@@ -37,8 +37,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
             -DMEIOS_BUILD_TESTS=ON `
             -DMEIOS_CMAKE_FETCH_DEPS=ON `
-            -DMEIOS_WERROR=ON `
-            '-DCMAKE_CXX_FLAGS=/std:c++20 /W4 /EHsc'
+            -DMEIOS_WERROR=ON
 
       - name: Build
         run: cmake --build build --config Release
@@ -64,8 +63,7 @@ jobs:
           cmake . -B build -A x64 `
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" `
-            -DMEIOS_CMAKE_FETCH_DEPS=OFF `
-            '-DCMAKE_CXX_FLAGS=/std:c++20 /EHsc'
+            -DMEIOS_CMAKE_FETCH_DEPS=OFF
 
       - name: Build and install
         run: |
@@ -75,8 +73,7 @@ jobs:
       - name: Build consumer
         run: |
           cmake tests/integration/consumer -B build-consumer -A x64 `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" `
-            '-DCMAKE_CXX_FLAGS=/std:c++20 /EHsc'
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps"
           cmake --build build-consumer --config Release
 
       - name: Run consumer test

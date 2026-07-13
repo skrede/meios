@@ -36,14 +36,14 @@ jobs:
           git clone https://github.com/zeux/pugixml.git pugixml-src
           git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
           cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/deps"
           cmake --build pugixml-build
           cmake --install pugixml-build
 
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps" \
             -DMEIOS_WERROR=OFF \
             -DMEIOS_BUILD_TESTS=ON \
             -DMEIOS_CMAKE_FETCH_DEPS=ON

@@ -4,7 +4,7 @@
 set(MEIOS_WARNING_FLAGS
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /permissive- /utf-8>
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
-        -fPIC -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
+        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
         -Wold-style-cast -Wcast-align -Woverloaded-virtual -Wnon-virtual-dtor
         -Wdouble-promotion -Wimplicit-fallthrough -Wformat=2>
 )
@@ -38,8 +38,7 @@ function(meios_enable_coverage target)
     if(NOT MEIOS_COVERAGE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         return()
     endif()
-    target_compile_options(${target} PRIVATE
-        --coverage -fprofile-arcs -ftest-coverage -O0 -g)
+    target_compile_options(${target} PRIVATE --coverage -O0 -g)
     # BUILD_INTERFACE so the instrumentation never leaks into the installed export.
     target_link_options(${target} PUBLIC $<BUILD_INTERFACE:--coverage>)
 endfunction()

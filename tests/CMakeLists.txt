@@ -13,15 +13,17 @@ FetchContent_MakeAvailable(Catch2)
 # RC_ENABLE_CATCH would also add rapidcheck's vendored ext/catch (a Catch2 v2.4.2
 # target) which collides with the Catch2 v3 fetched above; RC_INSTALL_ALL_EXTRAS
 # yields the same rapidcheck_catch bridge target without that vendored copy.
-set(RC_ENABLE_CATCH OFF)
-set(RC_INSTALL_ALL_EXTRAS ON)
-FetchContent_Declare(
-    rapidcheck
-    GIT_REPOSITORY https://github.com/emil-e/rapidcheck.git
-    GIT_TAG b2d9ed2dddefc4b84318d664b4f221eb792d89c7
-    SYSTEM
-)
-FetchContent_MakeAvailable(rapidcheck)
+if(MEIOS_BUILD_PROPERTY_TESTS)
+    set(RC_ENABLE_CATCH OFF)
+    set(RC_INSTALL_ALL_EXTRAS ON)
+    FetchContent_Declare(
+        rapidcheck
+        GIT_REPOSITORY https://github.com/emil-e/rapidcheck.git
+        GIT_TAG b2d9ed2dddefc4b84318d664b4f221eb792d89c7
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(rapidcheck)
+endif()
 
 # A fetched Catch2 keeps its extras in a child scope; a found one is added by its
 # own config. Cover both before pulling in catch_discover_tests.
