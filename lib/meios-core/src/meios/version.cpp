@@ -1,3 +1,5 @@
+#include <meios/detail/xml_engine.h>
+
 #include <pugixml.hpp>
 
 namespace meios::detail
