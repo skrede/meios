@@ -33,6 +33,15 @@ set(MEIOS_CORE_PUGIXML_INSTALLED FALSE)
 set(MEIOS_SCAN_GLTF_INSTALLED FALSE)
 set(MEIOS_ARCHIVE_ZIP_INSTALLED FALSE)
 
+# Set before the subdirectories so lib/ and tests/ share one acquisition policy.
+# NEVER forces every dependency down the fetch path; ALWAYS prefers a discoverable
+# find_package and fetches only the pinned source as a fallback.
+if(MEIOS_CMAKE_FETCH_DEPS)
+    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
+else()
+    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE ALWAYS)
+endif()
+
 add_subdirectory(lib)
 
 # Emitted after lib/ so the export sees every module that joined meiosTargets, and

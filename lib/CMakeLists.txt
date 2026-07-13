@@ -55,28 +55,23 @@ function(meios_add_module name)
         add_library(${alias} ALIAS ${target})
     endforeach()
 
-    install(TARGETS ${target}
-        EXPORT meiosTargets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    if(EXISTS ${include_root})
-        install(DIRECTORY ${include_root}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    if(MEIOS_ENABLE_INSTALL)
+        install(TARGETS ${target}
+            EXPORT meiosTargets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(EXISTS ${include_root})
+            install(DIRECTORY ${include_root}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        endif()
     endif()
 endfunction()
 
-# Acquisition toggle. Each dependency is declared once with FIND_PACKAGE_ARGS, so
-# a single declaration expresses both paths. find_package is preferred so an
-# already-discoverable dependency is reused and meios::core's exported target
-# stays an imported reference -- forcing a fetched (non-imported) pugixml would
-# make install(EXPORT) fail on the $<LINK_ONLY:> edge. The pinned source is
-# fetched only when the dependency is not otherwise found.
-if(MEIOS_CMAKE_FETCH_DEPS)
-    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE OPT_IN)
-else()
-    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE ALWAYS)
-endif()
-
+# Each dependency is declared once with FIND_PACKAGE_ARGS, so a single declaration
+# expresses both acquisition paths (the top-level FETCHCONTENT_TRY_FIND_PACKAGE_MODE
+# picks which one). A found pugixml keeps meios::core's exported target an imported
+# reference; a fetched (non-imported) pugixml cannot join install(EXPORT) on the
+# $<LINK_ONLY:> edge, which is why the fetched case disables install below.
 set(PUGIXML_BUILD_TESTS OFF)
 set(PUGIXML_INSTALL OFF)
 FetchContent_Declare(
@@ -84,9 +79,20 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/zeux/pugixml.git
     GIT_TAG c8033ce9d039e7f9d134877c363397b3cfe20816  # pugixml v1.16
     SYSTEM
-    FIND_PACKAGE_ARGS NAMES pugixml
+    FIND_PACKAGE_ARGS 1.16 NAMES pugixml
 )
 FetchContent_MakeAvailable(pugixml)
+
+# A fetched pugixml is a real, non-imported target outside meiosTargets, so the
+# exported meios::core cannot resolve its private link edge from an installed tree.
+# Installing meios therefore requires a discoverable (find_package-able) pugixml.
+if(pugixml_SOURCE_DIR)
+    message(STATUS
+        "meios: pugixml was fetched; disabling install "
+        "(the installed package requires a find_package-able pugixml >= 1.16).")
+    set(MEIOS_ENABLE_INSTALL OFF)
+    set(MEIOS_ENABLE_INSTALL OFF PARENT_SCOPE)
+endif()
 
 # Opt-in enrichment backends: pinned to immutable refs now so every dependency is
 # recorded as FetchContent-able, but only made available when their target builds.
@@ -95,7 +101,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG 65ee68451d8eb2b5f3a30b410476ab83deb3289b  # nlohmann_json v3.12.0
     SYSTEM
-    FIND_PACKAGE_ARGS NAMES nlohmann_json
+    FIND_PACKAGE_ARGS 3.12 NAMES nlohmann_json
 )
 FetchContent_Declare(
     miniz
@@ -133,13 +139,15 @@ meios_add_module(core
 set_target_properties(meios_core PROPERTIES VERSION ${PROJECT_VERSION})
 
 configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/version.h.in
+    ${PROJECT_SOURCE_DIR}/cmake/version.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
     @ONLY)
 target_include_directories(meios_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/meios-core/include>)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/meios)
+if(MEIOS_ENABLE_INSTALL)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/meios)
+endif()
 
 # As a static archive, meios::core's PRIVATE pugixml survives in the exported
 # interface as $<LINK_ONLY:pugixml::pugixml>, so the installed package config must
