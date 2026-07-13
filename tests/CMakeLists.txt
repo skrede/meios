@@ -62,3 +62,7 @@ foreach(stem IN ITEMS math diag records types sink)
         catch_discover_tests(model_${stem}_test)
     endif()
 endforeach()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/fail)
+    add_subdirectory(compile/fail)
+endif()
