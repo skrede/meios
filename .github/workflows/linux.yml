@@ -16,6 +16,51 @@ on:
   workflow_dispatch:
 
 jobs:
+  header-guards:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check header guard uniqueness and format
+        run: |
+          guards=$(grep -rh '^#ifndef HPP_GUARD_' lib --include='*.h' | awk '{print $2}')
+          dups=$(printf '%s\n' "$guards" | sort | uniq -d)
+          if [ -n "$dups" ]; then
+            echo "Duplicate header guards:"
+            echo "$dups"
+            exit 1
+          fi
+          bad=$(printf '%s\n' "$guards" | grep -vE '^HPP_GUARD_MEIOS[A-Z0-9_]*_H$' || true)
+          if [ -n "$bad" ]; then
+            echo "Header guards not matching HPP_GUARD_MEIOS[A-Z0-9_]*_H:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "Checked $(printf '%s\n' "$guards" | wc -l) header guards: all unique and well-formed."
+
+  file-size:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check header size ceiling
+        run: |
+          status=0
+          while IFS= read -r header; do
+            lines=$(wc -l < "$header")
+            if [ "$lines" -gt 200 ] && ! grep -qF "$header" EXCEPTIONS.md; then
+              echo "OVER CEILING ($lines lines, limit 200): $header"
+              status=1
+            fi
+          done < <(find lib -name '*.h')
+          if [ "$status" -ne 0 ]; then
+            echo "Headers over the 200-line ceiling must be registered in EXCEPTIONS.md."
+            exit 1
+          fi
+          echo "All lib headers are within the 200-line ceiling (or registered)."
+
   build:
     strategy:
       fail-fast: false
