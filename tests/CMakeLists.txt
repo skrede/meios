@@ -50,3 +50,15 @@ target_link_libraries(integration_test
 meios_enable_coverage(integration_test)
 meios_warnings(integration_test)
 catch_discover_tests(integration_test)
+
+foreach(stem IN ITEMS math diag records types sink)
+    set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
+    if(EXISTS ${model_test_src})
+        add_executable(model_${stem}_test ${model_test_src})
+        target_link_libraries(model_${stem}_test
+            PRIVATE meios::core meios::model Catch2::Catch2WithMain)
+        meios_enable_coverage(model_${stem}_test)
+        meios_warnings(model_${stem}_test)
+        catch_discover_tests(model_${stem}_test)
+    endif()
+endforeach()
