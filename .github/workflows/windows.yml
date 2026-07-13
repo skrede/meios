@@ -1,0 +1,83 @@
+name: Windows
+
+on:
+  push:
+    branches: [master, develop, 'milestone/**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  pull_request:
+    branches: [master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      # The config-package resolves pugixml via find_dependency(pugixml 1.16);
+      # vcpkg ships an older release, so build the pinned one.
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -A x64 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build --config Release
+          cmake --install pugixml-build --config Release
+
+      - name: Configure
+        run: |
+          cmake . -B build -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
+            -DMEIOS_BUILD_TESTS=ON `
+            -DMEIOS_CMAKE_FETCH_DEPS=ON `
+            -DMEIOS_WERROR=ON `
+            '-DCMAKE_CXX_FLAGS=/std:c++20 /W4 /EHsc'
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: cd build && ctest -C Release --output-on-failure --timeout 60
+
+  install-test:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -A x64 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build --config Release
+          cmake --install pugixml-build --config Release
+
+      - name: Configure
+        run: |
+          cmake . -B build -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" `
+            -DMEIOS_CMAKE_FETCH_DEPS=OFF `
+            '-DCMAKE_CXX_FLAGS=/std:c++20 /EHsc'
+
+      - name: Build and install
+        run: |
+          cmake --build build --config Release
+          cmake --install build --config Release
+
+      - name: Build consumer
+        run: |
+          cmake tests/integration/consumer -B build-consumer -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" `
+            '-DCMAKE_CXX_FLAGS=/std:c++20 /EHsc'
+          cmake --build build-consumer --config Release
+
+      - name: Run consumer test
+        run: build-consumer/Release/integration_test.exe

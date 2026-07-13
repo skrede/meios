@@ -1,0 +1,123 @@
+name: Linux
+
+on:
+  push:
+    branches: [master, develop, 'milestone/**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  pull_request:
+    branches: [master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc-14
+            cc: gcc-14
+            cxx: g++-14
+            gcov_executable: gcov-14
+          - compiler: clang-18
+            cc: clang-18
+            cxx: clang++-18
+            gcov_executable: "llvm-cov-18 gcov"
+
+    runs-on: ubuntu-24.04
+    name: ${{ matrix.compiler }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gcovr
+        run: pip install gcovr
+
+      # meios::core links pugixml PRIVATE; the config-package resolves it via
+      # find_dependency(pugixml 1.16), so a >= 1.16 pugixml must be discoverable.
+      # Runner package managers ship older, so build the pinned release.
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_COVERAGE=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
+      # Filter to meios sources under lib/ (compiled TUs + headers). The compiled
+      # TU lib/meios-core/src/meios/version.cpp lives under src/, so a headers-only
+      # glob would yield an empty report.
+      - name: Generate coverage
+        run: |
+          gcovr build \
+            --root . \
+            --gcov-executable "${{ matrix.gcov_executable }}" \
+            --filter 'lib/.*/(include|src)/meios/' \
+            --gcov-ignore-errors=source_not_found \
+            --cobertura coverage.xml
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  install-test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Build and install
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+            -DMEIOS_CMAKE_FETCH_DEPS=OFF
+          cmake --build build
+          cmake --install build
+
+      - name: Build consumer project
+        run: |
+          cmake tests/integration/consumer -B build-consumer \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-consumer
+
+      - name: Run consumer test
+        run: ./build-consumer/integration_test

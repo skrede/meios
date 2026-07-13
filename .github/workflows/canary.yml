@@ -1,0 +1,55 @@
+name: Canary
+
+on:
+  push:
+    branches: [master, develop, 'milestone/**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  pull_request:
+    branches: [master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.planning/**'
+  workflow_dispatch:
+
+jobs:
+  # Newest-toolchain drift is reported, never fatal: MEIOS_WERROR is forced OFF so
+  # a benign new-compiler diagnostic does not red-light the pipeline, and the job
+  # is continue-on-error so any drift surfaces without blocking merges.
+  canary:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container: gcc:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build git
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=OFF \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
