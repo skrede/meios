@@ -1,0 +1,21 @@
+#ifndef HPP_GUARD_MEIOS_CORE_VERSION_H
+#define HPP_GUARD_MEIOS_CORE_VERSION_H
+
+#include <string_view>
+
+#define MEIOS_VERSION_MAJOR @meios_VERSION_MAJOR@
+#define MEIOS_VERSION_MINOR @meios_VERSION_MINOR@
+#define MEIOS_VERSION_PATCH @meios_VERSION_PATCH@
+#define MEIOS_VERSION_STRING "@meios_VERSION@"
+
+namespace meios
+{
+
+constexpr std::string_view version() noexcept
+{
+    return MEIOS_VERSION_STRING;
+}
+
+}
+
+#endif

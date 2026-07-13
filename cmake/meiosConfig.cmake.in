@@ -1,0 +1,31 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# meios::core links pugixml PRIVATE; as a static archive that dependency survives
+# in the exported interface as $<LINK_ONLY:pugixml::pugixml>, so a consumer of the
+# export must resolve pugixml. Gated on the flag the build recorded, so a build
+# without the core module does not force the requirement.
+if(@MEIOS_CORE_PUGIXML_INSTALLED@)
+    find_dependency(pugixml 1.16)
+endif()
+if(@MEIOS_SCAN_GLTF_INSTALLED@)
+    find_dependency(nlohmann_json 3.12)
+endif()
+if(@MEIOS_ARCHIVE_ZIP_INSTALLED@)
+    find_dependency(miniz)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/meiosTargets.cmake")
+
+set(meios_meios_FOUND TRUE)
+foreach(_meios_component core model completion scan-gltf archive-zip eval-python ros)
+    if(TARGET meios::${_meios_component})
+        set(meios_${_meios_component}_FOUND TRUE)
+    else()
+        set(meios_${_meios_component}_FOUND FALSE)
+    endif()
+endforeach()
+unset(_meios_component)
+
+check_required_components(meios)

@@ -1,0 +1,150 @@
+include(GNUInstallDirs)
+include(FetchContent)
+
+# One helper expresses the whole module pattern. A module's public include root is
+# lib/meios-<name>/include, so every target is consumed via #include <meios/...>;
+# compiled modules also see lib/meios-<name>/src privately. Every module joins the
+# single meiosTargets export.
+function(meios_add_module name)
+    cmake_parse_arguments(ARG "" "TYPE;EXPORT_NAME"
+        "SOURCES;LINK_PUBLIC;LINK_PRIVATE;ALIASES" ${ARGN})
+
+    set(target meios_${name})
+    set(module_dir ${CMAKE_CURRENT_SOURCE_DIR}/meios-${name})
+    set(include_root ${module_dir}/include)
+
+    if(ARG_TYPE STREQUAL "INTERFACE")
+        add_library(${target} INTERFACE)
+        target_compile_features(${target} INTERFACE cxx_std_20)
+        target_include_directories(${target} INTERFACE
+            $<BUILD_INTERFACE:${include_root}>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+        if(ARG_LINK_PUBLIC)
+            target_link_libraries(${target} INTERFACE ${ARG_LINK_PUBLIC})
+        endif()
+    else()
+        add_library(${target} ${ARG_TYPE} ${ARG_SOURCES})
+        meios_enable_coverage(${target})
+        meios_warnings(${target})
+        target_compile_features(${target} PUBLIC cxx_std_20)
+        # A static meios archive is meant to embed inside a consumer's shared
+        # library; without PIC that final link fails to relocate on Linux.
+        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        target_include_directories(${target}
+            PUBLIC
+                $<BUILD_INTERFACE:${include_root}>
+                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+            PRIVATE
+                ${module_dir}/src)
+        if(ARG_LINK_PUBLIC)
+            target_link_libraries(${target} PUBLIC ${ARG_LINK_PUBLIC})
+        endif()
+        if(ARG_LINK_PRIVATE)
+            target_link_libraries(${target} PRIVATE ${ARG_LINK_PRIVATE})
+        endif()
+    endif()
+
+    if(NOT ARG_EXPORT_NAME)
+        set(ARG_EXPORT_NAME ${name})
+    endif()
+    # CMake aliases are not exported; EXPORT_NAME is what keeps the installed
+    # spelling (meios::core) identical to the build-tree alias.
+    set_target_properties(${target} PROPERTIES EXPORT_NAME ${ARG_EXPORT_NAME})
+
+    foreach(alias ${ARG_ALIASES})
+        add_library(${alias} ALIAS ${target})
+    endforeach()
+
+    install(TARGETS ${target}
+        EXPORT meiosTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    if(EXISTS ${include_root})
+        install(DIRECTORY ${include_root}/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    endif()
+endfunction()
+
+# Acquisition toggle. Each dependency is declared once with FIND_PACKAGE_ARGS, so
+# a single declaration expresses both paths. find_package is preferred so an
+# already-discoverable dependency is reused and meios::core's exported target
+# stays an imported reference -- forcing a fetched (non-imported) pugixml would
+# make install(EXPORT) fail on the $<LINK_ONLY:> edge. The pinned source is
+# fetched only when the dependency is not otherwise found.
+if(MEIOS_CMAKE_FETCH_DEPS)
+    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE OPT_IN)
+else()
+    set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE ALWAYS)
+endif()
+
+set(PUGIXML_BUILD_TESTS OFF)
+set(PUGIXML_INSTALL OFF)
+FetchContent_Declare(
+    pugixml
+    GIT_REPOSITORY https://github.com/zeux/pugixml.git
+    GIT_TAG c8033ce9d039e7f9d134877c363397b3cfe20816  # pugixml v1.16
+    SYSTEM
+    FIND_PACKAGE_ARGS NAMES pugixml
+)
+FetchContent_MakeAvailable(pugixml)
+
+# Opt-in enrichment backends: pinned to immutable refs now so every dependency is
+# recorded as FetchContent-able, but only made available when their target builds.
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG 65ee68451d8eb2b5f3a30b410476ab83deb3289b  # nlohmann_json v3.12.0
+    SYSTEM
+    FIND_PACKAGE_ARGS NAMES nlohmann_json
+)
+FetchContent_Declare(
+    miniz
+    GIT_REPOSITORY https://github.com/richgel999/miniz.git
+    GIT_TAG 77d0dce8627735138c51770d1799a1ef48f2117d  # miniz 3.1.2
+    SYSTEM
+    FIND_PACKAGE_ARGS NAMES miniz
+)
+FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG c7fb32eea8c92bebeea9f0735041a72aa20c75f5  # pybind11 v3.0.4
+    SYSTEM
+    FIND_PACKAGE_ARGS NAMES pybind11
+)
+if(MEIOS_BUILD_SCAN_GLTF)
+    set(JSON_BuildTests OFF)
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
+if(MEIOS_BUILD_ARCHIVE_ZIP)
+    FetchContent_MakeAvailable(miniz)
+endif()
+if(MEIOS_BUILD_EVAL_PYTHON)
+    FetchContent_MakeAvailable(pybind11)
+endif()
+
+# core: the compiled engine. pugixml is linked PRIVATE and is reachable only from
+# lib/meios-core/src, so it never appears in meios::core's public requirements.
+meios_add_module(core
+    TYPE STATIC
+    EXPORT_NAME core
+    ALIASES meios::core
+    SOURCES meios-core/src/meios/version.cpp
+    LINK_PRIVATE pugixml::pugixml)
+set_target_properties(meios_core PROPERTIES VERSION ${PROJECT_VERSION})
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/version.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
+    @ONLY)
+target_include_directories(meios_core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/meios-core/include>)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/meios)
+
+# As a static archive, meios::core's PRIVATE pugixml survives in the exported
+# interface as $<LINK_ONLY:pugixml::pugixml>, so the installed package config must
+# resolve pugixml. Record that it must; the config template gates on this.
+set(MEIOS_CORE_PUGIXML_INSTALLED TRUE PARENT_SCOPE)
+
+meios_add_module(model TYPE INTERFACE ALIASES meios::model)
+meios_add_module(completion TYPE INTERFACE ALIASES meios::completion)
