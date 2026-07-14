@@ -278,7 +278,7 @@ if(TARGET meios_archive-zip)
         add_executable(zip_writer_test ${zip_writer_src})
         target_link_libraries(zip_writer_test
             PRIVATE meios::core meios::model meios::io meios::bundle meios::archive-zip
-                Catch2::Catch2WithMain)
+                miniz Catch2::Catch2WithMain)
         target_compile_definitions(zip_writer_test PRIVATE
             MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
         meios_enable_coverage(zip_writer_test)
