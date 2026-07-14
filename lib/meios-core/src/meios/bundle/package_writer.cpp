@@ -32,7 +32,11 @@ bool package_writer::copy_entry(const bundle_entry &entry, bool dry_run)
     std::filesystem::copy_file(entry.copy_source, *dest,
                                std::filesystem::copy_options::overwrite_existing, ec);
     if(ec)
+    {
         m_log.get().log(level::error, "failed to copy '" + entry.copy_source.string() + '\'');
+        std::error_code rm;
+        std::filesystem::remove(*dest, rm);
+    }
     return !ec;
 }
 
@@ -46,7 +50,12 @@ bool package_writer::write_urdf(std::string_view urdf_name, std::string_view urd
     std::filesystem::create_directories(dest->parent_path(), ec);
     std::ofstream out(*dest, std::ios::binary | std::ios::trunc);
     out.write(urdf_text.data(), static_cast<std::streamsize>(urdf_text.size()));
-    return out.good() && !ec;
+    out.close();
+    if(out.good() && !ec)
+        return true;
+    std::error_code rm;
+    std::filesystem::remove(*dest, rm);
+    return false;
 }
 
 emit_result package_writer::write(std::string_view urdf_name, std::string_view urdf_text,
