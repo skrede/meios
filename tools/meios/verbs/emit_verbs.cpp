@@ -1,4 +1,5 @@
 #include "verbs.h"
+#include "register_scanners.h"
 
 #include "meios/urdf/load.h"
 
@@ -43,6 +44,7 @@ int run_bundle(const verb_context &ctx)
     source_stack sources = build_sources(opts.package_roots, log);
     const model<double> robot = load(positional(ctx, 0), opts, sources, log);
     scanner_registry registry;
+    register_scanners(registry);
     emit_result out{};
     const folder_request request{ std::filesystem::current_path() / name->second, name->second,
                                   collision_options{ false }, false };
@@ -58,6 +60,7 @@ int run_deps(const verb_context &ctx)
     source_stack sources = build_sources(opts.package_roots, log);
     const model<double> robot = load(positional(ctx, 0), opts, sources, log);
     scanner_registry registry;
+    register_scanners(registry);
     emit_result out{};
     const folder_request request{ std::filesystem::current_path(),
                                   std::filesystem::path(positional(ctx, 0)).stem().string(),

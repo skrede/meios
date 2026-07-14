@@ -15,6 +15,17 @@ target_link_libraries(meios_cli
     PUBLIC meios::urdf meios::bundle meios::completion
     PRIVATE CLI11::CLI11)
 
+# D-01: the CLI is the consumer that links each built scanner target and calls its
+# register_ free function. A per-scanner compile definition gates the matching block
+# in register_scanners.cpp, so core and bundle stay free of any concrete scanner.
+foreach(scan IN ITEMS obj collada stl gltf)
+    if(TARGET meios_scan-${scan})
+        string(TOUPPER ${scan} scan_upper)
+        target_link_libraries(meios_cli PRIVATE meios::scan-${scan})
+        target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_SCAN_${scan_upper})
+    endif()
+endforeach()
+
 add_executable(meios main.cpp)
 meios_enable_coverage(meios)
 meios_warnings(meios)
