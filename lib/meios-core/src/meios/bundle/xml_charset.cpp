@@ -37,6 +37,9 @@ bool decode(std::string_view text, std::size_t &i, char32_t &cp)
             return false;
         cp = (cp << 6) | (byte & 0x3F);
     }
+    static const char32_t lead_min[5] = { 0, 0, 0x80, 0x800, 0x10000 };
+    if(cp < lead_min[length])
+        return false;
     i += static_cast<std::size_t>(length);
     return true;
 }

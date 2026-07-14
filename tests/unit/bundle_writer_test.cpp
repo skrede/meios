@@ -151,6 +151,23 @@ TEST_CASE("an un-encodable control character hard-fails the emitter", "[bundle][
     REQUIRE(out.str().empty());
 }
 
+TEST_CASE("an overlong UTF-8 encoding hard-fails the emitter", "[bundle][writer]")
+{
+    capture_log log;
+    std::ostringstream out;
+    meios::urdf_writer writer(out, log);
+    meios::tree<double> robot;
+    robot.name = "gen";
+    meios::link<double> arm{};
+    arm.name = std::string("arm") + '\xC0' + '\xBC';
+    robot.links.push_back(arm);
+    meios::replay(robot, writer);
+
+    REQUIRE(writer.status().status == meios::emit_status::xml_unencodable);
+    REQUIRE(log.saw(meios::level::error));
+    REQUIRE(out.str().empty());
+}
+
 TEST_CASE("an empty name is preserved with a warning, not a failure", "[bundle][writer]")
 {
     capture_log log;
