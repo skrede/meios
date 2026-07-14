@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="schema_missing_limit">
+  <link name="base_link"/>
+  <link name="arm"/>
+
+  <joint name="base_to_arm" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+</robot>
