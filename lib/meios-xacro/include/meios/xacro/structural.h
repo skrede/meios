@@ -3,6 +3,7 @@
 
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
 
@@ -14,6 +15,7 @@ namespace meios
 {
 
 class source_stack;
+class evaluator_handle;
 
 struct expansion
 {
@@ -25,7 +27,13 @@ struct expansion
 // xacro:include (resolved through sources), xacro:property, xacro:macro with
 // params and defaults, *block/**block insertion, and xacro:if/xacro:unless.
 // Bounded by limits and an include cycle guard; a failure loud-logs and yields
-// ok == false. The document path seeds $(dirname) and diagnostics.
+// ok == false. The document path seeds $(dirname) and diagnostics. eval_policy and
+// an optional injected backend govern how an unsupported ${}/$(eval) construct is
+// resolved; the delegating overload uses fail policy and the core evaluator.
+expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
+                 const std::filesystem::path &document, const expansion_limits &limits,
+                 eval_policy policy, evaluator_handle *backend, log_sink &log);
+
 expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
                  const std::filesystem::path &document, const expansion_limits &limits,
                  log_sink &log);

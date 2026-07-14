@@ -2,7 +2,6 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
-#include "meios/xacro/core_evaluator.h"
 
 #include "meios/io/materialize.h"
 #include "meios/io/source_stack.h"
@@ -12,7 +11,6 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <string>
-#include <cctype>
 #include <cstdlib>
 #include <utility>
 #include <optional>
@@ -28,30 +26,12 @@ namespace detail
 namespace
 {
 
-std::string_view trim(std::string_view text)
-{
-    std::size_t begin = text.find_first_not_of(" \t");
-    if(begin == std::string_view::npos)
-        return {};
-    return text.substr(begin, text.find_last_not_of(" \t") - begin + 1);
-}
-
 std::pair<std::string_view, std::string_view> split_first(std::string_view text)
 {
     std::size_t space = text.find_first_of(" \t");
     if(space == std::string_view::npos)
         return { text, {} };
     return { text.substr(0, space), trim(text.substr(space)) };
-}
-
-bool is_identifier(std::string_view text)
-{
-    if(text.empty() || (!std::isalpha(static_cast<unsigned char>(text[0])) && text[0] != '_'))
-        return false;
-    for(char c : text)
-        if(!std::isalnum(static_cast<unsigned char>(c)) && c != '_')
-            return false;
-    return true;
 }
 
 std::optional<std::string> fail(subst_ctx &ctx, const std::string &message)
@@ -65,16 +45,6 @@ std::string binding_str(const binding &bound)
     if(std::holds_alternative<std::string>(bound))
         return std::get<std::string>(bound);
     return to_python_str(std::get<value>(bound));
-}
-
-std::optional<std::string> string_property(subst_ctx &ctx, std::string_view name)
-{
-    if(!is_identifier(name))
-        return std::nullopt;
-    std::optional<binding> bound = ctx.scope.lookup(name);
-    if(bound && std::holds_alternative<std::string>(*bound))
-        return std::get<std::string>(*bound);
-    return std::nullopt;
 }
 
 void note_env_read(subst_ctx &ctx, std::string_view name)
@@ -137,18 +107,6 @@ std::optional<std::string> cmd_optenv(subst_ctx &ctx, std::string_view rest)
     return std::string(parts.second);
 }
 
-}
-
-std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
-{
-    std::string_view expr = trim(expression);
-    std::optional<std::string> direct = string_property(ctx, expr);
-    if(direct)
-        return direct;
-    value result = ctx.evaluator.eval(expr, ctx.scope, ctx.log);
-    if(ctx.evaluator.failed())
-        return std::nullopt;
-    return to_python_str(result);
 }
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner)

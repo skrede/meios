@@ -55,7 +55,7 @@ value call_unary(parser &p, std::string_view name, const value &arg)
     if(name == "degrees") return value{ as_double(arg) * (180.0 / 3.141592653589793) };
     math_fn fn = unary_math_fn(name);
     if(fn != nullptr) return value{ fn(as_double(arg)) };
-    return p.fail("unsupported function '" + std::string(name) + "' — use eval-python");
+    return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
 bool is_comparison(token_kind k)
@@ -100,7 +100,7 @@ value parse_name(parser &p)
     std::optional<binding> bound = p.scope.lookup(name);
     if(!bound) return p.fail("name '" + std::string(name) + "' is not defined");
     if(std::holds_alternative<value>(*bound)) return std::get<value>(*bound);
-    return p.fail("string value '" + std::string(name) + "' in expression — use eval-python");
+    return p.fail_unsupported("string value '" + std::string(name) + "' in expression — use eval-python");
 }
 
 value call_math(parser &p, std::string_view name, const std::vector<value> &args)
@@ -109,7 +109,7 @@ value call_math(parser &p, std::string_view name, const std::vector<value> &args
     if(name == "atan2" && args.size() == 2)
         return value{ std::atan2(as_double(args[0]), as_double(args[1])) };
     if(args.size() == 1) return call_unary(p, name, args[0]);
-    return p.fail("unsupported function '" + std::string(name) + "' — use eval-python");
+    return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
 value parse_comparison(parser &p)

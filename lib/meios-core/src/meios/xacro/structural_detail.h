@@ -4,6 +4,7 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/structural.h"
+#include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
 
@@ -21,6 +22,7 @@
 namespace meios
 {
 class source_stack;
+class evaluator_handle;
 }
 
 namespace meios::detail
@@ -46,12 +48,15 @@ struct block_arg
 // include documents are parked in owned so macro bodies stay live across files.
 struct expand_ctx
 {
-    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, log_sink &lg);
+    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, eval_policy policy,
+               evaluator_handle *inject, log_sink &lg);
 
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
     log_sink &log;
+    eval_policy mode;
+    evaluator_handle *backend;
     expansion_counters counters;
     std::map<std::string, macro_def> macros;
     std::map<std::string, block_arg> blocks;

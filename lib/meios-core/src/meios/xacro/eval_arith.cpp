@@ -17,7 +17,14 @@ namespace meios::detail
 
 value parser::fail(const std::string &message)
 {
-    if(ok) log.log(level::error, message);
+    if(ok) { log.log(level::error, message); failure = eval_failure_kind::error; }
+    ok = false;
+    return value{ 0ll };
+}
+
+value parser::fail_unsupported(const std::string &message)
+{
+    if(ok) { log.log(level::error, message); failure = eval_failure_kind::unsupported; }
     ok = false;
     return value{ 0ll };
 }
@@ -127,7 +134,7 @@ value parse_atom(parser &p)
     if(p.at(token_kind::name)) return parse_name(p);
     if(p.at(token_kind::error))
         return p.fail("unrecognized character in expression: '" + std::string(here.text) + "'");
-    return p.fail("unsupported expression — use eval-python");
+    return p.fail_unsupported("unsupported expression — use eval-python");
 }
 
 value parse_power(parser &p)

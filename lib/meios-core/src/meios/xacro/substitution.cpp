@@ -37,6 +37,24 @@ bool fail_unterminated(detail::subst_ctx &ctx, char opener, std::size_t at)
     return false;
 }
 
+// D-03: under warn/skip a construct the core cannot evaluate is left verbatim in
+// the output — never fabricated, never blanked — so the resolved text visibly
+// carries the unevaluated expression. A genuine error still fails; a conditional is
+// resolved with fail policy elsewhere, so leniency reaches text/attribute spans only.
+bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
+                    std::size_t close, std::string &out, std::size_t &cursor)
+{
+    if(ctx.last_kind != eval_failure_kind::unsupported
+       || (ctx.mode != eval_policy::warn && ctx.mode != eval_policy::skip))
+        return false;
+    if(ctx.mode == eval_policy::warn)
+        ctx.log.log(level::warn, "left an unsupported substitution verbatim at offset "
+            + std::to_string(dollar) + " in " + ctx.document.string());
+    out.append(raw.substr(dollar, close - dollar + 1));
+    cursor = close + 1;
+    return true;
+}
+
 bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
                  std::string &out, std::size_t &cursor)
 {
@@ -46,13 +64,16 @@ bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dolla
     if(close == std::string_view::npos)
         return fail_unterminated(ctx, opener, dollar);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
+    ctx.last_kind = eval_failure_kind::none;
     std::optional<std::string> result =
         opener == '{' ? detail::eval_expr(ctx, inner) : detail::dispatch(ctx, inner);
-    if(!result)
-        return false;
-    out.append(*result);
-    cursor = close + 1;
-    return true;
+    if(result)
+    {
+        out.append(*result);
+        cursor = close + 1;
+        return true;
+    }
+    return leave_verbatim(ctx, raw, dollar, close, out, cursor);
 }
 
 bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out)
@@ -81,12 +102,19 @@ bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out)
 }
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
-                        const std::filesystem::path &document, log_sink &log)
+                        const std::filesystem::path &document, eval_policy policy,
+                        evaluator_handle *backend, log_sink &log)
 {
-    detail::subst_ctx ctx(log, sources, scope, document);
+    detail::subst_ctx ctx(log, sources, scope, document, policy, backend);
     std::string out;
     bool ok = scan(ctx, raw, out);
     return substitution{ ok, std::move(out) };
+}
+
+substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
+                        const std::filesystem::path &document, log_sink &log)
+{
+    return substitute(raw, scope, sources, document, eval_policy::fail, nullptr, log);
 }
 
 }

@@ -21,6 +21,7 @@ value core_evaluator::eval(std::string_view expression, const eval_scope &scope,
     if(state.ok && !state.at(detail::token_kind::end))
         result = state.fail("unexpected trailing tokens in expression");
     m_failed = !state.ok;
+    m_kind = state.failure;
     return result;
 }
 
