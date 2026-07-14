@@ -306,7 +306,7 @@ if(TARGET meios_eval-python)
     if(EXISTS ${eval_python_src})
         add_executable(eval_python_test ${eval_python_src})
         target_link_libraries(eval_python_test
-            PRIVATE meios::core meios::model meios::xacro meios::eval-python
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
                 Catch2::Catch2WithMain)
         target_compile_definitions(eval_python_test PRIVATE
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
