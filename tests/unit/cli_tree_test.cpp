@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include <filesystem>
 
 using namespace meios;
@@ -62,6 +63,28 @@ std::string run_tree_on(const std::string &file, bool dot)
     return out.str();
 }
 
+struct tree_run
+{
+    int code;
+    std::string out;
+};
+
+tree_run run_tree_root(const std::string &file, const std::string &root)
+{
+    verb_context ctx;
+    ctx.id = "tree";
+    ctx.positionals = { file };
+    ctx.value_flags["--root"] = root;
+    cout_capture out;
+    const int code = cli::run_tree(ctx);
+    return { code, out.str() };
+}
+
+std::size_t line_count(const std::string &text)
+{
+    return static_cast<std::size_t>(std::count(text.begin(), text.end(), '\n'));
+}
+
 }
 
 TEST_CASE("cli_tree: the branched fixture renders every branch to the ASCII golden")
@@ -79,6 +102,25 @@ TEST_CASE("cli_tree: both branches of a link render, not a single chain")
     REQUIRE(rendered.find("slider") != std::string::npos);
     REQUIRE(rendered.find("free_body") != std::string::npos);
     REQUIRE(rendered.find("plane_body") != std::string::npos);
+}
+
+TEST_CASE("cli_tree: --root renders only the subtree rooted at the named link")
+{
+    const std::string full = run_tree_on(fixture("branched_all_joints.urdf"), false);
+    const tree_run sub = run_tree_root(fixture("branched_all_joints.urdf"), "torso");
+    REQUIRE(sub.code == 0);
+    REQUIRE(sub.out.find("arm") != std::string::npos);
+    REQUIRE(sub.out.find("slider") != std::string::npos);
+    REQUIRE(sub.out.find("free_body") == std::string::npos);
+    REQUIRE(sub.out.find("plane_body") == std::string::npos);
+    REQUIRE(line_count(sub.out) < line_count(full));
+}
+
+TEST_CASE("cli_tree: an unknown --root link exits nonzero and renders nothing")
+{
+    const tree_run sub = run_tree_root(fixture("branched_all_joints.urdf"), "no_such_link");
+    REQUIRE(sub.code != 0);
+    REQUIRE(sub.out.empty());
 }
 
 TEST_CASE("cli_tree: --dot matches the golden with movable and fixed styled distinctly")

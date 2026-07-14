@@ -7,6 +7,7 @@
 
 #include "meios/records/link.h"
 
+#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
@@ -59,6 +60,25 @@ child_map build_children(const model<double> &robot, const std::vector<int> &par
     return children;
 }
 
+int render_rooted(const model<double> &robot, const std::vector<int> &parent_of,
+                  const std::string &root_name, bool dot, log_sink &log)
+{
+    if(dot)
+    {
+        log.log(level::error, "--root is not supported together with --dot");
+        return 1;
+    }
+    const auto entry = robot.link_index.find(root_name);
+    if(entry == robot.link_index.end())
+    {
+        log.log(level::error, "unknown link: " + root_name);
+        return 1;
+    }
+    std::cout << render_ascii(robot, build_children(robot, parent_of),
+                              { static_cast<std::size_t>(entry->second) });
+    return 0;
+}
+
 int run_tree(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
@@ -71,7 +91,12 @@ int run_tree(const verb_context &ctx)
     const topology_result topo =
         reconstruct_topology(robot.links, robot.joints, quiet, topology_policy::skip);
 
-    if(ctx.bool_flags.count("--dot") != 0 && ctx.bool_flags.at("--dot"))
+    const bool dot = ctx.bool_flags.count("--dot") != 0 && ctx.bool_flags.at("--dot");
+    const auto root = ctx.value_flags.find("--root");
+    if(root != ctx.value_flags.end() && !root->second.empty())
+        return render_rooted(robot, topo.parent_of, root->second, dot, log);
+
+    if(dot)
         std::cout << render_dot(robot);
     else
         std::cout << render_ascii(robot, build_children(robot, topo.parent_of), roots_of(topo.parent_of));
