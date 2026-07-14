@@ -78,3 +78,37 @@ jobs:
 
       - name: Run consumer test
         run: build-consumer/Release/integration_test.exe
+
+  enrichments:
+    runs-on: windows-2022
+    name: enrichments (scanners + archive-zip + ros)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -A x64 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build --config Release
+          cmake --install pugixml-build --config Release
+
+      - name: Configure
+        run: |
+          cmake . -B build -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
+            -DMEIOS_BUILD_TESTS=ON `
+            -DMEIOS_CMAKE_FETCH_DEPS=ON `
+            -DMEIOS_WERROR=ON `
+            -DMEIOS_BUILD_SCAN_OBJ=ON `
+            -DMEIOS_BUILD_SCAN_COLLADA=ON `
+            -DMEIOS_BUILD_SCAN_STL=ON `
+            -DMEIOS_BUILD_SCAN_GLTF=ON `
+            -DMEIOS_BUILD_ARCHIVE_ZIP=ON `
+            -DMEIOS_BUILD_ROS=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: cd build && ctest -C Release --output-on-failure --timeout 60

@@ -182,3 +182,65 @@ target_include_directories(meios_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-urdf/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-bundle/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-completion/include)
+
+# Opt-in enrichment modules. Each is its own compiled archive whose body lives
+# under lib/meios-<name>/src, never meios-core/src, so the always-on core glob
+# never absorbs an enrichment .cpp. A module target only materializes once its
+# src carries a source; the glob guard keeps an options-on, sources-absent tree
+# valid so an implementing plan adds only .cpp files.
+function(meios_add_enrichment name)
+    file(GLOB_RECURSE enrichment_sources CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/meios-${name}/src/*.cpp)
+    if(NOT enrichment_sources)
+        return()
+    endif()
+    meios_add_module(${name} TYPE STATIC ALIASES meios::${name}
+        SOURCES ${enrichment_sources} ${ARGN})
+endfunction()
+
+if(MEIOS_BUILD_SCAN_OBJ)
+    meios_add_enrichment(scan-obj LINK_PUBLIC meios::bundle meios::io)
+endif()
+if(MEIOS_BUILD_SCAN_STL)
+    meios_add_enrichment(scan-stl LINK_PUBLIC meios::bundle meios::io)
+endif()
+if(MEIOS_BUILD_SCAN_COLLADA)
+    meios_add_enrichment(scan-collada
+        LINK_PUBLIC meios::bundle meios::io
+        LINK_PRIVATE pugixml::pugixml)
+endif()
+if(MEIOS_BUILD_SCAN_GLTF)
+    meios_add_enrichment(scan-gltf
+        LINK_PUBLIC meios::bundle meios::io
+        LINK_PRIVATE nlohmann_json::nlohmann_json)
+    if(TARGET meios_scan-gltf)
+        set(MEIOS_SCAN_GLTF_INSTALLED TRUE PARENT_SCOPE)
+    endif()
+endif()
+if(MEIOS_BUILD_ROS)
+    meios_add_enrichment(ros
+        LINK_PUBLIC meios::io
+        LINK_PRIVATE pugixml::pugixml)
+endif()
+if(MEIOS_BUILD_ARCHIVE_ZIP)
+    meios_add_enrichment(archive-zip
+        LINK_PUBLIC meios::bundle meios::io
+        LINK_PRIVATE miniz)
+    if(TARGET meios_archive-zip)
+        set(MEIOS_ARCHIVE_ZIP_INSTALLED TRUE PARENT_SCOPE)
+    endif()
+endif()
+
+# eval-python drives a found (never fetched) interpreter; if Python3's embed
+# component is absent the target is skipped rather than failing the configure.
+if(MEIOS_BUILD_EVAL_PYTHON)
+    find_package(Python3 COMPONENTS Interpreter Development.Embed)
+    if(Python3_FOUND)
+        meios_add_enrichment(eval-python
+            LINK_PUBLIC meios::xacro
+            LINK_PRIVATE pybind11::embed)
+    else()
+        message(STATUS
+            "meios: Python3 Development.Embed not found; skipping meios::eval-python.")
+    endif()
+endif()

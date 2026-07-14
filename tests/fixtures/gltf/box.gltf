@@ -1,0 +1,10 @@
+{
+  "asset": { "version": "2.0" },
+  "images": [
+    { "uri": "textures/albedo.png" },
+    { "uri": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg==" }
+  ],
+  "buffers": [
+    { "uri": "box.bin", "byteLength": 1024 }
+  ]
+}

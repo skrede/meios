@@ -19,7 +19,7 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/meiosTargets.cmake")
 
 set(meios_meios_FOUND TRUE)
-foreach(_meios_component core model completion scan-gltf archive-zip eval-python ros)
+foreach(_meios_component core model completion scan-obj scan-collada scan-stl scan-gltf archive-zip eval-python ros)
     if(TARGET meios::${_meios_component})
         set(meios_${_meios_component}_FOUND TRUE)
     else()

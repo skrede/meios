@@ -166,3 +166,104 @@ jobs:
 
       - name: Run consumer test
         run: ./build-consumer/integration_test
+
+  enrichments:
+    runs-on: ubuntu-24.04
+    name: enrichments (scanners + archive-zip + ros)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      # scan-gltf's nlohmann/json is header-only and archive-zip's miniz is a
+      # single-file C library, both FetchContent-acquired, so no extra install
+      # step is needed. ros depends only on the already-installed pugixml.
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_SCAN_OBJ=ON \
+            -DMEIOS_BUILD_SCAN_COLLADA=ON \
+            -DMEIOS_BUILD_SCAN_STL=ON \
+            -DMEIOS_BUILD_SCAN_GLTF=ON \
+            -DMEIOS_BUILD_ARCHIVE_ZIP=ON \
+            -DMEIOS_BUILD_ROS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
+  eval-python:
+    runs-on: ubuntu-24.04
+    name: eval-python (Python found + absent)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python development headers
+        run: sudo apt-get update && sudo apt-get install -y python3-dev
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      # eval-python forces install off (its pybind11-embed link edge cannot be
+      # re-resolved from an installed tree), so it never joins an install-consumer
+      # leg. This job exercises only build+test, never install.
+      - name: Configure (Python found)
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build-py -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_EVAL_PYTHON=ON
+
+      - name: Build (Python found)
+        run: cmake --build build-py
+
+      - name: Test (Python found)
+        run: cd build-py && ctest --output-on-failure
+
+      # Python absent: the eval-python target must be skipped and the always-on
+      # core-evaluator eval_policy tests must stay green.
+      - name: Configure (Python absent)
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build-nopy -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_EVAL_PYTHON=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE
+
+      - name: Build (Python absent)
+        run: cmake --build build-nopy
+
+      - name: Test (Python absent)
+        run: cd build-nopy && ctest --output-on-failure

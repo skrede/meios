@@ -80,3 +80,40 @@ jobs:
 
       - name: Run consumer test
         run: ./build-consumer/integration_test
+
+  enrichments:
+    runs-on: macos-14
+    name: enrichments (scanners + archive-zip + ros)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      # The AppleClang/libc++ leg is the signal for float from_chars in the
+      # scanner numeric-parsing paths, which historically lagged on libc++.
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_SCAN_OBJ=ON \
+            -DMEIOS_BUILD_SCAN_COLLADA=ON \
+            -DMEIOS_BUILD_SCAN_STL=ON \
+            -DMEIOS_BUILD_SCAN_GLTF=ON \
+            -DMEIOS_BUILD_ARCHIVE_ZIP=ON \
+            -DMEIOS_BUILD_ROS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
