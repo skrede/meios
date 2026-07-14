@@ -166,6 +166,8 @@ meios_add_module(completion TYPE INTERFACE ALIASES meios::completion)
 # no compiled-archive dependency, so the single pugixml PRIVATE edge is preserved.
 meios_add_module(xacro TYPE INTERFACE ALIASES meios::xacro LINK_PUBLIC meios::core meios::model)
 meios_add_module(io TYPE INTERFACE ALIASES meios::io LINK_PUBLIC meios::core meios::model)
+meios_add_module(urdf TYPE INTERFACE ALIASES meios::urdf
+    LINK_PUBLIC meios::core meios::model meios::io meios::xacro)
 
 # The INTERFACE modules PUBLIC-link core, so their include roots do not flow back
 # to the core archive; compiled bodies under meios-core/src reach the module and
@@ -173,4 +175,5 @@ meios_add_module(io TYPE INTERFACE ALIASES meios::io LINK_PUBLIC meios::core mei
 target_include_directories(meios_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-xacro/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-io/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/meios-model/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-model/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-urdf/include)

@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<robot name="trailing_garbage">
+  <link name="base"/>
+</robot>
+this text after the closing root tag is not valid

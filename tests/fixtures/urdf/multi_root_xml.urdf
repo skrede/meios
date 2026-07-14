@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<robot name="first">
+  <link name="base"/>
+</robot>
+<robot name="second">
+  <link name="base"/>
+</robot>

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot name="comment_in_value">
+  <link name="base">
+    <extra>1 <!-- interrupting comment --> 2</extra>
+  </link>
+</robot>

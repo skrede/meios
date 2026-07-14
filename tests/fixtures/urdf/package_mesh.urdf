@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="package_mesh">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://somepkg/meshes/x.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

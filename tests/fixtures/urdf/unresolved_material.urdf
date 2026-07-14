@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="unresolved_material">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.2"/>
+      </geometry>
+      <material name="missing"/>
+    </visual>
+  </link>
+</robot>

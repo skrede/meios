@@ -85,6 +85,21 @@ foreach(stem IN ITEMS
     endif()
 endforeach()
 
+foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_strict)
+    set(urdf_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${urdf_test_src})
+        add_executable(${stem}_test ${urdf_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
 if(MEIOS_BUILD_PROPERTY_TESTS)
     set(xacro_eval_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_eval_prop.cpp)
     if(EXISTS ${xacro_eval_prop_src})

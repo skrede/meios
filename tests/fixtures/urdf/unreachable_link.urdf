@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="unreachable_link">
+  <link name="base"/>
+  <link name="arm"/>
+  <link name="island"/>
+
+  <joint name="base_to_arm" type="fixed">
+    <parent link="base"/>
+    <child link="arm"/>
+  </joint>
+</robot>

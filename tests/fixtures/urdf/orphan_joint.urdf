@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="orphan_joint">
+  <link name="base"/>
+  <link name="arm"/>
+
+  <joint name="base_to_ghost" type="fixed">
+    <parent link="base"/>
+    <child link="ghost"/>
+  </joint>
+</robot>
