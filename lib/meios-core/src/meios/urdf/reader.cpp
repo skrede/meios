@@ -74,7 +74,7 @@ void basic_parser<urdf_reader>::parse(std::string_view source, Sink &sink)
         m_context.log.log(level::error, std::string("urdf parse error: ") + parsed.description());
         return;
     }
-    const std::filesystem::path file;
+    const std::filesystem::path &file = m_context.document;
     if(!detail::run_strictness(doc, source, file, m_context) && m_context.strict == strictness::strict)
         return;
     const pugi::xml_node robot = robot_root(doc);

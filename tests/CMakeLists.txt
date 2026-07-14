@@ -51,6 +51,21 @@ meios_enable_coverage(integration_test)
 meios_warnings(integration_test)
 catch_discover_tests(integration_test)
 
+foreach(stem IN ITEMS urdf_diagnostics urdf_realfixture)
+    set(urdf_integration_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/${stem}_test.cpp)
+    if(EXISTS ${urdf_integration_src})
+        add_executable(${stem}_test ${urdf_integration_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
 foreach(stem IN ITEMS math diag records types sink)
     set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
     if(EXISTS ${model_test_src})
@@ -110,6 +125,17 @@ if(MEIOS_BUILD_PROPERTY_TESTS)
         meios_enable_coverage(xacro_eval_prop)
         meios_warnings(xacro_eval_prop)
         catch_discover_tests(xacro_eval_prop)
+    endif()
+
+    set(urdf_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/urdf_prop.cpp)
+    if(EXISTS ${urdf_prop_src})
+        add_executable(urdf_prop ${urdf_prop_src})
+        target_link_libraries(urdf_prop
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(urdf_prop)
+        meios_warnings(urdf_prop)
+        catch_discover_tests(urdf_prop)
     endif()
 endif()
 

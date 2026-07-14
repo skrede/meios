@@ -7,6 +7,8 @@
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/topology_policy.h"
 
+#include <filesystem>
+
 namespace meios
 {
 
@@ -22,6 +24,7 @@ struct parse_context
     topology_policy topology;
     material_policy materials;
     strictness      strict;
+    std::filesystem::path document;
 };
 
 }

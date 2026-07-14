@@ -8,6 +8,8 @@
 
 #include "meios/model/model.h"
 
+#include "meios/diagnostic/log_sink.h"
+
 #include <filesystem>
 
 namespace meios
@@ -28,6 +30,8 @@ struct load_options
     material_policy materials;
     strictness      strict;
 };
+
+model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log);
 
 model<double> load(const std::filesystem::path &path, const load_options &opts);
 

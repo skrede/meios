@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="not_urdf">
+    <link name="base_link"/>
+  </model>
+</sdf>
