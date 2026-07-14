@@ -13,6 +13,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildflags.cmake)
 option(MEIOS_BUILD_TESTS "Build unit and compile tests" OFF)
 option(MEIOS_BUILD_EXAMPLES "Build examples" OFF)
 option(MEIOS_BUILD_PROPERTY_TESTS "Build property tests (RapidCheck)" OFF)
+option(MEIOS_BUILD_FUZZERS "Build libFuzzer harnesses (Clang only)" OFF)
 option(MEIOS_CMAKE_FETCH_DEPS "Use FetchContent for dependencies" OFF)
 option(MEIOS_COVERAGE "Instrument first-party targets for coverage (gcc/clang)" OFF)
 option(MEIOS_BUILD_SCAN_GLTF "Build meios::scan-gltf (nlohmann/json)" OFF)
@@ -71,4 +72,10 @@ if(MEIOS_BUILD_TESTS OR MEIOS_BUILD_PROPERTY_TESTS OR MEIOS_BUILD_EXAMPLES)
 endif()
 if(MEIOS_BUILD_TESTS OR MEIOS_BUILD_PROPERTY_TESTS)
     add_subdirectory(tests)
+endif()
+
+# libFuzzer's -fsanitize=fuzzer is a Clang toolchain feature; the harnesses are
+# skipped whole on any other compiler rather than failing to link.
+if(MEIOS_BUILD_FUZZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_subdirectory(tests/fuzz)
 endif()

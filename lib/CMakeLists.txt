@@ -130,11 +130,15 @@ endif()
 
 # core: the compiled engine. pugixml is linked PRIVATE and is reachable only from
 # lib/meios-core/src, so it never appears in meios::core's public requirements.
+# Every module's compiled body lands under meios-core/src, so the source list is a
+# recursive glob: a new .cpp joins the archive with no CMake edit.
+file(GLOB_RECURSE meios_core_sources CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-core/src/*.cpp)
 meios_add_module(core
     TYPE STATIC
     EXPORT_NAME core
     ALIASES meios::core
-    SOURCES meios-core/src/meios/version.cpp
+    SOURCES ${meios_core_sources}
     LINK_PRIVATE pugixml::pugixml)
 set_target_properties(meios_core PROPERTIES VERSION ${PROJECT_VERSION})
 
@@ -156,3 +160,17 @@ set(MEIOS_CORE_PUGIXML_INSTALLED TRUE PARENT_SCOPE)
 
 meios_add_module(model TYPE INTERFACE ALIASES meios::model)
 meios_add_module(completion TYPE INTERFACE ALIASES meios::completion)
+
+# The header modules re-export the diagnostic seam, which lives only in the
+# header-only meios::model; PUBLIC-linking it is a header-visibility edge that adds
+# no compiled-archive dependency, so the single pugixml PRIVATE edge is preserved.
+meios_add_module(xacro TYPE INTERFACE ALIASES meios::xacro LINK_PUBLIC meios::core meios::model)
+meios_add_module(io TYPE INTERFACE ALIASES meios::io LINK_PUBLIC meios::core meios::model)
+
+# The INTERFACE modules PUBLIC-link core, so their include roots do not flow back
+# to the core archive; compiled bodies under meios-core/src reach the module and
+# diagnostic headers only through these PRIVATE roots (header visibility, no link).
+target_include_directories(meios_core PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-xacro/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-io/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-model/include)

@@ -63,6 +63,41 @@ foreach(stem IN ITEMS math diag records types sink)
     endif()
 endforeach()
 
+# The module unit stems are wired but guarded: a stem becomes a real test the
+# moment its source drops in, with no further CMake edit. meios::model is linked
+# so a stem reaching the diagnostic seam through a module header compiles.
+foreach(stem IN ITEMS
+        xacro_eval xacro_structural xacro_subst xacro_budget
+        xacro_unsupported xacro_corpus io_concept io_source_stack io_sources)
+    set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${module_test_src})
+        add_executable(${stem}_test ${module_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::xacro meios::io
+                Catch2::Catch2WithMain)
+        if(stem STREQUAL "xacro_corpus")
+            target_compile_definitions(xacro_corpus_test PRIVATE
+                MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        endif()
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
+if(MEIOS_BUILD_PROPERTY_TESTS)
+    set(xacro_eval_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_eval_prop.cpp)
+    if(EXISTS ${xacro_eval_prop_src})
+        add_executable(xacro_eval_prop ${xacro_eval_prop_src})
+        target_link_libraries(xacro_eval_prop
+            PRIVATE meios::core meios::model meios::xacro
+                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(xacro_eval_prop)
+        meios_warnings(xacro_eval_prop)
+        catch_discover_tests(xacro_eval_prop)
+    endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/fail)
     add_subdirectory(compile/fail)
 endif()
