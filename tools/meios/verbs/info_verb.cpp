@@ -1,4 +1,5 @@
 #include "verbs.h"
+#include "json_escape.h"
 
 #include "meios/urdf/load.h"
 
@@ -8,6 +9,7 @@
 #include "meios/records/visual.h"
 #include "meios/records/geometry.h"
 
+#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
@@ -89,6 +91,63 @@ void print_info(const model<double> &robot, std::ostream &out)
     print_mesh_list(robot, out);
 }
 
+void write_histogram_json(const model<double> &robot, std::ostream &out)
+{
+    std::map<std::string_view, std::size_t> histogram;
+    for(const joint<double> &edge : robot.joints)
+        ++histogram[joint_kind_name(edge.kind)];
+    out << '{';
+    bool first = true;
+    for(const std::pair<const std::string_view, std::size_t> &bin : histogram)
+    {
+        out << (first ? "" : ",") << '"' << bin.first << "\":" << bin.second;
+        first = false;
+    }
+    out << '}';
+}
+
+void write_mesh_json(const geometry<double> &geom, std::ostream &out, bool &first)
+{
+    const mesh<double> *shape = std::get_if<mesh<double>>(&geom.shape);
+    if(shape == nullptr)
+        return;
+    out << (first ? "" : ",") << "{\"filename\":\"" << json_escape(shape->filename)
+        << "\",\"resolved\":";
+    if(shape->resolved_path)
+        out << '"' << json_escape(*shape->resolved_path) << '"';
+    else
+        out << "null";
+    out << '}';
+    first = false;
+}
+
+void write_meshes_json(const model<double> &robot, std::ostream &out)
+{
+    out << '[';
+    bool first = true;
+    for(const link<double> &node : robot.links)
+    {
+        for(const visual<double> &item : node.visuals)
+            write_mesh_json(item.geom, out, first);
+        for(const collision<double> &item : node.collisions)
+            write_mesh_json(item.geom, out, first);
+    }
+    out << ']';
+}
+
+void print_info_json(const model<double> &robot, std::ostream &out)
+{
+    out << "{\"name\":\"" << json_escape(robot.name) << '"'
+        << ",\"links\":" << robot.links.size()
+        << ",\"joints\":" << robot.joints.size()
+        << ",\"materials\":" << robot.materials.size()
+        << ",\"dof\":" << degrees_of_freedom(robot) << ",\"joints_by_kind\":";
+    write_histogram_json(robot, out);
+    out << ",\"meshes\":";
+    write_meshes_json(robot, out);
+    out << "}\n";
+}
+
 }
 
 int run_info(const verb_context &ctx)
@@ -97,7 +156,19 @@ int run_info(const verb_context &ctx)
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     const model<double> robot = load(positional(ctx, 0), opts, log);
-    print_info(robot, std::cout);
+
+    const auto format = ctx.value_flags.find("--format");
+    if(format == ctx.value_flags.end() || format->second.empty())
+    {
+        print_info(robot, std::cout);
+        return 0;
+    }
+    if(format->second != "json")
+    {
+        log.log(level::error, "unknown --format value: " + format->second);
+        return 2;
+    }
+    print_info_json(robot, std::cout);
     return 0;
 }
 

@@ -1,7 +1,7 @@
 #include "validate.h"
+#include "json_escape.h"
 
 #include <string>
-#include <cstdio>
 #include <cstddef>
 #include <sstream>
 #include <ostream>
@@ -11,28 +11,6 @@ namespace meios::cli
 
 namespace
 {
-
-// Escapes a string for a JSON double-quoted scalar: the two structural characters
-// plus every C0 control byte (RFC 8259 §7 forbids raw control bytes in strings).
-std::string json_escape(const std::string &text)
-{
-    std::string out;
-    for(const char raw : text)
-    {
-        const unsigned char byte = static_cast<unsigned char>(raw);
-        if(raw == '"' || raw == '\\')
-            out += { '\\', raw };
-        else if(byte < 0x20)
-        {
-            char buffer[8];
-            std::snprintf(buffer, sizeof(buffer), "\\u%04x", byte);
-            out += buffer;
-        }
-        else
-            out += raw;
-    }
-    return out;
-}
 
 void write_messages(std::ostream &out, const std::vector<std::string> &messages)
 {

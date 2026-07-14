@@ -70,6 +70,31 @@ TEST_CASE("cli_verbs: info summarizes links, joints, and degrees of freedom")
     REQUIRE(out.str().find("dof:") != std::string::npos);
 }
 
+TEST_CASE("cli_verbs: info --format json emits a machine-readable summary")
+{
+    verb_context ctx;
+    ctx.id = "info";
+    ctx.positionals = { fixture("branched_all_joints.urdf") };
+    ctx.value_flags["--format"] = "json";
+    cout_capture out;
+    REQUIRE(cli::run_info(ctx) == 0);
+    const std::string printed = out.str();
+    REQUIRE(printed.find("\"name\":\"branched_all_joints\"") != std::string::npos);
+    REQUIRE(printed.find("\"joints_by_kind\":") != std::string::npos);
+    REQUIRE(printed.find("dof:") == std::string::npos);
+}
+
+TEST_CASE("cli_verbs: info rejects an unknown --format value")
+{
+    verb_context ctx;
+    ctx.id = "info";
+    ctx.positionals = { fixture("branched_all_joints.urdf") };
+    ctx.value_flags["--format"] = "yaml";
+    cout_capture out;
+    REQUIRE(cli::run_info(ctx) != 0);
+    REQUIRE(out.str().empty());
+}
+
 TEST_CASE("cli_verbs: args exits zero over a document")
 {
     verb_context ctx;
