@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="nonfinite_origin">
+  <link name="base"/>
+  <link name="tip"/>
+  <joint name="base_to_tip" type="fixed">
+    <parent link="base"/>
+    <child link="tip"/>
+    <origin xyz="inf 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>
