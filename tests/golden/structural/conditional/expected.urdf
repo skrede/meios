@@ -1,0 +1,3 @@
+<robot name="c">
+  <link name="arm"/>
+</robot>

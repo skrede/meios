@@ -2,7 +2,9 @@
 #define HPP_GUARD_MEIOS_XACRO_XACRO_H
 
 #include "meios/xacro/value.h"
+#include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/structural.h"
 #include "meios/xacro/substitution.h"
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_concept.h"

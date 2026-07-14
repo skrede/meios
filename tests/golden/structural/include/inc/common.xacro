@@ -1,0 +1,6 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="mat" value="steel"/>
+  <link name="included">
+    <material name="${mat}"/>
+  </link>
+</robot>

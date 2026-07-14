@@ -37,6 +37,11 @@ public:
         return m_bindings.find(std::string(name)) != m_bindings.end();
     }
 
+    void erase(std::string_view name)
+    {
+        m_bindings.erase(std::string(name));
+    }
+
 private:
     std::unordered_map<std::string, binding> m_bindings;
 };

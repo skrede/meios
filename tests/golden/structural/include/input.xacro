@@ -1,0 +1,4 @@
+<robot name="i" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find inc)/common.xacro"/>
+  <link name="main"/>
+</robot>

@@ -1,0 +1,12 @@
+<robot name="c" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="use_arm" value="true"/>
+  <xacro:if value="${use_arm}">
+    <link name="arm"/>
+  </xacro:if>
+  <xacro:unless value="${use_arm}">
+    <link name="no_arm"/>
+  </xacro:unless>
+  <xacro:if value="false">
+    <link name="never"/>
+  </xacro:if>
+</robot>

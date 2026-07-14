@@ -1,0 +1,12 @@
+<robot name="m">
+  <link name="arm_link">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+    </visual>
+    <mass value="1.0"/>
+    <inertia/>
+  </link>
+</robot>

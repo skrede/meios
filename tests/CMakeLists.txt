@@ -75,8 +75,8 @@ foreach(stem IN ITEMS
         target_link_libraries(${stem}_test
             PRIVATE meios::core meios::model meios::xacro meios::io
                 Catch2::Catch2WithMain)
-        if(stem STREQUAL "xacro_corpus")
-            target_compile_definitions(xacro_corpus_test PRIVATE
+        if(stem STREQUAL "xacro_corpus" OR stem STREQUAL "xacro_structural")
+            target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         endif()
         meios_enable_coverage(${stem}_test)

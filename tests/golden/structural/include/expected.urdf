@@ -1,0 +1,6 @@
+<robot name="i">
+  <link name="included">
+    <material name="steel"/>
+  </link>
+  <link name="main"/>
+</robot>
