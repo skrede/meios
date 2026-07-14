@@ -67,7 +67,8 @@ namespace meios
 manifest_builder::manifest_builder(std::string bundle_name, collision_options opts,
                                    source_stack &sources, log_sink &log)
     : m_log(log), m_status(emit_status::ok), m_opts(opts), m_sources(sources),
-      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_retained()
+      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_rewrites(),
+      m_retained()
 {}
 
 std::filesystem::path manifest_builder::path_of_asset(resolved_asset asset)
@@ -113,15 +114,17 @@ std::optional<std::string> manifest_builder::pkg_dir(const std::string &pkg,
 }
 
 void manifest_builder::record(bool is_texture, const std::string &pkg, const std::string &rel,
-                              const std::filesystem::path &source)
+                              const std::filesystem::path &source, const std::string &original)
 {
-    if(!m_seen.insert(source.generic_string()).second)
-        return;
     const std::optional<std::string> dir = pkg_dir(pkg, detail::source_root_of(source, rel));
     if(!dir)
         return;
     const std::string dest = detail::layout_dest(is_texture, *dir, rel);
-    m_manifest.entries.push_back(bundle_entry{ detail::bundle_uri(m_bundle_name, dest), source, dest });
+    const std::string uri = detail::bundle_uri(m_bundle_name, dest);
+    m_rewrites[original] = uri;
+    if(!m_seen.insert(source.generic_string()).second)
+        return;
+    m_manifest.entries.push_back(bundle_entry{ uri, source, dest });
 }
 
 void manifest_builder::add_reference(const reference_record &ref)
@@ -139,7 +142,7 @@ void manifest_builder::add_reference(const reference_record &ref)
         m_manifest.unresolved.push_back(ref.original);
         return;
     }
-    record(parsed->is_texture, parsed->pkg, parsed->rel, *source);
+    record(parsed->is_texture, parsed->pkg, parsed->rel, *source, ref.original);
 }
 
 }

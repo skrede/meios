@@ -59,6 +59,11 @@ public:
 
     const asset_manifest &manifest() const noexcept { return m_manifest; }
 
+    // The original-reference -> package://<bundle>/... table the emitter's rewrite
+    // hook consumes; keyed on the URDF's original filename so the same collision
+    // decision that shapes the copy layout also shapes the in-URDF reference.
+    const std::map<std::string, std::string> &rewrites() const noexcept { return m_rewrites; }
+
     emit_status status() const noexcept { return m_status; }
 
 private:
@@ -70,6 +75,7 @@ private:
     asset_manifest m_manifest;
     std::unordered_set<std::string> m_seen;
     std::map<std::string, std::string> m_roots;
+    std::map<std::string, std::string> m_rewrites;
     std::vector<resolved_asset> m_retained;
 
     std::filesystem::path path_of_asset(resolved_asset asset);
@@ -80,7 +86,7 @@ private:
     std::optional<std::string> pkg_dir(const std::string &pkg, const std::filesystem::path &root);
 
     void record(bool is_texture, const std::string &pkg, const std::string &rel,
-                const std::filesystem::path &source);
+                const std::filesystem::path &source, const std::string &original);
 
     void scan_entry(scanner_registry &registry, std::filesystem::path source);
 };
