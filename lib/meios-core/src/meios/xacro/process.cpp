@@ -69,11 +69,16 @@ bool condition_true(expand_ctx &ctx, const std::string &text)
 bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                  const std::filesystem::path &document)
 {
-    bool ok = true;
-    std::string text = substitute_attr(ctx, in.attribute("value").value(), document, ok);
-    if(!ok)
+    // A structural conditional cannot be left half-expanded, so its test is always
+    // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
+    substitution result = substitute(in.attribute("value").value(), ctx.scope, ctx.sources,
+                                     document, eval_policy::fail, ctx.backend, ctx.log);
+    if(!result.ok)
+    {
+        ctx.ok = false;
         return false;
-    bool truth = condition_true(ctx, text);
+    }
+    bool truth = condition_true(ctx, result.text);
     if(!ctx.ok)
         return false;
     bool wants_true = std::string_view(in.name()) == "xacro:if";
@@ -109,7 +114,8 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
                             const std::filesystem::path &document, bool &ok)
 {
-    substitution result = substitute(raw, ctx.scope, ctx.sources, document, ctx.log);
+    substitution result = substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
+                                     ctx.log);
     ok = result.ok;
     if(!ok)
         ctx.ok = false;
