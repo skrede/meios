@@ -115,6 +115,21 @@ foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_stric
     endif()
 endforeach()
 
+foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner)
+    set(bundle_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${bundle_test_src})
+        add_executable(${stem}_test ${bundle_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::urdf meios::bundle
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
 if(MEIOS_BUILD_PROPERTY_TESTS)
     set(xacro_eval_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_eval_prop.cpp)
     if(EXISTS ${xacro_eval_prop_src})
@@ -136,6 +151,17 @@ if(MEIOS_BUILD_PROPERTY_TESTS)
         meios_enable_coverage(urdf_prop)
         meios_warnings(urdf_prop)
         catch_discover_tests(urdf_prop)
+    endif()
+
+    set(urdf_roundtrip_src ${CMAKE_CURRENT_SOURCE_DIR}/property/urdf_roundtrip_prop.cpp)
+    if(EXISTS ${urdf_roundtrip_src})
+        add_executable(urdf_roundtrip ${urdf_roundtrip_src})
+        target_link_libraries(urdf_roundtrip
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                meios::bundle rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(urdf_roundtrip)
+        meios_warnings(urdf_roundtrip)
+        catch_discover_tests(urdf_roundtrip)
     endif()
 endif()
 

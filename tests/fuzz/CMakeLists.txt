@@ -6,5 +6,5 @@ foreach(source IN LISTS fuzz_sources)
     target_compile_options(${stem} PRIVATE -fsanitize=fuzzer,address)
     target_link_options(${stem} PRIVATE -fsanitize=fuzzer,address)
     target_link_libraries(${stem}
-        PRIVATE meios::core meios::xacro meios::io meios::model meios::urdf)
+        PRIVATE meios::core meios::xacro meios::io meios::model meios::urdf meios::bundle)
 endforeach()
