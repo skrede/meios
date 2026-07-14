@@ -130,6 +130,69 @@ foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner)
     endif()
 endforeach()
 
+foreach(stem IN ITEMS urdf_load_sources)
+    set(load_sources_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/${stem}_test.cpp)
+    if(EXISTS ${load_sources_src})
+        add_executable(${stem}_test ${load_sources_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
+foreach(stem IN ITEMS arg_scan)
+    set(arg_scan_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${arg_scan_src})
+        add_executable(${stem}_test ${arg_scan_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::xacro Catch2::Catch2WithMain)
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
+foreach(stem IN ITEMS completion_emit)
+    set(completion_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${completion_test_src})
+        add_executable(${stem}_test ${completion_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::completion
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
+# The CLI stems reach the tool surface only through the meios_cli support lib,
+# which carries CLI11 PRIVATE. The TARGET guard keeps a MEIOS_BUILD_TOOLS=OFF
+# configure green even once these sources land.
+if(TARGET meios_cli)
+    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift)
+        set(cli_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+        if(EXISTS ${cli_test_src})
+            add_executable(${stem}_test ${cli_test_src})
+            target_link_libraries(${stem}_test
+                PRIVATE meios_cli meios::urdf meios::bundle meios::completion
+                    Catch2::Catch2WithMain)
+            target_compile_definitions(${stem}_test PRIVATE
+                MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+                MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+            meios_enable_coverage(${stem}_test)
+            meios_warnings(${stem}_test)
+            catch_discover_tests(${stem}_test)
+        endif()
+    endforeach()
+endif()
+
 if(MEIOS_BUILD_PROPERTY_TESTS)
     set(xacro_eval_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_eval_prop.cpp)
     if(EXISTS ${xacro_eval_prop_src})
