@@ -73,9 +73,12 @@ private:
 // supplies a required package name and the planner hook, buffering until finish().
 class urdf_writer
 {
+    struct document;
+
 public:
     urdf_writer(std::ostream &out, log_sink &log);
     urdf_writer(std::ostream &out, log_sink &log, std::string bundle_name, reference_planner plan_cb);
+    ~urdf_writer();
 
     void on_robot(const robot_info &robot);
     void on_material(const material<double> &mat);
@@ -90,8 +93,12 @@ private:
     log_sink &m_log;
     std::string m_bundle_name;
     emit_result m_result;
+    std::unique_ptr<document> m_doc;
     std::vector<reference_record> m_refs;
     reference_planner m_plan_cb;
+
+    void warn_empty(const std::string &name);
+    void apply_rewrite();
 };
 
 }

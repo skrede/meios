@@ -2,6 +2,8 @@
 
 #include "meios/urdf/urdf_reader.h"
 
+#include "meios/bundle/urdf_writer.h"
+
 #include "meios/sink/pod_recorder.h"
 #include "meios/sink/world_recorder.h"
 
@@ -89,5 +91,6 @@ void basic_parser<urdf_reader>::parse(std::string_view source, Sink &sink)
 template void basic_parser<urdf_reader>::parse<pod_recorder<tree<double>>>(
     std::string_view, pod_recorder<tree<double>> &);
 template void basic_parser<urdf_reader>::parse<world_recorder>(std::string_view, world_recorder &);
+template void basic_parser<urdf_reader>::parse<urdf_writer>(std::string_view, urdf_writer &);
 
 }
