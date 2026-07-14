@@ -159,7 +159,8 @@ endif()
 set(MEIOS_CORE_PUGIXML_INSTALLED TRUE PARENT_SCOPE)
 
 meios_add_module(model TYPE INTERFACE ALIASES meios::model)
-meios_add_module(completion TYPE INTERFACE ALIASES meios::completion)
+meios_add_module(completion TYPE INTERFACE ALIASES meios::completion
+    LINK_PUBLIC meios::core meios::model)
 
 # The header modules re-export the diagnostic seam, which lives only in the
 # header-only meios::model; PUBLIC-linking it is a header-visibility edge that adds
@@ -179,4 +180,5 @@ target_include_directories(meios_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-io/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-model/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-urdf/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/meios-bundle/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-bundle/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-completion/include)
