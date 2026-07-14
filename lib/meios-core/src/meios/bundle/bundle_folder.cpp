@@ -63,7 +63,7 @@ asset_manifest bundle_impl(const Robot &robot, source_stack &sources, scanner_re
         package_writer disk(request.root, log);
         out = disk.write(request.bundle_name + ".urdf", buffer.str(), manifest, request.dry_run);
     }
-    if(builder.status() != emit_status::ok)
+    if(out.status == emit_status::ok && builder.status() != emit_status::ok)
         out.status = builder.status();
     return manifest;
 }

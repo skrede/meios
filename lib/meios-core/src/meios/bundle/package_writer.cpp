@@ -25,8 +25,13 @@ bool package_writer::copy_entry(const bundle_entry &entry, bool dry_run)
 {
     const std::optional<std::filesystem::path> dest =
         detail::contained_candidate(m_root, "", entry.dest_relative, m_log.get());
-    if(!dest || dry_run)
-        return dest.has_value();
+    if(!dest)
+        return false;
+    if(dry_run)
+    {
+        std::error_code probe;
+        return std::filesystem::exists(entry.copy_source, probe);
+    }
     std::error_code ec;
     std::filesystem::create_directories(dest->parent_path(), ec);
     std::filesystem::copy_file(entry.copy_source, *dest,

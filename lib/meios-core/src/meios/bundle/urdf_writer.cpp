@@ -9,8 +9,8 @@
 #include <pugixml.hpp>
 
 #include <map>
-#include <string>
 #include <memory>
+#include <string>
 #include <utility>
 
 namespace meios

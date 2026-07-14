@@ -174,6 +174,22 @@ TEST_CASE("the dry-run mutates nothing and returns a manifest equal to the real 
     std::filesystem::remove(src);
 }
 
+TEST_CASE("a dry run whose source is missing reports an io error", "[bundle][pkg]")
+{
+    const std::filesystem::path root = scratch_root("dry_missing");
+    meios::log_sink silent;
+    meios::asset_manifest manifest;
+    manifest.entries.push_back(meios::bundle_entry{
+        "package://rob/meshes/rob/base.stl",
+        root.parent_path() / "does_not_exist.stl", "meshes/rob/base.stl" });
+
+    meios::package_writer writer(root, silent);
+    const meios::emit_result result = writer.write("rob.urdf", "<robot/>", manifest, true);
+
+    REQUIRE(result.status == meios::emit_status::io_error);
+    REQUIRE_FALSE(std::filesystem::exists(root));
+}
+
 TEST_CASE("an unresolvable mesh reference surfaces in the unresolved list", "[bundle][pkg]")
 {
     const std::filesystem::path root = scratch_root("unresolved");

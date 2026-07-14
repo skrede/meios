@@ -7,8 +7,8 @@
 
 #include "meios/diagnostic/log_sink.h"
 
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 #include <cassert>
 #include <utility>

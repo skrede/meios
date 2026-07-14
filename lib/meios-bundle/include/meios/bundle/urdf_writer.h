@@ -11,8 +11,8 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 #include <ostream>
 #include <utility>
