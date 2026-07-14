@@ -7,7 +7,11 @@
 #include "meios/records/robot_info.h"
 
 #include "meios/model/model.h"
+#include "meios/model/topology.h"
 #include "meios/model/structure.h"
+
+#include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/topology_policy.h"
 
 namespace meios
 {
@@ -15,7 +19,7 @@ namespace meios
 class world_recorder
 {
 public:
-    world_recorder() : m_model() {}
+    world_recorder(log_sink &log, topology_policy policy) : m_log(log), m_policy(policy), m_model() {}
 
     void on_robot(const robot_info &robot)
     {
@@ -24,7 +28,7 @@ public:
 
     void on_material(const material<double> &mat)
     {
-        (void)mat;
+        m_model.materials.push_back(mat);
     }
 
     void on_link(const link<double> &node)
@@ -41,6 +45,7 @@ public:
 
     void finish()
     {
+        reconstruct_topology(m_model.links, m_model.joints, m_log, m_policy);
         m_model.kind = m_model.loops.empty() ? structure::tree : structure::closed_chain;
     }
 
@@ -50,6 +55,8 @@ public:
     }
 
 private:
+    log_sink &m_log;
+    topology_policy m_policy;
     model<double> m_model;
 };
 

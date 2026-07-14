@@ -3,6 +3,7 @@
 
 #include "meios/records/link.h"
 #include "meios/records/joint.h"
+#include "meios/records/material.h"
 
 #include "meios/math/rotations.h"
 
@@ -18,6 +19,7 @@ struct tree
     std::string name;
     std::vector<link<Scalar>> links;
     std::vector<joint<Scalar>> joints;
+    std::vector<material<Scalar>> materials;
     std::vector<int> parent_of;
 };
 

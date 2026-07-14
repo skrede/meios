@@ -6,8 +6,10 @@
 #include "meios/records/material.h"
 #include "meios/records/robot_info.h"
 
-#include <string>
-#include <cstddef>
+#include "meios/model/topology.h"
+
+#include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/topology_policy.h"
 
 namespace meios
 {
@@ -24,15 +26,6 @@ struct topology_scalar<Shape<Scalar, Rot>>
     using type = Scalar;
 };
 
-template <typename Links>
-int index_of(const Links &links, const std::string &name)
-{
-    for(std::size_t i = 0; i < links.size(); ++i)
-        if(links[i].name == name)
-            return static_cast<int>(i);
-    return -1;
-}
-
 }
 
 template <typename Topology>
@@ -41,7 +34,7 @@ class pod_recorder
 public:
     using scalar_type = typename detail::topology_scalar<Topology>::type;
 
-    pod_recorder() : m_result() {}
+    pod_recorder(log_sink &log, topology_policy policy) : m_log(log), m_policy(policy), m_result() {}
 
     void on_robot(const robot_info &robot)
     {
@@ -50,7 +43,7 @@ public:
 
     void on_material(const material<scalar_type> &mat)
     {
-        (void)mat;
+        m_result.materials.push_back(mat);
     }
 
     void on_link(const link<scalar_type> &node)
@@ -65,9 +58,8 @@ public:
 
     void finish()
     {
-        m_result.parent_of.assign(m_result.links.size(), -1);
-        for(const auto &edge : m_result.joints)
-            link_parent(edge);
+        m_result.parent_of =
+            reconstruct_topology(m_result.links, m_result.joints, m_log, m_policy).parent_of;
     }
 
     const Topology &result() const
@@ -76,14 +68,8 @@ public:
     }
 
 private:
-    void link_parent(const joint<scalar_type> &edge)
-    {
-        const int child = detail::index_of(m_result.links, edge.child);
-        if(child >= 0)
-            m_result.parent_of[static_cast<std::size_t>(child)] =
-                detail::index_of(m_result.links, edge.parent);
-    }
-
+    log_sink &m_log;
+    topology_policy m_policy;
     Topology m_result;
 };
 

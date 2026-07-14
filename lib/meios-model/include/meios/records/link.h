@@ -6,6 +6,8 @@
 #include "meios/records/extension.h"
 #include "meios/records/inertial.h"
 
+#include "meios/diagnostic/source_location.h"
+
 #include <string>
 #include <vector>
 #include <optional>
@@ -21,6 +23,7 @@ struct link
     std::vector<visual<Scalar>> visuals;
     std::vector<collision<Scalar>> collisions;
     std::vector<extension> extensions;
+    std::optional<source_location> origin_loc;
 };
 
 }

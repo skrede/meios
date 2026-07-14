@@ -20,6 +20,7 @@
 
 #include "meios/model/tree.h"
 #include "meios/model/model.h"
+#include "meios/model/topology.h"
 #include "meios/model/structure.h"
 #include "meios/model/closed_chain.h"
 
@@ -32,5 +33,6 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/topology_policy.h"
 
 #endif

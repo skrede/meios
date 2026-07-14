@@ -5,6 +5,7 @@
 
 #include <string>
 #include <variant>
+#include <optional>
 
 namespace meios
 {
@@ -14,6 +15,7 @@ struct mesh
 {
     std::string filename;
     vector3<Scalar> scale;
+    std::optional<std::string> resolved_path;
 };
 
 template <typename Scalar = double>

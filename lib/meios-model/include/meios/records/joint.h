@@ -4,6 +4,8 @@
 #include "meios/records/extension.h"
 #include "meios/records/joint_extras.h"
 
+#include "meios/diagnostic/source_location.h"
+
 #include "meios/math/vector3.h"
 #include "meios/math/transform.h"
 
@@ -40,6 +42,7 @@ struct joint
     std::optional<calibration<Scalar>> calib;
     bool closes_loop;
     std::vector<extension> extensions;
+    std::optional<source_location> origin_loc;
 };
 
 }
