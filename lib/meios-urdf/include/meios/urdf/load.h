@@ -10,10 +10,13 @@
 
 #include "meios/diagnostic/log_sink.h"
 
+#include <vector>
 #include <filesystem>
 
 namespace meios
 {
+
+class source_stack;
 
 struct load_options
 {
@@ -21,7 +24,8 @@ struct load_options
         : on_missing(missing_asset::warn),
           topology(topology_policy::fail),
           materials(material_policy::warn),
-          strict(strictness::strict)
+          strict(strictness::strict),
+          package_roots()
     {
     }
 
@@ -29,9 +33,14 @@ struct load_options
     topology_policy topology;
     material_policy materials;
     strictness      strict;
+
+    std::vector<std::filesystem::path> package_roots;
 };
 
 model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log);
+
+model<double> load(const std::filesystem::path &path, const load_options &opts,
+                   source_stack &sources, log_sink &log);
 
 model<double> load(const std::filesystem::path &path, const load_options &opts);
 

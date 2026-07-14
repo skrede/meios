@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/budget.h"
+#include "meios/xacro/arg_scan.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/structural.h"
 #include "meios/xacro/substitution.h"

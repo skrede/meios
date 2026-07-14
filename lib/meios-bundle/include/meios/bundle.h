@@ -3,6 +3,7 @@
 
 #include "meios/bundle/result.h"
 #include "meios/bundle/replay.h"
+#include "meios/bundle/flatten.h"
 #include "meios/bundle/manifest.h"
 #include "meios/bundle/urdf_writer.h"
 #include "meios/bundle/package_writer.h"

@@ -7,6 +7,8 @@
 #include "meios/sink/world_recorder.h"
 
 #include "meios/io/source_stack.h"
+#include "meios/io/source_handle.h"
+#include "meios/io/directory_source.h"
 
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
@@ -20,9 +22,12 @@
 #include <pugixml.hpp>
 
 #include <string>
+#include <vector>
 #include <fstream>
 #include <sstream>
+#include <ostream>
 #include <optional>
+#include <iostream>
 #include <filesystem>
 #include <string_view>
 
@@ -93,9 +98,8 @@ std::optional<bool> sniff_robot(std::string_view bytes, const std::filesystem::p
     return declares_xacro(root);
 }
 
-}
-
-model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log)
+model<double> drive_load(const std::filesystem::path &path, const load_options &opts,
+                         source_stack &sources, log_sink &log)
 {
     const std::string bytes = read_file(path);
     world_recorder recorder(log, opts.topology);
@@ -104,7 +108,6 @@ model<double> load(const std::filesystem::path &path, const load_options &opts, 
     if(!expandable)
         return recorder.result();
 
-    source_stack sources;
     core_evaluator eval;
     parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
@@ -112,10 +115,32 @@ model<double> load(const std::filesystem::path &path, const load_options &opts, 
     return recorder.result();
 }
 
+source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_sink &log)
+{
+    source_stack sources;
+    for(const std::filesystem::path &root : roots)
+        sources.push_back(source_handle(directory_source(root, log)));
+    return sources;
+}
+
+}
+
+model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log)
+{
+    source_stack sources = build_sources(opts.package_roots, log);
+    return drive_load(path, opts, sources, log);
+}
+
+model<double> load(const std::filesystem::path &path, const load_options &opts,
+                   source_stack &sources, log_sink &log)
+{
+    return drive_load(path, opts, sources, log);
+}
+
 model<double> load(const std::filesystem::path &path, const load_options &opts)
 {
-    log_sink silent;
-    return load(path, opts, silent);
+    log_sink_s stderr_sink(std::cerr);
+    return load(path, opts, stderr_sink);
 }
 
 }
