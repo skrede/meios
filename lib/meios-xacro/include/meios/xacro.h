@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_concept.h"
 #include "meios/xacro/detail/numeric.h"
 

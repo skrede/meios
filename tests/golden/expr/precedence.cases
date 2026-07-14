@@ -1,0 +1,24 @@
+# expr <TAB> expected canonical output (CPython str()), machine-verified.
+# Exponentiation is right-associative.
+2**3**2	512
+# The unary-minus / power asymmetry: -x**y is -(x**y) but x**-y binds on the right.
+-2**2	-4
+2**-2	0.25
+2**-1	0.5
+# Non-negative integer exponents keep integer typing.
+2**3	8
+# Comparisons chain: a<b<c is (a<b) and (b<c).
+1<2<3	True
+3<2<1	False
+1<=1	True
+2!=3	True
+3>=3	True
+# The ternary sits at the lowest precedence.
+1 if 0 else 2	2
+10 if 1 else 20	10
+# Boolean operators over the numeric subset yield bool.
+True and False	False
+not 0	True
+1<2 or 5<3	True
+# Parentheses regroup.
+(2+3)*4	20

@@ -1,0 +1,20 @@
+# expr <TAB> expected canonical output (CPython str()), machine-verified.
+# True division always yields a float.
+1/2	0.5
+4/2	2.0
+7/2	3.5
+# Integer arithmetic keeps integer typing.
+2+3*4	14
+10-4	6
+6*7	42
+2+2	4
+# Floor division and modulo follow Python sign rules (toward negative infinity).
+7//2	3
+-7//2	-4
+7%3	1
+-7%3	2
+8//3	2
+# A bool promotes to int in arithmetic.
+True+1	2
+True+True	2
+False*5	0

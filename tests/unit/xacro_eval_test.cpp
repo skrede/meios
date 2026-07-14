@@ -5,6 +5,7 @@
 #include <string>
 #include <clocale>
 #include <optional>
+#include <functional>
 #include <string_view>
 
 namespace
@@ -23,7 +24,46 @@ struct not_an_evaluator
     int eval(int) const { return 0; }
 };
 
+std::string eval_str(std::string_view expression, const meios::eval_scope &scope = {})
+{
+    meios::core_evaluator evaluator;
+    meios::log_sink sink;
+    return meios::to_python_str(evaluator.eval(expression, scope, sink));
 }
+
+struct failure
+{
+    bool failed{ false };
+    int diagnostics{ 0 };
+    std::string message{};
+
+    void operator()(meios::level, const std::string &text)
+    {
+        message = text;
+        ++diagnostics;
+    }
+
+    void operator()(meios::level, const meios::source_location &, const std::string &text)
+    {
+        message = text;
+        ++diagnostics;
+    }
+};
+
+failure eval_failure(std::string_view expression)
+{
+    failure state;
+    meios::core_evaluator evaluator;
+    meios::eval_scope scope;
+    meios::log_sink_f sink{ std::ref(state) };
+    evaluator.eval(expression, scope, sink);
+    state.failed = evaluator.failed();
+    return state;
+}
+
+}
+
+static_assert(meios::expression_evaluator<meios::core_evaluator>);
 
 static_assert(meios::expression_evaluator<mock_evaluator>);
 static_assert(!meios::expression_evaluator<not_an_evaluator>);
@@ -118,4 +158,75 @@ TEST_CASE("a type exposing eval(expr, scope, log) satisfies expression_evaluator
     REQUIRE(std::holds_alternative<long long>(evaluator.eval("0", scope, log)));
     STATIC_REQUIRE(meios::expression_evaluator<mock_evaluator>);
     STATIC_REQUIRE_FALSE(meios::expression_evaluator<not_an_evaluator>);
+    STATIC_REQUIRE(meios::expression_evaluator<meios::core_evaluator>);
+}
+
+TEST_CASE("core evaluator reproduces CPython numeric semantics", "[xacro][eval]")
+{
+    REQUIRE(eval_str("1/2") == "0.5");
+    REQUIRE(eval_str("4/2") == "2.0");
+    REQUIRE(eval_str("2+3*4") == "14");
+    REQUIRE(eval_str("-7//2") == "-4");
+    REQUIRE(eval_str("-7%3") == "2");
+    REQUIRE(eval_str("-2**2") == "-4");
+    REQUIRE(eval_str("2**-2") == "0.25");
+    REQUIRE(eval_str("1<2<3") == "True");
+    REQUIRE(eval_str("3<2<1") == "False");
+    REQUIRE(eval_str("1 if 0 else 2") == "2");
+    REQUIRE(eval_str("True and 1<2") == "True");
+    REQUIRE(eval_str("not 0") == "True");
+    REQUIRE(eval_str("(2+3)*4") == "20");
+}
+
+TEST_CASE("core evaluator dispatches the whitelisted math functions", "[xacro][eval]")
+{
+    REQUIRE(eval_str("pi") == "3.141592653589793");
+    REQUIRE(eval_str("sqrt(4)") == "2.0");
+    REQUIRE(eval_str("radians(180)") == "3.141592653589793");
+    REQUIRE(eval_str("degrees(pi)") == "180.0");
+    REQUIRE(eval_str("floor(2.7)") == "2");
+    REQUIRE(eval_str("ceil(2.1)") == "3");
+    REQUIRE(eval_str("abs(-3)") == "3");
+    REQUIRE(eval_str("min(1,2)") == "1");
+    REQUIRE(eval_str("max(1.5,2)") == "2");
+    REQUIRE(eval_str("atan2(0,1)") == "0.0");
+}
+
+TEST_CASE("core evaluator follows CPython result typing", "[xacro][typing]")
+{
+    REQUIRE(eval_str("2+2") == "4");
+    REQUIRE(eval_str("4/2") == "2.0");
+    REQUIRE(eval_str("2**3") == "8");
+    REQUIRE(eval_str("2**-1") == "0.5");
+    REQUIRE(eval_str("True+1") == "2");
+    REQUIRE(eval_str("7//2") == "3");
+    REQUIRE(eval_str("floor(3.0)") == "3");
+    REQUIRE(eval_str("1<2") == "True");
+
+    meios::eval_scope scope;
+    scope.set("radius", meios::value{ 0.2 });
+    REQUIRE(eval_str("radius*2", scope) == "0.4");
+}
+
+TEST_CASE("multi-character operators lex as single tokens through the evaluator", "[xacro][lexer]")
+{
+    REQUIRE(eval_str("2**3**2") == "512");
+    REQUIRE(eval_str("7//2") == "3");
+    REQUIRE(eval_str("1<=2<3") == "True");
+    REQUIRE(eval_str("2!=3") == "True");
+    REQUIRE(eval_str("3>=3") == "True");
+}
+
+TEST_CASE("an unsupported construct loud-fails instead of guessing", "[xacro][eval]")
+{
+    const failure unknown_call = eval_failure("foo(1)");
+    REQUIRE(unknown_call.failed);
+    REQUIRE(unknown_call.diagnostics >= 1);
+
+    const failure list_literal = eval_failure("[1, 2]");
+    REQUIRE(list_literal.failed);
+
+    const failure absent_name = eval_failure("undefined_property");
+    REQUIRE(absent_name.failed);
+    REQUIRE(absent_name.diagnostics >= 1);
 }
