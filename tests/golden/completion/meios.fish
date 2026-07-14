@@ -19,6 +19,7 @@ complete -c meios -n '__fish_seen_subcommand_from bundle' -l name -r -d 'Name of
 complete -c meios -n '__fish_seen_subcommand_from info' -l package-path -r -d 'Additional package search root, repeatable.'
 complete -c meios -n '__fish_seen_subcommand_from info' -l format -r -d 'Output format for the summary.'
 complete -c meios -n '__fish_seen_subcommand_from validate' -l package-path -r -d 'Additional package search root, repeatable.'
+complete -c meios -n '__fish_seen_subcommand_from validate' -l format -r -d 'Output format for the report.'
 complete -c meios -n '__fish_seen_subcommand_from tree' -l package-path -r -d 'Additional package search root, repeatable.'
 complete -c meios -n '__fish_seen_subcommand_from tree' -l dot -d 'Emit Graphviz DOT instead of ASCII.'
 complete -c meios -n '__fish_seen_subcommand_from tree' -l root -r -d 'Render the subtree rooted at this link.'

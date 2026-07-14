@@ -46,7 +46,9 @@ command_spec validate_command()
 {
     return command_spec{ "validate", "validate",
                          "Check the model and report diagnostics by class.",
-                         { package_path_flag() }, { model_positional() } };
+                         { package_path_flag(),
+                           { "--format", "Output format for the report.", flag_kind::value, false } },
+                         { model_positional() } };
 }
 
 command_spec tree_command()

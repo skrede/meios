@@ -1,0 +1,7 @@
+base_link
+├─ [base_to_torso: fixed] torso
+│  ├─ [torso_to_arm: revolute] arm
+│  │  └─ [arm_to_wheel: continuous] wheel
+│  └─ [torso_to_slider: prismatic] slider
+├─ [base_to_free: floating] free_body
+└─ [base_to_plane: planar] plane_body

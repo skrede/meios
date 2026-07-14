@@ -1,0 +1,15 @@
+digraph robot {
+  "base_link";
+  "torso";
+  "arm";
+  "wheel";
+  "slider";
+  "free_body";
+  "plane_body";
+  "base_link" -> "torso" [label="base_to_torso: fixed", style=dashed];
+  "torso" -> "arm" [label="torso_to_arm: revolute", style=solid];
+  "arm" -> "wheel" [label="arm_to_wheel: continuous", style=solid];
+  "torso" -> "slider" [label="torso_to_slider: prismatic", style=solid];
+  "base_link" -> "free_body" [label="base_to_free: floating", style=dashed];
+  "base_link" -> "plane_body" [label="base_to_plane: planar", style=dashed];
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="hostile_name">
+  <link name="safe"/>
+  <link name="evil&quot;]; system(&#10;)"/>
+
+  <joint name="j" type="fixed">
+    <parent link="safe"/>
+    <child link="evil&quot;]; system(&#10;)"/>
+  </joint>
+</robot>

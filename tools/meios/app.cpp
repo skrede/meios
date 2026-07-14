@@ -1,4 +1,5 @@
 #include "app.h"
+#include "complete.h"
 #include "verbs/verbs.h"
 
 #include "meios/completion/command_table.h"
@@ -14,6 +15,7 @@
 #include <cstddef>
 #include <utility>
 #include <iostream>
+#include <string_view>
 
 namespace meios::cli
 {
@@ -28,6 +30,8 @@ int run_verb(const verb_context &ctx)
     if(ctx.id == "deps")       return run_deps(ctx);
     if(ctx.id == "info")       return run_info(ctx);
     if(ctx.id == "resolve")    return run_resolve(ctx);
+    if(ctx.id == "validate")   return run_validate(ctx);
+    if(ctx.id == "tree")       return run_tree(ctx);
     if(ctx.id == "args")       return run_args(ctx);
     if(ctx.id == "completion") return run_completion(ctx);
     log_sink_s log(std::cerr);
@@ -73,6 +77,9 @@ void build(CLI::App &app, std::deque<verb_context> &contexts, int &exit_code)
 
 int run(int argc, char **argv)
 {
+    if(argc >= 2 && std::string_view(argv[1]) == "__complete")
+        return run_complete(std::vector<std::string>(argv + 2, argv + argc));
+
     CLI::App app{ "meios URDF/xacro command-line frontend", "meios" };
     std::deque<verb_context> contexts;
     int exit_code = 0;

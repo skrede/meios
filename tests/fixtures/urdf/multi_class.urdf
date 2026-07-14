@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="multi_class">
+  <link name="root_a"/>
+  <link name="root_b"/>
+  <link name="arm"/>
+
+  <joint name="a_to_arm" type="revolute">
+    <parent link="root_a"/>
+    <child link="arm"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+</robot>

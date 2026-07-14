@@ -56,6 +56,10 @@ int run_info(const verb_context &ctx);
 
 int run_resolve(const verb_context &ctx);
 
+int run_validate(const verb_context &ctx);
+
+int run_tree(const verb_context &ctx);
+
 int run_args(const verb_context &ctx);
 
 int run_completion(const verb_context &ctx);

@@ -38,7 +38,7 @@ _meios_flags() {
         flatten) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
         bundle) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--name[Name of the emitted bundle package.]' ;;
         info) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the summary.]' ;;
-        validate) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
+        validate) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the report.]' ;;
         tree) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--dot[Emit Graphviz DOT instead of ASCII.]' '--root[Render the subtree rooted at this link.]' ;;
         deps) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
         args) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;

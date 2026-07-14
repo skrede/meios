@@ -43,7 +43,7 @@ _meios_flags() {
         flatten) printf '%s\n' "--package-path" ;;
         bundle) printf '%s\n' "--package-path --name" ;;
         info) printf '%s\n' "--package-path --format" ;;
-        validate) printf '%s\n' "--package-path" ;;
+        validate) printf '%s\n' "--package-path --format" ;;
         tree) printf '%s\n' "--package-path --dot --root" ;;
         deps) printf '%s\n' "--package-path" ;;
         args) printf '%s\n' "--package-path" ;;
