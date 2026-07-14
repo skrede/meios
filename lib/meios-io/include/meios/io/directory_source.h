@@ -1,0 +1,51 @@
+#ifndef HPP_GUARD_MEIOS_IO_DIRECTORY_SOURCE_H
+#define HPP_GUARD_MEIOS_IO_DIRECTORY_SOURCE_H
+
+#include "meios/io/package_source.h"
+#include "meios/io/resolved_asset.h"
+
+#include "meios/diagnostic/log_sink.h"
+
+#include <functional>
+#include <optional>
+#include <filesystem>
+#include <string_view>
+
+namespace meios
+{
+
+namespace detail
+{
+
+// Joins root/package/relative, canonicalizes it, and returns the candidate only
+// when it stays within the canonicalized root; an escaping candidate is rejected
+// with a loud diagnostic and yields nullopt. Shared by the path-backed sources.
+std::optional<std::filesystem::path> contained_candidate(
+    const std::filesystem::path &root, std::string_view package,
+    std::string_view relative, log_sink &log);
+
+}
+
+// Resolves package://<pkg>/<rel> against a single configured root directory,
+// returning a real filesystem path (so it satisfies provides_path). A traversal
+// candidate that escapes the root is rejected, never returned.
+class directory_source
+{
+public:
+    directory_source(std::filesystem::path root, log_sink &log);
+
+    capability_descriptor capabilities() const;
+
+    std::optional<resolved_asset> locate(std::string_view package, std::string_view relative);
+
+    std::optional<std::filesystem::path> path_of(std::string_view package,
+                                                 std::string_view relative) const;
+
+private:
+    std::filesystem::path m_root;
+    std::reference_wrapper<log_sink> m_log;
+};
+
+}
+
+#endif
