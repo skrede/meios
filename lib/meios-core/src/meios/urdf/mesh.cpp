@@ -93,14 +93,14 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
 geometry<double> read_geometry(pugi::xml_node node, parse_context &ctx, const source_location &loc)
 {
     geometry<double> out{};
-    if(pugi::xml_node shape = node.child("box"))
-        out.shape = box<double>{ read_vec3(shape.attribute("size").value(), ctx, loc, "size") };
-    else if(pugi::xml_node shape = node.child("cylinder"))
-        out.shape = read_cylinder(shape, ctx, loc);
-    else if(pugi::xml_node shape = node.child("sphere"))
-        out.shape = read_sphere(shape, ctx, loc);
-    else if(pugi::xml_node shape = node.child("mesh"))
-        out.shape = read_mesh(shape, ctx, loc);
+    if(pugi::xml_node box_node = node.child("box"))
+        out.shape = box<double>{ read_vec3(box_node.attribute("size").value(), ctx, loc, "size") };
+    else if(pugi::xml_node cylinder_node = node.child("cylinder"))
+        out.shape = read_cylinder(cylinder_node, ctx, loc);
+    else if(pugi::xml_node sphere_node = node.child("sphere"))
+        out.shape = read_sphere(sphere_node, ctx, loc);
+    else if(pugi::xml_node mesh_node = node.child("mesh"))
+        out.shape = read_mesh(mesh_node, ctx, loc);
     return out;
 }
 

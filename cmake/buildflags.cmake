@@ -6,7 +6,11 @@ set(MEIOS_WARNING_FLAGS
     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
         -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
         -Wold-style-cast -Wcast-align -Woverloaded-virtual -Wnon-virtual-dtor
-        -Wdouble-promotion -Wimplicit-fallthrough -Wformat=2>
+        -Wdouble-promotion -Wimplicit-fallthrough -Wformat=2
+        # gcc 16 fires -Wmissing-field-initializers on designated initializers
+        # that omit defaulted members; the codebase's designated-init POD idiom
+        # relies on that, so this -Wextra sub-warning is opted out deliberately.
+        -Wno-missing-field-initializers>
 )
 
 # The only switch that injects -Werror. Default is meios_IS_TOP_LEVEL: ON for
