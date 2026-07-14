@@ -46,14 +46,14 @@ void append_geometry(pugi::xml_node parent, const geometry<double> &geom,
                      std::vector<reference_record> &refs)
 {
     pugi::xml_node node = parent.append_child("geometry");
-    if(const mesh<double> *shape = std::get_if<mesh<double>>(&geom.shape))
-        append_mesh(node, *shape, refs);
-    else if(const box<double> *shape = std::get_if<box<double>>(&geom.shape))
-        append_box(node, *shape);
-    else if(const cylinder<double> *shape = std::get_if<cylinder<double>>(&geom.shape))
-        append_cylinder(node, *shape);
-    else if(const sphere<double> *shape = std::get_if<sphere<double>>(&geom.shape))
-        append_sphere(node, *shape);
+    if(const mesh<double> *mesh_shape = std::get_if<mesh<double>>(&geom.shape))
+        append_mesh(node, *mesh_shape, refs);
+    else if(const box<double> *box_shape = std::get_if<box<double>>(&geom.shape))
+        append_box(node, *box_shape);
+    else if(const cylinder<double> *cylinder_shape = std::get_if<cylinder<double>>(&geom.shape))
+        append_cylinder(node, *cylinder_shape);
+    else if(const sphere<double> *sphere_shape = std::get_if<sphere<double>>(&geom.shape))
+        append_sphere(node, *sphere_shape);
 }
 
 }
