@@ -96,6 +96,9 @@ validation_report assemble_report(bool xacro, bool expand_ok, const topology_res
                                   recording_sink &topology, recording_sink &schema)
 {
     validation_report report;
+    // Class 1 covers a document that (or whose immediate asset references) cannot be
+    // loaded, not only XML malformedness: the same well-formedness sink records both
+    // strictness errors and a source's containment rejection of a root-escaping ref.
     if(well_formed.had_error() && (!xacro || expand_ok))
         add(report, 1, "malformed", well_formed.messages());
     if(xacro && !expand_ok)
