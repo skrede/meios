@@ -62,7 +62,8 @@ bool declares_xacro(pugi::xml_node root)
 }
 
 void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
-           parse_context &ctx, world_recorder &recorder)
+           eval_policy policy, evaluator_handle *backend, parse_context &ctx,
+           world_recorder &recorder)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
@@ -71,7 +72,8 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
         return;
     }
     eval_scope scope;
-    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{}, ctx.log);
+    const expansion expanded =
+        expand(bytes, scope, ctx.sources, path, expansion_limits{}, policy, backend, ctx.log);
     parser.parse(expanded.document, recorder);
 }
 
@@ -111,7 +113,7 @@ model<double> drive_load(const std::filesystem::path &path, const load_options &
     core_evaluator eval;
     parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(bytes, path, *expandable, ctx, recorder);
+    drive(bytes, path, *expandable, opts.eval, opts.backend, ctx, recorder);
     return recorder.result();
 }
 
