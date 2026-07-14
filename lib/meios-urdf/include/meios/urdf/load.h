@@ -8,6 +8,8 @@
 
 #include "meios/model/model.h"
 
+#include "meios/xacro/eval_policy.h"
+
 #include "meios/diagnostic/log_sink.h"
 
 #include <vector>
@@ -17,6 +19,7 @@ namespace meios
 {
 
 class source_stack;
+class evaluator_handle;
 
 struct load_options
 {
@@ -25,6 +28,8 @@ struct load_options
           topology(topology_policy::fail),
           materials(material_policy::warn),
           strict(strictness::strict),
+          eval(eval_policy::fail),
+          backend(nullptr),
           package_roots()
     {
     }
@@ -33,6 +38,9 @@ struct load_options
     topology_policy topology;
     material_policy materials;
     strictness      strict;
+    eval_policy     eval;
+
+    evaluator_handle *backend;
 
     std::vector<std::filesystem::path> package_roots;
 };
