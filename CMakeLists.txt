@@ -19,6 +19,7 @@ option(MEIOS_COVERAGE "Instrument first-party targets for coverage (gcc/clang)" 
 option(MEIOS_BUILD_SCAN_GLTF "Build meios::scan-gltf (nlohmann/json)" OFF)
 option(MEIOS_BUILD_ARCHIVE_ZIP "Build meios::archive-zip (miniz)" OFF)
 option(MEIOS_BUILD_EVAL_PYTHON "Build meios::eval-python (pybind11 + found Python3)" OFF)
+option(MEIOS_BUILD_TOOLS "Build the meios CLI" OFF)
 
 # Install is gated off only for a backend whose link edge cannot be re-resolved by
 # the config package (pybind11-embed); extend the condition as such backends land.
@@ -65,6 +66,12 @@ if(MEIOS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfigVersion.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
+endif()
+
+# Added before the tests block so the meios_cli support lib is a live TARGET when
+# the CLI test stems configure. The EXISTS guard keeps a pre-tools tree valid.
+if(MEIOS_BUILD_TOOLS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tools/CMakeLists.txt)
+    add_subdirectory(tools)
 endif()
 
 if(MEIOS_BUILD_TESTS OR MEIOS_BUILD_PROPERTY_TESTS OR MEIOS_BUILD_EXAMPLES)
