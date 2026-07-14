@@ -59,6 +59,17 @@ std::filesystem::path source_root_of(const std::filesystem::path &resolved, std:
     return root;
 }
 
+std::string compose_child_reference(std::string_view ref, std::string_view pkg,
+                                    std::string_view rel_dir)
+{
+    if(ref.starts_with("package://"))
+        return std::string(ref);
+    std::string uri = "package://" + std::string(pkg) + '/';
+    if(!rel_dir.empty())
+        uri += std::string(rel_dir) + '/';
+    return uri + std::string(ref);
+}
+
 }
 
 namespace meios
@@ -124,7 +135,8 @@ void manifest_builder::record(bool is_texture, const std::string &pkg, const std
     m_rewrites[original] = uri;
     if(!m_seen.insert(source.generic_string()).second)
         return;
-    m_manifest.entries.push_back(bundle_entry{ uri, source, dest });
+    const std::string rel_dir = std::filesystem::path(rel).parent_path().generic_string();
+    m_manifest.entries.push_back(bundle_entry{ uri, source, dest, pkg, rel_dir });
 }
 
 void manifest_builder::add_reference(const reference_record &ref)

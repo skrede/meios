@@ -192,6 +192,25 @@ TEST_CASE("the closure re-resolves a scanner-discovered ref into the manifest", 
     REQUIRE(manifest.entries[1].dest_relative == "meshes/ur5/materials/wood.mtl");
 }
 
+TEST_CASE("the closure re-anchors a bare relative scanner ref to the entry's package", "[bundle][closure]")
+{
+    fake_source src;
+    src.table["ur5/meshes/material.mtl"] = "/abs/ur5/meshes/material.mtl";
+    meios::source_stack sources(std::move(src));
+    meios::log_sink silent;
+    meios::scanner_registry registry;
+    registry.register_scanner("obj", meios::scanner_handle{ obj_scanner{ { "material.mtl" } } });
+
+    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    builder.add_reference(mesh_ref("package://ur5/meshes/base.obj", "/abs/ur5/meshes/base.obj"));
+    builder.close_over(registry);
+
+    const meios::asset_manifest &manifest = builder.manifest();
+    REQUIRE(manifest.entries.size() == 2);
+    REQUIRE(manifest.entries[1].dest_relative == "meshes/ur5/meshes/material.mtl");
+    REQUIRE(manifest.unresolved.empty());
+}
+
 TEST_CASE("a scanner-discovered texture lands under the textures root", "[bundle][closure]")
 {
     fake_source src;

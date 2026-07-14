@@ -43,21 +43,24 @@ bool is_texture_extension(std::string ext)
 namespace meios
 {
 
-void manifest_builder::scan_entry(scanner_registry &registry, std::filesystem::path source)
+void manifest_builder::scan_entry(scanner_registry &registry, bundle_entry entry)
 {
-    resolved_asset asset{ source };
-    const std::vector<std::string> refs = registry.scan(detail::extension_of(source), asset, m_log);
+    resolved_asset asset{ entry.copy_source };
+    const std::vector<std::string> refs =
+        registry.scan(detail::extension_of(entry.copy_source), asset, m_log);
     for(const std::string &ref : refs)
     {
-        const bool is_texture = detail::is_texture_extension(detail::extension_of(ref));
-        add_reference(reference_record{ ref, std::nullopt, is_texture });
+        const std::string child =
+            detail::compose_child_reference(ref, entry.ref_package, entry.ref_dir);
+        const bool is_texture = detail::is_texture_extension(detail::extension_of(child));
+        add_reference(reference_record{ child, std::nullopt, is_texture });
     }
 }
 
 void manifest_builder::close_over(scanner_registry &registry)
 {
     for(std::size_t index = 0; index < m_manifest.entries.size(); ++index)
-        scan_entry(registry, m_manifest.entries[index].copy_source);
+        scan_entry(registry, m_manifest.entries[index]);
 }
 
 }

@@ -28,6 +28,12 @@ std::string layout_dest(bool is_texture, std::string_view pkg_dir, std::string_v
 
 std::string bundle_uri(std::string_view bundle_name, std::string_view dest);
 
+// Re-anchors a scanner-returned ref against the referencing entry's package and
+// directory: a bare "material.mtl" next to package://pkg/dir/base.obj becomes
+// package://pkg/dir/material.mtl, while an explicit package:// ref passes through.
+std::string compose_child_reference(std::string_view ref, std::string_view pkg,
+                                    std::string_view rel_dir);
+
 std::string extension_of(const std::filesystem::path &source);
 
 std::filesystem::path source_root_of(const std::filesystem::path &resolved, std::string_view rel);

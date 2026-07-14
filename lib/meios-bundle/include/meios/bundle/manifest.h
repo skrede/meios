@@ -25,6 +25,8 @@ struct bundle_entry
     std::string rewritten_uri;
     std::filesystem::path copy_source;
     std::string dest_relative;
+    std::string ref_package;
+    std::string ref_dir;
 };
 
 struct asset_manifest
@@ -88,7 +90,7 @@ private:
     void record(bool is_texture, const std::string &pkg, const std::string &rel,
                 const std::filesystem::path &source, const std::string &original);
 
-    void scan_entry(scanner_registry &registry, std::filesystem::path source);
+    void scan_entry(scanner_registry &registry, bundle_entry entry);
 };
 
 }
