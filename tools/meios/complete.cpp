@@ -104,8 +104,15 @@ int emit_args(const std::string &model_path)
 
 }
 
-int run_complete(const std::vector<std::string> &words)
+int run_complete(const std::vector<std::string> &argv)
 {
+    // The emitters pass the current word after a literal `--` boundary (the cobra
+    // convention, quoting-safe); drop that separator so the prior real token drives
+    // classification rather than the `--` itself.
+    std::vector<std::string> words = argv;
+    if(words.size() >= 2 && words[words.size() - 2] == "--")
+        words.erase(words.end() - 2);
+
     if(words.size() < 2)
         return emit({}, directive_default);
 
