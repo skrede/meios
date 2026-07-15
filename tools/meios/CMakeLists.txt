@@ -34,6 +34,14 @@ if(TARGET meios_ros)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_ROS)
 endif()
 
+# The Python evaluator backend links the same way an enrichment scanner does: only
+# when the target is built does the CLI link it and define the guard that lets
+# run_flatten construct a python-backed evaluator_handle for --eval python.
+if(TARGET meios_eval-python)
+    target_link_libraries(meios_cli PRIVATE meios::eval-python)
+    target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_EVAL_PYTHON)
+endif()
+
 add_executable(meios main.cpp)
 meios_enable_coverage(meios)
 meios_warnings(meios)

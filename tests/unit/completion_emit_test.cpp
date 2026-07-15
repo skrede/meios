@@ -63,8 +63,15 @@ TEST_CASE("completion_emit: emitted scripts never eval candidate output", "[comp
     const std::array<std::string, 3> scripts = {
         meios::emit_bash(model), meios::emit_zsh(model), meios::emit_fish(model)
     };
+    // The hazard is the shell eval builtin executing dynamic candidate output, so the
+    // guard targets its invocation forms — eval applied to a command substitution,
+    // variable, string, or subshell — not the letters, which also spell a flag name.
+    const std::array<std::string, 5> invocations = {
+        "eval \"", "eval '", "eval $", "eval `", "eval("
+    };
     for(const std::string &script : scripts)
-        REQUIRE_FALSE(contains(script, "eval"));
+        for(const std::string &form : invocations)
+            REQUIRE_FALSE(contains(script, form));
 }
 
 TEST_CASE("completion_emit: bash expansions are quoted, never bare", "[completion]")

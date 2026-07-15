@@ -35,7 +35,7 @@ _meios_args() {
 }
 _meios_flags() {
     case "$1" in
-        flatten) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
+        flatten) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--eval[Expression evaluator backend: core or python.]' '--eval-policy[Policy for an unsupported expression: fail, warn, or skip.]' ;;
         bundle) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--name[Name of the emitted bundle package.]' ;;
         info) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the summary.]' ;;
         validate) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the report.]' ;;

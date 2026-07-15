@@ -4,6 +4,12 @@
 
 #include "meios/urdf/load.h"
 
+#include "meios/xacro/evaluator_handle.h"
+
+#ifdef MEIOS_CLI_HAS_EVAL_PYTHON
+#include "meios/eval/python_evaluator.h"
+#endif
+
 #include "meios/bundle/flatten.h"
 #include "meios/bundle/manifest.h"
 #include "meios/bundle/package_writer.h"
@@ -17,6 +23,7 @@
 #include <vector>
 #include <ostream>
 #include <iostream>
+#include <optional>
 #include <filesystem>
 
 namespace meios::cli
@@ -29,6 +36,51 @@ bool ros_linked()
 #else
     return false;
 #endif
+}
+
+bool eval_python_linked()
+{
+#ifdef MEIOS_CLI_HAS_EVAL_PYTHON
+    return true;
+#else
+    return false;
+#endif
+}
+
+eval_policy eval_policy_of(const verb_context &ctx)
+{
+    const std::map<std::string, std::string>::const_iterator policy =
+        ctx.value_flags.find("--eval-policy");
+    if(policy == ctx.value_flags.end())
+        return eval_policy::fail;
+    if(policy->second == "warn")
+        return eval_policy::warn;
+    if(policy->second == "skip")
+        return eval_policy::skip;
+    return eval_policy::fail;
+}
+
+// Binds a python-backed handle when --eval python is asked for, holding it in the
+// caller's named local so opts.backend never outlives its storage; a request with
+// the backend unlinked fails loudly rather than downgrading to the core evaluator.
+bool select_backend(const verb_context &ctx, load_options &opts,
+                    std::optional<evaluator_handle> &handle, log_sink &log)
+{
+    const std::map<std::string, std::string>::const_iterator eval =
+        ctx.value_flags.find("--eval");
+    if(eval == ctx.value_flags.end() || eval->second != "python")
+        return true;
+    if(!eval_python_linked())
+    {
+        log.log(level::error, "the python evaluator backend is not built into this binary; "
+                              "rebuild with the eval-python enrichment to use --eval python");
+        return false;
+    }
+#ifdef MEIOS_CLI_HAS_EVAL_PYTHON
+    handle.emplace(python_evaluator{});
+    opts.backend = &*handle;
+#endif
+    return true;
 }
 
 bool collect_arg_overrides(const std::vector<std::string> &tokens,
@@ -56,7 +108,10 @@ int run_flatten(const verb_context &ctx)
     counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink))
+    opts.eval = eval_policy_of(ctx);
+    std::optional<evaluator_handle> handle;
+    if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
+       || !select_backend(ctx, opts, handle, log))
         return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
     const model<double> robot = load(positional(ctx, 0), opts, sources, sink);

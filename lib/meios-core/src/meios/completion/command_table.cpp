@@ -12,6 +12,19 @@ flag_spec package_path_flag()
                       "Additional package search root, repeatable.", flag_kind::value, false };
 }
 
+flag_spec eval_backend_flag()
+{
+    return flag_spec{ "--eval",
+                      "Expression evaluator backend: core or python.", flag_kind::value, false };
+}
+
+flag_spec eval_policy_flag()
+{
+    return flag_spec{ "--eval-policy",
+                      "Policy for an unsupported expression: fail, warn, or skip.",
+                      flag_kind::value, false };
+}
+
 positional_spec model_positional()
 {
     return positional_spec{ "model", "Path to the URDF or xacro document.", true };
@@ -27,7 +40,7 @@ command_spec flatten_command()
 {
     return command_spec{ "flatten", "flatten",
                          "Expand xacro and resolve a URDF, printing the flattened document.",
-                         { package_path_flag() },
+                         { package_path_flag(), eval_backend_flag(), eval_policy_flag() },
                          { model_positional(), arg_overrides_positional() } };
 }
 

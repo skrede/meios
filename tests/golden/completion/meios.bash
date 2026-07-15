@@ -40,7 +40,7 @@ _meios() {
 }
 _meios_flags() {
     case "$1" in
-        flatten) printf '%s\n' "--package-path" ;;
+        flatten) printf '%s\n' "--package-path --eval --eval-policy" ;;
         bundle) printf '%s\n' "--package-path --name" ;;
         info) printf '%s\n' "--package-path --format" ;;
         validate) printf '%s\n' "--package-path --format" ;;

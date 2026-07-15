@@ -14,6 +14,8 @@ complete -c meios -n '__fish_use_subcommand' -a 'args' -d 'List the declared arg
 complete -c meios -n '__fish_use_subcommand' -a 'resolve' -d 'Resolve a link or joint to its resolved definition.'
 complete -c meios -n '__fish_use_subcommand' -a 'completion' -d 'Generate a shell completion script.'
 complete -c meios -n '__fish_seen_subcommand_from flatten' -l package-path -r -d 'Additional package search root, repeatable.'
+complete -c meios -n '__fish_seen_subcommand_from flatten' -l eval -r -d 'Expression evaluator backend: core or python.'
+complete -c meios -n '__fish_seen_subcommand_from flatten' -l eval-policy -r -d 'Policy for an unsupported expression: fail, warn, or skip.'
 complete -c meios -n '__fish_seen_subcommand_from bundle' -l package-path -r -d 'Additional package search root, repeatable.'
 complete -c meios -n '__fish_seen_subcommand_from bundle' -l name -r -d 'Name of the emitted bundle package.'
 complete -c meios -n '__fish_seen_subcommand_from info' -l package-path -r -d 'Additional package search root, repeatable.'

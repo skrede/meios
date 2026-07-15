@@ -24,6 +24,11 @@ namespace meios::cli
 // the ros-dependent path when the enrichment was not built in.
 bool ros_linked();
 
+// True only when the meios_cli translation units carry MEIOS_CLI_HAS_EVAL_PYTHON;
+// run_flatten and a test binary read it to decide whether --eval python has a
+// backend to bind or must fail loudly for want of one.
+bool eval_python_linked();
+
 // The parsed argv for one verb, filled generically by the table-driven registration
 // and read by the verb bodies. It carries no CLI11 type, so a verb body is a plain
 // function the tests drive directly without the parser.

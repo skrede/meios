@@ -176,7 +176,7 @@ endforeach()
 # which carries CLI11 PRIVATE. The TARGET guard keeps a MEIOS_BUILD_TOOLS=OFF
 # configure green even once these sources land.
 if(TARGET meios_cli)
-    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift)
+    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift cli_eval_backend)
         set(cli_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
         if(EXISTS ${cli_test_src})
             add_executable(${stem}_test ${cli_test_src})
