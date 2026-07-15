@@ -12,6 +12,10 @@ void ensure_interpreter()
     // extension modules (e.g. NumPy). Process teardown reclaims it.
     static pybind11::scoped_interpreter &guard = *new pybind11::scoped_interpreter();
     (void)guard;
+    // scoped_interpreter leaves the GIL held by the initializing thread; release it
+    // once (also leaked) so any thread's per-call gil_scoped_acquire can take it.
+    static pybind11::gil_scoped_release &released = *new pybind11::gil_scoped_release();
+    (void)released;
 }
 
 }

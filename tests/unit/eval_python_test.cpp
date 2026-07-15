@@ -128,6 +128,13 @@ TEST_CASE("a comprehension evaluates with full python parity", "[eval_python]")
     REQUIRE(*got == "[0, 1, 4, 9]");
 }
 
+TEST_CASE("an arbitrary-precision integer renders its exact CPython decimal", "[eval_python]")
+{
+    const std::optional<std::string> got = evaluate("2**64", meios::eval_scope{});
+    REQUIRE(got);
+    REQUIRE(*got == "18446744073709551616");
+}
+
 TEST_CASE("a seeded numeric property matches core formatting", "[eval_python]")
 {
     meios::eval_scope scope;

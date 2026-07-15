@@ -82,17 +82,17 @@ void seed_scope(py::dict &globals, std::string_view expr, const eval_scope &scop
     }
 }
 
-// bool/int/float route back through the core evaluator's to_python_str so the two
-// paths render identically (True/False, .0-append); str returns verbatim and every
-// other object (list, dict) substitutes as its Python str().
+// bool/float route back through the core evaluator's to_python_str so the two
+// paths render identically (True/False, .0-append); str returns verbatim. int
+// renders via Python's own str() to preserve arbitrary-precision results (e.g.
+// ${2**64}) that overflow long long; bool precedes int because in Python bool is
+// a subtype of int. Every other object (list, dict) substitutes as its Python str().
 std::string format_result(const py::object &result)
 {
     if(py::isinstance<py::str>(result))
         return result.cast<std::string>();
     if(py::isinstance<py::bool_>(result))
         return to_python_str(value{ result.cast<bool>() });
-    if(py::isinstance<py::int_>(result))
-        return to_python_str(value{ result.cast<long long>() });
     if(py::isinstance<py::float_>(result))
         return to_python_str(value{ result.cast<double>() });
     return py::str(result).cast<std::string>();
@@ -104,6 +104,7 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
                                                           const eval_scope &scope, log_sink &log)
 {
     detail::ensure_interpreter();
+    py::gil_scoped_acquire gil;
     try
     {
         py::dict globals;
@@ -118,6 +119,13 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
         m_kind = eval_failure_kind::error;
         log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" raised: "
             + raised.what());
+        return std::nullopt;
+    }
+    catch(const std::exception &raised)
+    {
+        m_kind = eval_failure_kind::error;
+        log.log(level::error, "python evaluation of \"" + std::string(expr)
+            + "\" failed to convert its result: " + raised.what());
         return std::nullopt;
     }
 }
