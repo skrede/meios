@@ -60,8 +60,6 @@ void parse_params(std::string_view spec, macro_def &def)
     }
 }
 
-using saved_binding = std::pair<std::string, std::optional<binding>>;
-
 bool bind_literal(expand_ctx &ctx, const std::string &name, std::string_view raw,
                   const std::filesystem::path &document)
 {
@@ -164,8 +162,10 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
     ctx.blocks.clear();
     bind_blocks(def, call, ctx.blocks);
     ctx.prop_frames.emplace_back();
+    ctx.param_saves.push_back(&saved);
     bool ok = bind_params(ctx, def, call, document, saved)
            && process_children(ctx, def.body, out, document);
+    ctx.param_saves.pop_back();
     revert_prop_frame(ctx);
     restore_params(ctx, saved);
     ctx.blocks = std::move(outer_blocks);

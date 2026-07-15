@@ -27,7 +27,7 @@ namespace detail
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
                        eval_policy policy, evaluator_handle *inject, log_sink &lg)
     : scope(s), sources(src), limits(lim), log(lg), mode(policy), backend(inject), counters(),
-      macros(), blocks(), include_stack(), owned(), prop_frames(), ok(true)
+      macros(), blocks(), include_stack(), owned(), prop_frames(), param_saves(), ok(true)
 {
 }
 
@@ -86,6 +86,19 @@ binding classify(std::string_view text)
     return binding{ std::string(text) };
 }
 
+// The prior an ancestor frame must record is the value it actually holds, which the
+// writing invocation's own parameter binding may be masking in the shared flat scope.
+// When the written name is a parameter of the writing macro, use the outer value that
+// invocation saved on entry instead of the live (masked) lookup.
+std::optional<binding> ancestor_prior(const expand_ctx &ctx, std::string_view name)
+{
+    if(!ctx.param_saves.empty())
+        for(const saved_binding &saved : *ctx.param_saves.back())
+            if(saved.first == name)
+                return saved.second;
+    return ctx.scope.lookup(name);
+}
+
 // scope="parent" records into the caller's frame so an inner write is visible to the
 // immediate caller yet reverted when that caller exits; scope="local" records into the
 // current frame; every other scope (default, global, unknown) records nowhere and so
@@ -105,7 +118,8 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
     for(const std::pair<std::string, std::optional<binding>> &prior : frame)
         if(prior.first == name)
             return;
-    frame.emplace_back(std::string(name), ctx.scope.lookup(name));
+    frame.emplace_back(std::string(name), scope_attr == "parent" ? ancestor_prior(ctx, name)
+                                                                  : ctx.scope.lookup(name));
 }
 
 }

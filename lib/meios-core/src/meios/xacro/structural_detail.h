@@ -44,6 +44,9 @@ struct block_arg
     pugi::xml_node source;
 };
 
+// A macro parameter's outer binding, captured on entry and restored on exit.
+using saved_binding = std::pair<std::string, std::optional<binding>>;
+
 // One macro invocation's record of prior property bindings, reverted when the
 // invocation exits so a scoped write does not leak past its owning frame.
 using prop_frame = std::vector<std::pair<std::string, std::optional<binding>>>;
@@ -69,6 +72,10 @@ struct expand_ctx
     std::vector<std::filesystem::path> include_stack;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<prop_frame> prop_frames;
+    // Parallel to prop_frames: the outer bindings each live invocation masked
+    // with its parameters, so a scope="parent" write can record the value the
+    // ancestor frame actually holds rather than the writing macro's private param.
+    std::vector<const std::vector<saved_binding> *> param_saves;
     bool ok;
 
     bool charge_work();

@@ -81,6 +81,21 @@ const char *default_leaks =
     "<xacro:macro name=\"d\"><xacro:property name=\"z\" value=\"3\"/></xacro:macro>"
     "<xacro:d/><link name=\"d${z}\"/></robot>";
 
+const char *param_parent_collision =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"X\" value=\"doc\"/>"
+    "<xacro:macro name=\"B\" params=\"X:=bparam\">"
+    "<xacro:property name=\"X\" value=\"99\" scope=\"parent\"/></xacro:macro>"
+    "<xacro:macro name=\"A\"><xacro:B/></xacro:macro>"
+    "<xacro:A/><link name=\"l${X}\"/></robot>";
+
+const char *parent_publish =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"pub\" params=\"src:=abc\">"
+    "<xacro:property name=\"dst\" value=\"${src}\" scope=\"parent\"/></xacro:macro>"
+    "<xacro:macro name=\"wrap\"><xacro:pub/><link name=\"w${dst}\"/></xacro:macro>"
+    "<xacro:wrap/></robot>";
+
 }
 
 TEST_CASE("every structural golden expands to its expected URDF", "[xacro][structural][golden]")
@@ -152,4 +167,25 @@ TEST_CASE("a default-scope property set inside a macro persists as before",
     const meios::expansion out = expand_source(default_leaks, silent);
     REQUIRE(out.ok);
     REQUIRE(out.document.find("d3") != std::string::npos);
+}
+
+TEST_CASE("a scope=parent write to a name that is also the writer's parameter never leaks "
+          "the private parameter value into the document scope",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(param_parent_collision, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("ldoc") != std::string::npos);
+    REQUIRE(out.document.find("lbparam") == std::string::npos);
+    REQUIRE(out.document.find("l99") == std::string::npos);
+}
+
+TEST_CASE("a scope=parent write of a parameter value under a distinct name reaches the caller",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(parent_publish, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("wabc") != std::string::npos);
 }
