@@ -3,6 +3,7 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/substitution.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/container_marker.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -22,11 +23,6 @@ namespace meios::detail
 
 namespace
 {
-
-// Mirrors the eval-python container marker byte; stripped at every value->output seam as
-// XML-illegal control-char hygiene so no marker reaches serialized output — core links
-// nothing from eval-python.
-constexpr char container_marker = '\x01';
 
 bool is_true(const value &v)
 {

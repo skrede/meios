@@ -5,6 +5,7 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/container_marker.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -26,10 +27,7 @@ namespace meios
 namespace
 {
 
-// Delimits a container str-ified crossing a xacro:property boundary. XML 1.0 forbids the raw
-// control char (www.w3.org/TR/xml/#charsets), so an author value parsed by pugixml can never
-// bear it — the marker is unforgeable from input.
-constexpr char container_marker = '\x01';
+using detail::container_marker;
 
 // Only a marker-wrapped string is re-parsed with ast.literal_eval and rebound to its real
 // container; any other string is returned verbatim, so a literal-shaped author value like
