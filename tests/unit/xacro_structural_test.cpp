@@ -1,6 +1,7 @@
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
+#include <meios/io/memory_source.h>
 #include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/log_sink.h>
@@ -130,6 +131,30 @@ const char *parent_publish =
     "<xacro:property name=\"dst\" value=\"${src}\" scope=\"parent\"/></xacro:macro>"
     "<xacro:macro name=\"wrap\"><xacro:pub/><link name=\"w${dst}\"/></xacro:macro>"
     "<xacro:wrap/></robot>";
+
+const char *include_property_fixture =
+    "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"p\" value=\"42\"/></robot>";
+
+const char *include_in_macro =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"m\">"
+    "<xacro:include filename=\"$(find pkg)/inc.xacro\"/></xacro:macro>"
+    "<xacro:m/><link name=\"x${p}\"/></robot>";
+
+const char *include_at_top =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:include filename=\"$(find pkg)/inc.xacro\"/>"
+    "<link name=\"x${p}\"/></robot>";
+
+meios::expansion expand_with_include(const char *source, meios::log_sink &log)
+{
+    meios::memory_source parts;
+    parts.add("pkg", "inc.xacro", include_property_fixture);
+    meios::source_stack sources{ std::move(parts) };
+    meios::eval_scope scope;
+    return meios::expand(source, scope, sources, "top.xacro", meios::expansion_limits{}, log);
+}
 
 }
 
@@ -271,4 +296,22 @@ TEST_CASE("a scope=parent write of a parameter value under a distinct name reach
     const meios::expansion out = expand_source(parent_publish, silent);
     REQUIRE(out.ok);
     REQUIRE(out.document.find("wabc") != std::string::npos);
+}
+
+TEST_CASE("an included top-level property is macro-local when the include is nested in a macro body",
+          "[xacro][structural][property][include]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_with_include(include_in_macro, silent);
+    REQUIRE_FALSE(out.ok);
+    REQUIRE(out.document.find("x42") == std::string::npos);
+}
+
+TEST_CASE("an included top-level property persists when the include sits at the document top level",
+          "[xacro][structural][property][include]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_with_include(include_at_top, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("x42") != std::string::npos);
 }
