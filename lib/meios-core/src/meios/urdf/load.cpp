@@ -21,11 +21,13 @@
 
 #include <pugixml.hpp>
 
+#include <map>
 #include <string>
 #include <vector>
 #include <fstream>
 #include <sstream>
 #include <ostream>
+#include <utility>
 #include <optional>
 #include <iostream>
 #include <filesystem>
@@ -63,9 +65,14 @@ bool declares_xacro(pugi::xml_node root)
     return false;
 }
 
+void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string> &args)
+{
+    for(const std::pair<const std::string, std::string> &arg : args)
+        scope.set(arg.first, detail::classify(arg.second));
+}
+
 void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
-           eval_policy policy, evaluator_handle *backend, parse_context &ctx,
-           world_recorder &recorder)
+           const load_options &opts, parse_context &ctx, world_recorder &recorder)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
@@ -74,8 +81,9 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
         return;
     }
     eval_scope scope;
-    const expansion expanded =
-        expand(bytes, scope, ctx.sources, path, expansion_limits{}, policy, backend, ctx.log);
+    seed_caller_args(scope, opts.args);
+    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{},
+                                      opts.eval, opts.backend, ctx.log);
     parser.parse(expanded.document, recorder);
 }
 
@@ -121,7 +129,7 @@ model<double> drive_load(const std::filesystem::path &path, const load_options &
     core_evaluator eval;
     parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(*bytes, path, *expandable, opts.eval, opts.backend, ctx, recorder);
+    drive(*bytes, path, *expandable, opts, ctx, recorder);
     return recorder.result();
 }
 

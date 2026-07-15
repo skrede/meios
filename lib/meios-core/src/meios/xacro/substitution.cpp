@@ -55,6 +55,26 @@ bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t do
     return true;
 }
 
+bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out);
+
+// A `$(...)` command first resolves any `${}`/`$()` in its inner text, so
+// `$(find ${pkg})` dispatches the resolved package name; a `${...}` expression is
+// handed to the evaluator whole. A failed inner scan yields nullopt so the caller's
+// verbatim/leniency handling governs the outcome rather than a mis-dispatch.
+std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std::string_view inner)
+{
+    if(opener == '{')
+    {
+        ctx.last_kind = eval_failure_kind::none;
+        return detail::eval_expr(ctx, inner);
+    }
+    std::string resolved;
+    if(!scan(ctx, inner, resolved))
+        return std::nullopt;
+    ctx.last_kind = eval_failure_kind::none;
+    return detail::dispatch(ctx, resolved);
+}
+
 bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
                  std::string &out, std::size_t &cursor)
 {
@@ -64,9 +84,7 @@ bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dolla
     if(close == std::string_view::npos)
         return fail_unterminated(ctx, opener, dollar);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
-    ctx.last_kind = eval_failure_kind::none;
-    std::optional<std::string> result =
-        opener == '{' ? detail::eval_expr(ctx, inner) : detail::dispatch(ctx, inner);
+    std::optional<std::string> result = resolve_span(ctx, opener, inner);
     if(result)
     {
         out.append(*result);

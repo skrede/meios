@@ -32,6 +32,7 @@ struct verb_context
     std::string id;
     std::vector<std::string> positionals;
     std::vector<std::string> package_paths;
+    std::vector<std::string> arg_overrides;
     std::map<std::string, std::string> value_flags;
     std::map<std::string, bool> bool_flags;
 };

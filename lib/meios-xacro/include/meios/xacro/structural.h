@@ -42,6 +42,15 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
 // insignificant whitespace) so a golden comparison ignores trivial formatting.
 std::string canonical_xml(std::string_view xml);
 
+namespace detail
+{
+
+// Parses a raw argument or property string into a numeric binding when it reads as
+// an integer or a real, otherwise keeps it as a string.
+binding classify(std::string_view text);
+
+}
+
 }
 
 #endif

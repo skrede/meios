@@ -2,6 +2,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/substitution.h"
 
 #include "meios/io/materialize.h"
 #include "meios/io/source_stack.h"
@@ -79,7 +80,13 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
     if(bound)
         return binding_str(*bound);
     if(!parts.second.empty())
-        return std::string(parts.second);
+    {
+        substitution resolved = substitute(parts.second, ctx.scope, ctx.sources, ctx.document,
+                                           ctx.mode, ctx.backend, ctx.log);
+        if(!resolved.ok)
+            return std::nullopt;
+        return resolved.text;
+    }
     return fail(ctx, "$(arg " + std::string(parts.first) + ") is unset and has no default");
 }
 

@@ -67,6 +67,20 @@ TEST_CASE("cli_verbs: --package-path binds one path and keeps the model position
     REQUIRE(out.str().find("<robot") != std::string::npos);
 }
 
+TEST_CASE("cli_verbs: a trailing key:=value overrides a declared arg default")
+{
+    const std::string model = fixture("args_doc.xacro");
+    std::vector<std::string> args = { "meios", "flatten", model, "prefix:=front" };
+    std::vector<char *> argv;
+    for(std::string &arg : args)
+        argv.push_back(arg.data());
+
+    cout_capture out;
+    const int code = cli::run(static_cast<int>(argv.size()), argv.data());
+    REQUIRE(code == 0);
+    REQUIRE(out.str().find("frontbase_link") != std::string::npos);
+}
+
 TEST_CASE("cli_verbs: flatten prints a resolved robot document")
 {
     verb_context ctx;

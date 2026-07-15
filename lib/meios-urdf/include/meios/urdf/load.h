@@ -12,6 +12,8 @@
 
 #include "meios/diagnostic/log_sink.h"
 
+#include <map>
+#include <string>
 #include <vector>
 #include <filesystem>
 
@@ -30,7 +32,8 @@ struct load_options
           strict(strictness::strict),
           eval(eval_policy::fail),
           backend(nullptr),
-          package_roots()
+          package_roots(),
+          args()
     {
     }
 
@@ -43,6 +46,11 @@ struct load_options
     evaluator_handle *backend;
 
     std::vector<std::filesystem::path> package_roots;
+
+    // Caller overrides seeded into the evaluation scope before expansion; because
+    // the declared-default seed is seed-if-absent, a name set here wins over the
+    // document's <xacro:arg> default.
+    std::map<std::string, std::string> args;
 };
 
 model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log);

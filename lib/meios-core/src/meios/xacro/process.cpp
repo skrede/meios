@@ -43,14 +43,21 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
 
 // A declared default seeds the scope only when the name is still unbound, so a
 // caller override or an earlier binding wins; the declaration itself emits nothing.
-bool declare_arg(expand_ctx &ctx, pugi::xml_node in)
+// The default is resolved through substitution first, so a nested
+// $(find)/$(arg)/${} default becomes real text rather than a raw literal.
+bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     std::string_view name = in.attribute("name").value();
     if(name.empty())
         return fail(ctx, "<xacro:arg> requires a name attribute");
     pugi::xml_attribute fallback = in.attribute("default");
-    if(fallback && !ctx.scope.contains(name))
-        ctx.scope.set(name, classify(fallback.value()));
+    if(!fallback || ctx.scope.contains(name))
+        return true;
+    bool ok = true;
+    std::string resolved = substitute_attr(ctx, fallback.value(), document, ok);
+    if(!ok)
+        return false;
+    ctx.scope.set(name, classify(resolved));
     return true;
 }
 
@@ -109,7 +116,7 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(name == "xacro:macro")
         return (define_macro(ctx, in), true);
     if(name == "xacro:arg")
-        return declare_arg(ctx, in);
+        return declare_arg(ctx, in, document);
     if(name == "xacro:include")
         return expand_include(ctx, in, out, document);
     if(name == "xacro:if" || name == "xacro:unless")

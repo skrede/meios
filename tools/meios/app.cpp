@@ -56,7 +56,13 @@ void add_positionals(CLI::App &sub, const command_spec &spec, verb_context &ctx)
 {
     ctx.positionals.resize(spec.positionals.size());
     for(std::size_t i = 0; i < spec.positionals.size(); ++i)
-        sub.add_option(spec.positionals[i].name, ctx.positionals[i], spec.positionals[i].description);
+    {
+        const positional_spec &pos = spec.positionals[i];
+        if(pos.variadic)
+            sub.add_option(pos.name, ctx.arg_overrides, pos.description);
+        else
+            sub.add_option(pos.name, ctx.positionals[i], pos.description);
+    }
 }
 
 void build(CLI::App &app, std::deque<verb_context> &contexts, int &exit_code)

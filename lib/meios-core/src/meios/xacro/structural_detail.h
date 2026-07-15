@@ -69,8 +69,6 @@ struct expand_ctx
     pugi::xml_document &park();
 };
 
-binding classify(std::string_view text);
-
 bool fail(expand_ctx &ctx, const std::string &message);
 
 std::string substitute_attr(expand_ctx &ctx, std::string_view raw,

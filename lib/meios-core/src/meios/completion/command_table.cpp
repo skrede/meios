@@ -17,11 +17,18 @@ positional_spec model_positional()
     return positional_spec{ "model", "Path to the URDF or xacro document.", true };
 }
 
+positional_spec arg_overrides_positional()
+{
+    return positional_spec{ "arg", "Argument override in key:=value form, repeatable.",
+                            false, true };
+}
+
 command_spec flatten_command()
 {
     return command_spec{ "flatten", "flatten",
                          "Expand xacro and resolve a URDF, printing the flattened document.",
-                         { package_path_flag() }, { model_positional() } };
+                         { package_path_flag() },
+                         { model_positional(), arg_overrides_positional() } };
 }
 
 command_spec bundle_command()

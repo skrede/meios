@@ -89,10 +89,18 @@ binding classify(std::string_view text)
 namespace
 {
 
+bool has_substitution(std::string_view text)
+{
+    return text.find("$(") != std::string_view::npos
+        || text.find("${") != std::string_view::npos;
+}
+
 // The main pass is single-forward, so a `$(arg x)` used above its own
 // `<xacro:arg>` declaration would resolve before the default is seen. A pre-pass
-// over the already-materialized tree seeds every declared default (raw, unbound
-// names only) so use-before-declaration resolves the way real xacro does.
+// over the already-materialized tree seeds every declared literal default (unbound
+// names only) so use-before-declaration resolves the way real xacro does. A default
+// carrying a nested substitution is left for declare_arg to resolve at its
+// declaration, where the sources and document needed to substitute it are in hand.
 void seed_declared_args(eval_scope &scope, pugi::xml_node node)
 {
     for(pugi::xml_node child : node.children())
@@ -103,7 +111,8 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
         {
             pugi::xml_attribute name = child.attribute("name");
             pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !scope.contains(name.value()))
+            if(name && fallback && !scope.contains(name.value())
+               && !has_substitution(fallback.value()))
                 scope.set(name.value(), detail::classify(fallback.value()));
         }
         seed_declared_args(scope, child);

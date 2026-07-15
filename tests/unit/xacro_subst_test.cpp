@@ -143,6 +143,15 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
+    SECTION("$(find ${pkg}) resolves the inner expression before dispatch")
+    {
+        scope.set("pkgname", meios::binding{ std::string("pkg") });
+        meios::substitution out =
+            meios::substitute("$(find ${pkgname})/x.stl", scope, sources, document, log);
+        REQUIRE(out.ok);
+        REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
+    }
+
     SECTION("$(find) materializes a bytes-only hit to a path and logs it")
     {
         meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);

@@ -14,6 +14,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 #include <ostream>
 #include <iostream>
 #include <filesystem>
@@ -30,12 +31,25 @@ bool ros_linked()
 #endif
 }
 
+void collect_arg_overrides(const std::vector<std::string> &tokens,
+                           std::map<std::string, std::string> &args)
+{
+    for(const std::string &token : tokens)
+    {
+        const std::string::size_type split = token.find(":=");
+        if(split == std::string::npos)
+            continue;
+        args[token.substr(0, split)] = token.substr(split + 2);
+    }
+}
+
 int run_flatten(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
+    collect_arg_overrides(ctx.arg_overrides, opts.args);
     source_stack sources = build_sources(opts.package_roots, sink);
     const model<double> robot = load(positional(ctx, 0), opts, sources, sink);
     if(sink.errors() != 0)

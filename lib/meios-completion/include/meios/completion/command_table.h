@@ -19,6 +19,8 @@ struct positional_spec
     std::string description;
     // A dynamic position is enumerated live by `meios __complete`, not from this table.
     bool dynamic;
+    // A variadic position greedily collects every remaining trailing token.
+    bool variadic;
 };
 
 struct flag_spec
