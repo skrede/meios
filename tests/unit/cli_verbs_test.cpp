@@ -204,6 +204,44 @@ TEST_CASE("cli_verbs: resolve locates a reference through a package root")
     REQUIRE(printed.find("x.stl") != std::string::npos);
 }
 
+TEST_CASE("cli_verbs: flatten resolves a nested folder!=name package through the ros layer")
+{
+    if(!cli::ros_linked())
+    {
+        SUCCEED("meios::ros not linked; the ros resolution layer is absent");
+        return;
+    }
+
+    const std::filesystem::path root =
+        std::filesystem::temp_directory_path() / "meios_cli_ros_flatten";
+    std::filesystem::remove_all(root);
+    const std::filesystem::path pkg = root / "deep" / "nested_dir";
+    std::filesystem::create_directories(pkg);
+    std::ofstream(pkg / "package.xml") << "<package><name>rospkg</name></package>";
+    std::ofstream(pkg / "parts.xacro")
+        << "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\"><link name=\"arm\"/>"
+           "<joint name=\"j\" type=\"fixed\"><parent link=\"base\"/><child link=\"arm\"/></joint>"
+           "</robot>";
+    const std::filesystem::path top = root / "top.urdf.xacro";
+    std::ofstream(top) << "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+                          "<xacro:include filename=\"$(find rospkg)/parts.xacro\"/>"
+                          "<link name=\"base\"/></robot>";
+
+    verb_context ctx;
+    ctx.id = "flatten";
+    ctx.positionals = { top.string() };
+    ctx.package_paths = { root.string() };
+
+    cout_capture out;
+    const int code = cli::run_flatten(ctx);
+    const std::string printed = out.str();
+    std::filesystem::remove_all(root);
+
+    REQUIRE(code == 0);
+    REQUIRE(printed.find("<robot") != std::string::npos);
+    REQUIRE(printed.find("arm") != std::string::npos);
+}
+
 TEST_CASE("cli_verbs: completion bash equals the golden and calls __complete")
 {
     verb_context ctx;

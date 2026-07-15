@@ -134,6 +134,22 @@ TEST_CASE("ROS1 crawl names packages from the manifest and skips CATKIN_IGNORE",
     REQUIRE(source.locate("gripper_pkg", "meshes/g.stl").has_value());
 }
 
+TEST_CASE("a deeply nested package whose folder differs from its manifest name resolves", "[ros]")
+{
+    temp_tree tree;
+    write_file(tree.root / "a" / "b" / "arm_description_dir" / "package.xml",
+        "<package><name>arm_description</name></package>");
+    write_file(tree.root / "a" / "b" / "arm_description_dir" / "meshes" / "x.stl", "solid\n");
+
+    std::vector<std::pair<meios::level, std::string>> log_entries;
+    meios::log_sink_f log{ capture{ log_entries } };
+    meios::ros_package_source source({ tree.root }, {}, log);
+
+    REQUIRE(has_package(source.packages(), "arm_description"));
+    REQUIRE(source.locate("arm_description", "meshes/x.stl").has_value());
+    REQUIRE(source.path_of("arm_description", "").has_value());
+}
+
 TEST_CASE("stack order encodes explicit-first precedence and shadows lower layers", "[ros]")
 {
     temp_tree explicit_tree;

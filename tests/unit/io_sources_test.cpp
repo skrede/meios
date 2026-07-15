@@ -138,6 +138,38 @@ TEST_CASE("directory_source rejects a traversal escape with a loud diagnostic",
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("directory_source accepts a package reached through an in-root symlink",
+          "[io][sources][symlink]")
+{
+    std::filesystem::path parent = fresh_dir();
+    std::filesystem::path root = parent / "ws";
+    std::filesystem::path outside = parent / "src_pkg";
+    std::filesystem::create_directories(root);
+    std::filesystem::create_directories(outside / "meshes");
+    std::ofstream(outside / "meshes" / "x.stl") << "mesh-bytes";
+
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(outside, root / "linked_pkg", ec);
+    if(ec)
+    {
+        std::filesystem::remove_all(parent);
+        SUCCEED("platform cannot create a directory symlink; skipping");
+        return;
+    }
+
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+    meios::directory_source source{ root, seam };
+
+    REQUIRE(source.locate("linked_pkg", "meshes/x.stl").has_value());
+    REQUIRE(source.path_of("linked_pkg", "meshes/x.stl").has_value());
+    REQUIRE_FALSE(source.locate("linked_pkg", "../../etc/passwd").has_value());
+    REQUIRE(count_level(events, meios::level::error) == 1);
+
+    std::filesystem::remove_all(parent);
+}
+
 TEST_CASE("bundle_source resolves in-root and rejects escape like directory_source",
           "[io][sources][bundle]")
 {

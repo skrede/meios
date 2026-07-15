@@ -21,13 +21,23 @@
 namespace meios::cli
 {
 
+bool ros_linked()
+{
+#ifdef MEIOS_CLI_HAS_ROS
+    return true;
+#else
+    return false;
+#endif
+}
+
 int run_flatten(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    const model<double> robot = load(positional(ctx, 0), opts, sink);
+    source_stack sources = build_sources(opts.package_roots, sink);
+    const model<double> robot = load(positional(ctx, 0), opts, sources, sink);
     if(sink.errors() != 0)
         return 1;
     const emit_result result = flatten(robot, std::cout, log);

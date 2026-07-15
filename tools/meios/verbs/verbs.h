@@ -5,6 +5,10 @@
 #include "meios/io/source_handle.h"
 #include "meios/io/directory_source.h"
 
+#ifdef MEIOS_CLI_HAS_ROS
+#include "meios/ros/ros_package_source.h"
+#endif
+
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
@@ -14,6 +18,11 @@
 
 namespace meios::cli
 {
+
+// True only in the meios_cli translation units, which alone carry the
+// MEIOS_CLI_HAS_ROS guard; a test binary links the archive and reads this to skip
+// the ros-dependent path when the enrichment was not built in.
+bool ros_linked();
 
 // The parsed argv for one verb, filled generically by the table-driven registration
 // and read by the verb bodies. It carries no CLI11 type, so a verb body is a plain
@@ -37,6 +46,14 @@ inline source_stack build_sources(const std::vector<std::filesystem::path> &root
     source_stack sources;
     for(const std::filesystem::path &root : roots)
         sources.push_back(source_handle(directory_source(root, log)));
+#ifdef MEIOS_CLI_HAS_ROS
+    // Explicit --package-path roots keep highest precedence as literal directory
+    // sources; the ros layers follow, resolving by package.xml <name> across a
+    // recursive crawl of those roots, then the ROS2 ament index and ROS1
+    // ROS_PACKAGE_PATH taken from the environment.
+    sources.push_back(source_handle(ros_package_source(roots, {}, log)));
+    sources.push_back(source_handle(ros_package_source::from_environment(log)));
+#endif
     return sources;
 }
 

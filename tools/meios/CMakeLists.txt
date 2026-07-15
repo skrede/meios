@@ -26,6 +26,14 @@ foreach(scan IN ITEMS obj collada stl gltf)
     endif()
 endforeach()
 
+# ROS package resolution composes as an ordinary source layer, gated the same way
+# a scanner is: only when the enrichment target is built does the CLI link it and
+# define the guard that folds a ros_package_source into build_sources.
+if(TARGET meios_ros)
+    target_link_libraries(meios_cli PRIVATE meios::ros)
+    target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_ROS)
+endif()
+
 add_executable(meios main.cpp)
 meios_enable_coverage(meios)
 meios_warnings(meios)
