@@ -49,7 +49,7 @@ std::optional<std::string> extract_glb_json(std::string_view bytes, log_sink &lo
         return {};
     }
     const std::uint32_t json_len = read_u32(bytes, 12);
-    if(read_u32(bytes, 16) != chunk_json || 20u + json_len > bytes.size())
+    if(read_u32(bytes, 16) != chunk_json || std::uint64_t{ 20 } + json_len > bytes.size())
     {
         log.log(level::error, "glb: first chunk is not a bounded JSON chunk");
         return {};

@@ -14,8 +14,9 @@ namespace meios
 class scanner_registry;
 
 // glTF/GLB scanner: reports only external images[].uri and buffers[].uri. base64
-// data: URIs and the embedded GLB BIN chunk are validated but never reported, so a
-// fully-embedded .glb resolves to zero external assets.
+// data: URIs are recognized and skipped without inspection (external-only rule) and
+// the embedded GLB BIN chunk is not reported, so a fully-embedded .glb resolves to
+// zero external assets.
 class gltf_scanner
 {
 public:

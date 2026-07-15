@@ -4,6 +4,7 @@
 
 #include "meios/bundle/asset_bytes.h"
 
+#include "meios/io/uri_decode.h"
 #include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/level.h"
@@ -13,7 +14,6 @@
 
 #include <string>
 #include <vector>
-#include <cstddef>
 #include <optional>
 #include <string_view>
 
@@ -24,33 +24,6 @@ namespace
 {
 
 using json = nlohmann::json;
-
-int hex_value(char c)
-{
-    if(c >= '0' && c <= '9') return c - '0';
-    if(c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if(c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return -1;
-}
-
-std::string percent_decode(std::string_view uri)
-{
-    std::string out;
-    out.reserve(uri.size());
-    for(std::size_t i = 0; i < uri.size(); ++i)
-    {
-        const int hi = i + 2 < uri.size() ? hex_value(uri[i + 1]) : -1;
-        const int lo = i + 2 < uri.size() ? hex_value(uri[i + 2]) : -1;
-        if(uri[i] == '%' && hi >= 0 && lo >= 0)
-        {
-            out.push_back(static_cast<char>(hi * 16 + lo));
-            i += 2;
-        }
-        else
-            out.push_back(uri[i]);
-    }
-    return out;
-}
 
 bool is_external(std::string_view uri)
 {
@@ -94,6 +67,9 @@ std::vector<std::string> scan_gltf_json(std::string_view text, log_sink &log)
 namespace meios
 {
 
+// Refs are emitted verbatim (decoded, possibly carrying `..` or absolute segments);
+// containment against the bundle root is enforced downstream by the package/zip
+// writer's contained_candidate guard, so this scanner must not pre-filter them.
 std::vector<std::string> gltf_scanner::scan(const resolved_asset &asset, log_sink &log)
 {
     const std::string bytes = read_asset_text(asset, log);

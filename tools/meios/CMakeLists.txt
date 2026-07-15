@@ -15,7 +15,7 @@ target_link_libraries(meios_cli
     PUBLIC meios::urdf meios::bundle meios::completion
     PRIVATE CLI11::CLI11)
 
-# D-01: the CLI is the consumer that links each built scanner target and calls its
+# The CLI is the consumer that links each built scanner target and calls its
 # register_ free function. A per-scanner compile definition gates the matching block
 # in register_scanners.cpp, so core and bundle stay free of any concrete scanner.
 foreach(scan IN ITEMS obj collada stl gltf)
