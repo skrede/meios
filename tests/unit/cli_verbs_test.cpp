@@ -101,6 +101,49 @@ TEST_CASE("cli_verbs: flatten fails loudly on an unopenable path and emits no st
     REQUIRE(out.str().find("<robot") == std::string::npos);
 }
 
+TEST_CASE("cli_verbs: flatten fails loudly on a malformed argument override and emits no stub")
+{
+    verb_context ctx;
+    ctx.id = "flatten";
+    ctx.positionals = { fixture("args_doc.xacro") };
+    ctx.arg_overrides = { "prefix=front" };
+    cout_capture out;
+    REQUIRE(cli::run_flatten(ctx) != 0);
+    REQUIRE(out.str().find("<robot") == std::string::npos);
+}
+
+TEST_CASE("cli_verbs: flatten fails loudly on an empty-key argument override")
+{
+    verb_context ctx;
+    ctx.id = "flatten";
+    ctx.positionals = { fixture("args_doc.xacro") };
+    ctx.arg_overrides = { ":=front" };
+    cout_capture out;
+    REQUIRE(cli::run_flatten(ctx) != 0);
+    REQUIRE(out.str().find("<robot") == std::string::npos);
+}
+
+TEST_CASE("cli_verbs: bundle fails loudly on an unopenable path and writes nothing")
+{
+    verb_context ctx;
+    ctx.id = "bundle";
+    ctx.positionals = { fixture("this_file_does_not_exist.urdf") };
+    ctx.value_flags["--name"] = "mybundle";
+    cout_capture out;
+    REQUIRE(cli::run_bundle(ctx) != 0);
+    REQUIRE(out.str().empty());
+}
+
+TEST_CASE("cli_verbs: deps fails loudly on an unopenable path and emits no stdout")
+{
+    verb_context ctx;
+    ctx.id = "deps";
+    ctx.positionals = { fixture("this_file_does_not_exist.urdf") };
+    cout_capture out;
+    REQUIRE(cli::run_deps(ctx) != 0);
+    REQUIRE(out.str().empty());
+}
+
 TEST_CASE("cli_verbs: info summarizes links, joints, and degrees of freedom")
 {
     verb_context ctx;

@@ -31,16 +31,23 @@ bool ros_linked()
 #endif
 }
 
-void collect_arg_overrides(const std::vector<std::string> &tokens,
-                           std::map<std::string, std::string> &args)
+bool collect_arg_overrides(const std::vector<std::string> &tokens,
+                           std::map<std::string, std::string> &args, log_sink &log)
 {
+    bool ok = true;
     for(const std::string &token : tokens)
     {
         const std::string::size_type split = token.find(":=");
-        if(split == std::string::npos)
+        if(split == std::string::npos || split == 0)
+        {
+            log.log(level::error, "malformed argument override '" + token
+                + "'; expected key:=value with a non-empty key");
+            ok = false;
             continue;
+        }
         args[token.substr(0, split)] = token.substr(split + 2);
     }
+    return ok;
 }
 
 int run_flatten(const verb_context &ctx)
@@ -49,7 +56,8 @@ int run_flatten(const verb_context &ctx)
     counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    collect_arg_overrides(ctx.arg_overrides, opts.args);
+    if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink))
+        return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
     const model<double> robot = load(positional(ctx, 0), opts, sources, sink);
     if(sink.errors() != 0)
@@ -61,6 +69,7 @@ int run_flatten(const verb_context &ctx)
 int run_bundle(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    counting_log_sink sink(log);
     const std::map<std::string, std::string>::const_iterator name = ctx.value_flags.find("--name");
     if(name == ctx.value_flags.end() || name->second.empty())
     {
@@ -69,8 +78,10 @@ int run_bundle(const verb_context &ctx)
     }
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    source_stack sources = build_sources(opts.package_roots, log);
-    const model<double> robot = load(positional(ctx, 0), opts, sources, log);
+    source_stack sources = build_sources(opts.package_roots, sink);
+    const model<double> robot = load(positional(ctx, 0), opts, sources, sink);
+    if(sink.errors() != 0)
+        return 1;
     scanner_registry registry;
     register_scanners(registry);
     emit_result out{};
@@ -83,10 +94,13 @@ int run_bundle(const verb_context &ctx)
 int run_deps(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    source_stack sources = build_sources(opts.package_roots, log);
-    const model<double> robot = load(positional(ctx, 0), opts, sources, log);
+    source_stack sources = build_sources(opts.package_roots, sink);
+    const model<double> robot = load(positional(ctx, 0), opts, sources, sink);
+    if(sink.errors() != 0)
+        return 1;
     scanner_registry registry;
     register_scanners(registry);
     emit_result out{};
