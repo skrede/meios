@@ -150,6 +150,59 @@ TEST_CASE("a deeply nested package whose folder differs from its manifest name r
     REQUIRE(source.path_of("arm_description", "").has_value());
 }
 
+TEST_CASE("a colcon --symlink-install package dir resolves to the real files", "[ros]")
+{
+    temp_tree tree;
+    const std::filesystem::path outside = tree.root / "src" / "arm_pkg";
+    write_file(outside / "package.xml", "<package><name>arm_hardware</name></package>");
+    write_file(outside / "meshes" / "x.stl", "solid\n");
+
+    const std::filesystem::path ws = tree.root / "install";
+    std::filesystem::create_directories(ws);
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(outside, ws / "arm_hardware", ec);
+    if(ec)
+    {
+        SUCCEED("platform cannot create a directory symlink; skipping");
+        return;
+    }
+
+    std::vector<std::pair<meios::level, std::string>> log_entries;
+    meios::log_sink_f log{ capture{ log_entries } };
+    meios::ros_package_source source({ ws }, {}, log);
+
+    REQUIRE(has_package(source.packages(), "arm_hardware"));
+    const std::optional<meios::resolved_asset> asset = source.locate("arm_hardware", "meshes/x.stl");
+    REQUIRE(asset.has_value());
+    REQUIRE(asset->holds_path());
+    REQUIRE(std::filesystem::exists(asset->path()));
+    REQUIRE(std::filesystem::equivalent(asset->path(), outside / "meshes" / "x.stl"));
+}
+
+TEST_CASE("an escaping in-root symlink with no manifest is never registered", "[ros]")
+{
+    temp_tree tree;
+    const std::filesystem::path outside = tree.root / "secret";
+    write_file(outside / "passwd", "secret-bytes");
+
+    const std::filesystem::path ws = tree.root / "ws";
+    std::filesystem::create_directories(ws);
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(outside, ws / "evil", ec);
+    if(ec)
+    {
+        SUCCEED("platform cannot create a directory symlink; skipping");
+        return;
+    }
+
+    std::vector<std::pair<meios::level, std::string>> log_entries;
+    meios::log_sink_f log{ capture{ log_entries } };
+    meios::ros_package_source source({ ws }, {}, log);
+
+    REQUIRE_FALSE(has_package(source.packages(), "evil"));
+    REQUIRE_FALSE(source.locate("evil", "passwd").has_value());
+}
+
 TEST_CASE("stack order encodes explicit-first precedence and shadows lower layers", "[ros]")
 {
     temp_tree explicit_tree;

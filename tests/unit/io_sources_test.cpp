@@ -138,18 +138,18 @@ TEST_CASE("directory_source rejects a traversal escape with a loud diagnostic",
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("directory_source accepts a package reached through an in-root symlink",
+TEST_CASE("directory_source rejects an escaping in-root symlink and never reads outside the root",
           "[io][sources][symlink]")
 {
     std::filesystem::path parent = fresh_dir();
     std::filesystem::path root = parent / "ws";
-    std::filesystem::path outside = parent / "src_pkg";
+    std::filesystem::path outside = parent / "secret";
     std::filesystem::create_directories(root);
-    std::filesystem::create_directories(outside / "meshes");
-    std::ofstream(outside / "meshes" / "x.stl") << "mesh-bytes";
+    std::filesystem::create_directories(outside);
+    std::ofstream(outside / "passwd") << "secret-bytes";
 
     std::error_code ec;
-    std::filesystem::create_directory_symlink(outside, root / "linked_pkg", ec);
+    std::filesystem::create_directory_symlink(outside, root / "evil", ec);
     if(ec)
     {
         std::filesystem::remove_all(parent);
@@ -162,10 +162,12 @@ TEST_CASE("directory_source accepts a package reached through an in-root symlink
     meios::log_sink &seam = log;
     meios::directory_source source{ root, seam };
 
-    REQUIRE(source.locate("linked_pkg", "meshes/x.stl").has_value());
-    REQUIRE(source.path_of("linked_pkg", "meshes/x.stl").has_value());
-    REQUIRE_FALSE(source.locate("linked_pkg", "../../etc/passwd").has_value());
-    REQUIRE(count_level(events, meios::level::error) == 1);
+    // The raw --package-path resolver has no package registration, so an in-root
+    // symlink whose real target escapes the root is rejected outright; the file
+    // behind evil must never be handed back. Symlink-install lives at the ros layer.
+    REQUIRE_FALSE(source.locate("evil", "passwd").has_value());
+    REQUIRE_FALSE(source.path_of("evil", "passwd").has_value());
+    REQUIRE(count_level(events, meios::level::error) == 2);
 
     std::filesystem::remove_all(parent);
 }

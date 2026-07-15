@@ -4,6 +4,7 @@
 
 #include <pugixml.hpp>
 
+#include <set>
 #include <cctype>
 #include <cstdlib>
 #include <utility>
@@ -81,16 +82,30 @@ bool is_ignored(const std::filesystem::path &dir)
         || std::filesystem::exists(dir / "AMENT_IGNORE", ec);
 }
 
+std::filesystem::recursive_directory_iterator crawl_iterator(
+    const std::filesystem::path &root, std::error_code &ec)
+{
+    // follow_directory_symlink lets a colcon --symlink-install package dir (an
+    // in-root symlink to a source tree) be discovered; the visited-set below
+    // breaks the cycles that following links can otherwise loop on.
+    const std::filesystem::directory_options options =
+        std::filesystem::directory_options::skip_permission_denied
+        | std::filesystem::directory_options::follow_directory_symlink;
+    return std::filesystem::recursive_directory_iterator(root, options, ec);
+}
+
 void crawl_ros1_root(const std::filesystem::path &root,
                      std::map<std::string, std::filesystem::path> &out, log_sink &log)
 {
     std::error_code ec;
-    std::filesystem::recursive_directory_iterator it(
-        root, std::filesystem::directory_options::skip_permission_denied, ec);
+    std::filesystem::recursive_directory_iterator it = crawl_iterator(root, ec);
     const std::filesystem::recursive_directory_iterator end;
+    std::set<std::filesystem::path> seen;
     for(; !ec && it != end; it.increment(ec))
     {
-        if(!it->is_directory(ec) || is_ignored(it->path()))
+        std::error_code probe;
+        std::filesystem::path real = std::filesystem::weakly_canonical(it->path(), probe);
+        if(probe || !it->is_directory(probe) || is_ignored(it->path()) || !seen.insert(real).second)
         {
             it.disable_recursion_pending();
             continue;
@@ -100,7 +115,7 @@ void crawl_ros1_root(const std::filesystem::path &root,
             continue;
         std::string name = package_name(manifest, log);
         if(!name.empty())
-            out.emplace(std::move(name), it->path());
+            out.emplace(std::move(name), std::move(real));
         it.disable_recursion_pending();
     }
 }

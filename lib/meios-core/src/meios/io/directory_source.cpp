@@ -34,18 +34,13 @@ std::optional<std::filesystem::path> detail::contained_candidate(
     const std::filesystem::path &root, std::string_view package,
     std::string_view relative, log_sink &log)
 {
-    // Containment is judged on the logical path, not the symlink-resolved real
-    // path: a colcon --symlink-install package dir is an in-root symlink to a
-    // source tree outside the root, so weakly_canonical would false-positive an
-    // escape. lexically_normal collapses `..` without following links, keeping the
-    // first-component `..` check as the real parent-escape guard.
-    std::filesystem::path base = root.lexically_normal();
-    std::filesystem::path candidate =
-        (root / std::string(package) / std::string(relative)).lexically_normal();
-    // An empty relative leaves a trailing separator that lexically_normal keeps but
-    // weakly_canonical dropped; strip it so $(find pkg) yields the bare base path.
-    if(!candidate.has_filename() && candidate != candidate.root_path())
-        candidate = candidate.parent_path();
+    // weakly_canonical resolves symlinks, so an in-root link whose real target
+    // leaves the root canonicalizes to an out-of-root path and is rejected below.
+    // Symlink-install workspaces are supported at the ros layer, which registers a
+    // package name to its real resolved directory before it reaches this guard.
+    std::filesystem::path base = std::filesystem::weakly_canonical(root);
+    std::filesystem::path candidate = std::filesystem::weakly_canonical(
+        root / std::string(package) / std::string(relative));
     if(escapes_root(base, candidate))
     {
         log.log(level::error, reject_message(package, relative));
