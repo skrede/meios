@@ -132,6 +132,8 @@ value parse_atom(parser &p)
         return inner;
     }
     if(p.at(token_kind::name)) return parse_name(p);
+    if(p.at(token_kind::unsupported))
+        return p.fail_unsupported("unsupported expression — use eval-python");
     if(p.at(token_kind::error))
         return p.fail("unrecognized character in expression: '" + std::string(here.text) + "'");
     return p.fail_unsupported("unsupported expression — use eval-python");

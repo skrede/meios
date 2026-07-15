@@ -115,7 +115,7 @@ std::vector<token> tokenize(std::string_view source)
         if(starts_number)      { i = push_number(source, i, tokens); continue; }
         if(is_name_start(c))   { i = push_name(source, i, tokens); continue; }
         std::size_t consumed = push_symbol(source, i, tokens);
-        if(consumed == 0) { tokens.push_back(token{ token_kind::error, source.substr(i, 1) }); return tokens; }
+        if(consumed == 0) { tokens.push_back(token{ token_kind::unsupported, source.substr(i, 1) }); return tokens; }
         i += consumed;
     }
     tokens.push_back(token{ token_kind::end, {} });

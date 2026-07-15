@@ -168,3 +168,32 @@ TEST_CASE("an injected genuine error hard-fails regardless of policy", "[xacro][
     const outcome failed = run(span_document("${anything}"), meios::eval_policy::skip, &handle);
     REQUIRE_FALSE(failed.ok);
 }
+
+TEST_CASE("a leading python-only span is left verbatim under skip and warn", "[xacro][eval_policy]")
+{
+    const outcome skipped = run(span_document("${['x']}"), meios::eval_policy::skip);
+    REQUIRE(skipped.ok);
+    REQUIRE(leaves(skipped, "${['x']}"));
+    REQUIRE(skipped.errors == 0);
+
+    const outcome warned = run(span_document("${['x']}"), meios::eval_policy::warn);
+    REQUIRE(warned.ok);
+    REQUIRE(leaves(warned, "${['x']}"));
+    REQUIRE(warned.errors == 0);
+    REQUIRE(warned.warnings >= 1);
+}
+
+TEST_CASE("a leading python-only span still aborts under fail", "[xacro][eval_policy]")
+{
+    const outcome aborted = run(span_document("${['x']}"), meios::eval_policy::fail);
+    REQUIRE_FALSE(aborted.ok);
+    REQUIRE(aborted.errors >= 1);
+}
+
+TEST_CASE("a malformed numeric literal hard-fails even under skip", "[xacro][eval_policy]")
+{
+    const outcome broken = run(span_document("${1.2.3}"), meios::eval_policy::skip);
+    REQUIRE_FALSE(broken.ok);
+    REQUIRE(broken.errors >= 1);
+    REQUIRE_FALSE(leaves(broken, "${1.2.3}"));
+}

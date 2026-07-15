@@ -61,6 +61,15 @@ failure eval_failure(std::string_view expression)
     return state;
 }
 
+meios::eval_failure_kind eval_kind(std::string_view expression)
+{
+    meios::core_evaluator evaluator;
+    meios::eval_scope scope;
+    meios::log_sink sink;
+    evaluator.eval(expression, scope, sink);
+    return evaluator.failure_kind();
+}
+
 }
 
 static_assert(meios::expression_evaluator<meios::core_evaluator>);
@@ -229,4 +238,12 @@ TEST_CASE("an unsupported construct loud-fails instead of guessing", "[xacro][ev
     const failure absent_name = eval_failure("undefined_property");
     REQUIRE(absent_name.failed);
     REQUIRE(absent_name.diagnostics >= 1);
+}
+
+TEST_CASE("the lexer separates an unsupported lexeme from a genuine error", "[xacro][lexer]")
+{
+    REQUIRE(eval_kind("['x']") == meios::eval_failure_kind::unsupported);
+    REQUIRE(eval_kind("{'a': 1}") == meios::eval_failure_kind::unsupported);
+    REQUIRE(eval_kind("1.2.3") == meios::eval_failure_kind::error);
+    REQUIRE(eval_kind("undefined_property") == meios::eval_failure_kind::error);
 }

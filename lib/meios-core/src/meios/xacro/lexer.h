@@ -38,6 +38,7 @@ enum class token_kind
     not_equal,
     end,
     error,
+    unsupported,
 };
 
 struct token
