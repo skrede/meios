@@ -29,10 +29,11 @@ bool contains(const std::string &haystack, const std::string &needle)
 }
 
 // Reports a hit when the script invokes the shell eval builtin on dynamic output: a
-// word-boundary "eval" (line start or preceded by whitespace) followed by one or more
-// whitespace bytes and then a command-substitution, variable, string, or subshell opener.
-// The run of whitespace is consumed wholesale, so no tab/newline/multi-space separator
-// variation slips past — the guard tracks the invocation shape, not five literal forms.
+// word-boundary "eval" (line start or preceded by whitespace) that is either called
+// directly as "eval(" with no separator, or followed by one or more whitespace bytes and
+// then a command-substitution, variable, string, or subshell opener. The whitespace run is
+// consumed wholesale, so no tab/newline/multi-space separator variation slips past — the
+// guard tracks the invocation shape, not a handful of literal forms.
 bool eval_is_invoked(const std::string &script)
 {
     for(std::size_t at = script.find("eval"); at != std::string::npos; at = script.find("eval", at + 1))
@@ -40,6 +41,8 @@ bool eval_is_invoked(const std::string &script)
         if(at != 0 && std::isspace(static_cast<unsigned char>(script[at - 1])) == 0)
             continue;
         std::size_t i = at + 4;
+        if(i < script.size() && script[i] == '(')
+            return true;
         const std::size_t gap = i;
         while(i < script.size() && std::isspace(static_cast<unsigned char>(script[i])) != 0)
             ++i;
@@ -93,6 +96,7 @@ TEST_CASE("completion_emit: emitted scripts never eval candidate output", "[comp
     REQUIRE(eval_is_invoked("eval\t\"$candidate\""));
     REQUIRE(eval_is_invoked("eval   $candidate"));
     REQUIRE(eval_is_invoked("eval\n`candidate`"));
+    REQUIRE(eval_is_invoked("eval(candidate)"));
 
     REQUIRE_FALSE(eval_is_invoked("retrieval \"$x\""));
 }
