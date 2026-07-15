@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -43,9 +44,14 @@ struct block_arg
     pugi::xml_node source;
 };
 
+// One macro invocation's record of prior property bindings, reverted when the
+// invocation exits so a scoped write does not leak past its owning frame.
+using prop_frame = std::vector<std::pair<std::string, std::optional<binding>>>;
+
 // Threads the whole expansion: name scope, package sources, both budget counters,
-// the macro table, the include cycle stack, and the active block bindings. Parsed
-// include documents are parked in owned so macro bodies stay live across files.
+// the macro table, the include cycle stack, the active block bindings, and the stack
+// of per-invocation property frames. Parsed include documents are parked in owned so
+// macro bodies stay live across files.
 struct expand_ctx
 {
     expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, eval_policy policy,
@@ -62,6 +68,7 @@ struct expand_ctx
     std::map<std::string, block_arg> blocks;
     std::vector<std::filesystem::path> include_stack;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
+    std::vector<prop_frame> prop_frames;
     bool ok;
 
     bool charge_work();
@@ -70,6 +77,8 @@ struct expand_ctx
 };
 
 bool fail(expand_ctx &ctx, const std::string &message);
+
+void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name);
 
 std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
                             const std::filesystem::path &document, bool &ok);

@@ -129,6 +129,21 @@ void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
     }
 }
 
+// Reverting in reverse restores the true pre-invocation value when a name was written
+// more than once inside the frame.
+void revert_prop_frame(expand_ctx &ctx)
+{
+    prop_frame &frame = ctx.prop_frames.back();
+    for(auto entry = frame.rbegin(); entry != frame.rend(); ++entry)
+    {
+        if(entry->second)
+            ctx.scope.set(entry->first, *entry->second);
+        else
+            ctx.scope.erase(entry->first);
+    }
+    ctx.prop_frames.pop_back();
+}
+
 }
 
 void define_macro(expand_ctx &ctx, pugi::xml_node in)
@@ -148,8 +163,10 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
     std::map<std::string, block_arg> outer_blocks = std::move(ctx.blocks);
     ctx.blocks.clear();
     bind_blocks(def, call, ctx.blocks);
+    ctx.prop_frames.emplace_back();
     bool ok = bind_params(ctx, def, call, document, saved)
            && process_children(ctx, def.body, out, document);
+    revert_prop_frame(ctx);
     restore_params(ctx, saved);
     ctx.blocks = std::move(outer_blocks);
     return ok;

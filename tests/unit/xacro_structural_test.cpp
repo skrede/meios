@@ -62,6 +62,25 @@ const char *inherit_missing =
     "<xacro:macro name=\"m\" params=\"a:=^\"><link name=\"l${a}\"/></xacro:macro>"
     "<xacro:m/></robot>";
 
+const char *parent_one_level =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"p\" value=\"1\"/>"
+    "<xacro:macro name=\"inner\">"
+    "<xacro:property name=\"p\" value=\"9\" scope=\"parent\"/></xacro:macro>"
+    "<xacro:macro name=\"outer\"><xacro:inner/><link name=\"in${p}\"/></xacro:macro>"
+    "<xacro:outer/><link name=\"top${p}\"/></robot>";
+
+const char *parent_at_top =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"setter\">"
+    "<xacro:property name=\"q\" value=\"5\" scope=\"parent\"/></xacro:macro>"
+    "<xacro:setter/><link name=\"g${q}\"/></robot>";
+
+const char *default_leaks =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"d\"><xacro:property name=\"z\" value=\"3\"/></xacro:macro>"
+    "<xacro:d/><link name=\"d${z}\"/></robot>";
+
 }
 
 TEST_CASE("every structural golden expands to its expected URDF", "[xacro][structural][golden]")
@@ -105,4 +124,32 @@ TEST_CASE("a caret macro default with no inherited value and no fallback fails l
     const meios::expansion out = expand_source(inherit_missing, silent);
     REQUIRE_FALSE(out.ok);
     REQUIRE(out.document.find("^") == std::string::npos);
+}
+
+TEST_CASE("a scope=parent property reaches the immediate caller but not the grandparent",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(parent_one_level, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("in9") != std::string::npos);
+    REQUIRE(out.document.find("top1") != std::string::npos);
+}
+
+TEST_CASE("a scope=parent property set at top level persists into the document scope",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(parent_at_top, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("g5") != std::string::npos);
+}
+
+TEST_CASE("a default-scope property set inside a macro persists as before",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(default_leaks, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("d3") != std::string::npos);
 }

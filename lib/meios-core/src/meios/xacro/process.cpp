@@ -37,7 +37,9 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     std::string value_text = substitute_attr(ctx, in.attribute("value").value(), document, ok);
     if(!ok)
         return false;
-    ctx.scope.set(in.attribute("name").value(), classify(value_text));
+    std::string_view name = in.attribute("name").value();
+    record_scoped(ctx, in.attribute("scope").value(), name);
+    ctx.scope.set(name, classify(value_text));
     return true;
 }
 

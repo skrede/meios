@@ -13,6 +13,8 @@
 #include <memory>
 #include <sstream>
 #include <cstddef>
+#include <utility>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -25,7 +27,7 @@ namespace detail
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
                        eval_policy policy, evaluator_handle *inject, log_sink &lg)
     : scope(s), sources(src), limits(lim), log(lg), mode(policy), backend(inject), counters(),
-      macros(), blocks(), include_stack(), owned(), ok(true)
+      macros(), blocks(), include_stack(), owned(), prop_frames(), ok(true)
 {
 }
 
@@ -82,6 +84,28 @@ binding classify(std::string_view text)
     if(ok)
         return binding{ value{ real } };
     return binding{ std::string(text) };
+}
+
+// scope="parent" records into the caller's frame so an inner write is visible to the
+// immediate caller yet reverted when that caller exits; scope="local" records into the
+// current frame; every other scope (default, global, unknown) records nowhere and so
+// persists. A parent write with fewer than two frames targets the document scope, where
+// persistence is the intended behavior.
+void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name)
+{
+    std::size_t depth = ctx.prop_frames.size();
+    std::size_t target = 0;
+    if(scope_attr == "local" && depth >= 1)
+        target = depth - 1;
+    else if(scope_attr == "parent" && depth >= 2)
+        target = depth - 2;
+    else
+        return;
+    prop_frame &frame = ctx.prop_frames[target];
+    for(const std::pair<std::string, std::optional<binding>> &prior : frame)
+        if(prior.first == name)
+            return;
+    frame.emplace_back(std::string(name), ctx.scope.lookup(name));
 }
 
 }
