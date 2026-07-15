@@ -86,6 +86,32 @@ binding classify(std::string_view text)
 
 }
 
+namespace
+{
+
+// The main pass is single-forward, so a `$(arg x)` used above its own
+// `<xacro:arg>` declaration would resolve before the default is seen. A pre-pass
+// over the already-materialized tree seeds every declared default (raw, unbound
+// names only) so use-before-declaration resolves the way real xacro does.
+void seed_declared_args(eval_scope &scope, pugi::xml_node node)
+{
+    for(pugi::xml_node child : node.children())
+    {
+        if(child.type() != pugi::node_element)
+            continue;
+        if(std::string_view(child.name()) == "xacro:arg")
+        {
+            pugi::xml_attribute name = child.attribute("name");
+            pugi::xml_attribute fallback = child.attribute("default");
+            if(name && fallback && !scope.contains(name.value()))
+                scope.set(name.value(), detail::classify(fallback.value()));
+        }
+        seed_declared_args(scope, child);
+    }
+}
+
+}
+
 // pugixml's default parse flags never load a DTD or resolve external entities, so
 // an XXE / entity-expansion payload has no effect; keep it at parse_default.
 expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
@@ -101,6 +127,7 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
         return expansion{ false, {} };
     }
     ctx.include_stack.push_back(std::filesystem::weakly_canonical(document));
+    seed_declared_args(scope, doc);
     pugi::xml_document result;
     for(pugi::xml_node child : doc.children())
         if(!detail::process_node(ctx, child, result, document))

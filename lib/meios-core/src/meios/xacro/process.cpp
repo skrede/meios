@@ -41,6 +41,19 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     return true;
 }
 
+// A declared default seeds the scope only when the name is still unbound, so a
+// caller override or an earlier binding wins; the declaration itself emits nothing.
+bool declare_arg(expand_ctx &ctx, pugi::xml_node in)
+{
+    std::string_view name = in.attribute("name").value();
+    if(name.empty())
+        return fail(ctx, "<xacro:arg> requires a name attribute");
+    pugi::xml_attribute fallback = in.attribute("default");
+    if(fallback && !ctx.scope.contains(name))
+        ctx.scope.set(name, classify(fallback.value()));
+    return true;
+}
+
 std::string lowered(std::string_view text)
 {
     std::string out;
@@ -95,6 +108,8 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return define_property(ctx, in, document);
     if(name == "xacro:macro")
         return (define_macro(ctx, in), true);
+    if(name == "xacro:arg")
+        return declare_arg(ctx, in);
     if(name == "xacro:include")
         return expand_include(ctx, in, out, document);
     if(name == "xacro:if" || name == "xacro:unless")
