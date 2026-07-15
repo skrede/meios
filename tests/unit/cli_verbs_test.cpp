@@ -1,3 +1,4 @@
+#include "app.h"
 #include "verbs/verbs.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -50,6 +51,22 @@ private:
 
 }
 
+TEST_CASE("cli_verbs: --package-path binds one path and keeps the model positional")
+{
+    const std::string root = MEIOS_URDF_FIXTURE_DIR;
+    const std::string model = fixture("branched_all_joints.urdf");
+    std::vector<std::string> args = { "meios", "flatten", "--package-path", root,
+                                      "--package-path", root, model };
+    std::vector<char *> argv;
+    for(std::string &arg : args)
+        argv.push_back(arg.data());
+
+    cout_capture out;
+    const int code = cli::run(static_cast<int>(argv.size()), argv.data());
+    REQUIRE(code == 0);
+    REQUIRE(out.str().find("<robot") != std::string::npos);
+}
+
 TEST_CASE("cli_verbs: flatten prints a resolved robot document")
 {
     verb_context ctx;
@@ -58,6 +75,16 @@ TEST_CASE("cli_verbs: flatten prints a resolved robot document")
     cout_capture out;
     REQUIRE(cli::run_flatten(ctx) == 0);
     REQUIRE(out.str().find("<robot") != std::string::npos);
+}
+
+TEST_CASE("cli_verbs: flatten fails loudly on an unopenable path and emits no stub")
+{
+    verb_context ctx;
+    ctx.id = "flatten";
+    ctx.positionals = { fixture("this_file_does_not_exist.urdf") };
+    cout_capture out;
+    REQUIRE(cli::run_flatten(ctx) != 0);
+    REQUIRE(out.str().find("<robot") == std::string::npos);
 }
 
 TEST_CASE("cli_verbs: info summarizes links, joints, and degrees of freedom")

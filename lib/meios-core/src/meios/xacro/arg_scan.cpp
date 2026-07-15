@@ -71,9 +71,17 @@ void scan_text(std::string_view text, std::vector<arg_declaration> &out)
 void note_declaration(pugi::xml_node node, std::vector<arg_declaration> &out)
 {
     const std::string_view name = node.attribute("name").value();
-    if(name.empty() || seen(out, name))
+    if(name.empty())
         return;
     const pugi::xml_attribute fallback = node.attribute("default");
+    for(arg_declaration &arg : out)
+    {
+        if(arg.name != name)
+            continue;
+        if(!arg.default_value && fallback)
+            arg.default_value = fallback.value();
+        return;
+    }
     out.push_back({ std::string(name),
                     fallback ? std::optional<std::string>(fallback.value()) : std::nullopt });
 }

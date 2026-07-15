@@ -44,7 +44,7 @@ void add_flags(CLI::App &sub, const command_spec &spec, verb_context &ctx)
     for(const flag_spec &flag : spec.flags)
     {
         if(flag.token == "--package-path")
-            sub.add_option(flag.token, ctx.package_paths, flag.description);
+            sub.add_option(flag.token, ctx.package_paths, flag.description)->allow_extra_args(false);
         else if(flag.kind == flag_kind::boolean)
             sub.add_flag(flag.token, ctx.bool_flags[flag.token], flag.description);
         else

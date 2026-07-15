@@ -1,4 +1,5 @@
 #include "verbs.h"
+#include "counting_log_sink.h"
 #include "register_scanners.h"
 
 #include "meios/urdf/load.h"
@@ -23,9 +24,12 @@ namespace meios::cli
 int run_flatten(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    const model<double> robot = load(positional(ctx, 0), opts, log);
+    const model<double> robot = load(positional(ctx, 0), opts, sink);
+    if(sink.errors() != 0)
+        return 1;
     const emit_result result = flatten(robot, std::cout, log);
     return result.status == emit_status::ok ? 0 : 1;
 }

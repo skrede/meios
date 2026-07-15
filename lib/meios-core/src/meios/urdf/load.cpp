@@ -37,9 +37,11 @@ namespace meios
 namespace
 {
 
-std::string read_file(const std::filesystem::path &path)
+std::optional<std::string> read_file(const std::filesystem::path &path)
 {
     std::ifstream in(path, std::ios::binary);
+    if(!in)
+        return std::nullopt;
     std::ostringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
@@ -103,17 +105,23 @@ std::optional<bool> sniff_robot(std::string_view bytes, const std::filesystem::p
 model<double> drive_load(const std::filesystem::path &path, const load_options &opts,
                          source_stack &sources, log_sink &log)
 {
-    const std::string bytes = read_file(path);
     world_recorder recorder(log, opts.topology);
 
-    const std::optional<bool> expandable = sniff_robot(bytes, path, log);
+    const std::optional<std::string> bytes = read_file(path);
+    if(!bytes)
+    {
+        log.log(level::error, source_location{ path, 0, 0 }, "cannot open input file");
+        return recorder.result();
+    }
+
+    const std::optional<bool> expandable = sniff_robot(*bytes, path, log);
     if(!expandable)
         return recorder.result();
 
     core_evaluator eval;
     parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(bytes, path, *expandable, opts.eval, opts.backend, ctx, recorder);
+    drive(*bytes, path, *expandable, opts.eval, opts.backend, ctx, recorder);
     return recorder.result();
 }
 

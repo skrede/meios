@@ -42,6 +42,44 @@ TEST_CASE("scan_args enumerates declared and referenced args", "[xacro][arg_scan
     REQUIRE_FALSE(b->default_value.has_value());
 }
 
+TEST_CASE("scan_args keeps a declared default when a reference precedes the declaration",
+          "[xacro][arg_scan]")
+{
+    const std::string_view doc =
+        R"XML(<?xml version="1.0"?>
+<robot name="r" xmlns:xacro="http://ros.org/wiki/xacro">
+  <link name="$(arg foo)"/>
+  <xacro:arg name="foo" default="bar"/>
+</robot>)XML";
+    meios::log_sink silent;
+    const std::vector<meios::arg_declaration> args = meios::scan_args(doc, silent);
+
+    int count = 0;
+    for(const meios::arg_declaration &arg : args)
+        if(arg.name == "foo")
+            ++count;
+    REQUIRE(count == 1);
+
+    const meios::arg_declaration *foo = find(args, "foo");
+    REQUIRE(foo != nullptr);
+    REQUIRE(foo->default_value == std::optional<std::string>("bar"));
+}
+
+TEST_CASE("scan_args fabricates no default for a pure reference", "[xacro][arg_scan]")
+{
+    const std::string_view doc =
+        R"XML(<?xml version="1.0"?>
+<robot name="r" xmlns:xacro="http://ros.org/wiki/xacro">
+  <link name="$(arg lonely)"/>
+</robot>)XML";
+    meios::log_sink silent;
+    const std::vector<meios::arg_declaration> args = meios::scan_args(doc, silent);
+
+    const meios::arg_declaration *lonely = find(args, "lonely");
+    REQUIRE(lonely != nullptr);
+    REQUIRE_FALSE(lonely->default_value.has_value());
+}
+
 TEST_CASE("scan_args de-duplicates and preserves document order", "[xacro][arg_scan]")
 {
     const std::string_view doc =
