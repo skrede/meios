@@ -314,6 +314,23 @@ if(TARGET meios_eval-python)
         meios_warnings(eval_python_test)
         catch_discover_tests(eval_python_test)
     endif()
+
+    set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
+    if(EXISTS ${urdf_yaml_flatten_src})
+        add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})
+        target_link_libraries(urdf_yaml_flatten_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::eval-python
+                Catch2::Catch2WithMain)
+        target_compile_definitions(urdf_yaml_flatten_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        if(TARGET meios)
+            target_compile_definitions(urdf_yaml_flatten_test PRIVATE
+                MEIOS_CLI_BINARY="$<TARGET_FILE:meios>")
+        endif()
+        meios_enable_coverage(urdf_yaml_flatten_test)
+        meios_warnings(urdf_yaml_flatten_test)
+        catch_discover_tests(urdf_yaml_flatten_test)
+    endif()
 endif()
 
 if(MEIOS_BUILD_PROPERTY_TESTS)

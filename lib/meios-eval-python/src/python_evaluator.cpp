@@ -26,10 +26,29 @@ namespace meios
 namespace
 {
 
+// A dict/list str-ified by format_result when it crossed a xacro:property boundary is
+// re-parsed on re-entry with ast.literal_eval, which accepts only genuine Python literals
+// and raises on anything else — so a real container is rebound while an ordinary string
+// stays a string, never fabricating a value.
+py::object rehydrate(const std::string &text)
+{
+    try
+    {
+        py::object parsed = py::module_::import("ast").attr("literal_eval")(text);
+        if(py::isinstance<py::dict>(parsed) || py::isinstance<py::list>(parsed)
+            || py::isinstance<py::tuple>(parsed))
+            return parsed;
+    }
+    catch(py::error_already_set &)
+    {
+    }
+    return py::str(text);
+}
+
 py::object to_py_object(const binding &bound)
 {
     if(std::holds_alternative<std::string>(bound))
-        return py::str(std::get<std::string>(bound));
+        return rehydrate(std::get<std::string>(bound));
     const value &v = std::get<value>(bound);
     if(std::holds_alternative<bool>(v))
         return py::bool_(std::get<bool>(v));
@@ -58,17 +77,31 @@ std::vector<std::string> identifiers(std::string_view expr)
 }
 
 // math is spread into globals (from math import *) so ${sin(pi/2)}-style bare names
-// hold parity with the core evaluator; load_yaml lazily imports PyYAML (a found
-// environment resource) and a missing module surfaces as a loud runtime error.
+// hold parity with the core evaluator.
 void seed_math(py::dict &globals)
 {
     py::module_ math = py::module_::import("math");
     globals.attr("update")(math.attr("__dict__"));
+}
+
+// load_yaml lazily imports PyYAML (a found environment resource; a missing module
+// surfaces as a loud runtime error) and registers the !degrees/!radians unit tags on
+// the SafeLoader — degrees to radians via math.radians, radians identity — matching
+// ros/xacro's ConstructUnits. A `xacro` SimpleNamespace exposes the same load_yaml so
+// both the bare and the xacro.load_yaml spellings resolve.
+void seed_yaml(py::dict &globals)
+{
     py::exec(
         "def load_yaml(path):\n"
-        "    import yaml\n"
+        "    import yaml, math\n"
+        "    def _deg(loader, node): return math.radians(float(loader.construct_scalar(node)))\n"
+        "    def _rad(loader, node): return float(loader.construct_scalar(node))\n"
+        "    yaml.SafeLoader.add_constructor('!degrees', _deg)\n"
+        "    yaml.SafeLoader.add_constructor('!radians', _rad)\n"
         "    with open(path) as _stream:\n"
-        "        return yaml.safe_load(_stream)\n",
+        "        return yaml.load(_stream, Loader=yaml.SafeLoader)\n"
+        "import types as _types\n"
+        "xacro = _types.SimpleNamespace(load_yaml=load_yaml)\n",
         globals);
 }
 
@@ -109,6 +142,7 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
     {
         py::dict globals;
         seed_math(globals);
+        seed_yaml(globals);
         seed_scope(globals, expr, scope);
         py::object result = py::eval(std::string(expr), globals);
         m_kind = eval_failure_kind::none;

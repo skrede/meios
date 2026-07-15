@@ -181,3 +181,68 @@ TEST_CASE("a python runtime throw hard-fails even under skip", "[eval_python]")
     REQUIRE(raised.errors >= 1);
     REQUIRE_FALSE(leaves(raised, "${1/0}"));
 }
+
+TEST_CASE("xacro.load_yaml resolves a mapping through the SimpleNamespace shim", "[eval_python]")
+{
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "meios_eval_xacro_map.yaml";
+    std::ofstream(tmp) << "arm:\n  dof: 6\n";
+    const std::string expr = "xacro.load_yaml('" + tmp.generic_string() + "')['arm']['dof']";
+    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
+    std::filesystem::remove(tmp);
+    REQUIRE(got);
+    REQUIRE(*got == "6");
+}
+
+TEST_CASE("a !degrees yaml tag loads as radians through the SafeLoader constructor", "[eval_python]")
+{
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "meios_eval_degrees.yaml";
+    std::ofstream(tmp) << "angle: !degrees 180\n";
+    const std::string expr =
+        "abs(xacro.load_yaml('" + tmp.generic_string() + "')['angle'] - pi) < 1e-9";
+    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
+    std::filesystem::remove(tmp);
+    REQUIRE(got);
+    REQUIRE(*got == "True");
+}
+
+TEST_CASE("a !radians yaml tag loads unchanged through the SafeLoader constructor", "[eval_python]")
+{
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "meios_eval_radians.yaml";
+    std::ofstream(tmp) << "angle: !radians 1.5\n";
+    const std::string expr =
+        "abs(xacro.load_yaml('" + tmp.generic_string() + "')['angle'] - 1.5) < 1e-9";
+    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
+    std::filesystem::remove(tmp);
+    REQUIRE(got);
+    REQUIRE(*got == "True");
+}
+
+TEST_CASE("a dict crossing a xacro:property boundary is re-hydrated for nested subscripts",
+          "[eval_python]")
+{
+    const std::filesystem::path tmp =
+        std::filesystem::temp_directory_path() / "meios_eval_rehydrate.yaml";
+    std::ofstream(tmp) << "limits:\n  shoulder:\n    max: 42\n";
+    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const std::string document = std::string(header)
+        + "<xacro:property name=\"config\" value=\"${xacro.load_yaml('" + tmp.generic_string()
+        + "')}\"/>"
+        + "<xacro:property name=\"section\" value=\"${config['limits']}\"/>"
+        + "<l>${section['shoulder']['max']}</l></robot>";
+    const outcome resolved = run(document, meios::eval_policy::fail, &handle);
+    std::filesystem::remove(tmp);
+    REQUIRE(resolved.ok);
+    REQUIRE(leaves(resolved, "<l>42</l>"));
+}
+
+TEST_CASE("an ordinary string binding is never fabricated into a container", "[eval_python]")
+{
+    meios::eval_scope scope;
+    scope.set("v", std::string("6"));
+    const std::optional<std::string> got = evaluate("v + '0'", scope);
+    REQUIRE(got);
+    REQUIRE(*got == "60");
+}
