@@ -116,11 +116,10 @@ TEST_CASE("the real UR description clears the yaml parity layer", "[urdf][yaml][
     const std::string command = std::string(MEIOS_CLI_BINARY) + " flatten " + ur.string()
         + " --package-path " + root.string() + " ur_type:=ur5e --eval python";
     const shell_result out = run_cli(command);
-    // The load_yaml shim and the !degrees/!radians constructors must resolve on the
-    // real corpus; the exit status additionally depends on core macro-scope handling
-    // this backend does not govern, so it is not asserted here.
     REQUIRE(out.output.find("name 'xacro' is not defined") == std::string::npos);
     REQUIRE(out.output.find("ConstructorError") == std::string::npos);
+    REQUIRE(out.status == 0);
+    REQUIRE(out.output.find("<robot") != std::string::npos);
 #else
     SUCCEED("CLI binary or POSIX shell unavailable — smoke skipped");
 #endif

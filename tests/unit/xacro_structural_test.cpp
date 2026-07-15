@@ -76,10 +76,45 @@ const char *parent_at_top =
     "<xacro:property name=\"q\" value=\"5\" scope=\"parent\"/></xacro:macro>"
     "<xacro:setter/><link name=\"g${q}\"/></robot>";
 
-const char *default_leaks =
+const char *default_local =
     "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
     "<xacro:macro name=\"d\"><xacro:property name=\"z\" value=\"3\"/></xacro:macro>"
     "<xacro:d/><link name=\"d${z}\"/></robot>";
+
+const char *nested_default_read =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"outer\">"
+    "<xacro:property name=\"sysval\" value=\"3\"/>"
+    "<xacro:macro name=\"inner\"><link name=\"j${sysval}\"/></xacro:macro>"
+    "<xacro:inner/></xacro:macro>"
+    "<xacro:outer/></robot>";
+
+const char *nested_default_no_leak =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"outer\">"
+    "<xacro:property name=\"sysval\" value=\"3\"/>"
+    "<xacro:macro name=\"inner\"><link name=\"j${sysval}\"/></xacro:macro>"
+    "<xacro:inner/></xacro:macro>"
+    "<xacro:outer/><link name=\"doc${sysval}\"/></robot>";
+
+const char *param_default_collision =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"X\" value=\"doc\"/>"
+    "<xacro:macro name=\"B\" params=\"X:=bparam\">"
+    "<xacro:property name=\"X\" value=\"99\"/></xacro:macro>"
+    "<xacro:macro name=\"A\"><xacro:B/></xacro:macro>"
+    "<xacro:A/><link name=\"l${X}\"/></robot>";
+
+const char *global_reaches_doc =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"g\">"
+    "<xacro:property name=\"w\" value=\"7\" scope=\"global\"/></xacro:macro>"
+    "<xacro:g/><link name=\"gl${w}\"/></robot>";
+
+const char *top_level_default =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"t\" value=\"4\"/>"
+    "<link name=\"tl${t}\"/></robot>";
 
 const char *param_parent_collision =
     "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
@@ -160,13 +195,61 @@ TEST_CASE("a scope=parent property set at top level persists into the document s
     REQUIRE(out.document.find("g5") != std::string::npos);
 }
 
-TEST_CASE("a default-scope property set inside a macro persists as before",
+TEST_CASE("a default-scope property set inside a macro is macro-local and invisible after return",
           "[xacro][structural][property]")
 {
     meios::log_sink silent;
-    const meios::expansion out = expand_source(default_leaks, silent);
+    const meios::expansion out = expand_source(default_local, silent);
+    REQUIRE_FALSE(out.ok);
+    REQUIRE(out.document.find("d3") == std::string::npos);
+}
+
+TEST_CASE("a default-scope property is visible to a nested macro while the definer is on the stack",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(nested_default_read, silent);
     REQUIRE(out.ok);
-    REQUIRE(out.document.find("d3") != std::string::npos);
+    REQUIRE(out.document.find("j3") != std::string::npos);
+}
+
+TEST_CASE("a default-scope property read from the document after the outer macro returns fails",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(nested_default_no_leak, silent);
+    REQUIRE_FALSE(out.ok);
+    REQUIRE(out.document.find("doc3") == std::string::npos);
+}
+
+TEST_CASE("a default-scope write to a name that is also the writer's parameter restores the outer "
+          "document value on exit",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(param_default_collision, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("ldoc") != std::string::npos);
+    REQUIRE(out.document.find("lbparam") == std::string::npos);
+    REQUIRE(out.document.find("l99") == std::string::npos);
+}
+
+TEST_CASE("a scope=global property set inside a macro reaches the document scope",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(global_reaches_doc, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("gl7") != std::string::npos);
+}
+
+TEST_CASE("a default-scope property defined at document top level persists for a later read",
+          "[xacro][structural][property]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(top_level_default, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("tl4") != std::string::npos);
 }
 
 TEST_CASE("a scope=parent write to a name that is also the writer's parameter never leaks "

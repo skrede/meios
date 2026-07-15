@@ -99,16 +99,16 @@ std::optional<binding> ancestor_prior(const expand_ctx &ctx, std::string_view na
     return ctx.scope.lookup(name);
 }
 
-// scope="parent" records into the caller's frame so an inner write is visible to the
-// immediate caller yet reverted when that caller exits; scope="local" records into the
-// current frame; every other scope (default, global, unknown) records nowhere and so
-// persists. A parent write with fewer than two frames targets the document scope, where
-// persistence is the intended behavior.
+// An empty (default) or "local" scope records into the current frame, so a property
+// written inside a macro reverts when that macro exits (macro-local); at document scope
+// (no frame) a default write records nowhere and persists. scope="parent" records into
+// the caller's frame so an inner write reaches the immediate caller yet reverts when it
+// exits; "global" and unknown scopes record nowhere and so persist.
 void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name)
 {
     std::size_t depth = ctx.prop_frames.size();
     std::size_t target = 0;
-    if(scope_attr == "local" && depth >= 1)
+    if((scope_attr == "local" || scope_attr.empty()) && depth >= 1)
         target = depth - 1;
     else if(scope_attr == "parent" && depth >= 2)
         target = depth - 2;
