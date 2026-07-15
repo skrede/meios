@@ -37,10 +37,10 @@ bool fail_unterminated(detail::subst_ctx &ctx, char opener, std::size_t at)
     return false;
 }
 
-// D-03: under warn/skip a construct the core cannot evaluate is left verbatim in
-// the output — never fabricated, never blanked — so the resolved text visibly
-// carries the unevaluated expression. A genuine error still fails; a conditional is
-// resolved with fail policy elsewhere, so leniency reaches text/attribute spans only.
+// Under warn/skip a construct the core cannot evaluate is left verbatim in the
+// output — never fabricated, never blanked — so the resolved text visibly carries
+// the unevaluated expression. A genuine error still fails; a conditional is resolved
+// with fail policy elsewhere, so leniency reaches text/attribute spans only.
 bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
                     std::size_t close, std::string &out, std::size_t &cursor)
 {
@@ -57,16 +57,33 @@ bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t do
 
 bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out);
 
+std::string_view leading_command(std::string_view inner)
+{
+    std::size_t start = inner.find_first_not_of(" \t");
+    if(start == std::string_view::npos)
+        return {};
+    std::size_t end = inner.find_first_of(" \t", start);
+    return inner.substr(start, end - start);
+}
+
 // A `$(...)` command first resolves any `${}`/`$()` in its inner text, so
 // `$(find ${pkg})` dispatches the resolved package name; a `${...}` expression is
-// handed to the evaluator whole. A failed inner scan yields nullopt so the caller's
-// verbatim/leniency handling governs the outcome rather than a mis-dispatch.
+// handed to the evaluator whole. `$(arg name default)` is the exception: its inner
+// is dispatched unscanned so the `default` is evaluated lazily by `cmd_arg` only on
+// the unset branch — a pre-scan would eagerly evaluate a default the bound arg never
+// uses, failing on an unresolvable fallback. A failed inner scan yields nullopt so
+// the caller's verbatim/leniency handling governs the outcome rather than a mis-dispatch.
 std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std::string_view inner)
 {
     if(opener == '{')
     {
         ctx.last_kind = eval_failure_kind::none;
         return detail::eval_expr(ctx, inner);
+    }
+    if(leading_command(inner) == "arg")
+    {
+        ctx.last_kind = eval_failure_kind::none;
+        return detail::dispatch(ctx, inner);
     }
     std::string resolved;
     if(!scan(ctx, inner, resolved))

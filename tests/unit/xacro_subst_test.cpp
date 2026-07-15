@@ -181,6 +181,16 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == "0.5");
     }
 
+    SECTION("$(arg name default) with a bound name never evaluates an unresolvable default")
+    {
+        scope.set("mesh_pkg", meios::binding{ std::string("pkg") });
+        meios::substitution out =
+            meios::substitute("$(arg mesh_pkg $(find absent_pkg))", scope, sources, document, log);
+        REQUIRE(out.ok);
+        REQUIRE(out.text == "pkg");
+        REQUIRE_FALSE(any_contains(records, "did not resolve"));
+    }
+
     SECTION("an unset $(arg) with no default loud-fails")
     {
         meios::substitution out = meios::substitute("$(arg height)", scope, sources, document, log);

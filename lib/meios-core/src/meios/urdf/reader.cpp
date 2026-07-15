@@ -47,14 +47,16 @@ void emit_materials(pugi::xml_node robot, std::string_view text, const std::file
 }
 
 template <typename Sink>
-void lift_inline_materials(const link<double> &built, detail::material_table &table, Sink &sink)
+void lift_inline_materials(link<double> &built, detail::material_table &table, Sink &sink)
 {
-    for(const visual<double> &vis : built.visuals)
+    for(visual<double> &vis : built.visuals)
     {
         if(!vis.material_inline || vis.material_inline->name.empty())
             continue;
         if(table.emplace(vis.material_inline->name, *vis.material_inline).second)
             sink.on_material(*vis.material_inline);
+        vis.material_ref = vis.material_inline->name;
+        vis.material_inline.reset();
     }
 }
 
@@ -75,6 +77,11 @@ bool is_handled_child(std::string_view tag)
     return tag == "material" || tag == "link" || tag == "joint";
 }
 
+bool is_known_extension(std::string_view tag)
+{
+    return tag == "gazebo" || tag == "ros2_control" || tag == "transmission" || tag == "sensor";
+}
+
 void warn_unhandled(pugi::xml_node robot, std::string_view text, const std::filesystem::path &file,
                     parse_context &ctx)
 {
@@ -85,8 +92,9 @@ void warn_unhandled(pugi::xml_node robot, std::string_view text, const std::file
         std::string named = child.name();
         if(pugi::xml_attribute name = child.attribute("name"))
             named += " name='" + std::string(name.value()) + '\'';
+        const std::string kind = is_known_extension(child.name()) ? "extension " : "";
         ctx.log.log(level::warn, detail::node_location(child, text, file),
-                    "dropping unhandled robot-level element <" + named + '>');
+                    "dropping unhandled robot-level " + kind + "element <" + named + '>');
     }
 }
 

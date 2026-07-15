@@ -101,21 +101,21 @@ TEST_CASE("the real single-link description leaves its name-only ref unresolved"
     REQUIRE(std::count(levels.begin(), levels.end(), meios::level::warn) >= 1);
 }
 
-TEST_CASE("an inline visual material captures its color and lifts into the table", "[urdf][material]")
+TEST_CASE("a named inline visual material lifts to the table and leaves a name reference",
+          "[urdf][material]")
 {
     meios::log_sink log;
     const meios::tree<double> robot = parse_fixture("inline_color_material.urdf", log);
 
     const meios::visual<double> &vis = robot.links.at(0).visuals.at(0);
-    REQUIRE_FALSE(vis.material_ref.has_value());
-    REQUIRE(vis.material_inline.has_value());
-    REQUIRE(vis.material_inline->name == "red");
-    REQUIRE(vis.material_inline->color.has_value());
-    REQUIRE(vis.material_inline->color->r == 1.0);
+    REQUIRE_FALSE(vis.material_inline.has_value());
+    REQUIRE(vis.material_ref.has_value());
+    REQUIRE(vis.material_ref.value() == "red");
 
     REQUIRE(robot.materials.size() == 1);
     REQUIRE(robot.materials.at(0).name == "red");
     REQUIRE(robot.materials.at(0).color.has_value());
+    REQUIRE(robot.materials.at(0).color->r == 1.0);
 }
 
 TEST_CASE("an unnamed inline visual material captures its texture and does not lift", "[urdf][material]")
