@@ -36,7 +36,7 @@ bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document)
 {
     std::string name = in.attribute("name").value();
-    std::map<std::string, block_arg>::iterator found = ctx.blocks.find(name);
+    auto found = ctx.blocks.find(name);
     if(found == ctx.blocks.end())
         return fail(ctx, "xacro:insert_block references unknown block '" + name + '\'');
     if(found->second.children)

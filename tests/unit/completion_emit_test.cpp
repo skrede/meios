@@ -3,7 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
+#include <cctype>
 #include <string>
+#include <cstddef>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -24,6 +26,30 @@ std::string slurp_golden(const std::string &name)
 bool contains(const std::string &haystack, const std::string &needle)
 {
     return haystack.find(needle) != std::string::npos;
+}
+
+// Reports a hit when the script invokes the shell eval builtin on dynamic output: a
+// word-boundary "eval" (line start or preceded by whitespace) followed by one or more
+// whitespace bytes and then a command-substitution, variable, string, or subshell opener.
+// The run of whitespace is consumed wholesale, so no tab/newline/multi-space separator
+// variation slips past — the guard tracks the invocation shape, not five literal forms.
+bool eval_is_invoked(const std::string &script)
+{
+    for(std::size_t at = script.find("eval"); at != std::string::npos; at = script.find("eval", at + 1))
+    {
+        if(at != 0 && std::isspace(static_cast<unsigned char>(script[at - 1])) == 0)
+            continue;
+        std::size_t i = at + 4;
+        const std::size_t gap = i;
+        while(i < script.size() && std::isspace(static_cast<unsigned char>(script[i])) != 0)
+            ++i;
+        if(i == gap || i >= script.size())
+            continue;
+        const char target = script[i];
+        if(target == '"' || target == '\'' || target == '$' || target == '`' || target == '(')
+            return true;
+    }
+    return false;
 }
 
 meios::completion_model built_model()
@@ -60,18 +86,15 @@ TEST_CASE("completion_emit: every emitter carries descriptions from the table", 
 TEST_CASE("completion_emit: emitted scripts never eval candidate output", "[completion]")
 {
     const meios::completion_model model = built_model();
-    const std::array<std::string, 3> scripts = {
-        meios::emit_bash(model), meios::emit_zsh(model), meios::emit_fish(model)
-    };
-    // The hazard is the shell eval builtin executing dynamic candidate output, so the
-    // guard targets its invocation forms — eval applied to a command substitution,
-    // variable, string, or subshell — not the letters, which also spell a flag name.
-    const std::array<std::string, 5> invocations = {
-        "eval \"", "eval '", "eval $", "eval `", "eval("
-    };
-    for(const std::string &script : scripts)
-        for(const std::string &form : invocations)
-            REQUIRE_FALSE(contains(script, form));
+    REQUIRE_FALSE(eval_is_invoked(meios::emit_bash(model)));
+    REQUIRE_FALSE(eval_is_invoked(meios::emit_zsh(model)));
+    REQUIRE_FALSE(eval_is_invoked(meios::emit_fish(model)));
+
+    REQUIRE(eval_is_invoked("eval\t\"$candidate\""));
+    REQUIRE(eval_is_invoked("eval   $candidate"));
+    REQUIRE(eval_is_invoked("eval\n`candidate`"));
+
+    REQUIRE_FALSE(eval_is_invoked("retrieval \"$x\""));
 }
 
 TEST_CASE("completion_emit: bash expansions are quoted, never bare", "[completion]")

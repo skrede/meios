@@ -8,6 +8,7 @@
 #include <pugixml.hpp>
 
 #include <map>
+#include <ranges>
 #include <string>
 #include <vector>
 #include <utility>
@@ -113,7 +114,7 @@ void bind_blocks(const macro_def &def, pugi::xml_node call, std::map<std::string
         if(child.type() == pugi::node_element)
             kids.push_back(child);
     for(std::size_t i = 0; i < def.block_params.size() && i < kids.size(); ++i)
-        blocks[def.block_params[i]] = block_arg{ def.block_children[i], kids[i] };
+        blocks.insert_or_assign(def.block_params[i], block_arg{ def.block_children[i], kids[i] });
 }
 
 void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
@@ -132,12 +133,12 @@ void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
 void revert_prop_frame(expand_ctx &ctx)
 {
     prop_frame &frame = ctx.prop_frames.back();
-    for(auto entry = frame.rbegin(); entry != frame.rend(); ++entry)
+    for(const saved_binding &entry : std::views::reverse(frame))
     {
-        if(entry->second)
-            ctx.scope.set(entry->first, *entry->second);
+        if(entry.second)
+            ctx.scope.set(entry.first, *entry.second);
         else
-            ctx.scope.erase(entry->first);
+            ctx.scope.erase(entry.first);
     }
     ctx.prop_frames.pop_back();
 }

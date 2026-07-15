@@ -49,8 +49,7 @@ bool eval_python_linked()
 
 eval_policy eval_policy_of(const verb_context &ctx)
 {
-    const std::map<std::string, std::string>::const_iterator policy =
-        ctx.value_flags.find("--eval-policy");
+    const auto policy = ctx.value_flags.find("--eval-policy");
     if(policy == ctx.value_flags.end())
         return eval_policy::fail;
     if(policy->second == "warn")
@@ -66,8 +65,7 @@ eval_policy eval_policy_of(const verb_context &ctx)
 bool select_backend(const verb_context &ctx, load_options &opts,
                     std::optional<evaluator_handle> &handle, log_sink &log)
 {
-    const std::map<std::string, std::string>::const_iterator eval =
-        ctx.value_flags.find("--eval");
+    const auto eval = ctx.value_flags.find("--eval");
     if(eval == ctx.value_flags.end() || eval->second != "python")
         return true;
     if(!eval_python_linked())
@@ -127,7 +125,7 @@ int run_bundle(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
-    const std::map<std::string, std::string>::const_iterator name = ctx.value_flags.find("--name");
+    const auto name = ctx.value_flags.find("--name");
     if(name == ctx.value_flags.end() || name->second.empty())
     {
         log.log(level::error, "bundle requires --name");

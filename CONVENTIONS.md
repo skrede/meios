@@ -57,8 +57,9 @@ Keep public headers lean by moving internal helpers into a `detail/` directory a
 `detail::` namespace. Make `detail/` files and `detail::` types as needed — but a `detail/`
 file is still a real file and obeys these same rules.
 
-Enforcement: `.clang-tidy` runs size and cognitive-complexity checks and **fails the build**
-over the ceiling. A change is not done until it is within budget or its overage is a
+Enforcement: `.clang-tidy` runs size and cognitive-complexity checks that **report** any unit
+over the ceiling. The report is advisory — it is not wired to fail a build — so treat an overage
+as a defect to clear: a change is not done until it is within budget or its overage is a
 registered exception.
 
 ### Exceptions
@@ -70,9 +71,9 @@ for an exception only when decomposition would make the code worse.
 
 Every exception is registered in **`EXCEPTIONS.md`** — the single, complete list of every
 sanctioned over-limit unit, each with its justification. There is **no in-code marker**: the
-justification is bookkeeping, and bookkeeping never belongs in the code. The size gate sanctions
-exactly the files `EXCEPTIONS.md` lists and fails on any unlisted overage, or on a stale row whose
-file has since dropped under the ceiling. There are no silent exceptions.
+justification is bookkeeping, and bookkeeping never belongs in the code. `EXCEPTIONS.md` records
+exactly the sanctioned overages; the size report flags any unlisted overage, or a stale row whose
+file has since dropped under the ceiling, as a unit to reconcile. There are no silent exceptions.
 
 ## Comments
 
@@ -216,7 +217,8 @@ initialization-order constraint in **Construction**.
   185-column lines, comments never reflowed to fit the column, short functions never auto-collapsed
   onto one line (the author decides), and includes left unsorted so the hand-ordering below holds.
   Run it.
-- `.clang-tidy` is the linter and the size/complexity gate. It fails the build.
+- `.clang-tidy` is the linter and the advisory size/complexity report; it flags overages rather
+  than failing the build. Treat its findings as defects to clear.
 - Apply both across the whole tree. A change is not done until both are clean — or its overage is a
   registered exception.
 

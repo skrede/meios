@@ -139,6 +139,15 @@ std::string format_result(const py::object &result)
     return py::str(result).cast<std::string>();
 }
 
+py::object seed_and_eval(std::string_view expr, const eval_scope &scope)
+{
+    py::dict globals;
+    seed_math(globals);
+    seed_yaml(globals);
+    seed_scope(globals, expr, scope);
+    return py::eval(std::string(expr), globals);
+}
+
 }
 
 std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
@@ -148,26 +157,20 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
     py::gil_scoped_acquire gil;
     try
     {
-        py::dict globals;
-        seed_math(globals);
-        seed_yaml(globals);
-        seed_scope(globals, expr, scope);
-        py::object result = py::eval(std::string(expr), globals);
+        std::string text = format_result(seed_and_eval(expr, scope));
         m_kind = eval_failure_kind::none;
-        return format_result(result);
+        return text;
     }
     catch(py::error_already_set &raised)
     {
         m_kind = eval_failure_kind::error;
-        log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" raised: "
-            + raised.what());
+        log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" raised: " + raised.what());
         return std::nullopt;
     }
     catch(const std::exception &raised)
     {
         m_kind = eval_failure_kind::error;
-        log.log(level::error, "python evaluation of \"" + std::string(expr)
-            + "\" failed to convert its result: " + raised.what());
+        log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" failed to convert its result: " + raised.what());
         return std::nullopt;
     }
 }

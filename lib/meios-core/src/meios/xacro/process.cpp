@@ -129,7 +129,7 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return insert_block(ctx, in, out, document);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
-    std::map<std::string, macro_def>::iterator found = ctx.macros.find(std::string(name.substr(6)));
+    auto found = ctx.macros.find(std::string(name.substr(6)));
     if(found != ctx.macros.end())
         return instantiate_macro(ctx, found->second, in, out, document);
     return fail(ctx, "unknown xacro element <" + std::string(name) + '>');
