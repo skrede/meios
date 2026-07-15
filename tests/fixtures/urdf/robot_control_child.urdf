@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot name="controlled">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.2"/>
+      </geometry>
+    </visual>
+  </link>
+  <ros2_control name="system_hw" type="system">
+    <hardware/>
+  </ros2_control>
+  <gazebo reference="base_link"/>
+  <transmission name="tran1"/>
+</robot>

@@ -39,6 +39,29 @@ std::string expand_case(const std::filesystem::path &dir, meios::log_sink &log)
     return meios::canonical_xml(out.document);
 }
 
+meios::expansion expand_source(const std::string &source, meios::log_sink &log)
+{
+    meios::source_stack sources{};
+    meios::eval_scope scope;
+    return meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
+}
+
+const char *inherit_hit =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:property name=\"a\" value=\"7\"/>"
+    "<xacro:macro name=\"m\" params=\"a:=^\"><link name=\"l${a}\"/></xacro:macro>"
+    "<xacro:m/></robot>";
+
+const char *inherit_fallback =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"m\" params=\"a:=^|5\"><link name=\"l${a}\"/></xacro:macro>"
+    "<xacro:m/></robot>";
+
+const char *inherit_missing =
+    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<xacro:macro name=\"m\" params=\"a:=^\"><link name=\"l${a}\"/></xacro:macro>"
+    "<xacro:m/></robot>";
+
 }
 
 TEST_CASE("every structural golden expands to its expected URDF", "[xacro][structural][golden]")
@@ -56,4 +79,30 @@ TEST_CASE("every structural golden expands to its expected URDF", "[xacro][struc
         ++cases;
     }
     REQUIRE(cases == 3);
+}
+
+TEST_CASE("a caret macro default inherits the enclosing binding", "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(inherit_hit, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("l7") != std::string::npos);
+}
+
+TEST_CASE("a caret-fallback macro default resolves the fallback when nothing is inherited",
+          "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(inherit_fallback, silent);
+    REQUIRE(out.ok);
+    REQUIRE(out.document.find("l5") != std::string::npos);
+}
+
+TEST_CASE("a caret macro default with no inherited value and no fallback fails loudly",
+          "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    const meios::expansion out = expand_source(inherit_missing, silent);
+    REQUIRE_FALSE(out.ok);
+    REQUIRE(out.document.find("^") == std::string::npos);
 }

@@ -65,7 +65,9 @@ void append_visual(pugi::xml_node parent, const visual<double> &vis, std::vector
     pugi::xml_node node = parent.append_child("visual");
     append_origin(node, vis.origin);
     append_geometry(node, vis.geom, refs);
-    if(vis.material_ref)
+    if(vis.material_inline)
+        append_material(node, *vis.material_inline, refs);
+    else if(vis.material_ref)
         append_material_ref(node, *vis.material_ref);
 }
 

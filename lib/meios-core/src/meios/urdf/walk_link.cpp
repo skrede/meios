@@ -88,7 +88,12 @@ visual<double> read_visual(pugi::xml_node node, std::string_view text,
     out.origin = read_transform(node.child("origin"), ctx, loc);
     out.geom = read_geometry(node.child("geometry"), ctx, loc);
     if(pugi::xml_node mat = node.child("material"))
-        out.material_ref = resolve_material_ref(mat, materials, ctx, node_location(mat, text, file));
+    {
+        if(mat.child("color") || mat.child("texture"))
+            out.material_inline = extract_material(mat, text, file, ctx);
+        else
+            out.material_ref = resolve_material_ref(mat, materials, ctx, node_location(mat, text, file));
+    }
     return out;
 }
 

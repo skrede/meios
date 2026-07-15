@@ -62,6 +62,34 @@ void parse_params(std::string_view spec, macro_def &def)
 
 using saved_binding = std::pair<std::string, std::optional<binding>>;
 
+bool bind_literal(expand_ctx &ctx, const std::string &name, std::string_view raw,
+                  const std::filesystem::path &document)
+{
+    bool ok = true;
+    std::string bound = substitute_attr(ctx, raw, document, ok);
+    if(!ok)
+        return false;
+    ctx.scope.set(name, classify(bound));
+    return true;
+}
+
+// A `^` default inherits the enclosing binding; `^|fallback` inherits it or the
+// fallback text; a bare `^` with no inherited value is a loud error, never literal.
+bool bind_default(expand_ctx &ctx, const std::string &name, const std::string &def,
+                  const std::filesystem::path &document)
+{
+    if(def != "^" && def.rfind("^|", 0) != 0)
+        return bind_literal(ctx, name, def, document);
+    if(std::optional<binding> inherited = ctx.scope.lookup(name))
+    {
+        ctx.scope.set(name, *inherited);
+        return true;
+    }
+    if(def.rfind("^|", 0) == 0)
+        return bind_literal(ctx, name, std::string_view(def).substr(2), document);
+    return fail(ctx, "macro parameter '" + name + "' inherits no value and has no fallback");
+}
+
 bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                  const std::filesystem::path &document, std::vector<saved_binding> &saved)
 {
@@ -72,12 +100,10 @@ bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
         pugi::xml_attribute attr = call.attribute(name.c_str());
         if(!attr && !def.defaults[i])
             return fail(ctx, "macro instantiation is missing required parameter '" + name + '\'');
-        bool ok = true;
-        std::string raw = attr ? std::string(attr.value()) : *def.defaults[i];
-        std::string bound = substitute_attr(ctx, raw, document, ok);
+        const bool ok = attr ? bind_literal(ctx, name, attr.value(), document)
+                             : bind_default(ctx, name, *def.defaults[i], document);
         if(!ok)
             return false;
-        ctx.scope.set(name, classify(bound));
     }
     return true;
 }

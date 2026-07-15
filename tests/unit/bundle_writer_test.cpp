@@ -168,6 +168,24 @@ TEST_CASE("an overlong UTF-8 encoding hard-fails the emitter", "[bundle][writer]
     REQUIRE(out.str().empty());
 }
 
+TEST_CASE("an inline visual material survives read->flatten with its color verbatim", "[bundle][writer]")
+{
+    capture_log log;
+    const char *src =
+        "<robot name=\"r\">"
+        "<link name=\"base\"><visual><geometry><box size=\"1 1 1\"/></geometry>"
+        "<material name=\"red\"><color rgba=\"1 0 0 1\"/></material></visual></link>"
+        "</robot>";
+    const meios::tree<double> robot = reparse(src, log);
+
+    std::ostringstream out;
+    meios::urdf_writer writer(out, log);
+    meios::replay(robot, writer);
+
+    REQUIRE(writer.status().status == meios::emit_status::ok);
+    REQUIRE(out.str().find("color rgba") != std::string::npos);
+}
+
 TEST_CASE("an empty name is preserved with a warning, not a failure", "[bundle][writer]")
 {
     capture_log log;
