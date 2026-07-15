@@ -2,9 +2,6 @@
 
 #include "meios/xacro/eval_scope.h"
 
-#include "meios/diagnostic/level.h"
-#include "meios/diagnostic/log_sink.h"
-
 #include <pugixml.hpp>
 
 #include <map>

@@ -5,9 +5,6 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/container_marker.h"
 
-#include "meios/diagnostic/level.h"
-#include "meios/diagnostic/log_sink.h"
-
 #include <pugixml.hpp>
 
 #include <map>
