@@ -76,6 +76,8 @@ bool select_backend(const verb_context &ctx, load_options &opts,
                               "rebuild with the eval-python enrichment to use --eval python");
         return false;
     }
+    (void)opts;
+    (void)handle;
 #ifdef MEIOS_CLI_HAS_EVAL_PYTHON
     handle.emplace(python_evaluator{});
     opts.backend = &*handle;
