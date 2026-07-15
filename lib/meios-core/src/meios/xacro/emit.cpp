@@ -24,7 +24,7 @@ bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         if(std::string_view(attr.name()) == "xmlns:xacro")
             continue;
         bool ok = true;
-        std::string value = substitute_attr(ctx, attr.value(), document, ok);
+        std::string value = strip_container_marker(substitute_attr(ctx, attr.value(), document, ok));
         if(!ok)
             return false;
         element.append_attribute(attr.name()).set_value(value.c_str());

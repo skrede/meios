@@ -13,6 +13,7 @@
 #include <cctype>
 #include <string>
 #include <variant>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -21,6 +22,11 @@ namespace meios::detail
 
 namespace
 {
+
+// Mirrors the eval-python container marker byte; stripped at every value->output seam as
+// XML-illegal control-char hygiene so no marker reaches serialized output — core links
+// nothing from eval-python.
+constexpr char container_marker = '\x01';
 
 bool is_true(const value &v)
 {
@@ -135,6 +141,12 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 
 }
 
+std::string strip_container_marker(std::string text)
+{
+    text.erase(std::remove(text.begin(), text.end(), container_marker), text.end());
+    return text;
+}
+
 std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
                             const std::filesystem::path &document, bool &ok)
 {
@@ -155,7 +167,7 @@ bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(kind == pugi::node_pcdata || kind == pugi::node_cdata)
     {
         bool ok = true;
-        std::string text = substitute_attr(ctx, in.value(), document, ok);
+        std::string text = strip_container_marker(substitute_attr(ctx, in.value(), document, ok));
         if(!ok)
             return false;
         out.append_child(kind).set_value(text.c_str());

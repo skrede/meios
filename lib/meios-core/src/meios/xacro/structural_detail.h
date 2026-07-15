@@ -90,6 +90,8 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
 std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
                             const std::filesystem::path &document, bool &ok);
 
+std::string strip_container_marker(std::string text);
+
 bool process_children(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                       const std::filesystem::path &document);
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,

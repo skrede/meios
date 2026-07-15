@@ -26,15 +26,22 @@ namespace meios
 namespace
 {
 
-// A dict/list str-ified by format_result when it crossed a xacro:property boundary is
-// re-parsed on re-entry with ast.literal_eval, which accepts only genuine Python literals
-// and raises on anything else — so a real container is rebound while an ordinary string
-// stays a string, never fabricating a value.
+// Delimits a container str-ified crossing a xacro:property boundary. XML 1.0 forbids the raw
+// control char (www.w3.org/TR/xml/#charsets), so an author value parsed by pugixml can never
+// bear it — the marker is unforgeable from input.
+constexpr char container_marker = '\x01';
+
+// Only a marker-wrapped string is re-parsed with ast.literal_eval and rebound to its real
+// container; any other string is returned verbatim, so a literal-shaped author value like
+// "[1, 2]" stays a string, matching xacro's _eval_literal.
 py::object rehydrate(const std::string &text)
 {
+    if(text.size() < 2 || text.front() != container_marker || text.back() != container_marker)
+        return py::str(text);
+    const std::string inner = text.substr(1, text.size() - 2);
     try
     {
-        py::object parsed = py::module_::import("ast").attr("literal_eval")(text);
+        py::object parsed = py::module_::import("ast").attr("literal_eval")(inner);
         if(py::isinstance<py::dict>(parsed) || py::isinstance<py::list>(parsed)
             || py::isinstance<py::tuple>(parsed))
             return parsed;
@@ -42,7 +49,7 @@ py::object rehydrate(const std::string &text)
     catch(py::error_already_set &)
     {
     }
-    return py::str(text);
+    return py::str(inner);
 }
 
 py::object to_py_object(const binding &bound)
@@ -115,11 +122,11 @@ void seed_scope(py::dict &globals, std::string_view expr, const eval_scope &scop
     }
 }
 
-// bool/float route back through the core evaluator's to_python_str so the two
-// paths render identically (True/False, .0-append); str returns verbatim. int
-// renders via Python's own str() to preserve arbitrary-precision results (e.g.
-// ${2**64}) that overflow long long; bool precedes int because in Python bool is
-// a subtype of int. Every other object (list, dict) substitutes as its Python str().
+// bool/float route back through the core evaluator's to_python_str so the two paths render
+// identically (True/False, .0-append); str returns verbatim; int renders via Python's own
+// str() to preserve arbitrary-precision results (${2**64}) that overflow long long, bool
+// preceding int because Python bool subtypes int. A list/dict/tuple is delimited with the
+// container_marker so rehydrate can round-trip it across a xacro:property boundary.
 std::string format_result(const py::object &result)
 {
     if(py::isinstance<py::str>(result))
@@ -128,6 +135,9 @@ std::string format_result(const py::object &result)
         return to_python_str(value{ result.cast<bool>() });
     if(py::isinstance<py::float_>(result))
         return to_python_str(value{ result.cast<double>() });
+    if(py::isinstance<py::list>(result) || py::isinstance<py::dict>(result)
+        || py::isinstance<py::tuple>(result))
+        return container_marker + py::str(result).cast<std::string>() + container_marker;
     return py::str(result).cast<std::string>();
 }
 
