@@ -43,9 +43,9 @@ std::optional<std::string> extract_glb_json(std::string_view bytes, log_sink &lo
         log.log(level::error, "glb: unsupported container version (expected 2)");
         return {};
     }
-    if(read_u32(bytes, 8) > bytes.size())
+    if(read_u32(bytes, 8) != bytes.size())
     {
-        log.log(level::error, "glb: declared length exceeds the actual byte size");
+        log.log(level::error, "glb: declared length does not match the actual byte size");
         return {};
     }
     const std::uint32_t json_len = read_u32(bytes, 12);

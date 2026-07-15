@@ -155,6 +155,18 @@ TEST_CASE("an oversized declared length yields a diagnostic and an empty list", 
     REQUIRE(log.errors > 0);
 }
 
+TEST_CASE("a declared length shorter than the actual byte count yields a diagnostic and an empty list", "[scan][gltf]")
+{
+    meios::gltf_scanner scanner;
+    counting_sink log;
+    std::string glb = make_glb(R"({"buffers":[]})", 4);
+    glb.append(4, '\0');
+    meios::resolved_asset asset = bytes_asset(std::move(glb));
+
+    REQUIRE(scanner.scan(asset, log).empty());
+    REQUIRE(log.errors > 0);
+}
+
 TEST_CASE("registration wires the gltf and glb extensions", "[scan][gltf]")
 {
     meios::scanner_registry registry;
