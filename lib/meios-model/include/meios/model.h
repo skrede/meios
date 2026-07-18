@@ -1,6 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_MODEL_MODEL_H
 #define HPP_GUARD_MEIOS_MODEL_MODEL_H
 
+#include "meios/expected.h"
+
 #include "meios/math/inertia.h"
 #include "meios/math/vector3.h"
 #include "meios/math/rotations.h"
