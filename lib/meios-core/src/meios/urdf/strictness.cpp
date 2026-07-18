@@ -89,15 +89,20 @@ int offset_to_line(std::string_view text, std::ptrdiff_t offset)
     return line;
 }
 
-source_location node_location(pugi::xml_node node, std::string_view text,
-                              const std::filesystem::path &file)
+source_location offset_location(std::string_view text, std::ptrdiff_t offset,
+                                const std::filesystem::path &file)
 {
-    const std::ptrdiff_t offset = node.offset_debug();
     const std::ptrdiff_t stop = std::min<std::ptrdiff_t>(offset, static_cast<std::ptrdiff_t>(text.size()));
     int column = 1;
     for(std::ptrdiff_t i = 0; i < stop; ++i)
         column = text[static_cast<std::size_t>(i)] == '\n' ? 1 : column + 1;
     return source_location{ file, offset_to_line(text, offset), column };
+}
+
+source_location node_location(pugi::xml_node node, std::string_view text,
+                              const std::filesystem::path &file)
+{
+    return offset_location(text, node.offset_debug(), file);
 }
 
 bool run_strictness(pugi::xml_node document, std::string_view text,

@@ -78,6 +78,18 @@ foreach(stem IN ITEMS math diag records types sink)
     endif()
 endforeach()
 
+foreach(stem IN ITEMS world_recorder)
+    set(recorder_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${recorder_test_src})
+        add_executable(${stem}_test ${recorder_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model Catch2::Catch2WithMain)
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test)
+    endif()
+endforeach()
+
 # The expected vocabulary aliases std::expected where the standard library ships it
 # and a C++20 fallback otherwise. Both branches carry the same call surface, so one
 # source proves both: expected_std_test pins C++23 to reach std::expected, and

@@ -29,6 +29,9 @@ using material_table = std::unordered_map<std::string, material<double>>;
 
 int offset_to_line(std::string_view text, std::ptrdiff_t offset);
 
+source_location offset_location(std::string_view text, std::ptrdiff_t offset,
+                                const std::filesystem::path &file);
+
 source_location node_location(pugi::xml_node node, std::string_view text,
                               const std::filesystem::path &file);
 
