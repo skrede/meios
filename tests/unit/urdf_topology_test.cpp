@@ -84,6 +84,27 @@ int root_count(const std::vector<int> &parent_of)
     return roots;
 }
 
+meios::tree<double> two_root_forest()
+{
+    meios::tree<double> robot;
+    robot.name = "two_roots";
+    robot.links = { { .name = "r0" }, { .name = "r0_a" }, { .name = "r0_b" },
+                    { .name = "r1" }, { .name = "r1_a" } };
+    robot.joints = { { .name = "j0", .parent = "r0", .child = "r0_a" },
+                     { .name = "j1", .parent = "r0", .child = "r0_b" },
+                     { .name = "j2", .parent = "r1", .child = "r1_a" } };
+    return robot;
+}
+
+int count_matching(const std::vector<entry> &entries, std::string_view needle)
+{
+    int hits = 0;
+    for(const entry &e : entries)
+        if(e.msg.find(needle) != std::string::npos)
+            ++hits;
+    return hits;
+}
+
 }
 
 TEST_CASE("each broken class is a located error under topology_policy::fail", "[urdf][topology]")
@@ -133,4 +154,15 @@ TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topolo
     const meios::topology_result skip = reconstruct(robot, skipped, meios::topology_policy::skip);
     REQUIRE(skip.ok);
     REQUIRE(skipped.empty());
+}
+
+TEST_CASE("a valid multi-root forest reports no false unreachable under warn", "[urdf][topology]")
+{
+    const meios::tree<double> robot = two_root_forest();
+
+    std::vector<entry> entries;
+    const meios::topology_result result = reconstruct(robot, entries, meios::topology_policy::warn);
+
+    REQUIRE(result.ok);
+    REQUIRE(count_matching(entries, "unreachable") == 0);
 }
