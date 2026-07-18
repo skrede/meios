@@ -2,11 +2,6 @@
 
 #include "meios/urdf/urdf_reader.h"
 
-#include "meios/bundle/urdf_writer.h"
-
-#include "meios/sink/pod_recorder.h"
-#include "meios/sink/world_recorder.h"
-
 #include "meios/records/robot_info.h"
 
 #include "meios/model/tree.h"
@@ -108,9 +103,7 @@ void emit_joints(pugi::xml_node robot, std::string_view text, const std::filesys
 
 }
 
-template <typename Sink>
-    requires model_sink<Sink>
-void basic_parser<urdf_reader>::parse(std::string_view source, Sink &sink)
+void basic_parser<urdf_reader>::parse_erased(std::string_view source, erased_sink &sink)
 {
     pugi::xml_document doc;
     const unsigned flags = pugi::parse_default | pugi::parse_comments | pugi::parse_ws_pcdata;
@@ -132,10 +125,5 @@ void basic_parser<urdf_reader>::parse(std::string_view source, Sink &sink)
     warn_unhandled(robot, source, file, m_context);
     sink.finish();
 }
-
-template void basic_parser<urdf_reader>::parse<pod_recorder<tree<double>>>(
-    std::string_view, pod_recorder<tree<double>> &);
-template void basic_parser<urdf_reader>::parse<world_recorder>(std::string_view, world_recorder &);
-template void basic_parser<urdf_reader>::parse<urdf_writer>(std::string_view, urdf_writer &);
 
 }
