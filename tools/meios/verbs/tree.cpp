@@ -85,7 +85,13 @@ int run_tree(const verb_context &ctx)
     load_options opts;
     opts.topology = topology_policy::warn;
     opts.package_roots = to_paths(ctx.package_paths);
-    const model<double> robot = load(positional(ctx, 0), opts, log);
+    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, log);
+    if(!loaded)
+    {
+        log.log(level::error, loaded.error().loc, loaded.error().message);
+        return 1;
+    }
+    const model<double> &robot = *loaded;
 
     log_sink quiet;
     const topology_result topo =

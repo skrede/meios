@@ -26,10 +26,8 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <ostream>
 #include <utility>
 #include <optional>
-#include <iostream>
 #include <filesystem>
 #include <string_view>
 
@@ -87,50 +85,58 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
     parser.parse(expanded.document, recorder);
 }
 
-// Sniffs the document root: nullopt loud-rejects a non-loadable/non-<robot>
-// document, otherwise reports whether the xacro namespace calls for expansion.
-std::optional<bool> sniff_robot(std::string_view bytes, const std::filesystem::path &path,
-                                log_sink &log)
+struct sniff_result
+{
+    std::optional<load_error> error;
+    bool expandable;
+};
+
+unexpected<load_error> make_error(source_location loc, std::string message)
+{
+    return unexpected<load_error>(load_error{ std::move(loc), std::move(message) });
+}
+
+// Reports an XML-parse failure or a non-<robot> root as a load_error rather than
+// logging it; drive_load is the one place that turns such a failure into the load's
+// error channel. A clean document reports whether the xacro namespace calls for
+// expansion.
+sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &path)
 {
     pugi::xml_document probe;
     const unsigned flags = pugi::parse_default | pugi::parse_comments | pugi::parse_ws_pcdata;
     const pugi::xml_parse_result parsed = probe.load_buffer(bytes.data(), bytes.size(), flags);
     if(!parsed)
-    {
-        log.log(level::error, std::string("urdf parse error: ") + parsed.description());
-        return std::nullopt;
-    }
+        return { load_error{ detail::offset_location(bytes, parsed.offset, path),
+                             std::string("urdf parse error: ") + parsed.description() }, false };
     const pugi::xml_node root = first_element(probe);
     if(std::string_view(root.name()) != "robot")
-    {
-        log.log(level::error, detail::node_location(root, bytes, path),
-                "expected a <robot> root element, found <" + std::string(root.name()) + ">");
-        return std::nullopt;
-    }
-    return declares_xacro(root);
+        return { load_error{ detail::node_location(root, bytes, path),
+                             "expected a <robot> root element, found <"
+                                 + std::string(root.name()) + ">" }, false };
+    return { std::nullopt, declares_xacro(root) };
 }
 
-model<double> drive_load(const std::filesystem::path &path, const load_options &opts,
-                         source_stack &sources, log_sink &log)
+expected<model<double>, load_error> drive_load(const std::filesystem::path &path,
+                                               const load_options &opts, source_stack &sources,
+                                               log_sink &log)
 {
-    world_recorder recorder(log, opts.topology);
-
     const std::optional<std::string> bytes = read_file(path);
     if(!bytes)
-    {
-        log.log(level::error, source_location{ path, 0, 0 }, "cannot open input file");
-        return recorder.result();
-    }
+        return make_error(source_location{ path, 0, 0 }, "cannot open input file");
 
-    const std::optional<bool> expandable = sniff_robot(*bytes, path, log);
-    if(!expandable)
-        return recorder.result();
+    const sniff_result sniff = sniff_robot(*bytes, path);
+    if(sniff.error)
+        return unexpected<load_error>(*sniff.error);
 
+    world_recorder recorder(log, opts.topology);
     core_evaluator eval;
     parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(*bytes, path, *expandable, opts, ctx, recorder);
-    return recorder.result();
+    drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
+    if(!recorder.ok())
+        return make_error(recorder.first_failure().value_or(source_location{ path, 0, 0 }),
+                          "invalid robot topology");
+    return recorder.take_model();
 }
 
 source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_sink &log)
@@ -143,22 +149,24 @@ source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_
 
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log)
+expected<model<double>, load_error> load(const std::filesystem::path &path,
+                                         const load_options &opts, log_sink &log)
 {
     source_stack sources = build_sources(opts.package_roots, log);
     return drive_load(path, opts, sources, log);
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts,
-                   source_stack &sources, log_sink &log)
+expected<model<double>, load_error> load(const std::filesystem::path &path,
+                                         const load_options &opts, source_stack &sources,
+                                         log_sink &log)
 {
     return drive_load(path, opts, sources, log);
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts)
+expected<model<double>, load_error> load(const std::filesystem::path &path, const load_options &opts)
 {
-    log_sink_s stderr_sink(std::cerr);
-    return load(path, opts, stderr_sink);
+    log_sink silent;
+    return load(path, opts, silent);
 }
 
 }

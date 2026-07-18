@@ -86,8 +86,11 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
     opts.backend = &handle;
     opts.args["config_path"] = fixture("yaml_arm/config.yaml").generic_string();
 
-    const meios::model<double> robot = meios::load(fixture("yaml_arm/arm.urdf.xacro"), opts, sink);
+    const meios::expected<meios::model<double>, meios::load_error> loaded =
+        meios::load(fixture("yaml_arm/arm.urdf.xacro"), opts, sink);
 
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = *loaded;
     REQUIRE(errors == 0);
     REQUIRE(robot.links.size() == 2);
 

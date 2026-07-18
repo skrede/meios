@@ -155,7 +155,13 @@ int run_info(const verb_context &ctx)
     log_sink_s log(std::cerr);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    const model<double> robot = load(positional(ctx, 0), opts, log);
+    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, log);
+    if(!loaded)
+    {
+        log.log(level::error, loaded.error().loc, loaded.error().message);
+        return 1;
+    }
+    const model<double> &robot = *loaded;
 
     const auto format = ctx.value_flags.find("--format");
     if(format == ctx.value_flags.end() || format->second.empty())

@@ -72,7 +72,10 @@ TEST_CASE("package_roots resolve a real package:// mesh end-to-end", "[urdf][loa
 
     meios::load_options opts;
     opts.package_roots = { root };
-    const meios::model<double> robot = meios::load(fixture("package_mesh.urdf"), opts, log);
+    const meios::expected<meios::model<double>, meios::load_error> loaded =
+        meios::load(fixture("package_mesh.urdf"), opts, log);
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = *loaded;
 
     const std::optional<std::string> resolved = first_mesh_path(robot);
     REQUIRE(resolved.has_value());
@@ -88,22 +91,28 @@ TEST_CASE("a package miss is reported, not silently dropped", "[urdf][load][sour
 
     meios::load_options opts;
     opts.on_missing = meios::missing_asset::warn;
-    const meios::model<double> robot = meios::load(fixture("package_mesh.urdf"), opts, log);
+    const meios::expected<meios::model<double>, meios::load_error> loaded =
+        meios::load(fixture("package_mesh.urdf"), opts, log);
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = *loaded;
 
     REQUIRE(has_message(msgs, "somepkg"));
     REQUIRE_FALSE(first_mesh_path(robot).value_or("").size() > 0);
 }
 
-TEST_CASE("the two-arg load reports an unresolved package on stderr", "[urdf][load][sources]")
+TEST_CASE("the two-arg load is silent even on an unresolved package", "[urdf][load][sources]")
 {
     std::ostringstream redirect;
     std::streambuf *previous = std::cerr.rdbuf(redirect.rdbuf());
 
     meios::load_options opts;
-    (void)meios::load(fixture("package_mesh.urdf"), opts);
+    const meios::expected<meios::model<double>, meios::load_error> loaded =
+        meios::load(fixture("package_mesh.urdf"), opts);
 
     std::cerr.rdbuf(previous);
-    REQUIRE_FALSE(redirect.str().empty());
+    REQUIRE(loaded.has_value());
+    REQUIRE(redirect.str().empty());
+    REQUIRE_FALSE(first_mesh_path(*loaded).value_or("").size() > 0);
 }
 
 TEST_CASE("the source_stack overload threads a caller stack into resolution", "[urdf][load][sources]")
@@ -116,8 +125,10 @@ TEST_CASE("the source_stack overload threads a caller stack into resolution", "[
     sources.push_back(meios::source_handle(meios::directory_source(root, log)));
 
     meios::load_options opts;
-    const meios::model<double> robot =
+    const meios::expected<meios::model<double>, meios::load_error> loaded =
         meios::load(fixture("package_mesh.urdf"), opts, sources, log);
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = *loaded;
 
     REQUIRE(first_mesh_path(robot).value_or("").size() > 0);
 

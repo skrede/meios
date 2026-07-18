@@ -11,6 +11,8 @@ enum class level
     error,
     warn,
     info,
+    trace,
+    debug,
 };
 
 constexpr std::string_view to_string(level lvl) noexcept
@@ -20,6 +22,8 @@ constexpr std::string_view to_string(level lvl) noexcept
         case level::error: return "error";
         case level::warn:  return "warn";
         case level::info:  return "info";
+        case level::trace: return "trace";
+        case level::debug: return "debug";
     }
     return "unknown";
 }

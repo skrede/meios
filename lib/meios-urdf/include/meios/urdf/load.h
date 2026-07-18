@@ -3,10 +3,13 @@
 
 #include "meios/urdf/policy.h"
 
+#include "meios/diagnostic/load_error.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/topology_policy.h"
 
 #include "meios/model/model.h"
+
+#include "meios/expected.h"
 
 #include "meios/xacro/eval_policy.h"
 
@@ -53,12 +56,15 @@ struct load_options
     std::map<std::string, std::string> args;
 };
 
-model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log);
+expected<model<double>, load_error> load(const std::filesystem::path &path,
+                                         const load_options &opts, log_sink &log);
 
-model<double> load(const std::filesystem::path &path, const load_options &opts,
-                   source_stack &sources, log_sink &log);
+expected<model<double>, load_error> load(const std::filesystem::path &path,
+                                         const load_options &opts, source_stack &sources,
+                                         log_sink &log);
 
-model<double> load(const std::filesystem::path &path, const load_options &opts);
+expected<model<double>, load_error> load(const std::filesystem::path &path,
+                                         const load_options &opts = {});
 
 }
 
