@@ -17,6 +17,13 @@
         #include <clocale>
     #else
         #include <locale.h>
+        #if defined(__APPLE__)
+            // Under a strict -std (CMAKE_CXX_EXTENSIONS OFF -> __STRICT_ANSI__) some
+            // macOS SDKs hide the POSIX xlocale extensions (locale_t, newlocale,
+            // uselocale, LC_ALL_MASK) from <locale.h>; <xlocale.h> declares them
+            // unconditionally. Harmless where <locale.h> already exposes them.
+            #include <xlocale.h>
+        #endif
     #endif
 #endif
 
