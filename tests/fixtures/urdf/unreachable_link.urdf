@@ -2,10 +2,19 @@
 <robot name="unreachable_link">
   <link name="base"/>
   <link name="arm"/>
-  <link name="island"/>
+  <link name="island_a"/>
+  <link name="island_b"/>
 
   <joint name="base_to_arm" type="fixed">
     <parent link="base"/>
     <child link="arm"/>
+  </joint>
+  <joint name="island_a_to_b" type="fixed">
+    <parent link="island_a"/>
+    <child link="island_b"/>
+  </joint>
+  <joint name="island_b_to_a" type="fixed">
+    <parent link="island_b"/>
+    <child link="island_a"/>
   </joint>
 </robot>

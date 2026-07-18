@@ -15,9 +15,17 @@
 namespace meios
 {
 
-struct topology_result
+struct robot_topology
 {
     std::vector<int> parent_of;
+    std::vector<int> joint_of;
+    std::vector<int> roots;
+    std::vector<int> order;
+};
+
+struct topology_result
+{
+    robot_topology topo;
     bool ok;
 };
 
@@ -51,10 +59,11 @@ void report_topology(log_sink &log, topology_policy policy, const Record &rec,
 template <typename Scalar>
 void assign_parents(const std::vector<link<Scalar>> &links,
                     const std::vector<joint<Scalar>> &joints, std::vector<int> &parent_of,
-                    log_sink &log, topology_policy policy, bool &ok)
+                    std::vector<int> &joint_of, log_sink &log, topology_policy policy, bool &ok)
 {
-    for(const auto &edge : joints)
+    for(std::size_t j = 0; j < joints.size(); ++j)
     {
+        const joint<Scalar> &edge = joints[j];
         const int pi = index_of(links, edge.parent);
         const int ci = index_of(links, edge.child);
         if(pi < 0 || ci < 0)
@@ -64,7 +73,10 @@ void assign_parents(const std::vector<link<Scalar>> &links,
             report_topology(log, policy, edge,
                 "link '" + edge.child + "' has more than one parent joint", ok);
         else
+        {
             parent_of[static_cast<std::size_t>(ci)] = pi;
+            joint_of[static_cast<std::size_t>(ci)] = static_cast<int>(j);
+        }
     }
 }
 
@@ -105,27 +117,45 @@ void detect_cycles(const std::vector<link<Scalar>> &links, const std::vector<int
     }
 }
 
-template <typename Scalar>
-void detect_unreachable(const std::vector<link<Scalar>> &links, const std::vector<int> &parent_of,
-                        const std::vector<int> &roots, log_sink &log, topology_policy policy, bool &ok)
+inline void push_children(const std::vector<int> &parent_of, int cur, std::vector<int> &stack)
 {
-    const std::size_t n = parent_of.size();
-    if(roots.empty())
-        return;
-    std::vector<bool> reached(n, false);
-    for(std::vector<int> stack{ roots.front() }; !stack.empty();)
+    std::vector<int> kids;
+    for(std::size_t i = 0; i < parent_of.size(); ++i)
+        if(parent_of[i] == cur)
+            kids.push_back(static_cast<int>(i));
+    // push children descending so the LIFO pops them ascending, giving pre-order ascending children
+    for(std::vector<int>::const_reverse_iterator it = kids.rbegin(); it != kids.rend(); ++it)
+        stack.push_back(*it);
+}
+
+inline std::vector<int> build_order(const std::vector<int> &parent_of, const std::vector<int> &roots)
+{
+    std::vector<int> order;
+    order.reserve(parent_of.size());
+    std::vector<bool> seen(parent_of.size(), false);
+    std::vector<int> stack(roots.rbegin(), roots.rend());
+    while(!stack.empty())
     {
         const int cur = stack.back();
         stack.pop_back();
-        if(reached[static_cast<std::size_t>(cur)])
+        if(seen[static_cast<std::size_t>(cur)])
             continue;
-        reached[static_cast<std::size_t>(cur)] = true;
-        for(std::size_t i = 0; i < n; ++i)
-            if(parent_of[i] == cur)
-                stack.push_back(static_cast<int>(i));
+        seen[static_cast<std::size_t>(cur)] = true;
+        order.push_back(cur);
+        push_children(parent_of, cur, stack);
     }
-    for(std::size_t i = 0; i < n; ++i)
-        if(!reached[i])
+    return order;
+}
+
+template <typename Scalar>
+void report_unreachable(const std::vector<link<Scalar>> &links, const std::vector<int> &order,
+                        log_sink &log, topology_policy policy, bool &ok)
+{
+    std::vector<bool> seen(links.size(), false);
+    for(const int idx : order)
+        seen[static_cast<std::size_t>(idx)] = true;
+    for(std::size_t i = 0; i < links.size(); ++i)
+        if(!seen[i])
             report_topology(log, policy, links[i],
                 "link '" + links[i].name + "' is unreachable from the root", ok);
 }
@@ -137,11 +167,14 @@ topology_result reconstruct_topology(const std::vector<link<Scalar>> &links,
                                      const std::vector<joint<Scalar>> &joints, log_sink &log,
                                      topology_policy policy)
 {
-    topology_result result{ std::vector<int>(links.size(), -1), true };
-    detail::assign_parents(links, joints, result.parent_of, log, policy, result.ok);
-    const std::vector<int> roots = detail::collect_roots(links, result.parent_of, log, policy, result.ok);
-    detail::detect_cycles(links, result.parent_of, log, policy, result.ok);
-    detail::detect_unreachable(links, result.parent_of, roots, log, policy, result.ok);
+    const std::size_t n = links.size();
+    topology_result result{ robot_topology{ std::vector<int>(n, -1), std::vector<int>(n, -1), {}, {} }, true };
+    detail::assign_parents(links, joints, result.topo.parent_of, result.topo.joint_of, log, policy, result.ok);
+    result.topo.roots = detail::collect_roots(links, result.topo.parent_of, log, policy, result.ok);
+    detail::detect_cycles(links, result.topo.parent_of, log, policy, result.ok);
+    result.topo.order = detail::build_order(result.topo.parent_of, result.topo.roots);
+    if(!result.topo.roots.empty())
+        detail::report_unreachable(links, result.topo.order, log, policy, result.ok);
     return result;
 }
 

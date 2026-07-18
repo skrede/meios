@@ -94,12 +94,12 @@ int run_tree(const verb_context &ctx)
     const bool dot = ctx.bool_flags.count("--dot") != 0 && ctx.bool_flags.at("--dot");
     const auto root = ctx.value_flags.find("--root");
     if(root != ctx.value_flags.end() && !root->second.empty())
-        return render_rooted(robot, topo.parent_of, root->second, dot, log);
+        return render_rooted(robot, topo.topo.parent_of, root->second, dot, log);
 
     if(dot)
         std::cout << render_dot(robot);
     else
-        std::cout << render_ascii(robot, build_children(robot, topo.parent_of), roots_of(topo.parent_of));
+        std::cout << render_ascii(robot, build_children(robot, topo.topo.parent_of), roots_of(topo.topo.parent_of));
     return 0;
 }
 

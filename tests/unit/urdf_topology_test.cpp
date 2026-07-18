@@ -137,8 +137,8 @@ TEST_CASE("a valid branched tree reconstructs with a single root", "[urdf][topol
 
     REQUIRE(result.ok);
     REQUIRE(entries.empty());
-    REQUIRE(root_count(result.parent_of) == 1);
-    REQUIRE(result.parent_of.at(0) == -1);
+    REQUIRE(root_count(result.topo.parent_of) == 1);
+    REQUIRE(result.topo.parent_of.at(0) == -1);
 }
 
 TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topology]")

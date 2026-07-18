@@ -175,7 +175,7 @@ TEST_CASE("a generated model round-trips through the shared emitter", "[bundle][
         const meios::topology_result topo =
             meios::reconstruct_topology(round.links, round.joints, silent, meios::topology_policy::fail);
         RC_ASSERT(topo.ok);
-        RC_ASSERT(root_count(topo.parent_of) == 1);
+        RC_ASSERT(root_count(topo.topo.parent_of) == 1);
     }));
 }
 

@@ -77,7 +77,7 @@ TEST_CASE("reconstruct_topology reports a broken tree through the log under fail
         meios::reconstruct_topology(links, joints, log, meios::topology_policy::fail);
 
     REQUIRE_FALSE(result.ok);
-    REQUIRE(result.parent_of.size() == 2);
+    REQUIRE(result.topo.parent_of.size() == 2);
     REQUIRE_FALSE(out.str().empty());
 }
 
@@ -95,8 +95,8 @@ TEST_CASE("reconstruct_topology accepts a valid branched tree", "[model][topolog
         meios::reconstruct_topology(links, joints, log, meios::topology_policy::fail);
 
     REQUIRE(result.ok);
-    REQUIRE(result.parent_of.at(0) == -1);
-    REQUIRE(result.parent_of.at(1) == 0);
-    REQUIRE(result.parent_of.at(2) == 0);
+    REQUIRE(result.topo.parent_of.at(0) == -1);
+    REQUIRE(result.topo.parent_of.at(1) == 0);
+    REQUIRE(result.topo.parent_of.at(2) == 0);
     REQUIRE(out.str().empty());
 }

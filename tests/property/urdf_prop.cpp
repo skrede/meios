@@ -101,6 +101,6 @@ TEST_CASE("a generated well-formed branched tree parses and round-trips", "[urdf
         const meios::topology_result topo =
             meios::reconstruct_topology(robot.links, robot.joints, silent, meios::topology_policy::fail);
         RC_ASSERT(topo.ok);
-        RC_ASSERT(root_count(topo.parent_of) == 1);
+        RC_ASSERT(root_count(topo.topo.parent_of) == 1);
     }));
 }
