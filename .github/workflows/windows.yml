@@ -3,16 +3,8 @@ name: Windows
 on:
   push:
     branches: [master, develop, 'milestone/**']
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.planning/**'
   pull_request:
     branches: [master, develop]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.planning/**'
   workflow_dispatch:
 
 jobs:
