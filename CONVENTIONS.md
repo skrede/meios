@@ -57,10 +57,12 @@ Keep public headers lean by moving internal helpers into a `detail/` directory a
 `detail::` namespace. Make `detail/` files and `detail::` types as needed — but a `detail/`
 file is still a real file and obeys these same rules.
 
-Enforcement: `.clang-tidy` runs size and cognitive-complexity checks that **report** any unit
-over the ceiling. The report is advisory — it is not wired to fail a build — so treat an overage
-as a defect to clear: a change is not done until it is within budget or its overage is a
-registered exception.
+Enforcement: a dedicated file-size CI job enforces the 200-line **file** ceiling on `lib` headers —
+it counts every `*.h` under `lib/` and **exits 1** on any header over 200 lines that is not registered
+in `EXCEPTIONS.md` (see below). Running `.clang-tidy` locally also **reports** any unit — function or
+file — over its ceiling with a size / cognitive-complexity check, but clang-tidy does **not** run in
+CI, so that report is advisory. Either way, treat an overage as a defect to clear: a change is not done
+until it is within budget or its overage is a registered exception.
 
 ### Exceptions
 
@@ -217,8 +219,10 @@ initialization-order constraint in **Construction**.
   185-column lines, comments never reflowed to fit the column, short functions never auto-collapsed
   onto one line (the author decides), and includes left unsorted so the hand-ordering below holds.
   Run it.
-- `.clang-tidy` is the linter and the advisory size/complexity report; it flags overages rather
-  than failing the build. Treat its findings as defects to clear.
+- `.clang-tidy` is the linter and the local, advisory size/complexity report; run locally it flags
+  overages rather than failing the build, and it does not run in CI. Treat its findings as defects to
+  clear. (The one size rule that *is* CI-enforced is the 200-line header ceiling — a dedicated
+  file-size job that exits 1 on an unregistered overage; see **File and function size guidelines**.)
 - Apply both across the whole tree. A change is not done until both are clean — or its overage is a
   registered exception.
 
