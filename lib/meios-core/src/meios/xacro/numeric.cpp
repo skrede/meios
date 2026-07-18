@@ -46,9 +46,9 @@ double strtod_c_locale(const char *first, char **last)
 
 double parse_double(std::string_view text, bool &ok)
 {
+#if MEIOS_HAS_FLOAT_CHARCONV
     const char *first = text.data();
     const char *last = text.data() + text.size();
-#if MEIOS_HAS_FLOAT_CHARCONV
     double number = 0.0;
     std::from_chars_result result = std::from_chars(first, last, number);
     ok = result.ec == std::errc{} && result.ptr == last;
