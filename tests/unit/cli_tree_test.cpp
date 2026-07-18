@@ -134,8 +134,10 @@ TEST_CASE("cli_tree: --dot matches the golden with movable and fixed styled dist
 TEST_CASE("cli_tree: a loop-closure edge is styled distinctly")
 {
     model<double> robot;
-    robot.links.push_back(link<double>{ "a", {}, {}, {}, {}, {} });
-    robot.links.push_back(link<double>{ "b", {}, {}, {}, {}, {} });
+    // Qualify to disambiguate from POSIX ::link (unistd.h) under `using namespace
+    // meios;` on gcc/Linux, where an unqualified `link` is ambiguous.
+    robot.links.push_back(meios::link<double>{ "a", {}, {}, {}, {}, {} });
+    robot.links.push_back(meios::link<double>{ "b", {}, {}, {}, {}, {} });
     joint<double> loop{};
     loop.name = "belt";
     loop.kind = joint_kind::fixed;
