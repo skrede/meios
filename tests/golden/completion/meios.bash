@@ -7,7 +7,7 @@
 #   tree - Print the link and joint topology.
 #   deps - List the assets the model references.
 #   args - List the declared arguments of the document.
-#   resolve - Resolve a link or joint to its resolved definition.
+#   resolve - Resolve a package://<pkg>/<rel> reference to its on-disk path; any other target fails loudly.
 #   completion - Generate a shell completion script.
 _meios() {
     local cur words cword
@@ -45,7 +45,7 @@ _meios_flags() {
         info) printf '%s\n' "--package-path --format" ;;
         validate) printf '%s\n' "--package-path --format" ;;
         tree) printf '%s\n' "--package-path --dot --root" ;;
-        deps) printf '%s\n' "--package-path" ;;
+        deps) printf '%s\n' "--package-path --eval --eval-policy" ;;
         args) printf '%s\n' "--package-path" ;;
         resolve) printf '%s\n' "--package-path" ;;
         completion) printf '%s\n' "" ;;
