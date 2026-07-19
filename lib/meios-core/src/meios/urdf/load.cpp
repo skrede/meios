@@ -17,6 +17,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
@@ -91,9 +92,9 @@ struct sniff_result
     bool expandable;
 };
 
-unexpected<load_error> make_error(source_location loc, std::string message)
+unexpected<load_error> make_error(source_location loc, std::string message, diagnostic_code code)
 {
-    return unexpected<load_error>(load_error{ std::move(loc), std::move(message) });
+    return unexpected<load_error>(load_error{ std::move(loc), std::move(message), code });
 }
 
 // Reports an XML-parse failure or a non-<robot> root as a load_error rather than
@@ -107,12 +108,14 @@ sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &pa
     const pugi::xml_parse_result parsed = probe.load_buffer(bytes.data(), bytes.size(), flags);
     if(!parsed)
         return { load_error{ detail::offset_location(bytes, parsed.offset, path),
-                             std::string("urdf parse error: ") + parsed.description() }, false };
+                             std::string("urdf parse error: ") + parsed.description(),
+                             diagnostic_code::xml_parse_error }, false };
     const pugi::xml_node root = first_element(probe);
     if(std::string_view(root.name()) != "robot")
         return { load_error{ detail::node_location(root, bytes, path),
                              "expected a <robot> root element, found <"
-                                 + std::string(root.name()) + ">" }, false };
+                                 + std::string(root.name()) + ">",
+                             diagnostic_code::non_robot_root }, false };
     return { std::nullopt, declares_xacro(root) };
 }
 
@@ -122,7 +125,8 @@ expected<model<double>, load_error> drive_load(const std::filesystem::path &path
 {
     const std::optional<std::string> bytes = read_file(path);
     if(!bytes)
-        return make_error(source_location{ path, 0, 0 }, "cannot open input file");
+        return make_error(source_location{ path, 0, 0 }, "cannot open input file",
+                          diagnostic_code::cannot_open);
 
     const sniff_result sniff = sniff_robot(*bytes, path);
     if(sniff.error)
@@ -135,7 +139,7 @@ expected<model<double>, load_error> drive_load(const std::filesystem::path &path
     drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
     if(!recorder.ok())
         return make_error(recorder.first_failure().value_or(source_location{ path, 0, 0 }),
-                          "invalid robot topology");
+                          "invalid robot topology", diagnostic_code::invalid_topology);
     return recorder.take_model();
 }
 
