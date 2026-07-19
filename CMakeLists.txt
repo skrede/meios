@@ -9,6 +9,7 @@ include(FetchContent)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildflags.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFetchDescription.cmake)
 
 option(MEIOS_BUILD_TESTS "Build unit and compile tests" OFF)
 option(MEIOS_BUILD_EXAMPLES "Build examples" OFF)
