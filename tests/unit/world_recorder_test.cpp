@@ -15,6 +15,8 @@ namespace
 class capture_sink final : public meios::log_sink
 {
 public:
+    using meios::log_sink::log;
+
     void log(meios::level lvl, meios::diagnostic_code code, const meios::source_location &location,
              const std::string &message) override
     {

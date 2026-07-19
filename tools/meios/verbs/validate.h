@@ -38,6 +38,8 @@ int exit_code(const validation_report &report);
 class recording_sink final : public log_sink
 {
 public:
+    using log_sink::log;
+
     recording_sink() : m_messages() {}
 
     void log(level lvl, const std::string &message) override;

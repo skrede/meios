@@ -47,6 +47,8 @@ namespace
 class capture_sink final : public log_sink
 {
 public:
+    using log_sink::log;
+
     void log(level lvl, const std::string &message) override
     {
         m_plain.emplace_back(lvl, message);

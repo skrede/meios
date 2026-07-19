@@ -15,6 +15,8 @@ namespace
 
 struct capture_log : meios::log_sink
 {
+    using meios::log_sink::log;
+
     std::vector<meios::level> levels;
 
     void log(meios::level lvl, const std::string &) override
