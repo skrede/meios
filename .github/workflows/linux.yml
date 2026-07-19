@@ -402,3 +402,9 @@ jobs:
 
       - name: Test
         run: cd build && ctest -R urdf_corpus --output-on-failure
+
+      # Byte-identical flatten check against the committed baseline, over the same
+      # always-on pinned known-good description. Blocking, so any drift in flatten
+      # output turns the PR red.
+      - name: Test flatten byte identity
+        run: cd build && ctest -R flatten_instrument --output-on-failure

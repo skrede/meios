@@ -93,6 +93,25 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
     catch_discover_tests(urdf_corpus_test)
 endif()
 
+# The flatten instrument asserts byte identity of flatten output against a
+# committed baseline derived from the pinned known-good description; it registers
+# only under MEIOS_FETCH_CORPUS so the pinned source is present. TEST_PREFIX names
+# the ctest cases flatten_instrument.* so CI can select them by regex.
+set(urdf_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_flatten_instrument_test.cpp)
+if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_flatten_src})
+    add_executable(flatten_instrument_test ${urdf_flatten_src})
+    target_link_libraries(flatten_instrument_test
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::bundle
+            Catch2::Catch2WithMain)
+    target_compile_definitions(flatten_instrument_test PRIVATE
+        MEIOS_CORPUS_DIR="${MEIOS_CORPUS_KUKA_DIR}"
+        MEIOS_CORPUS_KNOWN_GOOD="${MEIOS_CORPUS_KNOWN_GOOD}"
+        MEIOS_FLATTEN_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden/flatten")
+    meios_enable_coverage(flatten_instrument_test)
+    meios_warnings(flatten_instrument_test)
+    catch_discover_tests(flatten_instrument_test TEST_PREFIX "flatten_instrument.")
+endif()
+
 foreach(stem IN ITEMS math diag records types sink)
     set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
     if(EXISTS ${model_test_src})
