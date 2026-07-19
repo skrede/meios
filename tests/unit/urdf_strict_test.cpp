@@ -3,6 +3,8 @@
 #include <meios/io.h>
 #include <meios/xacro.h>
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -11,7 +13,6 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <string_view>
 #include <filesystem>
 
 namespace
@@ -29,7 +30,7 @@ std::string slurp(const std::string &name)
 struct capture_result
 {
     std::vector<meios::level> levels;
-    std::vector<std::string> msgs;
+    std::vector<meios::diagnostic_code> codes;
     std::size_t links;
 };
 
@@ -37,16 +38,23 @@ struct recorder
 {
     capture_result &sink;
 
-    void operator()(meios::level lvl, const std::string &msg)
+    void operator()(meios::level lvl, const std::string &)
     {
         sink.levels.push_back(lvl);
-        sink.msgs.push_back(msg);
+        sink.codes.push_back(meios::diagnostic_code::unspecified);
     }
 
-    void operator()(meios::level lvl, const meios::source_location &, const std::string &msg)
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &)
     {
         sink.levels.push_back(lvl);
-        sink.msgs.push_back(msg);
+        sink.codes.push_back(meios::diagnostic_code::unspecified);
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
+                    const std::string &)
+    {
+        sink.levels.push_back(lvl);
+        sink.codes.push_back(code);
     }
 };
 
@@ -65,12 +73,17 @@ capture_result run(const std::string &fixture, meios::strictness strict)
     return out;
 }
 
-bool has(const capture_result &result, meios::level lvl, std::string_view needle)
+bool has(const capture_result &result, meios::level lvl, meios::diagnostic_code code)
 {
     for(std::size_t i = 0; i < result.levels.size(); ++i)
-        if(result.levels[i] == lvl && result.msgs[i].find(needle) != std::string::npos)
+        if(result.levels[i] == lvl && result.codes[i] == code)
             return true;
     return false;
+}
+
+bool has_level(const capture_result &result, meios::level lvl)
+{
+    return std::find(result.levels.begin(), result.levels.end(), lvl) != result.levels.end();
 }
 
 int errors(const capture_result &result)
@@ -82,10 +95,14 @@ int errors(const capture_result &result)
 
 TEST_CASE("each pugixml-leniency class is a located error under strict", "[urdf][strict]")
 {
-    REQUIRE(has(run("dup_attr.urdf", meios::strictness::strict), meios::level::error, "duplicate attribute"));
-    REQUIRE(has(run("multi_root_xml.urdf", meios::strictness::strict), meios::level::error, "additional root"));
-    REQUIRE(has(run("trailing_garbage.urdf", meios::strictness::strict), meios::level::error, "trailing content"));
-    REQUIRE(has(run("comment_in_value.urdf", meios::strictness::strict), meios::level::error, "comment interrupting"));
+    REQUIRE(has(run("dup_attr.urdf", meios::strictness::strict), meios::level::error,
+                meios::diagnostic_code::duplicate_attribute));
+    REQUIRE(has(run("multi_root_xml.urdf", meios::strictness::strict), meios::level::error,
+                meios::diagnostic_code::additional_root_element));
+    REQUIRE(has(run("trailing_garbage.urdf", meios::strictness::strict), meios::level::error,
+                meios::diagnostic_code::trailing_content));
+    REQUIRE(has(run("comment_in_value.urdf", meios::strictness::strict), meios::level::error,
+                meios::diagnostic_code::comment_interrupting));
 }
 
 TEST_CASE("strict aborts the walk while lenient downgrades to a warning and continues", "[urdf][strict]")
@@ -99,7 +116,7 @@ TEST_CASE("strict aborts the walk while lenient downgrades to a warning and cont
     {
         const capture_result lenient = run(fixture, meios::strictness::lenient);
         REQUIRE(errors(lenient) == 0);
-        REQUIRE(has(lenient, meios::level::warn, ""));
+        REQUIRE(has_level(lenient, meios::level::warn));
         REQUIRE(lenient.links >= 1);
     }
 }

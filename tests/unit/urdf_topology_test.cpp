@@ -4,6 +4,7 @@
 #include <meios/xacro.h>
 
 #include <meios/model/topology.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,7 +14,6 @@
 #include <sstream>
 #include <cstddef>
 #include <filesystem>
-#include <string_view>
 
 namespace
 {
@@ -30,6 +30,7 @@ std::string slurp(const std::string &name)
 struct entry
 {
     meios::level lvl;
+    meios::diagnostic_code code;
     int line;
     std::string msg;
 };
@@ -38,11 +39,20 @@ struct capture
 {
     std::vector<entry> &entries;
 
-    void operator()(meios::level lvl, const std::string &msg) { entries.push_back({ lvl, 0, msg }); }
+    void operator()(meios::level lvl, const std::string &msg)
+    {
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified, 0, msg });
+    }
 
     void operator()(meios::level lvl, const meios::source_location &loc, const std::string &msg)
     {
-        entries.push_back({ lvl, loc.line, msg });
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified, loc.line, msg });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &loc,
+                    const std::string &msg)
+    {
+        entries.push_back({ lvl, code, loc.line, msg });
     }
 };
 
@@ -60,10 +70,10 @@ meios::tree<double> parse(const std::string &fixture)
     return rec.result();
 }
 
-bool located(const std::vector<entry> &entries, meios::level lvl, std::string_view needle)
+bool located(const std::vector<entry> &entries, meios::level lvl, meios::diagnostic_code expected)
 {
     for(const entry &e : entries)
-        if(e.lvl == lvl && e.line > 0 && e.msg.find(needle) != std::string::npos)
+        if(e.lvl == lvl && e.line > 0 && e.code == expected)
             return true;
     return false;
 }
@@ -96,11 +106,11 @@ meios::tree<double> two_root_forest()
     return robot;
 }
 
-int count_matching(const std::vector<entry> &entries, std::string_view needle)
+int count_matching(const std::vector<entry> &entries, meios::diagnostic_code code)
 {
     int hits = 0;
     for(const entry &e : entries)
-        if(e.msg.find(needle) != std::string::npos)
+        if(e.code == code)
             ++hits;
     return hits;
 }
@@ -112,20 +122,20 @@ TEST_CASE("each broken class is a located error under topology_policy::fail", "[
     struct expectation
     {
         std::string fixture;
-        std::string needle;
+        meios::diagnostic_code code;
     };
     for(const expectation &exp :
-        { expectation{ "multi_root.urdf", "additional root" },
-          expectation{ "cycle.urdf", "cycle" },
-          expectation{ "orphan_joint.urdf", "undeclared link" },
-          expectation{ "unreachable_link.urdf", "unreachable" },
-          expectation{ "multi_parent.urdf", "more than one parent" } })
+        { expectation{ "multi_root.urdf", meios::diagnostic_code::additional_root },
+          expectation{ "cycle.urdf", meios::diagnostic_code::link_on_cycle },
+          expectation{ "orphan_joint.urdf", meios::diagnostic_code::undeclared_link },
+          expectation{ "unreachable_link.urdf", meios::diagnostic_code::unreachable_link },
+          expectation{ "multi_parent.urdf", meios::diagnostic_code::multiple_parents } })
     {
         std::vector<entry> entries;
         const meios::topology_result result =
             reconstruct(parse(exp.fixture), entries, meios::topology_policy::fail);
         REQUIRE_FALSE(result.ok);
-        REQUIRE(located(entries, meios::level::error, exp.needle));
+        REQUIRE(located(entries, meios::level::error, exp.code));
     }
 }
 
@@ -148,7 +158,7 @@ TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topolo
     std::vector<entry> warned;
     const meios::topology_result warn = reconstruct(robot, warned, meios::topology_policy::warn);
     REQUIRE(warn.ok);
-    REQUIRE(located(warned, meios::level::warn, "additional root"));
+    REQUIRE(located(warned, meios::level::warn, meios::diagnostic_code::additional_root));
 
     std::vector<entry> skipped;
     const meios::topology_result skip = reconstruct(robot, skipped, meios::topology_policy::skip);
@@ -164,7 +174,7 @@ TEST_CASE("a valid multi-root forest reports no false unreachable under warn", "
     const meios::topology_result result = reconstruct(robot, entries, meios::topology_policy::warn);
 
     REQUIRE(result.ok);
-    REQUIRE(count_matching(entries, "unreachable") == 0);
+    REQUIRE(count_matching(entries, meios::diagnostic_code::unreachable_link) == 0);
 }
 
 TEST_CASE("joint_of maps each child to its forming joint and roots to -1", "[urdf][topology]")
