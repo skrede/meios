@@ -6,6 +6,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <cmath>
 #include <string>
@@ -57,7 +58,8 @@ std::optional<std::string> resolve_material_ref(pugi::xml_node node, const mater
     if(ctx.materials != material_policy::skip)
     {
         const level lvl = ctx.materials == material_policy::fail ? level::error : level::warn;
-        ctx.log.log(lvl, loc, "visual references undefined material '" + name + "'");
+        ctx.log.log(lvl, diagnostic_code::undefined_material, loc,
+                    "visual references undefined material '" + name + "'");
     }
     return std::nullopt;
 }

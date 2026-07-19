@@ -2,7 +2,37 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <sstream>
+#include <utility>
+#include <optional>
+
+namespace
+{
+
+// Terminal sink that records the (code, location) of the first error it receives on
+// the code-carrying overload, so a test can assert the code survives the relay chain.
+class capture_sink final : public meios::log_sink
+{
+public:
+    void log(meios::level lvl, meios::diagnostic_code code, const meios::source_location &location,
+             const std::string &message) override
+    {
+        (void)message;
+        if(lvl == meios::level::error && !m_first)
+            m_first = std::pair{ code, location };
+    }
+
+    const std::optional<std::pair<meios::diagnostic_code, meios::source_location>> &first() const
+    {
+        return m_first;
+    }
+
+private:
+    std::optional<std::pair<meios::diagnostic_code, meios::source_location>> m_first;
+};
+
+}
 
 TEST_CASE("a located topology failure is retained as ok=false and a first-failure location",
           "[model][sink]")
@@ -21,6 +51,25 @@ TEST_CASE("a located topology failure is retained as ok=false and a first-failur
     REQUIRE(recorder.first_failure()->line == 7);
     REQUIRE(recorder.first_failure()->column == 3);
     REQUIRE_FALSE(out.str().empty());
+}
+
+TEST_CASE("a typed topology diagnostic keeps its code and location through the world_recorder relay",
+          "[model][sink][diagnostic]")
+{
+    capture_sink sink;
+    meios::world_recorder recorder(sink, meios::topology_policy::fail);
+
+    recorder.on_robot({ .name = "arm" });
+    recorder.on_link({ .name = "a", .origin_loc = meios::source_location{ "robot.urdf", 3, 1 } });
+    recorder.on_link({ .name = "b", .origin_loc = meios::source_location{ "robot.urdf", 9, 5 } });
+    recorder.finish();
+
+    REQUIRE_FALSE(recorder.ok());
+    REQUIRE(sink.first().has_value());
+    REQUIRE(sink.first()->first == meios::diagnostic_code::additional_root);
+    REQUIRE(sink.first()->second.file == "robot.urdf");
+    REQUIRE(sink.first()->second.line == 9);
+    REQUIRE(sink.first()->second.column == 5);
 }
 
 TEST_CASE("a valid model is ok, has no first failure, and moves out with a populated topology",

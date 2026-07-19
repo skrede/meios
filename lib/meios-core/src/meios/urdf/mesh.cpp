@@ -8,6 +8,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
 #include <utility>
@@ -40,7 +41,7 @@ void report_missing(parse_context &ctx, const source_location &loc, const std::s
     if(ctx.on_missing == missing_asset::skip)
         return;
     const level lvl = ctx.on_missing == missing_asset::fail ? level::error : level::warn;
-    ctx.log.log(lvl, loc, "could not resolve mesh '" + uri + "'");
+    ctx.log.log(lvl, diagnostic_code::unresolved_mesh, loc, "could not resolve mesh '" + uri + "'");
 }
 
 void record_resolved(mesh<double> &shape, resolved_asset &&asset, parse_context &ctx)
@@ -76,7 +77,8 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
     const std::size_t slash = uri.find('/');
     if(slash == std::string_view::npos)
     {
-        ctx.log.log(level::error, loc, "malformed package:// mesh URI '" + shape.filename + "'");
+        ctx.log.log(level::error, diagnostic_code::malformed_mesh_uri, loc,
+                    "malformed package:// mesh URI '" + shape.filename + "'");
         return;
     }
     const std::string pkg(uri.substr(0, slash));

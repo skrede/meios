@@ -6,6 +6,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/topology_policy.h"
 
 #include <string>
@@ -43,13 +44,13 @@ int index_of(const Links &links, const std::string &name)
 
 template <typename Record>
 void report_topology(log_sink &log, topology_policy policy, const Record &rec,
-                     const std::string &message, bool &ok)
+                     diagnostic_code code, const std::string &message, bool &ok)
 {
     if(policy == topology_policy::skip)
         return;
     const level lvl = policy == topology_policy::fail ? level::error : level::warn;
     if(rec.origin_loc)
-        log.log(lvl, *rec.origin_loc, message);
+        log.log(lvl, code, *rec.origin_loc, message);
     else
         log.log(lvl, message);
     if(policy == topology_policy::fail)
@@ -67,10 +68,10 @@ void assign_parents(const std::vector<link<Scalar>> &links,
         const int pi = index_of(links, edge.parent);
         const int ci = index_of(links, edge.child);
         if(pi < 0 || ci < 0)
-            report_topology(log, policy, edge,
+            report_topology(log, policy, edge, diagnostic_code::undeclared_link,
                 "joint '" + edge.name + "' names an undeclared link", ok);
         else if(parent_of[static_cast<std::size_t>(ci)] != -1)
-            report_topology(log, policy, edge,
+            report_topology(log, policy, edge, diagnostic_code::multiple_parents,
                 "link '" + edge.child + "' has more than one parent joint", ok);
         else
         {
@@ -90,10 +91,11 @@ std::vector<int> collect_roots(const std::vector<link<Scalar>> &links,
         if(parent_of[i] == -1)
             roots.push_back(static_cast<int>(i));
     for(std::size_t r = 1; r < roots.size(); ++r)
-        report_topology(log, policy, links[static_cast<std::size_t>(roots[r])],
+        report_topology(log, policy, links[static_cast<std::size_t>(roots[r])], diagnostic_code::additional_root,
             "link '" + links[static_cast<std::size_t>(roots[r])].name + "' is an additional root", ok);
     if(roots.empty() && !links.empty())
-        report_topology(log, policy, links.front(), "no root link; the graph has a cycle", ok);
+        report_topology(log, policy, links.front(), diagnostic_code::no_root_cycle,
+            "no root link; the graph has a cycle", ok);
     return roots;
 }
 
@@ -109,7 +111,8 @@ void detect_cycles(const std::vector<link<Scalar>> &links, const std::vector<int
         {
             if(seen[static_cast<std::size_t>(cur)])
             {
-                report_topology(log, policy, links[i], "link '" + links[i].name + "' lies on a cycle", ok);
+                report_topology(log, policy, links[i], diagnostic_code::link_on_cycle,
+                    "link '" + links[i].name + "' lies on a cycle", ok);
                 break;
             }
             seen[static_cast<std::size_t>(cur)] = true;
@@ -149,14 +152,14 @@ inline std::vector<int> build_order(const std::vector<int> &parent_of, const std
 
 template <typename Scalar>
 void report_unreachable(const std::vector<link<Scalar>> &links, const std::vector<int> &order,
-                        log_sink &log, topology_policy policy, bool &ok)
+                        log_sink &log, topology_policy policy, diagnostic_code code, bool &ok)
 {
     std::vector<bool> seen(links.size(), false);
     for(const int idx : order)
         seen[static_cast<std::size_t>(idx)] = true;
     for(std::size_t i = 0; i < links.size(); ++i)
         if(!seen[i])
-            report_topology(log, policy, links[i],
+            report_topology(log, policy, links[i], code,
                 "link '" + links[i].name + "' is unreachable from the root", ok);
 }
 
@@ -174,7 +177,8 @@ topology_result reconstruct_topology(const std::vector<link<Scalar>> &links,
     detail::detect_cycles(links, result.topo.parent_of, log, policy, result.ok);
     result.topo.order = detail::build_order(result.topo.parent_of, result.topo.roots);
     if(!result.topo.roots.empty())
-        detail::report_unreachable(links, result.topo.order, log, policy, result.ok);
+        detail::report_unreachable(links, result.topo.order, log, policy,
+                                   diagnostic_code::unreachable_link, result.ok);
     return result;
 }
 
