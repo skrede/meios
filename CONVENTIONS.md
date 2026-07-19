@@ -192,8 +192,9 @@ initialization-order constraint in **Construction**.
 - Distinguish three things and never conflate them: **required** (no default),
   **required-with-default** (the override is optional), and **`std::optional`** (absence is
   itself meaningful). Do not use `std::optional` as a stand-in for a default.
-- Pre-release, there is no `[[deprecated]]`. Delete a superseded type outright — there are no
-  external users to cushion.
+- Pre-release, there is no `[[deprecated]]`. Delete a superseded type outright — adopters are
+  cushioned by the declared instability they accepted, not by an absence of adopters, and this
+  rule holds to the `v1.0.0` boundary.
 
 ## Lifetimes and ownership
 
