@@ -85,6 +85,28 @@ TEST_CASE("a bytes-backed package mesh materializes to a temp path", "[urdf][mes
     REQUIRE_FALSE(first_mesh(robot).resolved_path->empty());
 }
 
+TEST_CASE("a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted",
+          "[urdf][mesh]")
+{
+    const std::filesystem::path root =
+        std::filesystem::temp_directory_path() / "meios_urdf_lfs_fixture";
+    std::filesystem::create_directories(root / "somepkg" / "meshes");
+    std::ofstream(root / "somepkg" / "meshes" / "x.stl")
+        << "version https://git-lfs.github.com/spec/v1\n"
+           "oid sha256:4d7a2146e8f0a9c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293\n"
+           "size 12345\n";
+
+    std::vector<meios::level> levels;
+    meios::log_sink_f capture{ recorder{ levels } };
+    meios::directory_source dir{ root, capture };
+    meios::source_stack sources{ dir };
+    const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, capture);
+
+    REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
+    REQUIRE(std::count(levels.begin(), levels.end(), meios::level::error) >= 1);
+    std::filesystem::remove_all(root);
+}
+
 TEST_CASE("a missing mesh honors the missing_asset policy", "[urdf][mesh]")
 {
     SECTION("fail logs an error and leaves the path empty")

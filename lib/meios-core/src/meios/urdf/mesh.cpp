@@ -1,3 +1,4 @@
+#include "lfs_pointer.h"
 #include "urdf_detail.h"
 
 #include "meios/records/geometry.h"
@@ -90,6 +91,12 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
         return;
     }
     record_resolved(shape, std::move(*hit), ctx);
+    if(shape.resolved_path && is_lfs_pointer(*shape.resolved_path))
+    {
+        ctx.log.log(level::error, diagnostic_code::lfs_pointer_mesh, loc,
+                    "resolved mesh '" + shape.filename + "' is an unsmudged Git-LFS pointer, not geometry");
+        shape.resolved_path.reset();
+    }
 }
 
 geometry<double> read_geometry(pugi::xml_node node, parse_context &ctx, const source_location &loc)
