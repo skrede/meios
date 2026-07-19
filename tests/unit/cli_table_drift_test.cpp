@@ -70,3 +70,40 @@ TEST_CASE("cli_table_drift: the completion verb is part of the shared surface")
         found = found || entry.name == "completion";
     REQUIRE(found);
 }
+
+TEST_CASE("cli_table_drift: resolve names its package reference and deps carries the override surface")
+{
+    const std::vector<command_spec> &table = cli_table();
+
+    const command_spec *resolve = nullptr;
+    const command_spec *deps = nullptr;
+    for(const command_spec &spec : table)
+    {
+        if(spec.name == "resolve")
+            resolve = &spec;
+        if(spec.name == "deps")
+            deps = &spec;
+    }
+    REQUIRE(resolve != nullptr);
+    REQUIRE(deps != nullptr);
+
+    REQUIRE(resolve->description.find("package://") != std::string::npos);
+    REQUIRE(resolve->description.find("link or joint") == std::string::npos);
+
+    const positional_spec *target = nullptr;
+    for(const positional_spec &positional : resolve->positionals)
+        if(positional.name == "target")
+            target = &positional;
+    REQUIRE(target != nullptr);
+    REQUIRE(target->description.find("package://") != std::string::npos);
+
+    bool deps_has_eval = false;
+    for(const flag_spec &flag : deps->flags)
+        deps_has_eval = deps_has_eval || flag.token == "--eval";
+    REQUIRE(deps_has_eval);
+
+    bool deps_has_variadic_override = false;
+    for(const positional_spec &positional : deps->positionals)
+        deps_has_variadic_override = deps_has_variadic_override || positional.variadic;
+    REQUIRE(deps_has_variadic_override);
+}

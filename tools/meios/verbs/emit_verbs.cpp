@@ -161,6 +161,11 @@ int run_deps(const verb_context &ctx)
     counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
+    opts.eval = eval_policy_of(ctx);
+    std::optional<evaluator_handle> handle;
+    if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
+       || !select_backend(ctx, opts, handle, log))
+        return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
     const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
