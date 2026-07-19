@@ -66,6 +66,33 @@ foreach(stem IN ITEMS urdf_diagnostics urdf_realfixture)
     endif()
 endforeach()
 
+# The corpus test consumes the fetched, pinned descriptions. corpus.cmake runs the
+# configure-time license check unconditionally and resolves the fetch OUT_DIRs when
+# MEIOS_FETCH_CORPUS is ON; the test target registers only then, so a default
+# configure neither hits the network nor requires the corpus dirs.
+include(${CMAKE_SOURCE_DIR}/cmake/corpus.cmake)
+set(urdf_corpus_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_corpus_test.cpp)
+if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
+    add_executable(urdf_corpus_test ${urdf_corpus_src})
+    target_link_libraries(urdf_corpus_test
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+            Catch2::Catch2WithMain)
+    target_compile_definitions(urdf_corpus_test PRIVATE
+        MEIOS_CORPUS_DIR="${MEIOS_CORPUS_KUKA_DIR}"
+        MEIOS_CORPUS_KNOWN_GOOD="${MEIOS_CORPUS_KNOWN_GOOD}"
+        MEIOS_CORPUS_FAULTY="${MEIOS_CORPUS_FAULTY}"
+        MEIOS_CORPUS_FAULTY_LINE=${MEIOS_CORPUS_FAULTY_LINE})
+    if(MEIOS_CORPUS_BREADTH)
+        string(REPLACE ";" "|" _corpus_breadth_dirs "${MEIOS_CORPUS_BREADTH_DIRS}")
+        target_compile_definitions(urdf_corpus_test PRIVATE
+            MEIOS_CORPUS_BREADTH
+            MEIOS_CORPUS_BREADTH_DIRS="${_corpus_breadth_dirs}")
+    endif()
+    meios_enable_coverage(urdf_corpus_test)
+    meios_warnings(urdf_corpus_test)
+    catch_discover_tests(urdf_corpus_test)
+endif()
+
 foreach(stem IN ITEMS math diag records types sink)
     set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
     if(EXISTS ${model_test_src})

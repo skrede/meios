@@ -1,0 +1,47 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  # Breadth is fetched from third-party hosts every run, so a transient upstream
+  # outage must never gate a PR. This job runs on a schedule only and is
+  # continue-on-error: the full-breadth corpus surfaces regressions without
+  # blocking the always-on pipeline.
+  corpus-breadth:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    name: corpus breadth (full pinned set, non-blocking)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps" \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_FETCH_CORPUS=ON \
+            -DMEIOS_CORPUS_BREADTH=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        continue-on-error: true
+        run: cd build && ctest -R urdf_corpus --output-on-failure
