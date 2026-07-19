@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
-![Status](https://img.shields.io/badge/status-early%20development-red.svg)
+![Status](https://img.shields.io/badge/status-public%20preview-orange.svg)
 
 A dependency-light C++20 library that reads, resolves, and flattens URDF/xacro across packages
 and hands the resolved robot model straight to a consumer's own types — no intermediate
@@ -10,10 +10,9 @@ serialization format.
 
 ## Status
 
-**Early development.** meios is being built from the ground up; the API is unstable and much of
-the library is not yet implemented. This README describes the library's intent and scope rather
-than a finished feature set. Expect breaking changes onwards to a stable release. Follow the
-milestone branches for work in progress.
+**Public preview.** meios is being built from the ground up. This README describes the library's
+intent and scope rather than a finished feature set. Expect breaking changes onwards to a stable
+`v1.0.0` release. Follow the milestone branches for work in progress.
 
 ## Features
 
@@ -62,14 +61,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(meios)
 
-target_link_libraries(my_app PRIVATE meios::core)
+target_link_libraries(my_app PRIVATE meios::urdf)
 ```
 
 ### find_package
 
 ```cmake
 find_package(meios CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE meios::core)
+target_link_libraries(my_app PRIVATE meios::urdf)
 ```
 
 ## Documentation
