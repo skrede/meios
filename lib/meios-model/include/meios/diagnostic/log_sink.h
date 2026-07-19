@@ -2,11 +2,13 @@
 #define HPP_GUARD_MEIOS_MODEL_DIAGNOSTIC_LOG_SINK_H
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <string>
 #include <ostream>
 #include <utility>
+#include <type_traits>
 
 namespace meios
 {
@@ -28,6 +30,12 @@ public:
         (void)lvl;
         (void)location;
         (void)message;
+    }
+
+    virtual void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message)
+    {
+        (void)code;
+        log(lvl, location, message);
     }
 
 protected:
@@ -53,6 +61,14 @@ public:
         m_callable(lvl, location, message);
     }
 
+    void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
+    {
+        if constexpr(std::is_invocable_v<Callable, level, diagnostic_code, const source_location &, const std::string &>)
+            m_callable(lvl, code, location, message);
+        else
+            m_callable(lvl, location, message);
+    }
+
 private:
     Callable m_callable;
 };
@@ -73,6 +89,11 @@ public:
     void log(level lvl, const source_location &location, const std::string &message) override
     {
         m_stream << to_string(location) << ": [" << to_string(lvl) << "] " << message << '\n';
+    }
+
+    void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
+    {
+        m_stream << to_string(location) << ": [" << to_string(lvl) << "] (" << to_string(code) << ") " << message << '\n';
     }
 
 private:

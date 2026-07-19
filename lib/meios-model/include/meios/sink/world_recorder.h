@@ -12,6 +12,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/topology_policy.h"
 
@@ -98,6 +99,13 @@ private:
             if(lvl == level::error && !m_first)
                 m_first = location;
             m_target.log(lvl, location, message);
+        }
+
+        void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
+        {
+            if(lvl == level::error && !m_first)
+                m_first = location;
+            m_target.log(lvl, code, location, message);
         }
 
     private:

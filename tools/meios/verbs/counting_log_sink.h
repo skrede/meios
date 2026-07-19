@@ -3,6 +3,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <string>
@@ -30,6 +31,13 @@ public:
         if(lvl == level::error)
             ++m_errors;
         m_inner.log(lvl, location, message);
+    }
+
+    void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
+    {
+        if(lvl == level::error)
+            ++m_errors;
+        m_inner.log(lvl, code, location, message);
     }
 
     std::size_t errors() const
