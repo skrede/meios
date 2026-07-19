@@ -85,7 +85,8 @@ command_spec deps_command()
 {
     return command_spec{ "deps", "deps",
                          "List the assets the model references.",
-                         { package_path_flag() }, { model_positional() } };
+                         { package_path_flag(), eval_backend_flag(), eval_policy_flag() },
+                         { model_positional(), arg_overrides_positional() } };
 }
 
 command_spec args_command()
@@ -98,10 +99,12 @@ command_spec args_command()
 command_spec resolve_command()
 {
     return command_spec{ "resolve", "resolve",
-                         "Resolve a link or joint to its resolved definition.",
+                         "Resolve a package://<pkg>/<rel> reference to its on-disk path; "
+                         "any other target fails loudly.",
                          { package_path_flag() },
                          { model_positional(),
-                           { "target", "Link or joint name to resolve.", true } } };
+                           { "target", "Package reference of the shape package://<pkg>/<rel> "
+                                       "to resolve.", true } } };
 }
 
 command_spec completion_command()
