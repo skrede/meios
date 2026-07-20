@@ -1,5 +1,6 @@
 #include "verbs.h"
 #include "json_escape.h"
+#include "counting_log_sink.h"
 
 #include "meios/urdf/load.h"
 
@@ -153,14 +154,18 @@ void print_info_json(const model<double> &robot, std::ostream &out)
 int run_info(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    counting_log_sink sink(log);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, log);
+    source_stack sources = build_sources(opts.package_roots, sink);
+    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().loc, loaded.error().message);
         return 1;
     }
+    if(sink.errors() != 0)
+        return 1;
     const model<double> &robot = *loaded;
 
     const auto format = ctx.value_flags.find("--format");

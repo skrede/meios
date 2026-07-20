@@ -1,5 +1,6 @@
 #include "verbs.h"
 #include "tree.h"
+#include "counting_log_sink.h"
 
 #include "meios/urdf/load.h"
 
@@ -82,15 +83,19 @@ int render_rooted(const model<double> &robot, const std::vector<int> &parent_of,
 int run_tree(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    counting_log_sink sink(log);
     load_options opts;
     opts.topology = topology_policy::warn;
     opts.package_roots = to_paths(ctx.package_paths);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, log);
+    source_stack sources = build_sources(opts.package_roots, sink);
+    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().loc, loaded.error().message);
         return 1;
     }
+    if(sink.errors() != 0)
+        return 1;
     const model<double> &robot = *loaded;
 
     log_sink quiet;
