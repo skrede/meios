@@ -39,6 +39,7 @@ Standard library only -- no third-party imports.
 
 import re
 import sys
+import shutil
 import argparse
 from pathlib import Path
 
@@ -250,8 +251,14 @@ def extract(roots: list[Path], out_dir: Path) -> dict:
     counts = {cap: 0 for cap in (CORE, *CAPABILITIES)}
     skipped_unmarked = 0
 
+    # Wipe stale output first: the gate globs this tree, so a renamed or removed
+    # snippet must not leave an orphaned .cpp behind to keep compiling (which would
+    # invert the gate's contract on incremental builds).
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
     for rel, md in _collect_markdown(roots):
-        text = md.read_text(encoding="utf-8")
+        text = md.read_text(encoding="utf-8-sig")
         snippets, unmarked = parse_markdown(text, rel)
         skipped_unmarked += unmarked
         slug = _slug(rel)
@@ -261,7 +268,8 @@ def extract(roots: list[Path], out_dir: Path) -> dict:
             key = (slug, snip["name"])
             if key in seen_names:
                 raise SnippetError(
-                    f"{rel}: duplicate snippet name {snip['name']!r} in the same document"
+                    f"{rel}: snippet name {snip['name']!r} collides with an "
+                    f"already-emitted {filename!r} (same doc slug and name)"
                 )
             seen_names[key] = filename
             dest_dir = out_dir / capability
