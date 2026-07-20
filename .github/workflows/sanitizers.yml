@@ -80,3 +80,77 @@ jobs:
           fi
           echo "Zero concurrency primitives under lib/ and tools/: thread sanitizer finds nothing on this single-threaded library."
           echo "This tsan cell is a deliberate, visible, auditable deferral kept for the record, not credited with coverage it does not provide."
+
+  # Advisory fuzz job: clang only, because the CMake guard builds zero harnesses
+  # under gcc and would leave a gcc cell green while fuzzing nothing. Global
+  # fuzzer-no-link,address instrumentation reaches meios_core and the in-tree
+  # pugixml (the harness itself pulls in libFuzzer's main via its own link
+  # driver); each harness is bounded so an unbounded libFuzzer run cannot hang to
+  # the job timeout, which continue-on-error would not interrupt.
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    env:
+      CC: clang-18
+      CXX: clang++-18
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DMEIOS_BUILD_FUZZERS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CXX_FLAGS="-fsanitize=fuzzer-no-link,address -fno-omit-frame-pointer -g" \
+            -DCMAKE_C_FLAGS="-fsanitize=fuzzer-no-link,address -fno-omit-frame-pointer -g"
+
+      # The "fuzzes nothing" defect lives here: a coverage-blind library would run
+      # green forever. Prove the library, not just the harness, is instrumented by
+      # asserting the compiled library TU carries -fsanitize in the compile
+      # database before any fuzzing starts.
+      - name: Assert the library TU carries sanitizer instrumentation
+        run: |
+          if grep -F 'lib/meios-core/src/meios/version.cpp' build/compile_commands.json | grep -q -- '-fsanitize'; then
+            echo "confirmed: lib/meios-core/src/meios/version.cpp compiled with -fsanitize"
+          else
+            echo "FAIL: lib/meios-core/src/meios/version.cpp is not instrumented in the compile database" >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build build
+
+      # The fuzz CMakeLists globs *_fuzz.cpp, so a deleted harness silently drops
+      # the count. Assert all four by exact name so a missing binary fails the job
+      # instead of quietly fuzzing fewer entry points.
+      - name: Assert all four fuzz harnesses were built
+        run: |
+          for n in bundle_writer_fuzz evaluator_fuzz structural_fuzz urdf_reader_fuzz; do
+            matches=$(find build -type f -name "$n" -perm -u+x)
+            count=$(printf '%s' "$matches" | grep -c .)
+            if [ "$count" -ne 1 ]; then
+              echo "FAIL: expected exactly one $n executable, found $count" >&2
+              exit 1
+            fi
+            echo "found $n: $matches"
+          done
+
+      # Each harness gets a fresh writable work corpus as its first positional arg
+      # and a read-only seed directory as the second. evaluator_fuzz consumes bare
+      # expression strings so it seeds from the dedicated corpus; the other three
+      # consume whole documents so they seed from the URDF/xacro fixtures, which
+      # libFuzzer reads recursively. -max_total_time=60 bounds every harness so an
+      # unbounded run cannot hang the job.
+      - name: Fuzz each harness (advisory, 60s each)
+        run: |
+          find_bin() { find build -type f -name "$1" -perm -u+x | head -n1; }
+          mkdir -p work/bundle_writer work/evaluator work/structural work/urdf_reader
+
+          "$(find_bin evaluator_fuzz)"     work/evaluator     tests/fuzz/corpus/evaluator -max_total_time=60
+          "$(find_bin urdf_reader_fuzz)"   work/urdf_reader   tests/fixtures/urdf         -max_total_time=60
+          "$(find_bin bundle_writer_fuzz)" work/bundle_writer tests/fixtures/urdf         -max_total_time=60
+          "$(find_bin structural_fuzz)"    work/structural    tests/fixtures/urdf         -max_total_time=60
