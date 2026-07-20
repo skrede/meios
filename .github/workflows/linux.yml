@@ -293,6 +293,39 @@ jobs:
       - name: Build
         run: cmake --build build
 
+  docs:
+    runs-on: ubuntu-24.04
+    name: docs (MEIOS_BUILD_DOCS compile-gate)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      # The gate compiles the documented snippets against the build-tree
+      # meios::urdf target with every enrichment OFF, so it exercises the core
+      # consumer surface and FATALs at configure on a zero or malformed snippet.
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_DOCS=ON
+
+      - name: Build
+        run: cmake --build build --target doc_snippets
+
   tools:
     runs-on: ubuntu-24.04
     name: tools (MEIOS_BUILD_TOOLS + CLI unit tests)
