@@ -8,6 +8,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
@@ -110,7 +111,9 @@ void basic_parser<urdf_reader>::parse_erased(std::string_view source, erased_sin
     const pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size(), flags);
     if(!parsed)
     {
-        m_context.log.log(level::error, std::string("urdf parse error: ") + parsed.description());
+        m_context.log.log(level::error, diagnostic_code::xml_parse_error,
+                          detail::offset_location(source, parsed.offset, m_context.document),
+                          std::string("urdf parse error: ") + parsed.description());
         return;
     }
     const std::filesystem::path &file = m_context.document;

@@ -19,6 +19,7 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/capturing_log_sink.h"
 
 #include <pugixml.hpp>
 
@@ -132,14 +133,18 @@ expected<model<double>, load_error> drive_load(const std::filesystem::path &path
     if(sniff.error)
         return unexpected<load_error>(*sniff.error);
 
-    world_recorder recorder(log, opts.topology);
+    capturing_log_sink wrapper(log);
+    world_recorder recorder(wrapper, opts.topology);
     core_evaluator eval;
-    parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
+    parse_context ctx{ sources, eval, wrapper, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
     drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
-    if(!recorder.ok())
-        return make_error(recorder.first_failure().value_or(source_location{ path, 0, 0 }),
-                          "invalid robot topology", diagnostic_code::invalid_topology);
+    if(wrapper.errors() > 0)
+    {
+        const captured_diagnostic &first = *wrapper.first();
+        source_location loc = first.loc.file.empty() ? source_location{ path, 0, 0 } : first.loc;
+        return make_error(std::move(loc), first.message, first.code);
+    }
     return recorder.take_model();
 }
 
