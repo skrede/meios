@@ -93,6 +93,13 @@ if(MEIOS_BUILD_TESTS OR MEIOS_BUILD_PROPERTY_TESTS)
     add_subdirectory(tests)
 endif()
 
+# Reaches lib/'s build-tree meios::* targets and registers CTest cases, so it must
+# follow both add_subdirectory(lib) and enable_testing(). The EXISTS guard keeps a
+# pre-examples tree valid.
+if(MEIOS_BUILD_EXAMPLES AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt)
+    add_subdirectory(examples)
+endif()
+
 # libFuzzer's -fsanitize=fuzzer is a Clang toolchain feature; the harnesses are
 # skipped whole on any other compiler rather than failing to link.
 if(MEIOS_BUILD_FUZZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")

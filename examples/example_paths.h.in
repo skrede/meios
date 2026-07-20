@@ -1,0 +1,12 @@
+#ifndef HPP_GUARD_MEIOS_EXAMPLES_EXAMPLE_PATHS_H
+#define HPP_GUARD_MEIOS_EXAMPLES_EXAMPLE_PATHS_H
+
+namespace examples
+{
+
+inline constexpr const char *robot_description = "@MEIOS_EXAMPLE_ROBOT@";
+inline constexpr const char *parametric_description = "@MEIOS_EXAMPLE_ARG_ROBOT@";
+
+}
+
+#endif
