@@ -85,7 +85,7 @@ private:
     std::vector<diagnostic_record> &m_out;
 };
 
-bool near(double a, double b) { return (a < b ? b - a : a - b) < 1e-9; }
+bool nearly_equal(double a, double b) { return (a < b ? b - a : a - b) < 1e-9; }
 
 int run_out_of_tree_sink()
 {
@@ -160,7 +160,7 @@ int run_vendored_load()
         return 1;
     }
     if(joint < 0
-       || !near(model.joints[static_cast<std::size_t>(joint)].origin.translation.z, 0.25))
+       || !nearly_equal(model.joints[static_cast<std::size_t>(joint)].origin.translation.z, 0.25))
     {
         std::cerr << "substituted origin xyz did not survive expansion\n";
         return 1;
