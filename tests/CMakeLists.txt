@@ -196,7 +196,7 @@ foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_stric
     endif()
 endforeach()
 
-foreach(stem IN ITEMS load_error silent_default overload_resolution)
+foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})
         add_executable(${stem}_test ${load_test_src})
