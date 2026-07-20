@@ -55,9 +55,9 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
-      # MEIOS_BUILD_EXAMPLES only gates enable_testing() at HEAD (no examples/
-      # subdir yet), so this cell configures + builds green now and gains teeth
-      # once Phase 14 lands the examples. All enrichments stay OFF.
+      # The examples cell builds examples/ with all enrichments OFF: the flagship
+      # (core+urdf only) must compile and every enrichment example must gate itself
+      # out. All enrichments stay OFF.
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \
