@@ -161,7 +161,7 @@ int run_info(const verb_context &ctx)
     const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
-        log.log(level::error, loaded.error().loc, loaded.error().message);
+        log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
         return 1;
     }
     if(sink.errors() != 0)

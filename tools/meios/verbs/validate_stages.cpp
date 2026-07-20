@@ -130,7 +130,7 @@ validation_report classify(const std::filesystem::path &path,
     if(loaded)
         robot = *loaded;
     else
-        well_formed.log(level::error, loaded.error().loc, loaded.error().message);
+        well_formed.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
     const bool expand_ok = xacro ? xacro_expands(bytes, path, roots, expansion) : true;
     const topology_result topo =
         reconstruct_topology(robot.links, robot.joints, topology, topology_policy::fail);
