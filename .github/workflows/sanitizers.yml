@@ -143,14 +143,16 @@ jobs:
       # and a read-only seed directory as the second. evaluator_fuzz consumes bare
       # expression strings so it seeds from the dedicated corpus; the other three
       # consume whole documents so they seed from the URDF/xacro fixtures, which
-      # libFuzzer reads recursively. -max_total_time=60 bounds every harness so an
-      # unbounded run cannot hang the job.
+      # libFuzzer reads recursively. -max_total_time=60 bounds the mutation budget,
+      # but only -timeout=25 bounds a SINGLE input: without it one pathological unit
+      # runs to libFuzzer's 1200s default and blows the whole leg's wall-clock. Both
+      # are required for the run to be genuinely bounded.
       - name: Fuzz each harness (advisory, 60s each)
         run: |
           find_bin() { find build -type f -name "$1" -perm -u+x | head -n1; }
           mkdir -p work/bundle_writer work/evaluator work/structural work/urdf_reader
 
-          "$(find_bin evaluator_fuzz)"     work/evaluator     tests/fuzz/corpus/evaluator -max_total_time=60
-          "$(find_bin urdf_reader_fuzz)"   work/urdf_reader   tests/fixtures/urdf         -max_total_time=60
-          "$(find_bin bundle_writer_fuzz)" work/bundle_writer tests/fixtures/urdf         -max_total_time=60
-          "$(find_bin structural_fuzz)"    work/structural    tests/fixtures/urdf         -max_total_time=60
+          "$(find_bin evaluator_fuzz)"     work/evaluator     tests/fuzz/corpus/evaluator -max_total_time=60 -timeout=25
+          "$(find_bin urdf_reader_fuzz)"   work/urdf_reader   tests/fixtures/urdf         -max_total_time=60 -timeout=25
+          "$(find_bin bundle_writer_fuzz)" work/bundle_writer tests/fixtures/urdf         -max_total_time=60 -timeout=25
+          "$(find_bin structural_fuzz)"    work/structural    tests/fixtures/urdf         -max_total_time=60 -timeout=25
