@@ -7,6 +7,7 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 #include <variant>
@@ -106,12 +107,35 @@ value modulo(parser &p, const value &a, const value &b)
     return value{ r };
 }
 
-value power(const value &a, const value &b)
+bool mul_overflows(long long a, long long b, long long &out)
+{
+    constexpr long long lo = std::numeric_limits<long long>::min();
+    constexpr long long hi = std::numeric_limits<long long>::max();
+    if(a > 0)
+    {
+        if(b > 0) { if(a > hi / b) return true; }
+        else      { if(b < lo / a) return true; }
+    }
+    else if(a < 0)
+    {
+        if(b > 0) { if(a < lo / b) return true; }
+        else      { if(b < hi / a) return true; }
+    }
+    out = a * b;
+    return false;
+}
+
+value power(parser &p, const value &a, const value &b)
 {
     if(is_int(a) && is_int(b) && as_int(b) >= 0)
     {
-        long long base = as_int(a), result = 1;
-        for(long long k = 0, exp = as_int(b); k < exp; ++k) result *= base;
+        long long base = as_int(a), exp = as_int(b), result = 1;
+        while(exp > 0)
+        {
+            if((exp & 1) && mul_overflows(result, base, result)) return p.fail("integer power overflow");
+            exp >>= 1;
+            if(exp > 0 && mul_overflows(base, base, base)) return p.fail("integer power overflow");
+        }
         return value{ result };
     }
     return value{ std::pow(as_double(a), as_double(b)) };
@@ -142,7 +166,7 @@ value parse_atom(parser &p)
 value parse_power(parser &p)
 {
     value base = parse_atom(p);
-    if(p.accept(token_kind::star_star)) return power(base, parse_unary(p));
+    if(p.accept(token_kind::star_star)) return power(p, base, parse_unary(p));
     return base;
 }
 

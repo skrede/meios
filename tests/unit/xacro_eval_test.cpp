@@ -187,6 +187,20 @@ TEST_CASE("core evaluator reproduces CPython numeric semantics", "[xacro][eval]"
     REQUIRE(eval_str("(2+3)*4") == "20");
 }
 
+TEST_CASE("integer power bounds its work and loud-fails on an unrepresentable result", "[xacro][eval]")
+{
+    REQUIRE(eval_str("2**10") == "1024");
+    REQUIRE(eval_str("10**18") == "1000000000000000000");
+    REQUIRE(eval_str("0**5") == "0");
+    REQUIRE(eval_str("1**1000000000") == "1");
+    REQUIRE(eval_str("(-1)**1000000001") == "-1");
+
+    const failure overflow = eval_failure("9**99999999999");
+    REQUIRE(overflow.failed);
+    REQUIRE(overflow.diagnostics >= 1);
+    REQUIRE(eval_kind("9**99999999999") == meios::eval_failure_kind::error);
+}
+
 TEST_CASE("core evaluator dispatches the whitelisted math functions", "[xacro][eval]")
 {
     REQUIRE(eval_str("pi") == "3.141592653589793");
