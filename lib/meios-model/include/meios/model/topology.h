@@ -52,7 +52,7 @@ void report_topology(log_sink &log, topology_policy policy, const Record &rec,
     if(rec.origin_loc)
         log.log(lvl, code, *rec.origin_loc, message);
     else
-        log.log(lvl, message);
+        log.log(lvl, code, source_location{}, message);
     if(policy == topology_policy::fail)
         ok = false;
 }
