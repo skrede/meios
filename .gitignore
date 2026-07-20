@@ -78,4 +78,5 @@ HANDOFF.md
 **/*Test*/
 **/*Build*/
 **/*Testing*/
+!/tests/
 
