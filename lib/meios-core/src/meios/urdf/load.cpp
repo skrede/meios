@@ -122,7 +122,7 @@ sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &pa
 
 expected<model<double>, load_error> drive_load(const std::filesystem::path &path,
                                                const load_options &opts, source_stack &sources,
-                                               log_sink &log)
+                                               capturing_log_sink &wrapper)
 {
     const std::optional<std::string> bytes = read_file(path);
     if(!bytes)
@@ -133,7 +133,6 @@ expected<model<double>, load_error> drive_load(const std::filesystem::path &path
     if(sniff.error)
         return unexpected<load_error>(*sniff.error);
 
-    capturing_log_sink wrapper(log);
     world_recorder recorder(wrapper, opts.topology);
     core_evaluator eval;
     parse_context ctx{ sources, eval, wrapper, opts.on_missing, opts.topology, opts.materials,
@@ -161,15 +160,20 @@ source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_
 expected<model<double>, load_error> load(const std::filesystem::path &path,
                                          const load_options &opts, log_sink &log)
 {
-    source_stack sources = build_sources(opts.package_roots, log);
-    return drive_load(path, opts, sources, log);
+    // Wrap before building sources so a directory_source containment rejection, which
+    // it emits to the sink it was constructed with, is counted at the load boundary
+    // rather than escaping to the raw sink as a silent error.
+    capturing_log_sink wrapper(log);
+    source_stack sources = build_sources(opts.package_roots, wrapper);
+    return drive_load(path, opts, sources, wrapper);
 }
 
 expected<model<double>, load_error> load(const std::filesystem::path &path,
                                          const load_options &opts, source_stack &sources,
                                          log_sink &log)
 {
-    return drive_load(path, opts, sources, log);
+    capturing_log_sink wrapper(log);
+    return drive_load(path, opts, sources, wrapper);
 }
 
 expected<model<double>, load_error> load(const std::filesystem::path &path, const load_options &opts)
