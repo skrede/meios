@@ -13,6 +13,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFetchDescription.cmake)
 
 option(MEIOS_BUILD_TESTS "Build unit and compile tests" OFF)
 option(MEIOS_BUILD_EXAMPLES "Build examples" OFF)
+option(MEIOS_BUILD_DOCS "Build the documentation compile-gate" OFF)
 option(MEIOS_BUILD_PROPERTY_TESTS "Build property tests (RapidCheck)" OFF)
 option(MEIOS_BUILD_FUZZERS "Build libFuzzer harnesses (Clang only)" OFF)
 option(MEIOS_CMAKE_FETCH_DEPS "Use FetchContent for dependencies" OFF)
@@ -77,6 +78,12 @@ endif()
 # the CLI test stems configure. The EXISTS guard keeps a pre-tools tree valid.
 if(MEIOS_BUILD_TOOLS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tools/CMakeLists.txt)
     add_subdirectory(tools)
+endif()
+
+# Reaches lib/'s build-tree meios::* targets, so it must follow add_subdirectory(lib);
+# the gate compiles the documented snippets against those targets, never the install.
+if(MEIOS_BUILD_DOCS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/docs/CMakeLists.txt)
+    add_subdirectory(docs)
 endif()
 
 if(MEIOS_BUILD_TESTS OR MEIOS_BUILD_PROPERTY_TESTS OR MEIOS_BUILD_EXAMPLES)

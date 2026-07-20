@@ -71,6 +71,31 @@ find_package(meios CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE meios::urdf)
 ```
 
+## Usage
+
+Load a URDF/xacro file and hand the resolved model to your own code. `load` returns an
+`expected<model<double>, load_error>`: on success the model carries the flattened links, joints,
+materials, and topology; on failure it carries a typed `file:line` diagnostic.
+
+<!-- meios:snippet name=quick-start tu -->
+```cpp
+#include <meios/urdf.h>
+
+#include <iostream>
+
+int main()
+{
+    const auto robot = meios::load("robot.urdf");
+    if (!robot)
+    {
+        std::cout << "load failed: " << robot.error().message << '\n';
+        return 1;
+    }
+
+    std::cout << "loaded " << robot->links.size() << " links\n";
+}
+```
+
 ## Documentation
 
 Documentation is under construction and will be published as the library takes shape.
