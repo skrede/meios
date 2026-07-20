@@ -98,7 +98,13 @@ int main()
 
 ## Documentation
 
-Documentation is under construction and will be published as the library takes shape.
+Start at the [documentation hub](docs/README.md), which routes you to a tier — `load()` a description
+and read the resolved model, or receive the robot into your own types via a `model_sink` — before you
+read either guide. Every C++ example in the guides is compiled by CI, so a renamed symbol breaks the
+build instead of rotting on the page.
+
+Read the [known limitations](docs/known-limitations.md) for the candid, complete list of defects and
+caveats live at this point in the library's life, each described by its user-facing effect.
 
 ## Contributing
 
