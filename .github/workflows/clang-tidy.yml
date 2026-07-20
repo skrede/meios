@@ -1,0 +1,60 @@
+name: Clang-Tidy
+
+on:
+  push:
+    branches: [master, develop, 'milestone/**']
+  pull_request:
+    branches: [master, develop]
+  workflow_dispatch:
+
+jobs:
+  # Advisory-only: clang-tidy reports first-party findings but never blocks a
+  # merge. continue-on-error at the job level keeps every diagnostic visible
+  # while leaving the gate non-fatal, mirroring the canary job's posture.
+  # Promotion of this leg to a required gate is a deliberate, deferred decision:
+  # it stays advisory until the report is trusted enough to fail a build on, and
+  # that promotion is left as an explicit, auditable follow-up rather than an
+  # accident of configuration.
+  clang-tidy:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18 clang-tidy-18
+
+      # FETCH_DEPS=ON builds pugixml in-tree, so its headers resolve from the
+      # generated compile_commands.json with no separate install step. Configure
+      # alone populates the fetched sources and emits the compile database that
+      # clang-tidy consumes; MEIOS_WERROR is irrelevant to an advisory linter.
+      - name: Configure
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      # Run clang-tidy against the compile database, restricted to the first-party
+      # translation units under lib/. Selecting from compile_commands.json avoids
+      # linting sources that were not configured into this build.
+      - name: Run clang-tidy over first-party sources
+        run: |
+          files=$(python3 -c "import json; print('\n'.join(e['file'] for e in json.load(open('build/compile_commands.json')) if '/lib/' in e['file']))")
+          if [ -z "$files" ]; then
+            echo "No first-party lib/ translation units in the compile database."
+            exit 0
+          fi
+          echo "$files" | xargs clang-tidy-18 -p build
+
+      - name: Advisory note
+        run: |
+          echo "This clang-tidy leg is advisory only: its findings are reported"
+          echo "but do not block a merge. Turning it into a required gate is an"
+          echo "intentional, auditable deferral, not an oversight."
