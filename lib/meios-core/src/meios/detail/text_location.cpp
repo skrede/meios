@@ -257,7 +257,7 @@ source_location refine_attr_column(std::string_view text, pugi::xml_node host,
         }
     }
 
-    // The self-check backstop (the D-02 invariant): only a decode that reproduces
+    // The self-check backstop: only a decode that reproduces
     // attr.value() byte-for-byte proves this index map mirrors pugixml for this value.
     // On any divergence -- or a token index the map cannot place -- degrade to the
     // value-start column rather than emit a column the self-check did not confirm; a

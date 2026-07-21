@@ -112,7 +112,7 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
                     "xacro:include could not read \"" + key.string() + '"');
     // load_buffer copies into the document, but macro bodies defined in this include
     // keep string_views onto the source text, so it must outlive this call; park it in
-    // owned_text alongside the parked document rather than in this local (Pitfall 2).
+    // owned_text alongside the parked document rather than in this local.
     ctx.owned_text.push_back(std::make_unique<std::string>(std::move(*bytes)));
     const std::string &parked = *ctx.owned_text.back();
     pugi::xml_document &doc = ctx.park();
