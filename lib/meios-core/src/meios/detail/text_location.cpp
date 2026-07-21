@@ -221,7 +221,7 @@ source_location refine_attr_column(std::string_view text, pugi::xml_node host,
         {
             raw_at.push_back(i);
             decoded.push_back(' ');
-            i += (i + 1 < span->stop && text[i + 1] == '\n') ? 2 : 1;
+            i += (i + 1 < span->stop && text[i + 1] == '\n') ? std::size_t{2} : std::size_t{1};
         }
         else if(c == '\n' || c == '\t' || c == ' ')
         {
