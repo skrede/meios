@@ -5,6 +5,7 @@
 #include "meios/xacro/eval_scope.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <string_view>
 
@@ -26,7 +27,8 @@ class core_evaluator
 public:
     core_evaluator() : m_failed(false), m_kind(eval_failure_kind::none) {}
 
-    value eval(std::string_view expression, const eval_scope &scope, log_sink &log);
+    value eval(std::string_view expression, const eval_scope &scope, log_sink &log,
+               const source_location &at = {});
 
     bool failed() const { return m_failed; }
 

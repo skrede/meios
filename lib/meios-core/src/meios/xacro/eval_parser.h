@@ -8,6 +8,8 @@
 #include "meios/xacro/core_evaluator.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <vector>
 #include <cstddef>
@@ -19,20 +21,22 @@ namespace meios::detail
 
 struct parser
 {
-    parser(const std::vector<token> &token_stream, const eval_scope &names, log_sink &sink)
-        : tokens(token_stream), scope(names), log(sink), pos(0), ok(true),
+    parser(const std::vector<token> &token_stream, const eval_scope &names, log_sink &sink,
+           const source_location &origin = {})
+        : tokens(token_stream), scope(names), log(sink), anchor(origin), pos(0), ok(true),
           failure(eval_failure_kind::none)
     {}
 
     const token &peek() const { return tokens[pos]; }
     bool at(token_kind kind) const { return tokens[pos].kind == kind; }
     bool accept(token_kind kind) { if(at(kind)) { ++pos; return true; } return false; }
-    value fail(const std::string &message);
+    value fail(const std::string &message, diagnostic_code code = diagnostic_code::expression_error);
     value fail_unsupported(const std::string &message);
 
     const std::vector<token> &tokens;
     const eval_scope &scope;
     log_sink &log;
+    source_location anchor;
     std::size_t pos;
     bool ok;
     eval_failure_kind failure;

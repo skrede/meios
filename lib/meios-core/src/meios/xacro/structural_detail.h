@@ -7,6 +7,7 @@
 #include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
 
@@ -29,6 +30,12 @@ class evaluator_handle;
 namespace meios::detail
 {
 
+struct emit_origin
+{
+    std::filesystem::path path;
+    std::string_view text;
+};
+
 struct macro_def
 {
     std::vector<std::string> params;
@@ -36,12 +43,14 @@ struct macro_def
     std::vector<std::string> block_params;
     std::vector<bool> block_children;
     pugi::xml_node body;
+    emit_origin origin;
 };
 
 struct block_arg
 {
     bool children;
     pugi::xml_node source;
+    emit_origin origin;
 };
 
 // A macro parameter's outer binding, captured on entry and restored on exit.
@@ -71,6 +80,8 @@ struct expand_ctx
     std::map<std::string, block_arg> blocks;
     std::vector<std::filesystem::path> include_stack;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
+    std::vector<std::unique_ptr<std::string>> owned_text;
+    std::vector<emit_origin> origins;
     std::vector<prop_frame> prop_frames;
     // Parallel to prop_frames: the outer bindings each live invocation masked
     // with its parameters, so a scope="parent" write can record the value the
@@ -84,6 +95,8 @@ struct expand_ctx
 };
 
 bool fail(expand_ctx &ctx, const std::string &message);
+
+source_location locate(const expand_ctx &ctx, pugi::xml_node in);
 
 void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name);
 

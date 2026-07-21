@@ -9,11 +9,13 @@
 #include <pugixml.hpp>
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 #include <cstddef>
 #include <fstream>
 #include <sstream>
+#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -104,12 +106,19 @@ bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &
     std::optional<std::string> bytes = read_asset(std::move(hit));
     if(!bytes)
         return fail(ctx, "xacro:include could not read \"" + key.string() + '"');
+    // load_buffer copies into the document, but macro bodies defined in this include
+    // keep string_views onto the source text, so it must outlive this call; park it in
+    // owned_text alongside the parked document rather than in this local (Pitfall 2).
+    ctx.owned_text.push_back(std::make_unique<std::string>(std::move(*bytes)));
+    const std::string &parked = *ctx.owned_text.back();
     pugi::xml_document &doc = ctx.park();
-    pugi::xml_parse_result parsed = doc.load_buffer(bytes->data(), bytes->size());
+    pugi::xml_parse_result parsed = doc.load_buffer(parked.data(), parked.size());
     if(!parsed)
         return fail(ctx, std::string("xacro:include parse error: ") + parsed.description());
     ctx.include_stack.push_back(key);
+    ctx.origins.push_back(emit_origin{ key, parked });
     bool ok = process_children(ctx, doc.first_child(), out, key);
+    ctx.origins.pop_back();
     ctx.include_stack.pop_back();
     return ok;
 }

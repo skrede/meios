@@ -104,14 +104,16 @@ bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     return true;
 }
 
-void bind_blocks(const macro_def &def, pugi::xml_node call, std::map<std::string, block_arg> &blocks)
+void bind_blocks(const macro_def &def, pugi::xml_node call, std::map<std::string, block_arg> &blocks,
+                 const emit_origin &origin)
 {
     std::vector<pugi::xml_node> kids;
     for(pugi::xml_node child : call.children())
         if(child.type() == pugi::node_element)
             kids.push_back(child);
     for(std::size_t i = 0; i < def.block_params.size() && i < kids.size(); ++i)
-        blocks.insert_or_assign(def.block_params[i], block_arg{ def.block_children[i], kids[i] });
+        blocks.insert_or_assign(def.block_params[i],
+                                block_arg{ def.block_children[i], kids[i], origin });
 }
 
 void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
@@ -147,6 +149,8 @@ void define_macro(expand_ctx &ctx, pugi::xml_node in)
     macro_def def;
     parse_params(in.attribute("params").value(), def);
     def.body = in;
+    if(!ctx.origins.empty())
+        def.origin = ctx.origins.back();
     ctx.macros[in.attribute("name").value()] = std::move(def);
 }
 
@@ -158,11 +162,13 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
     std::vector<saved_binding> saved;
     std::map<std::string, block_arg> outer_blocks = std::move(ctx.blocks);
     ctx.blocks.clear();
-    bind_blocks(def, call, ctx.blocks);
+    bind_blocks(def, call, ctx.blocks, ctx.origins.empty() ? emit_origin{} : ctx.origins.back());
     ctx.prop_frames.emplace_back();
     ctx.param_saves.push_back(&saved);
+    ctx.origins.push_back(def.origin);
     bool ok = bind_params(ctx, def, call, document, saved)
            && process_children(ctx, def.body, out, document);
+    ctx.origins.pop_back();
     ctx.param_saves.pop_back();
     revert_prop_frame(ctx);
     restore_params(ctx, saved);

@@ -5,6 +5,7 @@
 #include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <string>
 #include <filesystem>
@@ -21,6 +22,10 @@ struct substitution
     bool ok;
     std::string text;
 };
+
+substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
+                        const std::filesystem::path &document, eval_policy policy,
+                        evaluator_handle *backend, log_sink &log, const source_location &at);
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,

@@ -4,6 +4,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <string>
 #include <cstddef>
@@ -138,12 +139,20 @@ bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out)
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,
-                        evaluator_handle *backend, log_sink &log)
+                        evaluator_handle *backend, log_sink &log, const source_location &at)
 {
-    detail::subst_ctx ctx(log, sources, scope, document, policy, backend);
+    detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
     std::string out;
     bool ok = scan(ctx, raw, out);
     return substitution{ ok, std::move(out) };
+}
+
+substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
+                        const std::filesystem::path &document, eval_policy policy,
+                        evaluator_handle *backend, log_sink &log)
+{
+    return substitute(raw, scope, sources, document, policy, backend, log,
+                      source_location{ document, 0, 0 });
 }
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,

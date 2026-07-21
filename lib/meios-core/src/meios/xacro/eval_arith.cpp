@@ -16,7 +16,7 @@
 namespace meios::detail
 {
 
-value parser::fail(const std::string &message)
+value parser::fail(const std::string &message, [[maybe_unused]] diagnostic_code code)
 {
     if(ok) { log.log(level::error, message); failure = eval_failure_kind::error; }
     ok = false;

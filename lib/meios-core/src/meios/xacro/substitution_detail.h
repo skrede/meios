@@ -7,6 +7,7 @@
 #include "meios/xacro/evaluator_handle.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <cctype>
 #include <string>
@@ -50,7 +51,7 @@ public:
     core_text_evaluator() : m_kind(eval_failure_kind::none) {}
 
     std::optional<std::string> eval_to_text(std::string_view expr, const eval_scope &scope,
-                                            log_sink &log);
+                                            log_sink &log, const source_location &at = {});
 
     eval_failure_kind last_failure_kind() const { return m_kind; }
 
@@ -61,8 +62,9 @@ private:
 struct subst_ctx
 {
     subst_ctx(log_sink &sink, source_stack &pkg_sources, const eval_scope &names,
-              const std::filesystem::path &doc, eval_policy policy, evaluator_handle *inject)
-        : log(sink), sources(pkg_sources), scope(names), core(), document(doc),
+              const std::filesystem::path &doc, eval_policy policy, evaluator_handle *inject,
+              const source_location &anchor = {})
+        : log(sink), sources(pkg_sources), scope(names), core(), document(doc), at(anchor),
           mode(policy), backend(inject), last_kind(eval_failure_kind::none)
     {
     }
@@ -78,6 +80,7 @@ struct subst_ctx
     const eval_scope &scope;
     core_text_evaluator core;
     const std::filesystem::path &document;
+    source_location at;
     eval_policy mode;
     evaluator_handle *backend;
     eval_failure_kind last_kind;

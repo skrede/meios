@@ -13,6 +13,8 @@
 
 #include "meios/diagnostic/source_location.h"
 
+#include "meios/detail/text_location.h"
+
 #include <pugixml.hpp>
 
 #include <string>
@@ -26,14 +28,6 @@ namespace meios::detail
 {
 
 using material_table = std::unordered_map<std::string, material<double>>;
-
-int offset_to_line(std::string_view text, std::ptrdiff_t offset);
-
-source_location offset_location(std::string_view text, std::ptrdiff_t offset,
-                                const std::filesystem::path &file);
-
-source_location node_location(pugi::xml_node node, std::string_view text,
-                              const std::filesystem::path &file);
 
 bool read_finite(std::string_view text, double &out, parse_context &ctx,
                  const source_location &loc, std::string_view field);

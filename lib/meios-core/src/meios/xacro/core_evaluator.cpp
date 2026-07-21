@@ -13,10 +13,11 @@
 namespace meios
 {
 
-value core_evaluator::eval(std::string_view expression, const eval_scope &scope, log_sink &log)
+value core_evaluator::eval(std::string_view expression, const eval_scope &scope, log_sink &log,
+                           const source_location &at)
 {
     std::vector<detail::token> tokens = detail::tokenize(expression);
-    detail::parser state(tokens, scope, log);
+    detail::parser state(tokens, scope, log, at);
     value result = detail::parse_ternary(state);
     if(state.ok && !state.at(detail::token_kind::end))
         result = state.fail("unexpected trailing tokens in expression");

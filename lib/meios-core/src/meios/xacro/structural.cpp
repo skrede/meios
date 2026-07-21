@@ -4,6 +4,8 @@
 #include "meios/xacro/structural.h"
 #include "meios/xacro/detail/numeric.h"
 
+#include "meios/detail/text_location.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 
@@ -27,7 +29,8 @@ namespace detail
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
                        eval_policy policy, evaluator_handle *inject, log_sink &lg)
     : scope(s), sources(src), limits(lim), log(lg), mode(policy), backend(inject), counters(),
-      macros(), blocks(), include_stack(), owned(), prop_frames(), param_saves(), ok(true)
+      macros(), blocks(), include_stack(), owned(), owned_text(), origins(), prop_frames(),
+      param_saves(), ok(true)
 {
 }
 
@@ -72,6 +75,17 @@ bool fail(expand_ctx &ctx, const std::string &message)
     ctx.log.log(level::error, message);
     ctx.ok = false;
     return false;
+}
+
+// A typed xacro emit always anchors on the hosting node's real position; with no
+// origin on the stack, or a node pugixml never gave a buffer offset, fall back to the
+// document path at 0:0 rather than dropping to a code-less, locationless emit.
+source_location locate(const expand_ctx &ctx, pugi::xml_node in)
+{
+    if(ctx.origins.empty() || in.offset_debug() < 0)
+        return source_location{ ctx.origins.empty() ? std::filesystem::path{} : ctx.origins.back().path,
+                                0, 0 };
+    return offset_location(ctx.origins.back().text, in.offset_debug(), ctx.origins.back().path);
 }
 
 binding classify(std::string_view text)
@@ -174,6 +188,7 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
         return expansion{ false, {} };
     }
     ctx.include_stack.push_back(std::filesystem::weakly_canonical(document));
+    ctx.origins.push_back(detail::emit_origin{ document, source });
     seed_declared_args(scope, doc);
     pugi::xml_document result;
     for(pugi::xml_node child : doc.children())
