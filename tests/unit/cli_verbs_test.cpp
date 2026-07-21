@@ -1,6 +1,8 @@
 #include "app.h"
 #include "verbs/verbs.h"
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -48,6 +50,35 @@ private:
     std::ostringstream m_buffer;
     std::streambuf *m_saved;
 };
+
+// The twin of cout_capture for stderr: verbs relay typed diagnostics through a
+// log_sink_s bound to std::cerr, so a test swaps std::cerr's rdbuf to assert on the
+// bytes a failing verb writes.
+class cerr_capture
+{
+public:
+    cerr_capture() : m_buffer(), m_saved(std::cerr.rdbuf(m_buffer.rdbuf())) {}
+
+    ~cerr_capture() { std::cerr.rdbuf(m_saved); }
+
+    cerr_capture(const cerr_capture &) = delete;
+    cerr_capture &operator=(const cerr_capture &) = delete;
+
+    std::string str() const { return m_buffer.str(); }
+
+private:
+    std::ostringstream m_buffer;
+    std::streambuf *m_saved;
+};
+
+std::size_t occurrences(const std::string &haystack, const std::string &needle)
+{
+    std::size_t count = 0;
+    for(std::size_t pos = haystack.find(needle); pos != std::string::npos;
+        pos = haystack.find(needle, pos + needle.size()))
+        ++count;
+    return count;
+}
 
 }
 
@@ -166,6 +197,33 @@ TEST_CASE("cli_verbs: info --format json emits a machine-readable summary")
     REQUIRE(printed.find("\"name\":\"branched_all_joints\"") != std::string::npos);
     REQUIRE(printed.find("\"joints_by_kind\":") != std::string::npos);
     REQUIRE(printed.find("dof:") == std::string::npos);
+}
+
+TEST_CASE("cli_verbs: info exits nonzero and prints each failure's typed code exactly once")
+{
+    struct row
+    {
+        std::string file;
+        diagnostic_code code;
+    };
+    const std::vector<row> rows = {
+        { fixture("malformed_xml.urdf"), diagnostic_code::xml_parse_error },
+        { fixture("cycle.urdf"), diagnostic_code::no_root_cycle },
+        { fixture("this_file_does_not_exist.urdf"), diagnostic_code::cannot_open },
+        { fixture("undefined_property.xacro"), diagnostic_code::undefined_property },
+    };
+
+    for(const row &r : rows)
+    {
+        verb_context ctx;
+        ctx.id = "info";
+        ctx.positionals = { r.file };
+        cerr_capture err;
+        const int code = cli::run_info(ctx);
+        const std::string token = "(" + std::string(to_string(r.code)) + ")";
+        REQUIRE(code != 0);
+        REQUIRE(occurrences(err.str(), token) == 1);
+    }
 }
 
 TEST_CASE("cli_verbs: info rejects an unknown --format value")
