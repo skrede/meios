@@ -239,6 +239,21 @@ TEST_CASE("a warn missing-asset policy still returns a populated model", "[urdf]
     REQUIRE(result.has_value());
 }
 
+TEST_CASE("an over-long include path becomes a typed error, never a filesystem_error abort",
+          "[urdf][load_failure]")
+{
+    // A single include component past the OS name limit makes the throwing
+    // filesystem overloads raise ENAMETOOLONG; the load must fail closed with a
+    // typed diagnostic instead of terminating the process.
+    meios::load_options opts;
+    opts.eval = meios::eval_policy::fail;
+    meios::expected<meios::model<double>, meios::load_error> result =
+        meios::load(fixture("overlong_include.xacro"), opts);
+
+    REQUIRE_FALSE(result.has_value());
+    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_include);
+}
+
 TEST_CASE("a root-escaping package path fails the load under the default policy",
           "[urdf][load_failure]")
 {

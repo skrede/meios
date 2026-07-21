@@ -5,6 +5,7 @@
 #include <optional>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios
 {
@@ -24,7 +25,8 @@ std::optional<resolved_asset> bundle_source::locate(std::string_view package,
 {
     std::optional<std::filesystem::path> candidate =
         detail::contained_candidate(m_root, package, relative, m_log.get());
-    if(!candidate || !std::filesystem::exists(*candidate))
+    std::error_code ec;
+    if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
     return resolved_asset{ *candidate };
 }
@@ -34,7 +36,8 @@ std::optional<std::filesystem::path> bundle_source::path_of(std::string_view pac
 {
     std::optional<std::filesystem::path> candidate =
         detail::contained_candidate(m_root, package, relative, m_log.get());
-    if(!candidate || !std::filesystem::exists(*candidate))
+    std::error_code ec;
+    if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
     return candidate;
 }

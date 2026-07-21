@@ -20,6 +20,7 @@
 #include <optional>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios
 {
@@ -196,7 +197,9 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
                 std::string("xacro parse error: ") + parsed.description());
         return expansion{ false, {} };
     }
-    ctx.include_stack.push_back(std::filesystem::weakly_canonical(document));
+    std::error_code canon_ec;
+    std::filesystem::path canonical_key = std::filesystem::weakly_canonical(document, canon_ec);
+    ctx.include_stack.push_back(canon_ec ? document : canonical_key);
     ctx.origins.push_back(detail::emit_origin{ document, source });
     seed_declared_args(scope, doc);
     pugi::xml_document result;

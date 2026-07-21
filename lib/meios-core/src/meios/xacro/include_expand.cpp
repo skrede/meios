@@ -22,6 +22,7 @@
 #include <optional>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios::detail
 {
@@ -146,8 +147,10 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "xacro:include target \"" + relative + "\" escapes the source root");
-    std::filesystem::path key =
-        std::filesystem::weakly_canonical(std::filesystem::path(target.package) / normalized);
+    std::filesystem::path joined = std::filesystem::path(target.package) / normalized;
+    std::error_code canon_ec;
+    std::filesystem::path canonical_key = std::filesystem::weakly_canonical(joined, canon_ec);
+    std::filesystem::path key = canon_ec ? joined : canonical_key;
     for(const std::filesystem::path &seen : ctx.include_stack)
         if(seen == key)
             return fail(ctx, in, diagnostic_code::xacro_structural_error,

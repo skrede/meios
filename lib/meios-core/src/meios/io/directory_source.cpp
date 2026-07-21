@@ -7,6 +7,7 @@
 #include <optional>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios
 {
@@ -38,10 +39,18 @@ std::optional<std::filesystem::path> detail::contained_candidate(
     // leaves the root canonicalizes to an out-of-root path and is rejected below.
     // Symlink-install workspaces are supported at the ros layer, which registers a
     // package name to its real resolved directory before it reaches this guard.
-    std::filesystem::path base = std::filesystem::weakly_canonical(root);
+    // A filesystem error (e.g. an over-long attacker path) fails closed: the
+    // candidate is rejected rather than accepted uncanonicalized.
+    std::error_code ec;
+    std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
+    if(ec)
+    {
+        log.log(level::error, reject_message(package, relative));
+        return std::nullopt;
+    }
     std::filesystem::path candidate = std::filesystem::weakly_canonical(
-        root / std::string(package) / std::string(relative));
-    if(escapes_root(base, candidate))
+        root / std::string(package) / std::string(relative), ec);
+    if(ec || escapes_root(base, candidate))
     {
         log.log(level::error, reject_message(package, relative));
         return std::nullopt;
@@ -64,7 +73,8 @@ std::optional<resolved_asset> directory_source::locate(std::string_view package,
 {
     std::optional<std::filesystem::path> candidate =
         detail::contained_candidate(m_root, package, relative, m_log.get());
-    if(!candidate || !std::filesystem::exists(*candidate))
+    std::error_code ec;
+    if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
     return resolved_asset{ *candidate };
 }
@@ -74,7 +84,8 @@ std::optional<std::filesystem::path> directory_source::path_of(std::string_view 
 {
     std::optional<std::filesystem::path> candidate =
         detail::contained_candidate(m_root, package, relative, m_log.get());
-    if(!candidate || !std::filesystem::exists(*candidate))
+    std::error_code ec;
+    if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
     return candidate;
 }

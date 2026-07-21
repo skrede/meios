@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <fstream>
 #include <filesystem>
+#include <system_error>
 
 namespace meios
 {
@@ -37,10 +38,11 @@ std::string random_stem()
 std::filesystem::path unique_temp_path()
 {
     std::filesystem::path directory = std::filesystem::temp_directory_path();
+    std::error_code ec;
     for(;;)
     {
         std::filesystem::path candidate = directory / random_stem();
-        if(!std::filesystem::exists(candidate))
+        if(!std::filesystem::exists(candidate, ec))
             return candidate;
     }
 }
@@ -65,7 +67,9 @@ resolved_asset materialize(resolved_asset &&asset, log_sink &log)
     drain(asset.bytes(), out);
     out.close();
 
-    std::filesystem::path canonical = std::filesystem::weakly_canonical(path);
+    std::error_code ec;
+    std::filesystem::path resolved = std::filesystem::weakly_canonical(path, ec);
+    std::filesystem::path canonical = ec ? path : resolved;
     log.log(level::info, "materialized bytes asset to temporary file " + canonical.string());
     return resolved_asset{ canonical, temp_file_guard{ canonical } };
 }

@@ -3,6 +3,7 @@
 #include "meios/io/directory_source.h"
 
 #include <utility>
+#include <system_error>
 
 namespace meios
 {
@@ -27,7 +28,8 @@ std::optional<std::filesystem::path> ros_package_source::path_of(std::string_vie
         return std::nullopt;
     std::optional<std::filesystem::path> candidate =
         detail::contained_candidate(entry->second, "", relative, m_log.get());
-    if(!candidate || !std::filesystem::exists(*candidate))
+    std::error_code ec;
+    if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
     return candidate;
 }
