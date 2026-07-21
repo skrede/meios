@@ -10,6 +10,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
 #include <cstdlib>
@@ -35,9 +36,9 @@ std::pair<std::string_view, std::string_view> split_first(std::string_view text)
     return { text.substr(0, space), trim(text.substr(space)) };
 }
 
-std::optional<std::string> fail(subst_ctx &ctx, const std::string &message)
+std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std::string &message)
 {
-    ctx.log.log(level::error, message);
+    ctx.log.log(level::error, code, ctx.at, message);
     return std::nullopt;
 }
 
@@ -64,10 +65,11 @@ std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
 {
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
-        return fail(ctx, "$(find) requires a package name");
+        return fail(ctx, diagnostic_code::unresolved_find, "$(find) requires a package name");
     std::optional<resolved_asset> hit = ctx.sources.locate(parts.first, parts.second, ctx.log);
     if(!hit)
-        return fail(ctx, "$(find " + std::string(parts.first) + ") did not resolve");
+        return fail(ctx, diagnostic_code::unresolved_find,
+                    "$(find " + std::string(parts.first) + ") did not resolve");
     return asset_path(ctx, std::move(*hit));
 }
 
@@ -75,30 +77,32 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
 {
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
-        return fail(ctx, "$(arg) requires an argument name");
+        return fail(ctx, diagnostic_code::unresolved_arg, "$(arg) requires an argument name");
     std::optional<binding> bound = ctx.scope.lookup(parts.first);
     if(bound)
         return binding_str(*bound);
     if(!parts.second.empty())
     {
         substitution resolved = substitute(parts.second, ctx.scope, ctx.sources, ctx.document,
-                                           ctx.mode, ctx.backend, ctx.log);
+                                           ctx.mode, ctx.backend, ctx.log, ctx.at);
         if(!resolved.ok)
             return std::nullopt;
         return resolved.text;
     }
-    return fail(ctx, "$(arg " + std::string(parts.first) + ") is unset and has no default");
+    return fail(ctx, diagnostic_code::unresolved_arg,
+                "$(arg " + std::string(parts.first) + ") is unset and has no default");
 }
 
 std::optional<std::string> cmd_env(subst_ctx &ctx, std::string_view rest)
 {
     std::string_view name = split_first(rest).first;
     if(name.empty())
-        return fail(ctx, "$(env) requires a variable name");
+        return fail(ctx, diagnostic_code::unresolved_env, "$(env) requires a variable name");
     note_env_read(ctx, name);
     const char *value = std::getenv(std::string(name).c_str());
     if(value == nullptr)
-        return fail(ctx, "$(env " + std::string(name) + ") is not set in the environment");
+        return fail(ctx, diagnostic_code::unresolved_env,
+                    "$(env " + std::string(name) + ") is not set in the environment");
     return std::string(value);
 }
 
@@ -106,7 +110,7 @@ std::optional<std::string> cmd_optenv(subst_ctx &ctx, std::string_view rest)
 {
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
-        return fail(ctx, "$(optenv) requires a variable name");
+        return fail(ctx, diagnostic_code::unresolved_env, "$(optenv) requires a variable name");
     note_env_read(ctx, parts.first);
     const char *value = std::getenv(std::string(parts.first).c_str());
     if(value != nullptr)
@@ -132,7 +136,8 @@ std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner)
         return cmd_env(ctx, parts.second);
     if(cmd == "optenv")
         return cmd_optenv(ctx, parts.second);
-    return fail(ctx, "unknown substitution command $(" + std::string(cmd) + ")");
+    return fail(ctx, diagnostic_code::unknown_substitution,
+                "unknown substitution command $(" + std::string(cmd) + ")");
 }
 
 }

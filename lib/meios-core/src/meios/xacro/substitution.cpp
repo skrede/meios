@@ -4,6 +4,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <string>
@@ -33,8 +34,9 @@ std::size_t find_close(std::string_view raw, std::size_t opener, char open_ch, c
 
 bool fail_unterminated(detail::subst_ctx &ctx, char opener, std::size_t at)
 {
-    ctx.log.log(level::error, std::string("unterminated $") + opener
-        + " substitution span at offset " + std::to_string(at));
+    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at,
+        std::string("unterminated $") + opener + " substitution span at offset "
+            + std::to_string(at));
     return false;
 }
 
@@ -49,8 +51,9 @@ bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t do
        || (ctx.mode != eval_policy::warn && ctx.mode != eval_policy::skip))
         return false;
     if(ctx.mode == eval_policy::warn)
-        ctx.log.log(level::warn, "left an unsupported substitution verbatim at offset "
-            + std::to_string(dollar) + " in " + ctx.document.string());
+        ctx.log.log(level::warn, diagnostic_code::unsupported_expression, ctx.at,
+            "left an unsupported substitution verbatim at offset " + std::to_string(dollar)
+                + " in " + ctx.document.string());
     out.append(raw.substr(dollar, close - dollar + 1));
     cursor = close + 1;
     return true;

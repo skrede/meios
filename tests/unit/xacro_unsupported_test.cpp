@@ -1,5 +1,7 @@
 #include <meios/xacro.h>
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -26,6 +28,12 @@ struct recorder
     void operator()(meios::level severity, const std::string &text) { note(severity, text); }
 
     void operator()(meios::level severity, const meios::source_location &, const std::string &text)
+    {
+        note(severity, text);
+    }
+
+    void operator()(meios::level severity, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &text)
     {
         note(severity, text);
     }

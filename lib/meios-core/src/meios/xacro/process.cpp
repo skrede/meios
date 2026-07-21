@@ -5,6 +5,9 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/container_marker.h"
 
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
+
 #include <pugixml.hpp>
 
 #include <map>
@@ -33,7 +36,7 @@ bool is_true(const value &v)
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     bool ok = true;
-    std::string value_text = substitute_attr(ctx, in.attribute("value").value(), document, ok);
+    std::string value_text = substitute_attr(ctx, in, in.attribute("value").value(), document, ok);
     if(!ok)
         return false;
     std::string_view name = in.attribute("name").value();
@@ -50,12 +53,13 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
 {
     std::string_view name = in.attribute("name").value();
     if(name.empty())
-        return fail(ctx, "<xacro:arg> requires a name attribute");
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "<xacro:arg> requires a name attribute");
     pugi::xml_attribute fallback = in.attribute("default");
     if(!fallback || ctx.scope.contains(name))
         return true;
     bool ok = true;
-    std::string resolved = substitute_attr(ctx, fallback.value(), document, ok);
+    std::string resolved = substitute_attr(ctx, in, fallback.value(), document, ok);
     if(!ok)
         return false;
     ctx.scope.set(name, classify(resolved));
@@ -73,7 +77,7 @@ std::string lowered(std::string_view text)
 // xacro accepts the literal booleans true/false/1/0 (case-insensitive) as well as
 // a ${} expression; substitution resolves the expression, then the result is
 // coerced. An unrecognized non-empty string is evaluated as a fallback expression.
-bool condition_true(expand_ctx &ctx, const std::string &text)
+bool condition_true(expand_ctx &ctx, const std::string &text, const source_location &at)
 {
     std::string flag = lowered(text);
     if(flag == "true" || flag == "1")
@@ -81,7 +85,7 @@ bool condition_true(expand_ctx &ctx, const std::string &text)
     if(flag == "false" || flag == "0" || flag.empty())
         return false;
     core_evaluator evaluator;
-    value result = evaluator.eval(text, ctx.scope, ctx.log);
+    value result = evaluator.eval(text, ctx.scope, ctx.log, at);
     if(evaluator.failed())
         ctx.ok = false;
     return is_true(result);
@@ -92,14 +96,15 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 {
     // A structural conditional cannot be left half-expanded, so its test is always
     // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
+    const source_location at = locate(ctx, in);
     substitution result = substitute(in.attribute("value").value(), ctx.scope, ctx.sources,
-                                     document, eval_policy::fail, ctx.backend, ctx.log);
+                                     document, eval_policy::fail, ctx.backend, ctx.log, at);
     if(!result.ok)
     {
         ctx.ok = false;
         return false;
     }
-    bool truth = condition_true(ctx, result.text);
+    bool truth = condition_true(ctx, result.text, at);
     if(!ctx.ok)
         return false;
     bool wants_true = std::string_view(in.name()) == "xacro:if";
@@ -129,7 +134,8 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     auto found = ctx.macros.find(std::string(name.substr(6)));
     if(found != ctx.macros.end())
         return instantiate_macro(ctx, found->second, in, out, document);
-    return fail(ctx, "unknown xacro element <" + std::string(name) + '>');
+    return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                "unknown xacro element <" + std::string(name) + '>');
 }
 
 }
@@ -140,11 +146,11 @@ std::string strip_container_marker(std::string text)
     return text;
 }
 
-std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
+std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok)
 {
     substitution result = substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
-                                     ctx.log);
+                                     ctx.log, locate(ctx, in));
     ok = result.ok;
     if(!ok)
         ctx.ok = false;
@@ -154,13 +160,13 @@ std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document)
 {
-    if(!ctx.charge_work())
+    if(!ctx.charge_work(in))
         return false;
     pugi::xml_node_type kind = in.type();
     if(kind == pugi::node_pcdata || kind == pugi::node_cdata)
     {
         bool ok = true;
-        std::string text = strip_container_marker(substitute_attr(ctx, in.value(), document, ok));
+        std::string text = strip_container_marker(substitute_attr(ctx, in, in.value(), document, ok));
         if(!ok)
             return false;
         out.append_child(kind).set_value(text.c_str());

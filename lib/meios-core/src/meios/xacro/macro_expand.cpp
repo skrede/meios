@@ -2,6 +2,8 @@
 
 #include "meios/xacro/eval_scope.h"
 
+#include "meios/diagnostic/diagnostic_code.h"
+
 #include <pugixml.hpp>
 
 #include <map>
@@ -58,11 +60,11 @@ void parse_params(std::string_view spec, macro_def &def)
     }
 }
 
-bool bind_literal(expand_ctx &ctx, const std::string &name, std::string_view raw,
-                  const std::filesystem::path &document)
+bool bind_literal(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
+                  std::string_view raw, const std::filesystem::path &document)
 {
     bool ok = true;
-    std::string bound = substitute_attr(ctx, raw, document, ok);
+    std::string bound = substitute_attr(ctx, call, raw, document, ok);
     if(!ok)
         return false;
     ctx.scope.set(name, classify(bound));
@@ -71,19 +73,20 @@ bool bind_literal(expand_ctx &ctx, const std::string &name, std::string_view raw
 
 // A `^` default inherits the enclosing binding; `^|fallback` inherits it or the
 // fallback text; a bare `^` with no inherited value is a loud error, never literal.
-bool bind_default(expand_ctx &ctx, const std::string &name, const std::string &def,
-                  const std::filesystem::path &document)
+bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
+                  const std::string &def, const std::filesystem::path &document)
 {
     if(def != "^" && def.rfind("^|", 0) != 0)
-        return bind_literal(ctx, name, def, document);
+        return bind_literal(ctx, call, name, def, document);
     if(std::optional<binding> inherited = ctx.scope.lookup(name))
     {
         ctx.scope.set(name, *inherited);
         return true;
     }
     if(def.rfind("^|", 0) == 0)
-        return bind_literal(ctx, name, std::string_view(def).substr(2), document);
-    return fail(ctx, "macro parameter '" + name + "' inherits no value and has no fallback");
+        return bind_literal(ctx, call, name, std::string_view(def).substr(2), document);
+    return fail(ctx, call, diagnostic_code::xacro_structural_error,
+                "macro parameter '" + name + "' inherits no value and has no fallback");
 }
 
 bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
@@ -95,9 +98,10 @@ bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
         saved.emplace_back(name, ctx.scope.lookup(name));
         pugi::xml_attribute attr = call.attribute(name.c_str());
         if(!attr && !def.defaults[i])
-            return fail(ctx, "macro instantiation is missing required parameter '" + name + '\'');
-        const bool ok = attr ? bind_literal(ctx, name, attr.value(), document)
-                             : bind_default(ctx, name, *def.defaults[i], document);
+            return fail(ctx, call, diagnostic_code::xacro_structural_error,
+                        "macro instantiation is missing required parameter '" + name + '\'');
+        const bool ok = attr ? bind_literal(ctx, call, name, attr.value(), document)
+                             : bind_default(ctx, call, name, *def.defaults[i], document);
         if(!ok)
             return false;
     }
@@ -157,7 +161,7 @@ void define_macro(expand_ctx &ctx, pugi::xml_node in)
 bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                        pugi::xml_node out, const std::filesystem::path &document)
 {
-    if(!ctx.charge_work())
+    if(!ctx.charge_work(call))
         return false;
     std::vector<saved_binding> saved;
     std::map<std::string, block_arg> outer_blocks = std::move(ctx.blocks);

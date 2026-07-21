@@ -8,6 +8,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
@@ -34,13 +35,13 @@ expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits 
 {
 }
 
-bool expand_ctx::charge_work()
+bool expand_ctx::charge_work(pugi::xml_node in)
 {
     if(!ok)
         return false;
     if(++counters.work > limits.work)
     {
-        log.log(level::error,
+        log.log(level::error, diagnostic_code::expansion_budget_exceeded, locate(*this, in),
                 "expansion budget exceeded: work limit of " + std::to_string(limits.work)
                     + " units reached");
         ok = false;
@@ -49,13 +50,13 @@ bool expand_ctx::charge_work()
     return true;
 }
 
-bool expand_ctx::charge_output()
+bool expand_ctx::charge_output(pugi::xml_node in)
 {
     if(!ok)
         return false;
     if(++counters.output_nodes > limits.output_nodes)
     {
-        log.log(level::error,
+        log.log(level::error, diagnostic_code::expansion_budget_exceeded, locate(*this, in),
                 "expansion budget exceeded: output-node limit of "
                     + std::to_string(limits.output_nodes) + " nodes reached");
         ok = false;
@@ -70,11 +71,17 @@ pugi::xml_document &expand_ctx::park()
     return *owned.back();
 }
 
-bool fail(expand_ctx &ctx, const std::string &message)
+bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
+          const std::string &message)
 {
-    ctx.log.log(level::error, message);
+    ctx.log.log(level::error, code, loc, message);
     ctx.ok = false;
     return false;
+}
+
+bool fail(expand_ctx &ctx, pugi::xml_node in, diagnostic_code code, const std::string &message)
+{
+    return fail(ctx, locate(ctx, in), code, message);
 }
 
 // A typed xacro emit always anchors on the hosting node's real position; with no
@@ -184,7 +191,9 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
     pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
     if(!parsed)
     {
-        log.log(level::error, std::string("xacro parse error: ") + parsed.description());
+        log.log(level::error, diagnostic_code::xacro_parse_error,
+                detail::offset_location(source, parsed.offset, document),
+                std::string("xacro parse error: ") + parsed.description());
         return expansion{ false, {} };
     }
     ctx.include_stack.push_back(std::filesystem::weakly_canonical(document));

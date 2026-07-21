@@ -7,6 +7,7 @@
 #include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
@@ -89,18 +90,20 @@ struct expand_ctx
     std::vector<const std::vector<saved_binding> *> param_saves;
     bool ok;
 
-    bool charge_work();
-    bool charge_output();
+    bool charge_work(pugi::xml_node in);
+    bool charge_output(pugi::xml_node in);
     pugi::xml_document &park();
 };
 
-bool fail(expand_ctx &ctx, const std::string &message);
+bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
+          const std::string &message);
+bool fail(expand_ctx &ctx, pugi::xml_node in, diagnostic_code code, const std::string &message);
 
 source_location locate(const expand_ctx &ctx, pugi::xml_node in);
 
 void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name);
 
-std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
+std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok);
 
 std::string strip_container_marker(std::string text);

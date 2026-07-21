@@ -1,5 +1,7 @@
 #include <meios/xacro.h>
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -44,6 +46,13 @@ struct failure
     }
 
     void operator()(meios::level, const meios::source_location &, const std::string &text)
+    {
+        message = text;
+        ++diagnostics;
+    }
+
+    void operator()(meios::level, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &text)
     {
         message = text;
         ++diagnostics;

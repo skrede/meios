@@ -4,6 +4,7 @@
 #include "meios/xacro/value.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <cmath>
 #include <string>
@@ -98,7 +99,9 @@ value parse_name(parser &p)
     if(p.at(token_kind::lparen)) return parse_call(p, name);
     if(name == "pi") return value{ 3.141592653589793 };
     std::optional<binding> bound = p.scope.lookup(name);
-    if(!bound) return p.fail("name '" + std::string(name) + "' is not defined");
+    if(!bound)
+        return p.fail("name '" + std::string(name) + "' is not defined",
+                      diagnostic_code::undefined_property);
     if(std::holds_alternative<value>(*bound)) return std::get<value>(*bound);
     return p.fail_unsupported("string value '" + std::string(name) + "' in expression — use eval-python");
 }

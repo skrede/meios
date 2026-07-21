@@ -5,6 +5,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <cmath>
 #include <limits>
@@ -16,16 +17,20 @@
 namespace meios::detail
 {
 
-value parser::fail(const std::string &message, [[maybe_unused]] diagnostic_code code)
+value parser::fail(const std::string &message, diagnostic_code code)
 {
-    if(ok) { log.log(level::error, message); failure = eval_failure_kind::error; }
+    if(ok) { log.log(level::error, code, anchor, message); failure = eval_failure_kind::error; }
     ok = false;
     return value{ 0ll };
 }
 
 value parser::fail_unsupported(const std::string &message)
 {
-    if(ok) { log.log(level::error, message); failure = eval_failure_kind::unsupported; }
+    if(ok)
+    {
+        log.log(level::error, diagnostic_code::unsupported_expression, anchor, message);
+        failure = eval_failure_kind::unsupported;
+    }
     ok = false;
     return value{ 0ll };
 }

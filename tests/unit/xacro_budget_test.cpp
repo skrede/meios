@@ -5,6 +5,7 @@
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -26,7 +27,16 @@ struct captured_log
         records.push_back({ lvl, message });
     }
 
-    void operator()(meios::level, const meios::source_location &, const std::string &) {}
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
+    {
+        records.push_back({ lvl, message });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &message)
+    {
+        records.push_back({ lvl, message });
+    }
 };
 
 bool any_contains(const std::vector<std::pair<meios::level, std::string>> &records,

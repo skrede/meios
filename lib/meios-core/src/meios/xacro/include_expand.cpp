@@ -3,8 +3,11 @@
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
+#include "meios/detail/text_location.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
@@ -100,12 +103,13 @@ std::optional<std::string> read_asset(resolved_asset &&hit)
     }
 }
 
-bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &key,
-            pugi::xml_node out)
+bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
+            const std::filesystem::path &key, pugi::xml_node out)
 {
     std::optional<std::string> bytes = read_asset(std::move(hit));
     if(!bytes)
-        return fail(ctx, "xacro:include could not read \"" + key.string() + '"');
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not read \"" + key.string() + '"');
     // load_buffer copies into the document, but macro bodies defined in this include
     // keep string_views onto the source text, so it must outlive this call; park it in
     // owned_text alongside the parked document rather than in this local (Pitfall 2).
@@ -114,7 +118,9 @@ bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &
     pugi::xml_document &doc = ctx.park();
     pugi::xml_parse_result parsed = doc.load_buffer(parked.data(), parked.size());
     if(!parsed)
-        return fail(ctx, std::string("xacro:include parse error: ") + parsed.description());
+        return fail(ctx, offset_location(parked, parsed.offset, key),
+                    diagnostic_code::xacro_parse_error,
+                    std::string("xacro:include parse error: ") + parsed.description());
     ctx.include_stack.push_back(key);
     ctx.origins.push_back(emit_origin{ key, parked });
     bool ok = process_children(ctx, doc.first_child(), out, key);
@@ -128,27 +134,29 @@ bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                     const std::filesystem::path &document)
 {
-    if(!ctx.charge_work())
+    if(!ctx.charge_work(in))
         return false;
     include_target target = split_target(in.attribute("filename").value());
     bool ok = true;
-    std::string relative = substitute_attr(ctx, target.relative, document, ok);
+    std::string relative = substitute_attr(ctx, in, target.relative, document, ok);
     if(!ok)
         return false;
     bool escaped = false;
     std::string normalized = normalize_relative(relative, escaped);
     if(escaped)
-        return fail(ctx, "xacro:include target \"" + relative + "\" escapes the source root");
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:include target \"" + relative + "\" escapes the source root");
     std::filesystem::path key =
         std::filesystem::weakly_canonical(std::filesystem::path(target.package) / normalized);
     for(const std::filesystem::path &seen : ctx.include_stack)
         if(seen == key)
-            return fail(ctx, "xacro:include cycle detected re-entering \"" + key.string() + '"');
+            return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                        "xacro:include cycle detected re-entering \"" + key.string() + '"');
     std::optional<resolved_asset> hit = ctx.sources.locate(target.package, normalized, ctx.log);
     if(!hit)
-        return fail(ctx, "xacro:include could not resolve \"" + target.package + '/' + normalized
-                             + '"');
-    return splice(ctx, std::move(*hit), key, out);
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not resolve \"" + target.package + '/' + normalized + '"');
+    return splice(ctx, in, std::move(*hit), key, out);
 }
 
 }

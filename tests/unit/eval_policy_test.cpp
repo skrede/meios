@@ -1,6 +1,8 @@
 #include <meios/xacro.h>
 #include <meios/io/source_stack.h>
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -28,6 +30,11 @@ struct tally
 
     void operator()(meios::level lvl, const std::string &) { bump(lvl); }
     void operator()(meios::level lvl, const meios::source_location &, const std::string &) { bump(lvl); }
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &)
+    {
+        bump(lvl);
+    }
 };
 
 struct outcome
