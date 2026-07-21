@@ -72,7 +72,8 @@ void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string
 }
 
 void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
-           const load_options &opts, parse_context &ctx, world_recorder &recorder)
+           const load_options &opts, parse_context &ctx, world_recorder &recorder,
+           capturing_log_sink &wrapper)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
@@ -84,6 +85,12 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
     seed_caller_args(scope, opts.args);
     const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{},
                                       opts.eval, opts.backend, ctx.log);
+    // A failed expansion yields an empty document; parsing it would append a
+    // misleading secondary "no document element" error after the real root cause
+    // already relayed. Skip the parse only when expand reported that root cause;
+    // a quiet failure still parses and fails loudly.
+    if(!expanded.ok && wrapper.errors() > 0)
+        return;
     parser.parse(expanded.document, recorder);
 }
 
@@ -137,7 +144,7 @@ expected<model<double>, load_error> drive_load(const std::filesystem::path &path
     core_evaluator eval;
     parse_context ctx{ sources, eval, wrapper, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
+    drive(*bytes, path, sniff.expandable, opts, ctx, recorder, wrapper);
     if(wrapper.errors() > 0)
     {
         const captured_diagnostic &first = *wrapper.first();
