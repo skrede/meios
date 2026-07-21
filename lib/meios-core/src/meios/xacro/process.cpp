@@ -1,4 +1,5 @@
 #include "structural_detail.h"
+#include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/substitution.h"
@@ -33,10 +34,23 @@ bool is_true(const value &v)
     return std::get<double>(v) != 0.0;
 }
 
+std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name)
+{
+    std::size_t idx = 0;
+    for(pugi::xml_attribute a : in.attributes())
+    {
+        if(std::string_view(a.name()) == name)
+            return idx;
+        ++idx;
+    }
+    return std::nullopt;
+}
+
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     bool ok = true;
-    std::string value_text = substitute_attr(ctx, in, in.attribute("value").value(), document, ok);
+    std::string value_text = substitute_attr(ctx, in, in.attribute("value").value(), document, ok,
+                                             attr_dom_index(in, "value"));
     if(!ok)
         return false;
     std::string_view name = in.attribute("name").value();
@@ -59,7 +73,8 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
     if(!fallback || ctx.scope.contains(name))
         return true;
     bool ok = true;
-    std::string resolved = substitute_attr(ctx, in, fallback.value(), document, ok);
+    std::string resolved = substitute_attr(ctx, in, fallback.value(), document, ok,
+                                           attr_dom_index(in, "default"));
     if(!ok)
         return false;
     ctx.scope.set(name, classify(resolved));
@@ -147,10 +162,17 @@ std::string strip_container_marker(std::string text)
 }
 
 std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
-                            const std::filesystem::path &document, bool &ok)
+                            const std::filesystem::path &document, bool &ok,
+                            std::optional<std::size_t> attr_index)
 {
-    substitution result = substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
-                                     ctx.log, locate(ctx, in));
+    const source_location at = locate(ctx, in);
+    const std::string_view host_text =
+        ctx.origins.empty() ? std::string_view{} : ctx.origins.back().text;
+    substitution result =
+        attr_index ? substitute_refined(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
+                                        ctx.log, at, in, host_text, attr_index)
+                   : substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
+                                ctx.log, at);
     ok = result.ok;
     if(!ok)
         ctx.ok = false;

@@ -9,8 +9,11 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/source_location.h"
 
+#include <pugixml.hpp>
+
 #include <cctype>
 #include <string>
+#include <cstddef>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -19,6 +22,8 @@ namespace meios
 {
 
 class source_stack;
+class evaluator_handle;
+struct substitution;
 
 namespace detail
 {
@@ -65,7 +70,7 @@ struct subst_ctx
               const std::filesystem::path &doc, eval_policy policy, evaluator_handle *inject,
               const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), core(), document(doc), at(anchor),
-          mode(policy), backend(inject), last_kind(eval_failure_kind::none)
+          node_anchor(anchor), mode(policy), backend(inject), last_kind(eval_failure_kind::none)
     {
     }
 
@@ -81,14 +86,31 @@ struct subst_ctx
     core_text_evaluator core;
     const std::filesystem::path &document;
     source_location at;
+    // The immutable node-anchored floor: `at`'s column may be refined to a failing
+    // token, but a degrade always falls back to this, never to a prior span's column.
+    source_location node_anchor;
     eval_policy mode;
     evaluator_handle *backend;
     eval_failure_kind last_kind;
+    // Optional forward-scan refinement inputs, empty for the public substitute() path:
+    // the hosting element, its raw document text, and the attribute's DOM index.
+    pugi::xml_node host{};
+    std::string_view host_text{};
+    std::optional<std::size_t> attr_index{};
 };
 
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression);
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
+
+// Internal substitute that carries the forward-scan refinement inputs so an
+// attribute-hosted failing token's column can refine the node anchor. The public
+// substitute() overloads keep the node anchor and do not widen for this.
+substitution substitute_refined(std::string_view raw, const eval_scope &scope,
+                                source_stack &sources, const std::filesystem::path &document,
+                                eval_policy policy, evaluator_handle *backend, log_sink &log,
+                                const source_location &at, pugi::xml_node host,
+                                std::string_view host_text, std::optional<std::size_t> attr_index);
 
 }
 

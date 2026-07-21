@@ -164,7 +164,7 @@ endif()
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
         xacro_eval xacro_structural xacro_subst xacro_budget xacro_arg
-        xacro_unsupported xacro_corpus io_concept io_source_stack io_sources)
+        xacro_unsupported xacro_corpus forward_scan io_concept io_source_stack io_sources)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
@@ -175,9 +175,20 @@ foreach(stem IN ITEMS
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         endif()
+        # The forward-scan helper lives in the core src tree and takes pugixml handles,
+        # so this stem alone reaches into meios-core/src and links pugixml directly.
+        if(stem STREQUAL "forward_scan")
+            target_include_directories(${stem}_test PRIVATE
+                ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+            target_link_libraries(${stem}_test PRIVATE pugixml::pugixml)
+        endif()
         meios_enable_coverage(${stem}_test)
         meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
+        if(stem STREQUAL "forward_scan")
+            catch_discover_tests(${stem}_test TEST_PREFIX "forward_scan.")
+        else()
+            catch_discover_tests(${stem}_test)
+        endif()
     endif()
 endforeach()
 

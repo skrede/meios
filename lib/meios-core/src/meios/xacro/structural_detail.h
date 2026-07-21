@@ -104,7 +104,8 @@ source_location locate(const expand_ctx &ctx, pugi::xml_node in);
 void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name);
 
 std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
-                            const std::filesystem::path &document, bool &ok);
+                            const std::filesystem::path &document, bool &ok,
+                            std::optional<std::size_t> attr_index = std::nullopt);
 
 std::string strip_container_marker(std::string text);
 

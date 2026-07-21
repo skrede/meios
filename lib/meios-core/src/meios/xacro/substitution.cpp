@@ -2,6 +2,8 @@
 
 #include "meios/xacro/substitution.h"
 
+#include "meios/detail/text_location.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -18,6 +20,18 @@ namespace meios
 
 namespace
 {
+
+// Upgrades ctx.at's column to the failing token at `decoded_offset` into the attribute
+// value, when the refinement inputs are present; line and file stay the node anchor's.
+// The forward-scan self-check degrades to the value-start or node-anchor column, so a
+// column ctx.at carries is always one the scan confirmed.
+void refine_span_column(detail::subst_ctx &ctx, std::size_t decoded_offset)
+{
+    if(!ctx.attr_index || !ctx.host)
+        return;
+    ctx.at.column = detail::refine_attr_column(ctx.host_text, ctx.host, *ctx.attr_index,
+                                               decoded_offset, ctx.node_anchor).column;
+}
 
 std::size_t find_close(std::string_view raw, std::size_t opener, char open_ch, char close_ch)
 {
@@ -59,7 +73,7 @@ bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t do
     return true;
 }
 
-bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out);
+bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base);
 
 std::string_view leading_command(std::string_view inner)
 {
@@ -77,7 +91,12 @@ std::string_view leading_command(std::string_view inner)
 // the unset branch — a pre-scan would eagerly evaluate a default the bound arg never
 // uses, failing on an unresolvable fallback. A failed inner scan yields nullopt so
 // the caller's verbatim/leniency handling governs the outcome rather than a mis-dispatch.
-std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std::string_view inner)
+// `span_offset` is the failing span's `$` byte as an offset into the whole decoded
+// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps
+// back to the real column. After a nested scan clobbers ctx.at, the outer command's
+// dispatch is re-anchored to its own span before it can emit.
+std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std::string_view inner,
+                                        std::size_t span_offset)
 {
     if(opener == '{')
     {
@@ -90,22 +109,25 @@ std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std
         return detail::dispatch(ctx, inner);
     }
     std::string resolved;
-    if(!scan(ctx, inner, resolved))
+    if(!scan(ctx, inner, resolved, span_offset + 2))
         return std::nullopt;
+    refine_span_column(ctx, span_offset);
     ctx.last_kind = eval_failure_kind::none;
     return detail::dispatch(ctx, resolved);
 }
 
 bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
-                 std::string &out, std::size_t &cursor)
+                 std::string &out, std::size_t &cursor, std::size_t base)
 {
+    const std::size_t span_offset = base + dollar;
+    refine_span_column(ctx, span_offset);
     char opener = raw[dollar + 1];
     char closer = opener == '{' ? '}' : ')';
     std::size_t close = find_close(raw, dollar + 1, opener, closer);
     if(close == std::string_view::npos)
         return fail_unterminated(ctx, opener, dollar);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
-    std::optional<std::string> result = resolve_span(ctx, opener, inner);
+    std::optional<std::string> result = resolve_span(ctx, opener, inner, span_offset);
     if(result)
     {
         out.append(*result);
@@ -115,7 +137,7 @@ bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dolla
     return leave_verbatim(ctx, raw, dollar, close, out, cursor);
 }
 
-bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out)
+bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base)
 {
     std::size_t cursor = 0;
     while(cursor < raw.size())
@@ -131,7 +153,7 @@ bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out)
             cursor = dollar + 1;
             continue;
         }
-        if(!expand_span(ctx, raw, dollar, out, cursor))
+        if(!expand_span(ctx, raw, dollar, out, cursor, base))
             return false;
     }
     out.append(raw.substr(cursor));
@@ -146,8 +168,28 @@ substitution substitute(std::string_view raw, const eval_scope &scope, source_st
 {
     detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
     std::string out;
-    bool ok = scan(ctx, raw, out);
+    bool ok = scan(ctx, raw, out, 0);
     return substitution{ ok, std::move(out) };
+}
+
+namespace detail
+{
+
+substitution substitute_refined(std::string_view raw, const eval_scope &scope,
+                                source_stack &sources, const std::filesystem::path &document,
+                                eval_policy policy, evaluator_handle *backend, log_sink &log,
+                                const source_location &at, pugi::xml_node host,
+                                std::string_view host_text, std::optional<std::size_t> attr_index)
+{
+    subst_ctx ctx(log, sources, scope, document, policy, backend, at);
+    ctx.host = host;
+    ctx.host_text = host_text;
+    ctx.attr_index = attr_index;
+    std::string out;
+    bool ok = scan(ctx, raw, out, 0);
+    return substitution{ ok, std::move(out) };
+}
+
 }
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
