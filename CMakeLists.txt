@@ -9,7 +9,7 @@ include(FetchContent)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildflags.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFetchDescription.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeclareResource.cmake)
 
 option(MEIOS_BUILD_TESTS "Build unit and compile tests" OFF)
 option(MEIOS_BUILD_EXAMPLES "Build examples" OFF)
@@ -71,6 +71,7 @@ if(MEIOS_ENABLE_INSTALL)
     install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfigVersion.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeclareResource.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
 endif()
 

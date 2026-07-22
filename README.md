@@ -71,6 +71,25 @@ find_package(meios CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE meios::urdf)
 ```
 
+### Acquiring a robot description
+
+Either integration also brings two CMake functions for treating a description package as fetched
+data rather than vendored files — pin it by hash, then deploy it beside the executable that loads
+it:
+
+```cmake
+meios_declare_resource(
+    NAME kuka
+    URL  https://github.com/ros-industrial/kuka_experimental/archive/<sha>.tar.gz
+    HASH SHA256=<hex>
+    STRIP_TOP_LEVEL)
+
+meios_target_deploy_resources(my_app RESOURCES kuka SUBDIR urdf)
+```
+
+See the [resource guide](docs/resources-guide.md) for the acquisition modes, offline configures, and
+how the deployed directory maps onto `package://` resolution.
+
 ## Usage
 
 Load a URDF/xacro file and hand the resolved model to your own code. `load` returns an

@@ -1,7 +1,7 @@
 include_guard(GLOBAL)
 
 # Pinned, license-recorded robot-description corpus, fetched as DATA through
-# meios_fetch_description (parsed, never compiled, never linked). The always-on
+# meios_declare_resource (parsed, never compiled, never linked). The always-on
 # tier fetches one small pinned known-good description plus an in-repo crafted
 # known-faulty fixture wired via SOURCE_DIR; the breadth tier adds the full set.
 
@@ -12,7 +12,7 @@ option(MEIOS_CORPUS_BREADTH
 
 # License determinations for every fetched upstream. Each corpus fetch NAME must
 # carry a matching "# license[<name>]:" line below; the check further down reads
-# this very file, extracts every meios_fetch_description NAME, and FATALs if any
+# this very file, extracts every meios_declare_resource NAME, and FATALs if any
 # lacks its annotation — so a future fetch added without a recorded license fails
 # configure rather than shipping an undetermined license into CI.
 #
@@ -23,7 +23,7 @@ option(MEIOS_CORPUS_BREADTH
 
 set(_corpus_self "")
 file(READ "${CMAKE_CURRENT_LIST_FILE}" _corpus_self)
-string(REGEX MATCHALL "meios_fetch_description\\([ \t\r\n]+NAME[ \t]+[A-Za-z0-9_]+"
+string(REGEX MATCHALL "meios_declare_resource\\([ \t\r\n]+NAME[ \t]+[A-Za-z0-9_]+"
        _corpus_calls "${_corpus_self}")
 foreach(_call IN LISTS _corpus_calls)
     string(REGEX REPLACE ".*NAME[ \t]+([A-Za-z0-9_]+)$" "\\1" _cname "${_call}")
@@ -41,7 +41,7 @@ endif()
 # The known-good half of the pair: one small, pre-expanded serial-arm URDF
 # that parses with zero error-level diagnostics (its package:// meshes surface as
 # warn-level unresolved_mesh, never errors).
-meios_fetch_description(
+meios_declare_resource(
     NAME kuka_experimental
     URL  https://github.com/ros-industrial/kuka_experimental/archive/8d9292b04a22628b1b78d989e2ddd3abb913bf92.tar.gz
     HASH SHA256=02f299d967868fb32022617429ddede3a197fb8f18e09b88f88732e11a78bf79
@@ -55,7 +55,7 @@ set(MEIOS_CORPUS_KNOWN_GOOD
 # SOURCE_DIR override (no network, still runs the LFS scan). faulty.urdf declares
 # two roots so topology emits exactly one additional_root at the second root's
 # line — the fixed (code, file, line) the always-on tier pins.
-meios_fetch_description(
+meios_declare_resource(
     NAME corpus_faulty
     SOURCE_DIR "${CMAKE_SOURCE_DIR}/tests/fixtures/urdf/corpus_faulty"
     OUT_DIR MEIOS_CORPUS_FAULTY_DIR)
@@ -68,14 +68,14 @@ set(MEIOS_CORPUS_FAULTY_LINE 4)
 # nightly leg so a transient upstream outage never gates a PR.
 set(MEIOS_CORPUS_BREADTH_DIRS "${MEIOS_CORPUS_KUKA_DIR}")
 if(MEIOS_CORPUS_BREADTH)
-    meios_fetch_description(
+    meios_declare_resource(
         NAME ur_description
         URL  https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/archive/refs/tags/4.3.1.tar.gz
         HASH SHA256=3532a25c9942bedcdfe41c845be6d144bbbbcd76f179f14a53a3e7b6972ae72d
         STRIP_TOP_LEVEL
         OUT_DIR MEIOS_CORPUS_UR_DIR)  # ur_description 4.3.1
 
-    meios_fetch_description(
+    meios_declare_resource(
         NAME lbr_fri_ros2_stack
         URL  https://github.com/lbr-stack/lbr_fri_ros2_stack/archive/refs/tags/jazzy-v2.5.0.tar.gz
         HASH SHA256=6d99bac113044642b8471690e2ceb079fe7c4624f19d7a01a000abb7b2430300

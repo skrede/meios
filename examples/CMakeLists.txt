@@ -46,3 +46,33 @@ if(TARGET meios_archive-zip)
     meios_warnings(archive_bundle)
     add_test(NAME example_archive_bundle COMMAND archive_bundle)
 endif()
+
+# Acquisition is declared here only because examples/ is the whole project; the split exists so a
+# consumer can declare in its top-level listfile and deploy in the subdirectory owning the target.
+#
+# SOURCE_DIR mode carries the in-repo description so `ctest` never needs the network. The option
+# adds a pinned upstream through the same registry, and both land in one runtime directory — which
+# is the layout package:// resolution wants, and what the plural RESOURCES argument is for.
+option(MEIOS_EXAMPLE_FETCH_NETWORK "Add a network-fetched description to the resource example" OFF)
+
+meios_declare_resource(
+    NAME example_arm
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/description)
+
+set(MEIOS_EXAMPLE_RESOURCES example_arm)
+if(MEIOS_EXAMPLE_FETCH_NETWORK)
+    meios_declare_resource(
+        NAME example_kuka
+        URL  https://github.com/ros-industrial/kuka_experimental/archive/8d9292b04a22628b1b78d989e2ddd3abb913bf92.tar.gz
+        HASH SHA256=02f299d967868fb32022617429ddede3a197fb8f18e09b88f88732e11a78bf79
+        STRIP_TOP_LEVEL)
+    list(APPEND MEIOS_EXAMPLE_RESOURCES example_kuka)
+endif()
+
+add_executable(deploy_resources deploy_resources.cpp)
+target_link_libraries(deploy_resources PRIVATE meios::core meios::model meios::urdf)
+meios_warnings(deploy_resources)
+meios_target_deploy_resources(deploy_resources
+    RESOURCES ${MEIOS_EXAMPLE_RESOURCES}
+    SUBDIR    urdf)
+add_test(NAME example_deploy_resources COMMAND deploy_resources)
