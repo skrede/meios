@@ -96,7 +96,7 @@ endfunction()
 
 function(meios_declare_resource)
     set(options       STRIP_TOP_LEVEL)
-    set(one_value     NAME URL HASH GIT_REPOSITORY GIT_TAG SOURCE_DIR SUBDIR OUT_DIR)
+    set(one_value     NAME URL HASH GIT_REPOSITORY GIT_TAG GITHUB REF SOURCE_DIR SUBDIR OUT_DIR)
     set(multi_value)
     cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
 
@@ -107,6 +107,22 @@ function(meios_declare_resource)
         message(FATAL_ERROR
             "meios_declare_resource(${ARG_NAME}): unknown args: ${ARG_UNPARSED_ARGUMENTS}")
     endif()
+    if(ARG_REF AND NOT ARG_GITHUB)
+        message(FATAL_ERROR
+            "meios_declare_resource(${ARG_NAME}): REF names the revision for GITHUB; use GIT_TAG "
+            "with GIT_REPOSITORY, or put the revision in the URL.")
+    endif()
+    if(ARG_GITHUB)
+        if(NOT ARG_GITHUB MATCHES "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+            message(FATAL_ERROR
+                "meios_declare_resource(${ARG_NAME}): GITHUB must be <owner>/<repository>; "
+                "got '${ARG_GITHUB}'.")
+        endif()
+        if(NOT ARG_REF)
+            message(FATAL_ERROR
+                "meios_declare_resource(${ARG_NAME}): GITHUB requires REF (a tag, branch, or commit).")
+        endif()
+    endif()
 
     # Declared per resource so an offline or air-gapped configure can redirect any mode at a
     # pre-placed tree without editing the listfile that declares it.
@@ -116,10 +132,11 @@ function(meios_declare_resource)
         set(ARG_SOURCE_DIR "${MEIOS_RESOURCE_${ARG_NAME}_SOURCE_DIR}")
         set(ARG_URL "")
         set(ARG_GIT_REPOSITORY "")
+        set(ARG_GITHUB "")
     endif()
 
     set(_modes 0)
-    foreach(_m SOURCE_DIR URL GIT_REPOSITORY)
+    foreach(_m SOURCE_DIR URL GIT_REPOSITORY GITHUB)
         if(ARG_${_m})
             math(EXPR _modes "${_modes}+1")
         endif()
@@ -127,7 +144,14 @@ function(meios_declare_resource)
     if(NOT _modes EQUAL 1)
         message(FATAL_ERROR
             "meios_declare_resource(${ARG_NAME}): specify exactly one of "
-            "SOURCE_DIR / URL / GIT_REPOSITORY.")
+            "SOURCE_DIR / URL / GIT_REPOSITORY / GITHUB.")
+    endif()
+
+    # Sugar over URL mode: GitHub serves <ref>.tar.gz for a tag, branch, or commit alike, and always
+    # wraps the tree in a <repository>-<ref> directory, so the strip is implied rather than asked for.
+    if(ARG_GITHUB)
+        set(ARG_URL "https://github.com/${ARG_GITHUB}/archive/${ARG_REF}.tar.gz")
+        set(ARG_STRIP_TOP_LEVEL TRUE)
     endif()
 
     set(_root "${MEIOS_RESOURCE_CACHE_DIR}")
@@ -180,11 +204,6 @@ function(meios_declare_resource)
                     "(e.g. SHA256=ab…); got '${ARG_HASH}'.")
             endif()
             set(_hash_arg EXPECTED_HASH "${ARG_HASH}")
-        else()
-            message(WARNING
-                "meios_declare_resource(${ARG_NAME}): fetching WITHOUT an integrity hash. The download "
-                "is trusted purely on TLS and server honesty; a swapped artifact is accepted silently. "
-                "Pin HASH SHA256=… for a reproducible, tamper-evident fetch.")
         endif()
 
         set(_tls_ca_arg "")
@@ -211,6 +230,18 @@ function(meios_declare_resource)
             message(FATAL_ERROR
                 "meios_declare_resource(${ARG_NAME}): download failed "
                 "(code ${_dl_code}: ${_dl_msg})\n  url:  ${ARG_URL}\n  log:\n${_dl_log}")
+        endif()
+
+        # Warned after the download rather than before it so the message can carry the hash that
+        # silences it: the only thing the caller is missing is a value they would otherwise have to
+        # compute by hand.
+        if(NOT ARG_HASH)
+            file(SHA256 "${_archive}" _computed)
+            message(WARNING
+                "meios_declare_resource(${ARG_NAME}): fetched WITHOUT an integrity hash. The download "
+                "is trusted purely on TLS and server honesty, a swapped artifact is accepted silently, "
+                "and nothing is cached, so every configure re-downloads. Pin it by adding:\n"
+                "    HASH SHA256=${_computed}")
         endif()
 
         set(_extract_tmp "${_root}/${ARG_NAME}.extract")

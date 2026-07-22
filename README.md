@@ -78,14 +78,13 @@ data rather than vendored files — pin it by hash, then deploy it beside the ex
 it:
 
 ```cmake
-meios_declare_resource(
-    NAME kuka
-    URL  https://github.com/ros-industrial/kuka_experimental/archive/<sha>.tar.gz
-    HASH SHA256=<hex>
-    STRIP_TOP_LEVEL)
+meios_declare_resource(NAME kuka GITHUB ros-industrial/kuka_experimental REF melodic-devel)
 
 meios_target_deploy_resources(my_app RESOURCES kuka SUBDIR urdf)
 ```
+
+Configure once and meios reports the archive's `SHA256` so you can pin it; pinned fetches are
+reproducible and cached.
 
 See the [resource guide](docs/resources-guide.md) for the acquisition modes, offline configures, and
 how the deployed directory maps onto `package://` resolution.

@@ -62,10 +62,10 @@ meios_declare_resource(
 set(MEIOS_EXAMPLE_RESOURCES example_arm)
 if(MEIOS_EXAMPLE_FETCH_NETWORK)
     meios_declare_resource(
-        NAME example_kuka
-        URL  https://github.com/ros-industrial/kuka_experimental/archive/8d9292b04a22628b1b78d989e2ddd3abb913bf92.tar.gz
-        HASH SHA256=02f299d967868fb32022617429ddede3a197fb8f18e09b88f88732e11a78bf79
-        STRIP_TOP_LEVEL)
+        NAME   example_kuka
+        GITHUB ros-industrial/kuka_experimental
+        REF    8d9292b04a22628b1b78d989e2ddd3abb913bf92
+        HASH   SHA256=02f299d967868fb32022617429ddede3a197fb8f18e09b88f88732e11a78bf79)
     list(APPEND MEIOS_EXAMPLE_RESOURCES example_kuka)
 endif()
 

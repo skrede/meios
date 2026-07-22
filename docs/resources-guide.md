@@ -47,6 +47,7 @@ meios_declare_resource(
     NAME <name>
 
     # exactly one acquisition mode:
+    GITHUB <owner>/<repository> REF <tag|branch|commit> [HASH <ALGO>=<hex>]
     URL <url> [HASH <ALGO>=<hex>] [STRIP_TOP_LEVEL]
     GIT_REPOSITORY <url> [GIT_TAG <tag>]
     SOURCE_DIR <dir>
@@ -55,19 +56,51 @@ meios_declare_resource(
     [OUT_DIR <variable>])
 ```
 
-`URL` downloads and extracts an archive. Always pin `HASH` — without one the download is trusted on
-TLS and server honesty alone, a swapped artifact is accepted silently, and the result is never
-cached, so every configure re-downloads. `STRIP_TOP_LEVEL` drops the single wrapper directory that
-GitHub's archive tarballs put around the repository.
+`GITHUB` is the short form and the one to reach for first. `REF` takes a tag, a branch, or a commit
+alike, so it reads the way `FetchContent_Declare` does:
 
-`GIT_REPOSITORY` shallow-clones. It is the escape hatch for Git-LFS, submodules, and private auth,
-not the default — an archive with a hash is reproducible and a branch is not.
+```cmake
+meios_declare_resource(NAME kuka GITHUB ros-industrial/kuka_experimental REF melodic-devel)
+```
+
+It expands to the archive URL and implies `STRIP_TOP_LEVEL`, since GitHub always wraps the tree in a
+`<repository>-<ref>` directory.
+
+`URL` downloads and extracts any archive, for hosts other than GitHub or for a release asset rather
+than a generated tarball.
+
+`GIT_REPOSITORY` with `GIT_TAG` shallow-clones. It is the escape hatch for Git-LFS, submodules, and
+private auth — clones are slower and a branch is not reproducible, but it is the only mode that
+handles those three.
 
 `SOURCE_DIR` registers a tree already on disk. Nothing is fetched, but the tree is still validated.
 
-`SUBDIR` narrows the resource to a subdirectory of whatever was acquired, so you can pull one
-package out of a monorepo rather than deploying the whole checkout. It is rejected if it escapes the
-acquired tree.
+### Pinning: you do not have to compute the hash
+
+`HASH` is what makes a fetch reproducible and tamper-evident, and it is also what enables caching —
+without one there is no trustworthy cache key, so every configure re-downloads. But you do not have
+to work the value out yourself. Declare the resource without it, configure once, and the warning
+carries the value to paste back:
+
+```
+meios_declare_resource(kuka): fetched WITHOUT an integrity hash. […] Pin it by adding:
+    HASH SHA256=703ea2a8502afd10ab8f5ec1775147263f3658e09ad81f14a1ce8788cfea7ce9
+```
+
+Paste that line into the call and the warning goes away, the fetch becomes reproducible, and later
+configures hit the cache instead of the network.
+
+One caveat specific to `GITHUB` and to `URL`s pointing at GitHub's generated archives: those tarballs
+are produced on demand rather than stored, and their bytes have changed in the past when GitHub
+changed its compression, invalidating pinned hashes across the ecosystem. A hash over a generated
+archive is therefore a strong integrity check but not an eternal one. Pinning `REF` to a commit
+rather than a branch removes the content drift; if you need an artifact guaranteed byte-stable, point
+`URL` at an uploaded release asset, or use `GIT_REPOSITORY` with a commit `GIT_TAG`.
+
+`SUBDIR` narrows the resource to a subdirectory of whatever was acquired — use it to treat a nested
+directory as the tree itself. To ship selected *packages* out of a monorepo, keeping their names so
+`package://` still resolves, see `PACKAGES` on the deploy call below. `SUBDIR` is rejected if it
+escapes the acquired tree.
 
 `OUT_DIR` writes the resolved path into a variable for callers that want the path directly rather
 than through a target. `meios_resource_dir(<name> <variable>)` does the same from any directory
