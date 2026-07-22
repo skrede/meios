@@ -278,7 +278,7 @@ endfunction()
 function(meios_target_deploy_resources target)
     set(options       INSTALL_RUNTIME_RELATIVE)
     set(one_value     SUBDIR INSTALL_DESTINATION INSTALL_COMPONENT)
-    set(multi_value   RESOURCES)
+    set(multi_value   RESOURCES PACKAGES)
     cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
 
     if(NOT TARGET ${target})
@@ -317,6 +317,16 @@ function(meios_target_deploy_resources target)
             "INSTALL_DESTINATION or INSTALL_RUNTIME_RELATIVE.")
     endif()
 
+    # PACKAGES names entries to copy out of ONE tree, so more than one source tree would leave the
+    # name ambiguous. Filtering is a property of what gets shipped, not of the acquired tree, which
+    # is why it lives here rather than on the declaration.
+    list(LENGTH ARG_RESOURCES _resource_count)
+    if(ARG_PACKAGES AND NOT _resource_count EQUAL 1)
+        message(FATAL_ERROR
+            "meios_target_deploy_resources(${target}): PACKAGES selects entries from a single "
+            "resource tree; pass exactly one RESOURCES name (got ${_resource_count}).")
+    endif()
+
     set(_dest "$<TARGET_FILE_DIR:${target}>")
     if(ARG_SUBDIR)
         if(IS_ABSOLUTE "${ARG_SUBDIR}")
@@ -328,43 +338,81 @@ function(meios_target_deploy_resources target)
 
     string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _slot "${ARG_SUBDIR}")
 
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy")
+
     foreach(_name IN LISTS ARG_RESOURCES)
         meios_resource_dir("${_name}" _dir)
 
-        # Driven by an OUTPUT rule keyed on the tree's contents rather than a POST_BUILD command:
-        # POST_BUILD runs only when the target itself relinks, so editing a resource without
-        # touching a source file would leave a stale tree deployed with no sign anything was wrong.
-        # copy_directory_if_different keeps an unchanged tree from restamping every file.
-        file(GLOB_RECURSE _files CONFIGURE_DEPENDS "${_dir}/*")
-        # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
-        # configuration has its own runtime directory, and one shared stamp would let the first
-        # configuration built mark the rest up to date and leave them without the tree. The
-        # configuration goes in the file name, not a directory, so the holding directory can be
-        # created once here — `cmake -E touch` does not create parents, and a generator expression
-        # cannot be resolved at configure time to create them.
-        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy")
-        set(_stamp
-            "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${_slot}.${_name}.$<CONFIG>.stamp")
-        add_custom_command(
-            OUTPUT  "${_stamp}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${_dir}" "${_dest}"
-            COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
-            DEPENDS ${_files}
-            COMMENT "Deploying resource '${_name}' to ${_dest}"
-            VERBATIM)
-        add_custom_target(${target}_deploy_${_slot}_${_name} DEPENDS "${_stamp}")
-        add_dependencies(${target} ${target}_deploy_${_slot}_${_name})
-
-        if(ARG_INSTALL_DESTINATION)
-            set(_component_arg "")
-            if(ARG_INSTALL_COMPONENT)
-                set(_component_arg COMPONENT "${ARG_INSTALL_COMPONENT}")
-            endif()
-            install(DIRECTORY "${_dir}/"
-                    DESTINATION "${ARG_INSTALL_DESTINATION}"
-                    ${_component_arg}
-                    USE_SOURCE_PERMISSIONS
-                    PATTERN ".git" EXCLUDE)
+        # Each entry keeps its own directory name at the destination, because package://<name>/…
+        # resolves to <package root>/<name>/…: copying a selected package's *contents* into the
+        # package root would strip the very name the reference is looked up under.
+        # "." stands for the tree itself. An empty string cannot serve as the sentinel: a list whose
+        # only element is "" is an empty list to foreach(IN LISTS), which would silently deploy
+        # nothing at all whenever PACKAGES was absent.
+        if(ARG_PACKAGES)
+            set(_selection ${ARG_PACKAGES})
+            foreach(_pkg IN LISTS _selection)
+                if(NOT IS_DIRECTORY "${_dir}/${_pkg}")
+                    message(FATAL_ERROR
+                        "meios_target_deploy_resources(${target}): resource '${_name}' has no "
+                        "entry '${_pkg}' to select:\n  ${_dir}/${_pkg}")
+                endif()
+            endforeach()
+        else()
+            set(_selection ".")
         endif()
+
+        foreach(_tree IN LISTS _selection)
+            if(_tree STREQUAL ".")
+                set(_src "${_dir}")
+                set(_dst "${_dest}")
+                set(_label "${_name}")
+            else()
+                set(_src "${_dir}/${_tree}")
+                set(_dst "${_dest}/${_tree}")
+                set(_label "${_name}.${_tree}")
+            endif()
+
+            # Driven by an OUTPUT rule keyed on the tree's contents rather than a POST_BUILD
+            # command: POST_BUILD runs only when the target itself relinks, so editing a resource
+            # without touching a source file would leave a stale tree deployed with no sign
+            # anything was wrong. copy_directory_if_different keeps an unchanged tree from
+            # restamping every file.
+            file(GLOB_RECURSE _files CONFIGURE_DEPENDS "${_src}/*")
+            # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
+            # configuration has its own runtime directory, and one shared stamp would let the first
+            # configuration built mark the rest up to date and leave them without the tree. The
+            # configuration goes in the file name, not a directory, so the holding directory can be
+            # created once above — `cmake -E touch` does not create parents, and a generator
+            # expression cannot be resolved at configure time to create them.
+            set(_stamp
+                "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${_slot}.${_label}.$<CONFIG>.stamp")
+            add_custom_command(
+                OUTPUT  "${_stamp}"
+                COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${_src}" "${_dst}"
+                COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
+                DEPENDS ${_files}
+                COMMENT "Deploying resource '${_label}' to ${_dst}"
+                VERBATIM)
+            string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _label_slot "${_label}")
+            add_custom_target(${target}_deploy_${_slot}_${_label_slot} DEPENDS "${_stamp}")
+            add_dependencies(${target} ${target}_deploy_${_slot}_${_label_slot})
+
+            if(ARG_INSTALL_DESTINATION)
+                set(_component_arg "")
+                if(ARG_INSTALL_COMPONENT)
+                    set(_component_arg COMPONENT "${ARG_INSTALL_COMPONENT}")
+                endif()
+                set(_install_dest "${ARG_INSTALL_DESTINATION}")
+                if(NOT _tree STREQUAL ".")
+                    set(_install_dest "${_install_dest}/${_tree}")
+                endif()
+                install(DIRECTORY "${_src}/"
+                        DESTINATION "${_install_dest}"
+                        ${_component_arg}
+                        USE_SOURCE_PERMISSIONS
+                        PATTERN ".git" EXCLUDE)
+            endif()
+        endforeach()
     endforeach()
 endfunction()

@@ -99,6 +99,7 @@ ships without a trust store.
 ```cmake
 meios_target_deploy_resources(<target>
     RESOURCES <name>...
+    [PACKAGES <name>...]
     [SUBDIR <relative/path>]
     [INSTALL_RUNTIME_RELATIVE | INSTALL_DESTINATION <dir>]
     [INSTALL_COMPONENT <component>])
@@ -111,6 +112,38 @@ which is how sibling description packages end up under a single directory you ca
 ```cmake
 meios_target_deploy_resources(app RESOURCES kuka universal_robots SUBDIR urdf)
 ```
+
+### Shipping part of a monorepo
+
+Many upstream description repositories hold a dozen packages and you need two of them. `PACKAGES`
+copies only the named top-level entries, each keeping its own directory name:
+
+```cmake
+meios_declare_resource(NAME kuka URL … HASH SHA256=… STRIP_TOP_LEVEL)
+
+meios_target_deploy_resources(app
+    RESOURCES kuka
+    PACKAGES  kuka_kr6_support kuka_resources
+    SUBDIR    urdf)
+```
+
+Keeping the names is the whole point: `package://kuka_kr6_support/…` resolves to
+`<package root>/kuka_kr6_support/…`, so a selection that flattened a package's contents into the
+package root would strip the very name the reference is looked up under. This is also why `SUBDIR`
+on the *declaration* is the wrong tool for the job — it descends into a directory and makes that
+directory the resource, which is right for narrowing to a mesh folder and wrong for picking packages.
+
+Because `PACKAGES` names entries inside one tree, it takes exactly one `RESOURCES` name. An entry
+that does not exist is a configure error, so a typo fails immediately rather than producing a
+package root that silently cannot resolve.
+
+Work out the full set before trimming: a description usually pulls in a shared package for materials
+and constants, and dropping it is a hard failure at load, not a cosmetic one. For the example above,
+`kuka_kr6_support/urdf/kr6r900sixx_macro.xacro` includes
+`$(find kuka_resources)/urdf/common_materials.xacro`, so `kuka_resources` is required even though no
+`package://kuka_resources/…` reference appears anywhere. Sibling variants in the same package can
+differ: `kr6r900_2_macro.xacro` additionally reaches into `kuka_kr10_support`. Deploying the whole
+tree always works and is the right default; trim when the size difference earns it.
 
 Deployment is wired into the build graph on the tree's contents, not attached as a post-build step,
 so editing a description redeploys it on the next build even when no source file changed.
