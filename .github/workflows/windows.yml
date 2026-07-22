@@ -71,6 +71,15 @@ jobs:
       - name: Run consumer test
         run: build-consumer/Release/integration_test.exe
 
+      - name: Build and run the installed resource consumer
+        run: |
+          cmake examples/install_consumer -B build-resource-consumer -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/resource-consumer-install"
+          cmake --build build-resource-consumer --config Release
+          cmake --install build-resource-consumer --config Release
+          & "${{ github.workspace }}/resource-consumer-install/bin/install_consumer.exe"
+
   enrichments:
     runs-on: windows-2022
     name: enrichments (scanners + archive-zip + ros)

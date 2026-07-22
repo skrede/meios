@@ -196,6 +196,16 @@ jobs:
       - name: Run consumer test
         run: ./build-consumer/integration_test
 
+      - name: Build and run the installed resource consumer
+        run: |
+          cmake examples/install_consumer -B build-resource-consumer \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/resource-consumer-install" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-resource-consumer
+          cmake --install build-resource-consumer
+          "${{ github.workspace }}/resource-consumer-install/bin/install_consumer"
+
   enrichments:
     runs-on: macos-14
     name: enrichments (scanners + archive-zip + ros)

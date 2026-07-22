@@ -171,9 +171,31 @@ int main(int, char **argv)
 }
 ```
 
-`examples/deploy_resources.cpp` is this program against a description the example declares itself;
-`examples/CMakeLists.txt` shows both the offline and the pinned-network declaration.
-
 A `package://<name>/<path>` reference resolves to `<package root>/<name>/<path>`, so the deployed
 directory must contain the package directory — deploy the tree that *holds* the packages, not one
 package's own root.
+
+## Worked examples
+
+Two, covering the two halves of the story:
+
+- **`examples/deploy_resources.cpp`** with `examples/CMakeLists.txt` — build-tree deployment,
+  declared both offline via `SOURCE_DIR` and, under `MEIOS_EXAMPLE_FETCH_NETWORK`, from a pinned
+  archive. Both land in one runtime directory, which is what the plural `RESOURCES` argument is for.
+  Built as part of the meios build with `MEIOS_BUILD_EXAMPLES=ON`.
+
+- **`examples/install_consumer/`** — a standalone project that configures against an *installed*
+  meios, deploys with `INSTALL_RUNTIME_RELATIVE`, installs its own executable, and resolves the
+  description from the installed binary's own directory. This is the one to copy if you ship or
+  package your program:
+
+  ```
+  cmake -S examples/install_consumer -B build -DCMAKE_PREFIX_PATH=<meios install prefix>
+  cmake --build build
+  cmake --install build --prefix <somewhere>
+  <somewhere>/bin/install_consumer
+  ```
+
+  Because it configures through `find_package(meios)` rather than as part of the meios build, it is
+  also what proves these functions reach install-mode consumers at all; the `install-test` CI job
+  builds, installs, and runs it on Linux, macOS, and Windows.

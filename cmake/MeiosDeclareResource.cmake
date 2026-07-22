@@ -336,7 +336,15 @@ function(meios_target_deploy_resources target)
         # touching a source file would leave a stale tree deployed with no sign anything was wrong.
         # copy_directory_if_different keeps an unchanged tree from restamping every file.
         file(GLOB_RECURSE _files CONFIGURE_DEPENDS "${_dir}/*")
-        set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/${target}.${_slot}.${_name}.deployed")
+        # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
+        # configuration has its own runtime directory, and one shared stamp would let the first
+        # configuration built mark the rest up to date and leave them without the tree. The
+        # configuration goes in the file name, not a directory, so the holding directory can be
+        # created once here — `cmake -E touch` does not create parents, and a generator expression
+        # cannot be resolved at configure time to create them.
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy")
+        set(_stamp
+            "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${_slot}.${_name}.$<CONFIG>.stamp")
         add_custom_command(
             OUTPUT  "${_stamp}"
             COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${_dir}" "${_dest}"
