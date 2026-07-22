@@ -100,7 +100,7 @@ ships without a trust store.
 meios_target_deploy_resources(<target>
     RESOURCES <name>...
     [SUBDIR <relative/path>]
-    [INSTALL_DESTINATION <dir>]
+    [INSTALL_RUNTIME_RELATIVE | INSTALL_DESTINATION <dir>]
     [INSTALL_COMPONENT <component>])
 ```
 
@@ -112,11 +112,33 @@ which is how sibling description packages end up under a single directory you ca
 meios_target_deploy_resources(app RESOURCES kuka universal_robots SUBDIR urdf)
 ```
 
-`INSTALL_DESTINATION` adds an `install(DIRECTORY)` rule for the same tree, so the build-tree layout
-and the installed layout are declared in one place.
-
 Deployment is wired into the build graph on the tree's contents, not attached as a post-build step,
 so editing a description redeploys it on the next build even when no source file changed.
+
+### Deploying is not installing
+
+The call above populates the **build tree only**. `cmake --install` will not carry those resources
+anywhere, so an installed program that looks for them beside its own executable will fail to find
+them — and it fails only after install, because the build tree resolves fine either way.
+
+Say where they go in the install tree as well:
+
+```cmake
+meios_target_deploy_resources(app RESOURCES kuka SUBDIR urdf INSTALL_RUNTIME_RELATIVE)
+```
+
+`INSTALL_RUNTIME_RELATIVE` installs the tree to `${CMAKE_INSTALL_BINDIR}/<SUBDIR>`, mirroring the
+build-tree layout so binary-relative lookup keeps working after install. Use it whenever the program
+resolves its resources from its own executable's directory. If you install the executable somewhere
+other than `CMAKE_INSTALL_BINDIR`, name the location yourself with `INSTALL_DESTINATION` instead.
+
+`INSTALL_DESTINATION <dir>` installs the tree wherever you say. It is the right choice when the
+program finds its resources some other way — a configured path, an environment variable, a
+command-line argument — because a conventional data location like `share/<app>/urdf` installs
+cleanly and still breaks a program that looks beside its own binary. Pick the destination to match
+how your program actually resolves the path; the two are not independent.
+
+`INSTALL_COMPONENT` names the component for either install form.
 
 ## Loading what you deployed
 

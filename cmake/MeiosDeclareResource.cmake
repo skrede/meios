@@ -276,7 +276,7 @@ endfunction()
 # runtime directory; several resources may share one SUBDIR, which is how sibling description
 # packages end up under a single package-root directory.
 function(meios_target_deploy_resources target)
-    set(options)
+    set(options       INSTALL_RUNTIME_RELATIVE)
     set(one_value     SUBDIR INSTALL_DESTINATION INSTALL_COMPONENT)
     set(multi_value   RESOURCES)
     cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
@@ -293,9 +293,28 @@ function(meios_target_deploy_resources target)
         message(FATAL_ERROR
             "meios_target_deploy_resources(${target}): RESOURCES is required.")
     endif()
+    if(ARG_INSTALL_RUNTIME_RELATIVE AND ARG_INSTALL_DESTINATION)
+        message(FATAL_ERROR
+            "meios_target_deploy_resources(${target}): INSTALL_RUNTIME_RELATIVE and "
+            "INSTALL_DESTINATION both name an install location; pass one.")
+    endif()
+
+    # Mirrors SUBDIR under the runtime destination so a program that finds its resources relative to
+    # its own executable keeps working once installed. Installing the tree to a conventional data
+    # directory instead would install successfully and still break such a program at runtime, and
+    # only after install — the build tree resolves either way.
+    if(ARG_INSTALL_RUNTIME_RELATIVE)
+        include(GNUInstallDirs)
+        set(ARG_INSTALL_DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        if(ARG_SUBDIR)
+            set(ARG_INSTALL_DESTINATION "${ARG_INSTALL_DESTINATION}/${ARG_SUBDIR}")
+        endif()
+    endif()
+
     if(ARG_INSTALL_COMPONENT AND NOT ARG_INSTALL_DESTINATION)
         message(FATAL_ERROR
-            "meios_target_deploy_resources(${target}): INSTALL_COMPONENT requires INSTALL_DESTINATION.")
+            "meios_target_deploy_resources(${target}): INSTALL_COMPONENT requires "
+            "INSTALL_DESTINATION or INSTALL_RUNTIME_RELATIVE.")
     endif()
 
     set(_dest "$<TARGET_FILE_DIR:${target}>")
