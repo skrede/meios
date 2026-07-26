@@ -1,6 +1,8 @@
 #include "meios/eval/python_evaluator.h"
 
 #include "interpreter.h"
+#include "guard_prelude.h"
+#include "python_eval_detail.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
@@ -12,9 +14,7 @@
 
 #include <pybind11/embed.h>
 
-#include <cctype>
 #include <string>
-#include <vector>
 #include <variant>
 #include <optional>
 #include <string_view>
@@ -62,57 +62,32 @@ py::object to_py_object(const binding &bound)
     return py::float_(std::get<double>(v));
 }
 
-std::vector<std::string> identifiers(std::string_view expr)
+// A compiled callable carries no defining-globals attribute, so the privileged namespace
+// holding the real builtins and the yaml module is not merely guarded against from the user
+// namespace — it is absent from the reach of everything bound there.
+py::object yaml_helper(const py::dict &priv)
 {
-    std::vector<std::string> names;
-    std::size_t i = 0;
-    while(i < expr.size())
-    {
-        if(!std::isalpha(static_cast<unsigned char>(expr[i])) && expr[i] != '_')
-        {
-            ++i;
-            continue;
-        }
-        std::size_t start = i;
-        while(i < expr.size() && (std::isalnum(static_cast<unsigned char>(expr[i])) || expr[i] == '_'))
-            ++i;
-        names.emplace_back(expr.substr(start, i - start));
-    }
-    return names;
+    py::object read  = priv["read_text"];
+    py::object parse = priv["parse_yaml"];
+    return py::cpp_function([read, parse](const std::string &spec) { return parse(read(py::str(spec))); });
 }
 
-// math is spread into globals (from math import *) so ${sin(pi/2)}-style bare names
-// hold parity with the core evaluator.
-void seed_math(py::dict &globals)
+// pybind11 injects the real builtins module into any globals dict that lacks the key, on every
+// eval and exec alike, so the curated allowlist has to be the dict's first entry or it is inert.
+py::dict restricted_globals(const py::dict &priv)
 {
-    py::module_ math = py::module_::import("math");
-    globals.attr("update")(math.attr("__dict__"));
-}
-
-// load_yaml lazily imports PyYAML (a found environment resource; a missing module
-// surfaces as a loud runtime error) and registers the !degrees/!radians unit tags on
-// the SafeLoader — degrees to radians via math.radians, radians identity — matching
-// ros/xacro's ConstructUnits. A `xacro` SimpleNamespace exposes the same load_yaml so
-// both the bare and the xacro.load_yaml spellings resolve.
-void seed_yaml(py::dict &globals)
-{
-    py::exec(
-        "def load_yaml(path):\n"
-        "    import yaml, math\n"
-        "    def _deg(loader, node): return math.radians(float(loader.construct_scalar(node)))\n"
-        "    def _rad(loader, node): return float(loader.construct_scalar(node))\n"
-        "    yaml.SafeLoader.add_constructor('!degrees', _deg)\n"
-        "    yaml.SafeLoader.add_constructor('!radians', _rad)\n"
-        "    with open(path) as _stream:\n"
-        "        return yaml.load(_stream, Loader=yaml.SafeLoader)\n"
-        "import types as _types\n"
-        "xacro = _types.SimpleNamespace(load_yaml=load_yaml)\n",
-        globals);
+    py::dict globals;
+    globals["__builtins__"] = priv["allowed_builtins"]();
+    globals.attr("update")(priv["math_names"]());
+    py::object helper    = yaml_helper(priv);
+    globals["load_yaml"] = helper;
+    globals["xacro"]     = py::module_::import("types").attr("SimpleNamespace")(py::arg("load_yaml") = helper);
+    return globals;
 }
 
 void seed_scope(py::dict &globals, std::string_view expr, const eval_scope &scope)
 {
-    for(const std::string &name : identifiers(expr))
+    for(const std::string &name : detail::identifiers(expr))
     {
         std::optional<binding> bound = scope.lookup(name);
         if(bound)
@@ -139,11 +114,17 @@ std::string format_result(const py::object &result)
     return py::str(result).cast<std::string>();
 }
 
-py::object seed_and_eval(std::string_view expr, const eval_scope &scope)
+std::optional<std::string> report(eval_failure_kind &kind, eval_failure_kind which, log_sink &log,
+                                  const std::string &message)
 {
-    py::dict globals;
-    seed_math(globals);
-    seed_yaml(globals);
+    kind = which;
+    log.log(level::error, message);
+    return std::nullopt;
+}
+
+py::object seed_and_eval(const py::dict &priv, std::string_view expr, const eval_scope &scope)
+{
+    py::dict globals = restricted_globals(priv);
     seed_scope(globals, expr, scope);
     return py::eval(std::string(expr), globals);
 }
@@ -155,23 +136,24 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
 {
     detail::ensure_interpreter();
     py::gil_scoped_acquire gil;
+    const std::string quoted = "\"" + std::string(expr) + "\"";
     try
     {
-        std::string text = format_result(seed_and_eval(expr, scope));
+        const py::dict priv    = detail::privileged_namespace();
+        const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(expr, scope));
+        if(!rule.empty())
+            return report(m_kind, eval_failure_kind::refused, log, "meios refused the expression " + quoted + ": " + rule);
+        std::string text = format_result(seed_and_eval(priv, expr, scope));
         m_kind = eval_failure_kind::none;
         return text;
     }
     catch(py::error_already_set &raised)
     {
-        m_kind = eval_failure_kind::error;
-        log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" raised: " + raised.what());
-        return std::nullopt;
+        return report(m_kind, eval_failure_kind::error, log, "python evaluation of " + quoted + " raised: " + raised.what());
     }
     catch(const std::exception &raised)
     {
-        m_kind = eval_failure_kind::error;
-        log.log(level::error, "python evaluation of \"" + std::string(expr) + "\" failed to convert its result: " + raised.what());
-        return std::nullopt;
+        return report(m_kind, eval_failure_kind::error, log, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
     }
 }
 

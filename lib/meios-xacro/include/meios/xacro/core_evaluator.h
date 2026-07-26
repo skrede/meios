@@ -12,14 +12,15 @@
 namespace meios
 {
 
-// Separates a construct the core cannot evaluate but a fuller backend could
-// (unsupported) from a genuine evaluation fault (error) such as an undefined name
-// or a division by zero; only the former is eligible for a lenient eval_policy.
+// Separates a construct the core cannot evaluate but a fuller backend could (unsupported, the
+// only kind a lenient eval_policy may soften) from a genuine evaluation fault (error) such as
+// an undefined name, and from one the evaluator declines to run (refused, always hard).
 enum class eval_failure_kind
 {
     none,
     unsupported,
     error,
+    refused,
 };
 
 class core_evaluator

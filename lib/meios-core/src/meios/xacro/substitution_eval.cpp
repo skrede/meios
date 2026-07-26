@@ -142,8 +142,8 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
 }
 
 // fail runs the backend loud against the real sink. Under warn/skip the backend's
-// diagnostics are captured: a genuine error is replayed and still hard-fails, while
-// an unsupported failure is left to expand_span to leave verbatim.
+// diagnostics are captured: a genuine error and a refusal are replayed and still
+// hard-fail, while an unsupported failure is left to expand_span to leave verbatim.
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
 {
     std::string_view expr = trim(expression);
@@ -156,7 +156,7 @@ std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression
     std::optional<std::string> out = run_backend(ctx, expr, buffer);
     if(out)
         return out;
-    if(ctx.last_kind == eval_failure_kind::error)
+    if(ctx.last_kind == eval_failure_kind::error || ctx.last_kind == eval_failure_kind::refused)
         buffer.replay(ctx.log);
     return std::nullopt;
 }
