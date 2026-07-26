@@ -2,6 +2,7 @@
 #include <meios/model.h>
 #include <meios/io.h>
 #include <meios/xacro.h>
+#include <meios/diagnostic/capturing_log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -73,16 +74,18 @@ TEST_CASE("a package:// mesh resolves to a path through the source stack", "[urd
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("a bytes-backed package mesh materializes to a temp path", "[urdf][mesh]")
+TEST_CASE("a bytes-backed package mesh is refused rather than given a dying path", "[urdf][mesh]")
 {
-    meios::log_sink log;
+    meios::log_sink inner;
+    meios::capturing_log_sink log{ inner };
     meios::memory_source memory;
     memory.add("somepkg", "meshes/x.stl", "solid\n");
     meios::source_stack sources{ memory };
     const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, log);
 
-    REQUIRE(first_mesh(robot).resolved_path.has_value());
-    REQUIRE_FALSE(first_mesh(robot).resolved_path->empty());
+    REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
+    REQUIRE(log.errors() == 1);
+    REQUIRE(log.first()->code == meios::diagnostic_code::unresolved_mesh);
 }
 
 TEST_CASE("a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted",

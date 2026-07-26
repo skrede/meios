@@ -162,12 +162,11 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
-    SECTION("$(find) materializes a bytes-only hit to a path and logs it")
+    SECTION("$(find) refuses a bytes-only hit rather than naming a path that will not survive")
     {
         meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text.find("meios-") != std::string::npos);
-        REQUIRE(any_contains(records, "materialized bytes asset"));
+        REQUIRE_FALSE(out.ok);
+        REQUIRE(any_contains(records, "byte-backed source"));
     }
 
     SECTION("an unresolved $(find) loud-fails")

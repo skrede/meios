@@ -3,7 +3,6 @@
 
 #include "meios/records/geometry.h"
 
-#include "meios/io/materialize.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
@@ -45,15 +44,21 @@ void report_missing(parse_context &ctx, const source_location &loc, const std::s
     ctx.log.log(lvl, diagnostic_code::unresolved_mesh, loc, "could not resolve mesh '" + uri + "'");
 }
 
-void record_resolved(mesh<double> &shape, resolved_asset &&asset, parse_context &ctx)
+// A materialized temp file is unlinked when the resolved_asset that owns it dies, and no part of
+// the returned model can hold that ownership, so recording its path would name a file already
+// gone. Failing loudly keeps a byte-backed source from yielding a model that looks resolved.
+void record_resolved(mesh<double> &shape, resolved_asset &&asset, parse_context &ctx,
+                     const source_location &loc)
 {
     if(asset.holds_path())
     {
         shape.resolved_path = asset.path().string();
         return;
     }
-    resolved_asset local = materialize(std::move(asset), ctx.log);
-    shape.resolved_path = local.path().string();
+    ctx.log.log(level::error, diagnostic_code::unresolved_mesh, loc,
+                "mesh '" + shape.filename
+                    + "' resolves to a byte-backed source; meios cannot yet hand out a path that "
+                      "outlives the load");
 }
 
 mesh<double> read_mesh(pugi::xml_node node, parse_context &ctx, const source_location &loc)
@@ -90,7 +95,7 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
         report_missing(ctx, loc, shape.filename);
         return;
     }
-    record_resolved(shape, std::move(*hit), ctx);
+    record_resolved(shape, std::move(*hit), ctx, loc);
     if(shape.resolved_path && is_lfs_pointer(*shape.resolved_path))
     {
         ctx.log.log(level::error, diagnostic_code::lfs_pointer_mesh, loc,

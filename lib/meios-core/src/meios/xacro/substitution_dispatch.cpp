@@ -4,7 +4,6 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/substitution.h"
 
-#include "meios/io/materialize.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
@@ -54,11 +53,15 @@ void note_env_read(subst_ctx &ctx, std::string_view name)
     ctx.log.log(level::info, "read of environment variable \"" + std::string(name) + '"');
 }
 
+// Same ownership limit as a byte-backed mesh: the materialized file dies with the asset, so the
+// substituted text would name a path that is already gone by the time the caller reads it.
 std::optional<std::string> asset_path(subst_ctx &ctx, resolved_asset &&hit)
 {
-    resolved_asset located = hit.holds_bytes() ? materialize(std::move(hit), ctx.log)
-                                               : std::move(hit);
-    return located.path().string();
+    if(hit.holds_bytes())
+        return fail(ctx, diagnostic_code::unresolved_find,
+                    "resolves to a byte-backed source; meios cannot yet substitute a path that "
+                    "outlives the load");
+    return hit.path().string();
 }
 
 std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
