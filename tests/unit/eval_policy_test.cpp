@@ -5,6 +5,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
 #include <string>
 #include <cstddef>
 #include <optional>
@@ -46,7 +47,7 @@ struct outcome
 };
 
 outcome run(std::string_view source, meios::eval_policy policy,
-            meios::evaluator_handle *backend = nullptr)
+            const std::shared_ptr<meios::evaluator_handle> &backend = {})
 {
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
@@ -155,24 +156,25 @@ TEST_CASE("an unsupported conditional hard-fails even under skip", "[xacro][eval
 
 TEST_CASE("an injected backend is consulted ahead of the core", "[xacro][eval_policy]")
 {
-    meios::evaluator_handle handle{ fixed_backend{} };
-    const outcome injected = run(span_document("${anything}"), meios::eval_policy::fail, &handle);
+    const auto handle = std::make_shared<meios::evaluator_handle>(fixed_backend{});
+    const outcome injected = run(span_document("${anything}"), meios::eval_policy::fail, handle);
     REQUIRE(injected.ok);
     REQUIRE(leaves(injected, "7"));
 }
 
 TEST_CASE("an injected unsupported decline is left verbatim under skip", "[xacro][eval_policy]")
 {
-    meios::evaluator_handle handle{ declining_backend{} };
-    const outcome declined = run(span_document("${anything}"), meios::eval_policy::skip, &handle);
+    const auto handle = std::make_shared<meios::evaluator_handle>(declining_backend{});
+    const outcome declined = run(span_document("${anything}"), meios::eval_policy::skip, handle);
     REQUIRE(declined.ok);
     REQUIRE(leaves(declined, "${anything}"));
 }
 
 TEST_CASE("an injected genuine error hard-fails regardless of policy", "[xacro][eval_policy]")
 {
-    meios::evaluator_handle handle{ declining_backend{ meios::eval_failure_kind::error } };
-    const outcome failed = run(span_document("${anything}"), meios::eval_policy::skip, &handle);
+    const declining_backend erroring{ meios::eval_failure_kind::error };
+    const auto handle = std::make_shared<meios::evaluator_handle>(erroring);
+    const outcome failed = run(span_document("${anything}"), meios::eval_policy::skip, handle);
     REQUIRE_FALSE(failed.ok);
 }
 

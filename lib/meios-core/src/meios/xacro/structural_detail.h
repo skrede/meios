@@ -68,14 +68,14 @@ using prop_frame = std::vector<std::pair<std::string, std::optional<binding>>>;
 struct expand_ctx
 {
     expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, eval_policy policy,
-               evaluator_handle *inject, log_sink &lg);
+               const std::shared_ptr<evaluator_handle> &inject, log_sink &lg);
 
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
     log_sink &log;
     eval_policy mode;
-    evaluator_handle *backend;
+    std::shared_ptr<evaluator_handle> backend;
     expansion_counters counters;
     std::map<std::string, macro_def> macros;
     std::map<std::string, block_arg> blocks;

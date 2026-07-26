@@ -19,10 +19,10 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <iostream>
-#include <optional>
 #include <filesystem>
 
 namespace meios::cli
@@ -58,11 +58,9 @@ eval_policy eval_policy_of(const verb_context &ctx)
     return eval_policy::fail;
 }
 
-// Binds a python-backed handle when --eval python is asked for, holding it in the
-// caller's named local so opts.backend never outlives its storage; a request with
-// the backend unlinked fails loudly rather than downgrading to the core evaluator.
-bool select_backend(const verb_context &ctx, load_options &opts,
-                    std::optional<evaluator_handle> &handle, log_sink &log)
+// Binds a python-backed handle when --eval python is asked for; a request with the
+// backend unlinked fails loudly rather than downgrading to the core evaluator.
+bool select_backend(const verb_context &ctx, load_options &opts, log_sink &log)
 {
     const auto eval = ctx.value_flags.find("--eval");
     if(eval == ctx.value_flags.end() || eval->second != "python")
@@ -74,10 +72,8 @@ bool select_backend(const verb_context &ctx, load_options &opts,
         return false;
     }
     (void)opts;
-    (void)handle;
 #ifdef MEIOS_CLI_HAS_EVAL_PYTHON
-    handle.emplace(python_evaluator{});
-    opts.backend = &*handle;
+    opts.backend = std::make_shared<evaluator_handle>(python_evaluator{});
 #endif
     return true;
 }
@@ -108,9 +104,8 @@ int run_flatten(const verb_context &ctx)
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     opts.eval = eval_policy_of(ctx);
-    std::optional<evaluator_handle> handle;
     if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
-       || !select_backend(ctx, opts, handle, log))
+       || !select_backend(ctx, opts, log))
         return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
     const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
@@ -162,9 +157,8 @@ int run_deps(const verb_context &ctx)
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     opts.eval = eval_policy_of(ctx);
-    std::optional<evaluator_handle> handle;
     if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
-       || !select_backend(ctx, opts, handle, log))
+       || !select_backend(ctx, opts, log))
         return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
     const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);

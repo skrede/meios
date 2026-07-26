@@ -16,6 +16,7 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -34,7 +35,7 @@ struct load_options
           materials(material_policy::warn),
           strict(strictness::strict),
           eval(eval_policy::fail),
-          backend(nullptr),
+          backend(),
           package_roots(),
           args()
     {
@@ -46,7 +47,7 @@ struct load_options
     strictness      strict;
     eval_policy     eval;
 
-    evaluator_handle *backend;
+    std::shared_ptr<evaluator_handle> backend;
 
     std::vector<std::filesystem::path> package_roots;
 

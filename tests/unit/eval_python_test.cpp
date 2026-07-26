@@ -7,6 +7,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -79,7 +80,8 @@ struct outcome
     int errors;
 };
 
-outcome run(std::string_view source, meios::eval_policy policy, meios::evaluator_handle *backend)
+outcome run(std::string_view source, meios::eval_policy policy,
+            const std::shared_ptr<meios::evaluator_handle> &backend)
 {
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
@@ -132,9 +134,9 @@ TEST_CASE("a string-producing expression returns its python str", "[eval_python]
 
 TEST_CASE("a comprehension evaluates with full python parity", "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${[i*i for i in range(4)]}"),
-                                 meios::eval_policy::fail, &handle);
+                                 meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>[0, 1, 4, 9]</l>"));
 }
@@ -169,25 +171,25 @@ TEST_CASE("load_yaml wraps yaml.safe_load over a found interpreter", "[eval_pyth
 
 TEST_CASE("an injected python backend resolves a document construct", "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${[i*i for i in range(3)]}"),
-                                 meios::eval_policy::fail, &handle);
+                                 meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "[0, 1, 4]"));
 }
 
 TEST_CASE("a non-python construct resolves identically with the backend injected", "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
-    const outcome resolved = run(span_document("${1+1}"), meios::eval_policy::fail, &handle);
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const outcome resolved = run(span_document("${1+1}"), meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>2</l>"));
 }
 
 TEST_CASE("a python runtime throw hard-fails even under skip", "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
-    const outcome raised = run(span_document("${1/0}"), meios::eval_policy::skip, &handle);
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const outcome raised = run(span_document("${1/0}"), meios::eval_policy::skip, handle);
     REQUIRE_FALSE(raised.ok);
     REQUIRE(raised.errors >= 1);
     REQUIRE_FALSE(leaves(raised, "${1/0}"));
@@ -237,13 +239,13 @@ TEST_CASE("a dict crossing a xacro:property boundary is re-hydrated for nested s
     const std::filesystem::path tmp =
         std::filesystem::temp_directory_path() / "meios_eval_rehydrate.yaml";
     std::ofstream(tmp) << "limits:\n  shoulder:\n    max: 42\n";
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header)
         + "<xacro:property name=\"config\" value=\"${xacro.load_yaml('" + tmp.generic_string()
         + "')}\"/>"
         + "<xacro:property name=\"section\" value=\"${config['limits']}\"/>"
         + "<l>${section['shoulder']['max']}</l></robot>";
-    const outcome resolved = run(document, meios::eval_policy::fail, &handle);
+    const outcome resolved = run(document, meios::eval_policy::fail, handle);
     std::filesystem::remove(tmp);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>42</l>"));
@@ -261,11 +263,11 @@ TEST_CASE("an ordinary string binding is never fabricated into a container", "[e
 TEST_CASE("an authored literal-shaped property value stays a string under subscript",
           "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header)
         + "<xacro:property name=\"x\" value=\"[1, 2]\"/>"
         + "<l>${x[0]}</l></robot>";
-    const outcome resolved = run(document, meios::eval_policy::fail, &handle);
+    const outcome resolved = run(document, meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>[</l>"));
     REQUIRE_FALSE(leaves(resolved, "<l>1</l>"));
@@ -274,8 +276,8 @@ TEST_CASE("an authored literal-shaped property value stays a string under subscr
 TEST_CASE("a container emitted whole into element text carries no control-char marker",
           "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
-    const outcome resolved = run(span_document("${[1, 2, 3]}"), meios::eval_policy::fail, &handle);
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const outcome resolved = run(span_document("${[1, 2, 3]}"), meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>[1, 2, 3]</l>"));
     REQUIRE(resolved.document.find('\x01') == std::string::npos);
@@ -284,9 +286,9 @@ TEST_CASE("a container emitted whole into element text carries no control-char m
 TEST_CASE("a container emitted whole into an attribute value carries no control-char marker",
           "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header) + "<l tag=\"${[1, 2, 3]}\"/></robot>";
-    const outcome resolved = run(document, meios::eval_policy::fail, &handle);
+    const outcome resolved = run(document, meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "tag=\"[1, 2, 3]\""));
     REQUIRE(resolved.document.find('\x01') == std::string::npos);
@@ -295,11 +297,11 @@ TEST_CASE("a container emitted whole into an attribute value carries no control-
 TEST_CASE("a list crossing a xacro:property boundary re-hydrates without leaking the marker",
           "[eval_python]")
 {
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header)
         + "<xacro:property name=\"row\" value=\"${[10, 20, 30]}\"/>"
         + "<l>${row[1]}</l></robot>";
-    const outcome resolved = run(document, meios::eval_policy::fail, &handle);
+    const outcome resolved = run(document, meios::eval_policy::fail, handle);
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>20</l>"));
     REQUIRE(resolved.document.find('\x01') == std::string::npos);

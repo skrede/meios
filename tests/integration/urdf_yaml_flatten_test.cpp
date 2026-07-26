@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <memory>
 #include <string>
 #include <vector>
 #include <optional>
@@ -33,6 +34,16 @@ const meios::joint<double> *find_joint(const meios::model<double> &robot, std::s
         if(j.name == name)
             return &j;
     return nullptr;
+}
+
+// Builds the options in a frame that has returned by the time load() runs: the backend
+// is owned by the options, so no caller has to keep storage alive alongside them.
+meios::load_options python_options(const std::filesystem::path &config)
+{
+    meios::load_options opts;
+    opts.backend = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    opts.args["config_path"] = config.generic_string();
+    return opts;
 }
 
 struct tally
@@ -81,10 +92,7 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
     int errors = 0;
     meios::log_sink_f sink{ tally{ errors } };
 
-    meios::evaluator_handle handle{ meios::python_evaluator{} };
-    meios::load_options opts;
-    opts.backend = &handle;
-    opts.args["config_path"] = fixture("yaml_arm/config.yaml").generic_string();
+    const meios::load_options opts = python_options(fixture("yaml_arm/config.yaml"));
 
     const meios::expected<meios::model<double>, meios::load_error> loaded =
         meios::load(fixture("yaml_arm/arm.urdf.xacro"), opts, sink);

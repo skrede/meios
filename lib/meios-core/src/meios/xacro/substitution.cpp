@@ -9,6 +9,7 @@
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
+#include <memory>
 #include <string>
 #include <cstddef>
 #include <optional>
@@ -164,7 +165,8 @@ bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::s
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,
-                        evaluator_handle *backend, log_sink &log, const source_location &at)
+                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
+                        const source_location &at)
 {
     detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
     std::string out;
@@ -177,7 +179,8 @@ namespace detail
 
 substitution substitute_refined(std::string_view raw, const eval_scope &scope,
                                 source_stack &sources, const std::filesystem::path &document,
-                                eval_policy policy, evaluator_handle *backend, log_sink &log,
+                                eval_policy policy,
+                                const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
                                 const source_location &at, pugi::xml_node host,
                                 std::string_view host_text, std::optional<std::size_t> attr_index)
 {
@@ -194,7 +197,7 @@ substitution substitute_refined(std::string_view raw, const eval_scope &scope,
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,
-                        evaluator_handle *backend, log_sink &log)
+                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log)
 {
     return substitute(raw, scope, sources, document, policy, backend, log,
                       source_location{ document, 0, 0 });
@@ -203,7 +206,7 @@ substitution substitute(std::string_view raw, const eval_scope &scope, source_st
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, log_sink &log)
 {
-    return substitute(raw, scope, sources, document, eval_policy::fail, nullptr, log);
+    return substitute(raw, scope, sources, document, eval_policy::fail, {}, log);
 }
 
 }

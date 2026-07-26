@@ -7,6 +7,7 @@
 
 #include "meios/diagnostic/log_sink.h"
 
+#include <memory>
 #include <string>
 #include <filesystem>
 #include <string_view>
@@ -32,7 +33,8 @@ struct expansion
 // resolved; the delegating overload uses fail policy and the core evaluator.
 expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
                  const std::filesystem::path &document, const expansion_limits &limits,
-                 eval_policy policy, evaluator_handle *backend, log_sink &log);
+                 eval_policy policy, const std::shared_ptr<evaluator_handle> &backend,
+                 log_sink &log);
 
 expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
                  const std::filesystem::path &document, const expansion_limits &limits,

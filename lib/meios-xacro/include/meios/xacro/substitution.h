@@ -7,6 +7,7 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/source_location.h"
 
+#include <memory>
 #include <string>
 #include <filesystem>
 #include <string_view>
@@ -25,11 +26,12 @@ struct substitution
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,
-                        evaluator_handle *backend, log_sink &log, const source_location &at);
+                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
+                        const source_location &at);
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, eval_policy policy,
-                        evaluator_handle *backend, log_sink &log);
+                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log);
 
 substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
                         const std::filesystem::path &document, log_sink &log);

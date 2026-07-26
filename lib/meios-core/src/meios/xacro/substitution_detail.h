@@ -12,6 +12,7 @@
 #include <pugixml.hpp>
 
 #include <cctype>
+#include <memory>
 #include <string>
 #include <cstddef>
 #include <optional>
@@ -67,8 +68,8 @@ private:
 struct subst_ctx
 {
     subst_ctx(log_sink &sink, source_stack &pkg_sources, const eval_scope &names,
-              const std::filesystem::path &doc, eval_policy policy, evaluator_handle *inject,
-              const source_location &anchor = {})
+              const std::filesystem::path &doc, eval_policy policy,
+              const std::shared_ptr<evaluator_handle> &inject, const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), core(), document(doc), at(anchor),
           node_anchor(anchor), mode(policy), backend(inject), last_kind(eval_failure_kind::none)
     {
@@ -76,7 +77,7 @@ struct subst_ctx
 
     subst_ctx(log_sink &sink, source_stack &pkg_sources, const eval_scope &names,
               const std::filesystem::path &doc)
-        : subst_ctx(sink, pkg_sources, names, doc, eval_policy::fail, nullptr)
+        : subst_ctx(sink, pkg_sources, names, doc, eval_policy::fail, {})
     {
     }
 
@@ -90,7 +91,7 @@ struct subst_ctx
     // token, but a degrade always falls back to this, never to a prior span's column.
     source_location node_anchor;
     eval_policy mode;
-    evaluator_handle *backend;
+    std::shared_ptr<evaluator_handle> backend;
     eval_failure_kind last_kind;
     // Optional forward-scan refinement inputs, empty for the public substitute() path:
     // the hosting element, its raw document text, and the attribute's DOM index.
@@ -108,7 +109,8 @@ std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
 // substitute() overloads keep the node anchor and do not widen for this.
 substitution substitute_refined(std::string_view raw, const eval_scope &scope,
                                 source_stack &sources, const std::filesystem::path &document,
-                                eval_policy policy, evaluator_handle *backend, log_sink &log,
+                                eval_policy policy,
+                                const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
                                 const source_location &at, pugi::xml_node host,
                                 std::string_view host_text, std::optional<std::size_t> attr_index);
 

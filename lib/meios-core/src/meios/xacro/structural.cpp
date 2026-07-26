@@ -29,7 +29,8 @@ namespace detail
 {
 
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
-                       eval_policy policy, evaluator_handle *inject, log_sink &lg)
+                       eval_policy policy, const std::shared_ptr<evaluator_handle> &inject,
+                       log_sink &lg)
     : scope(s), sources(src), limits(lim), log(lg), mode(policy), backend(inject), counters(),
       macros(), blocks(), include_stack(), owned(), owned_text(), origins(), prop_frames(),
       param_saves(), ok(true)
@@ -185,7 +186,8 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
 // an XXE / entity-expansion payload has no effect; keep it at parse_default.
 expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
                  const std::filesystem::path &document, const expansion_limits &limits,
-                 eval_policy policy, evaluator_handle *backend, log_sink &log)
+                 eval_policy policy, const std::shared_ptr<evaluator_handle> &backend,
+                 log_sink &log)
 {
     detail::expand_ctx ctx(scope, sources, limits, policy, backend, log);
     pugi::xml_document &doc = ctx.park();
@@ -215,7 +217,7 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
                  const std::filesystem::path &document, const expansion_limits &limits,
                  log_sink &log)
 {
-    return expand(source, scope, sources, document, limits, eval_policy::fail, nullptr, log);
+    return expand(source, scope, sources, document, limits, eval_policy::fail, {}, log);
 }
 
 }
