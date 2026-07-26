@@ -67,12 +67,15 @@ function(_meios_resource_subdir name root rel out)
     set(${out} "${_cand}" PARENT_SCOPE)
 endfunction()
 
-function(_meios_check_sparse_paths name paths)
+# Every caller-supplied path that is joined onto an acquired tree or a deployment root passes here.
+# A leading '-' is rejected alongside traversal because these values also reach git as arguments,
+# where a path that looks like an option is read as one.
+function(_meios_check_contained_paths context what paths)
     foreach(_p IN LISTS paths)
         if(IS_ABSOLUTE "${_p}" OR _p MATCHES "(^|/)\\.\\.(/|$)" OR _p MATCHES "^-")
             message(FATAL_ERROR
-                "meios_declare_resource(${name}): SPARSE_PATHS entry '${_p}' must be a relative "
-                "path inside the repository, with no '..' component and no leading '-'.")
+                "${context}: ${what} entry '${_p}' must be a relative path inside the tree, with "
+                "no '..' component and no leading '-'.")
         endif()
     endforeach()
 endfunction()
@@ -222,6 +225,14 @@ function(meios_declare_resource)
     if(NOT ARG_NAME)
         message(FATAL_ERROR "meios_declare_resource: NAME is required.")
     endif()
+    # NAME is a path component of the cache entry, and the entry is removed recursively before it is
+    # written, so a name carrying a separator or a parent component aims both the write and the
+    # delete outside the cache root. It also names a global property, which the same set admits.
+    if(NOT ARG_NAME MATCHES "^[A-Za-z0-9_][A-Za-z0-9_.+-]*$")
+        message(FATAL_ERROR
+            "meios_declare_resource: NAME must be a plain identifier — letters, digits, '_', '.', "
+            "'+' or '-', starting with a letter, digit or '_'; got '${ARG_NAME}'.")
+    endif()
     if(ARG_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR
             "meios_declare_resource(${ARG_NAME}): unknown args: ${ARG_UNPARSED_ARGUMENTS}")
@@ -253,7 +264,8 @@ function(meios_declare_resource)
                 "meios_declare_resource(${ARG_NAME}): HASH pins an archive's bytes; a sliced clone "
                 "has none. Pin the revision with a commit REF or GIT_TAG instead.")
         endif()
-        _meios_check_sparse_paths("${ARG_NAME}" "${ARG_SPARSE_PATHS}")
+        _meios_check_contained_paths("meios_declare_resource(${ARG_NAME})" SPARSE_PATHS
+                                     "${ARG_SPARSE_PATHS}")
     endif()
 
     # Declared per resource so an offline or air-gapped configure can redirect any mode at a
@@ -497,12 +509,11 @@ function(meios_target_deploy_resources target)
             "resource tree; pass exactly one RESOURCES name (got ${_resource_count}).")
     endif()
 
+    _meios_check_contained_paths("meios_target_deploy_resources(${target})" SUBDIR "${ARG_SUBDIR}")
+    _meios_check_contained_paths("meios_target_deploy_resources(${target})" PACKAGES "${ARG_PACKAGES}")
+
     set(_dest "$<TARGET_FILE_DIR:${target}>")
     if(ARG_SUBDIR)
-        if(IS_ABSOLUTE "${ARG_SUBDIR}")
-            message(FATAL_ERROR
-                "meios_target_deploy_resources(${target}): SUBDIR must be relative; got '${ARG_SUBDIR}'.")
-        endif()
         set(_dest "${_dest}/${ARG_SUBDIR}")
     endif()
 
