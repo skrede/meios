@@ -52,6 +52,7 @@ meios_declare_resource(
     GIT_REPOSITORY <url> [GIT_TAG <tag>]
     SOURCE_DIR <dir>
 
+    [SPARSE_PATHS <relative/path>...]
     [SUBDIR <relative/path>]
     [OUT_DIR <variable>])
 ```
@@ -71,7 +72,9 @@ than a generated tarball.
 
 `GIT_REPOSITORY` with `GIT_TAG` shallow-clones. It is the escape hatch for Git-LFS, submodules, and
 private auth — clones are slower and a branch is not reproducible, but it is the only mode that
-handles those three.
+handles those three, and the only one that can fetch *part* of a tree (see `SPARSE_PATHS`). The
+clone's `.git` directory is dropped once the checkout is done: an acquired tree is data, and every
+mode produces the same shape.
 
 `SOURCE_DIR` registers a tree already on disk. Nothing is fetched, but the tree is still validated.
 
@@ -96,6 +99,39 @@ changed its compression, invalidating pinned hashes across the ecosystem. A hash
 archive is therefore a strong integrity check but not an eternal one. Pinning `REF` to a commit
 rather than a branch removes the content drift; if you need an artifact guaranteed byte-stable, point
 `URL` at an uploaded release asset, or use `GIT_REPOSITORY` with a commit `GIT_TAG`.
+
+### Fetching only part of a repository
+
+`PACKAGES` on the deploy call trims what gets *shipped*; the whole tree is still downloaded first.
+`SPARSE_PATHS` trims what gets **fetched**, using a partial clone plus a cone-mode sparse checkout:
+
+```cmake
+meios_declare_resource(
+    NAME         ur_description
+    GITHUB       UniversalRobots/Universal_Robots_ROS2_Description
+    REF          4.3.1
+    SPARSE_PATHS urdf config meshes/ur5e)
+```
+
+For that repository the difference is 3.5 MB fetched against 27.5 MB for the tarball, and 9.7 MB on
+disk against 104 MB — the meshes for a dozen robot variants are what fills it, and one variant is
+what a program needs.
+
+`SPARSE_PATHS` implies a clone even when the declaration is written as `GITHUB`, because no GitHub
+endpoint serves part of a tree: the mode is re-routed to the git protocol, and `HASH`, which pins an
+archive's bytes, is rejected as meaningless there. Pin the revision with a commit `REF` instead. It
+is likewise rejected with `URL` and with `SOURCE_DIR`.
+
+Two things are checked because git will not fail on its own. A path list is verified against the
+worktree after checkout — cone mode reports success for a pattern that matches nothing, so a
+mistyped `meshes/ur5X` would otherwise leave a tree quietly missing `meshes/` altogether. And the
+path set is folded into the cache key, so widening the selection re-fetches rather than handing back
+the narrower tree. Cone mode needs Git 2.28 or newer; an older Git fails the configure naming its
+own version.
+
+Cone mode always brings the files at each parent level along, so `package.xml` and the repository's
+root files arrive whether or not you ask for them — which is what makes the slice a resolvable
+package rather than a bag of directories.
 
 `SUBDIR` narrows the resource to a subdirectory of whatever was acquired — use it to treat a nested
 directory as the tree itself. To ship selected *packages* out of a monorepo, keeping their names so
@@ -169,6 +205,24 @@ directory the resource, which is right for narrowing to a mesh folder and wrong 
 Because `PACKAGES` names entries inside one tree, it takes exactly one `RESOURCES` name. An entry
 that does not exist is a configure error, so a typo fails immediately rather than producing a
 package root that silently cannot resolve.
+
+### Selecting inside a single package
+
+The other shape is one package whose bulk sits two levels down — a `meshes/` directory holding a
+dozen robot variants when the program needs one. An entry may be a nested path, and it keeps that
+path at the destination, so putting the package's own name in `SUBDIR` selects within it:
+
+```cmake
+meios_target_deploy_resources(app
+    RESOURCES ur_description
+    PACKAGES  urdf config meshes/ur5e
+    SUBDIR    models/ur_description)
+```
+
+That deploys `models/ur_description/{urdf,config,meshes/ur5e}`, leaving the package root at
+`models`, which is the directory `load_options::package_roots` is handed. The rule is the same one
+as above — an entry keeps its own name — read at a depth greater than one. Pair it with
+`SPARSE_PATHS` on the declaration to avoid downloading the variants you then drop.
 
 Work out the full set before trimming: a description usually pulls in a shared package for materials
 and constants, and dropping it is a hard failure at load, not a cosmetic one. For the example above,

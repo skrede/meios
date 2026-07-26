@@ -67,6 +67,89 @@ function(_meios_resource_subdir name root rel out)
     set(${out} "${_cand}" PARENT_SCOPE)
 endfunction()
 
+function(_meios_check_sparse_paths name paths)
+    foreach(_p IN LISTS paths)
+        if(IS_ABSOLUTE "${_p}" OR _p MATCHES "(^|/)\\.\\.(/|$)" OR _p MATCHES "^-")
+            message(FATAL_ERROR
+                "meios_declare_resource(${name}): SPARSE_PATHS entry '${_p}' must be a relative "
+                "path inside the repository, with no '..' component and no leading '-'.")
+        endif()
+    endforeach()
+endfunction()
+
+function(_meios_run_git name dir what)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" -C "${dir}" ${ARGN}
+        RESULT_VARIABLE _rc
+        ERROR_VARIABLE  _err)
+    if(NOT _rc EQUAL 0)
+        message(FATAL_ERROR "meios_declare_resource(${name}): git ${what} failed: ${_err}")
+    endif()
+endfunction()
+
+# Cone mode reports success for a pattern that matches nothing, so a mistyped path yields a tree
+# silently missing a whole directory rather than an error — the checkout is only as trustworthy as
+# this check.
+function(_meios_check_sparse_result name dir paths)
+    set(_missing "")
+    foreach(_p IN LISTS paths)
+        if(NOT EXISTS "${dir}/${_p}")
+            list(APPEND _missing "${_p}")
+        endif()
+    endforeach()
+    if(_missing)
+        string(REPLACE ";" "\n    " _list "${_missing}")
+        message(FATAL_ERROR
+            "meios_declare_resource(${name}): SPARSE_PATHS selected nothing for:\n    ${_list}\n"
+            "Cone-mode sparse checkout succeeds on a pattern that matches no path, so these are "
+            "typos or paths absent at this revision.")
+    endif()
+endfunction()
+
+# Publishes through a scratch clone rather than cloning straight into place: the rename is the
+# atomic step, and it is also where .git is dropped, so an acquired tree is data alone and matches
+# what the archive path produces. Large-file objects are left as their pointers and submodules
+# uninitialized on purpose — the pointer scan fails loudly rather than shipping stub geometry.
+function(_meios_git_acquire name repository ref paths dest)
+    find_package(Git REQUIRED)
+    if(paths AND GIT_VERSION_STRING VERSION_LESS 2.28)
+        message(FATAL_ERROR
+            "meios_declare_resource(${name}): SPARSE_PATHS needs 'git sparse-checkout set --cone', "
+            "which requires Git 2.28 or newer; found ${GIT_VERSION_STRING}.")
+    endif()
+
+    set(_branch_arg "")
+    if(ref)
+        set(_branch_arg --branch "${ref}")
+    endif()
+    set(_sparse_arg "")
+    if(paths)
+        set(_sparse_arg --filter=blob:none --no-checkout)
+    endif()
+
+    set(_scratch "${dest}.clone")
+    file(REMOVE_RECURSE "${_scratch}")
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" clone --depth 1 ${_branch_arg} ${_sparse_arg}
+                -- "${repository}" "${_scratch}"
+        RESULT_VARIABLE _rc
+        ERROR_VARIABLE  _err)
+    if(NOT _rc EQUAL 0)
+        file(REMOVE_RECURSE "${_scratch}")
+        message(FATAL_ERROR "meios_declare_resource(${name}): git clone failed: ${_err}")
+    endif()
+
+    if(paths)
+        _meios_run_git("${name}" "${_scratch}" "sparse-checkout" sparse-checkout set --cone ${paths})
+        _meios_run_git("${name}" "${_scratch}" "checkout" checkout)
+        _meios_check_sparse_result("${name}" "${_scratch}" "${paths}")
+    endif()
+
+    file(REMOVE_RECURSE "${_scratch}/.git")
+    file(REMOVE_RECURSE "${dest}")
+    file(RENAME "${_scratch}" "${dest}")
+endfunction()
+
 function(_meios_register_resource name dir)
     get_property(_known GLOBAL PROPERTY MEIOS_RESOURCES)
     if("${name}" IN_LIST _known)
@@ -97,7 +180,7 @@ endfunction()
 function(meios_declare_resource)
     set(options       STRIP_TOP_LEVEL)
     set(one_value     NAME URL HASH GIT_REPOSITORY GIT_TAG GITHUB REF SOURCE_DIR SUBDIR OUT_DIR)
-    set(multi_value)
+    set(multi_value  SPARSE_PATHS)
     cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
 
     if(NOT ARG_NAME)
@@ -122,6 +205,19 @@ function(meios_declare_resource)
             message(FATAL_ERROR
                 "meios_declare_resource(${ARG_NAME}): GITHUB requires REF (a tag, branch, or commit).")
         endif()
+    endif()
+    if(ARG_SPARSE_PATHS)
+        if(ARG_SOURCE_DIR OR ARG_URL)
+            message(FATAL_ERROR
+                "meios_declare_resource(${ARG_NAME}): SPARSE_PATHS slices a clone; an archive is "
+                "served whole and a pre-placed tree is already on disk. Use GIT_REPOSITORY or GITHUB.")
+        endif()
+        if(ARG_HASH)
+            message(FATAL_ERROR
+                "meios_declare_resource(${ARG_NAME}): HASH pins an archive's bytes; a sliced clone "
+                "has none. Pin the revision with a commit REF or GIT_TAG instead.")
+        endif()
+        _meios_check_sparse_paths("${ARG_NAME}" "${ARG_SPARSE_PATHS}")
     endif()
 
     # Declared per resource so an offline or air-gapped configure can redirect any mode at a
@@ -149,7 +245,13 @@ function(meios_declare_resource)
 
     # Sugar over URL mode: GitHub serves <ref>.tar.gz for a tag, branch, or commit alike, and always
     # wraps the tree in a <repository>-<ref> directory, so the strip is implied rather than asked for.
-    if(ARG_GITHUB)
+    # SPARSE_PATHS turns the same declaration into a clone instead: GitHub has no endpoint that
+    # serves part of a tree, so slicing is only reachable over the git protocol.
+    if(ARG_GITHUB AND ARG_SPARSE_PATHS)
+        set(ARG_GIT_REPOSITORY "https://github.com/${ARG_GITHUB}.git")
+        set(ARG_GIT_TAG "${ARG_REF}")
+        set(ARG_GITHUB "")
+    elseif(ARG_GITHUB)
         set(ARG_URL "https://github.com/${ARG_GITHUB}/archive/${ARG_REF}.tar.gz")
         set(ARG_STRIP_TOP_LEVEL TRUE)
     endif()
@@ -184,7 +286,9 @@ function(meios_declare_resource)
     if(ARG_URL)
         set(_want "${ARG_HASH}")
     else()
-        set(_want "git:${ARG_GIT_TAG}")
+        # The slice is part of what was acquired, not just of what is shipped: widening
+        # SPARSE_PATHS against a key that ignored it would hand back the narrower cached tree.
+        set(_want "git:${ARG_GIT_TAG}:${ARG_SPARSE_PATHS}")
     endif()
     set(_stamp "${_root}/${ARG_NAME}.stamp")
     set(_cached FALSE)
@@ -267,24 +371,10 @@ function(meios_declare_resource)
         file(RENAME "${_extracted}" "${_source_dir}")
         file(REMOVE_RECURSE "${_extract_tmp}")
     elseif(NOT _cached)
-        find_package(Git REQUIRED)
-        set(_branch_arg "")
-        if(ARG_GIT_TAG)
-            set(_branch_arg --branch "${ARG_GIT_TAG}")
-        endif()
-        file(REMOVE_RECURSE "${_source_dir}")
-        # Escape hatch for LFS, submodules, and private auth. Large-file objects are left as their
-        # pointers and submodules are left uninitialized on purpose: the pointer scan below fails
-        # loudly rather than silently pulling stub geometry into the tree.
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" clone --depth 1 ${_branch_arg}
-                    -- "${ARG_GIT_REPOSITORY}" "${_source_dir}"
-            RESULT_VARIABLE _rc
-            ERROR_VARIABLE  _err)
-        if(NOT _rc EQUAL 0)
-            message(FATAL_ERROR
-                "meios_declare_resource(${ARG_NAME}): git clone failed: ${_err}")
-        endif()
+        # Escape hatch for LFS, submodules, and private auth, and the only mode that can fetch part
+        # of a tree rather than all of it.
+        _meios_git_acquire("${ARG_NAME}" "${ARG_GIT_REPOSITORY}" "${ARG_GIT_TAG}"
+                           "${ARG_SPARSE_PATHS}" "${_source_dir}")
     endif()
 
     set(_tree "${_source_dir}")
