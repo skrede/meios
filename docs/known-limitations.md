@@ -37,11 +37,22 @@ record type.
 
 ## Modeling gaps
 
-**Extension fragments are carried through, not interpreted.** Robot-level `<gazebo>`,
-`<ros2_control>`, `<transmission>`, and `<sensor>` fragments are preserved verbatim as opaque
-extensions and flagged at the `warn` tier; meios does not parse or model their contents. If your
-consumer needs the semantics inside those fragments, it must interpret the carried-through text
-itself.
+**Extension fragments are dropped, not carried through.** Robot-level `<gazebo>`,
+`<ros2_control>`, `<transmission>`, and `<sensor>` fragments are recognized, reported at the `warn`
+tier naming the element, and then discarded. The `extension` record type exists but nothing
+populates it, and the model's extension collections are always empty. A consumer that needs
+simulator, controller, transmission, or sensor configuration cannot recover it from a loaded model
+and must read the source document itself. Preserving these losslessly is planned; until it lands,
+treat a meios load as lossy for everything outside the URDF kinematic and visual surface.
+
+**The Python evaluator runs untrusted input with your process's authority.** `meios::eval-python`
+hands the expression to CPython with the ordinary builtins in scope, so a description can reach
+`__import__` and from there the filesystem, the network, and the process. Canonical xacro's
+`safe_eval` removes `__builtins__` and rejects double-underscore names; meios currently does
+neither, which makes this backend *less* restrictive than the compatibility target it is measured
+against. Enable it only for descriptions you would be willing to run as a script. The built-in core
+evaluator has no such exposure — it evaluates a fixed numeric and boolean grammar and loud-fails on
+anything outside it.
 
 **Python xacro expressions are recovered by literal re-parsing.** With the Python evaluation
 enrichment enabled, the result of a Python expression is re-hydrated by re-parsing its literal form.
