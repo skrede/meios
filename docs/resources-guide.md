@@ -163,6 +163,45 @@ cmake -S . -B build -DMEIOS_RESOURCE_kuka_SOURCE_DIR=/opt/descriptions/kuka
 directories can share one download. `MEIOS_RESOURCE_TLS_CAINFO` supplies a CA bundle where CMake
 ships without a trust store.
 
+## The acquisition cache
+
+A tree is stored under a name derived from every argument that determines its bytes — the URL and
+whether the top level is stripped, or the repository, revision and slice — and not under the name
+you gave the resource. Two consequences are worth knowing, because both are things the obvious
+layout gets wrong:
+
+- **Changing any of those arguments re-fetches.** A key assembled by hand can forget an argument and
+  hand back a tree fetched under different ones; a key that *is* the argument list cannot.
+- **Two build trees can pin different revisions of the same resource through one shared cache.**
+  Sharing a directory named after the resource, whichever configured last would overwrite the
+  other's tree — and the loser would go on to *build* against the wrong revision without anything
+  changing in its own listfiles.
+
+The layout inside the cache is an implementation detail; ask for a path with `OUT_DIR` or
+`meios_resource_dir` rather than composing one. Each entry keeps a small `.stamp` beside it naming
+what it holds, which is what makes a directory called `ur_description-4b20623385db` legible.
+
+### Collecting what is no longer used
+
+Every configure rewrites a claim file listing exactly the entries that build tree declared. Rename a
+resource, change a revision, or delete a declaration, and the entry it used stops being claimed:
+
+```
+cmake -DMEIOS_RESOURCE_CACHE_DIR=<dir> -P <cmakedir>/MeiosPruneResources.cmake
+```
+
+That reports what nothing claims any more, along with interrupted fetches and leftover scratch.
+Add `-DMEIOS_PRUNE_REMOVE=ON` to actually delete it; reporting is the default.
+
+Collection is a separate step on purpose, and never part of a configure. A configure sees only its
+own declarations, so collecting from inside one would delete the trees its siblings are still
+building against — the same failure the content-addressed layout exists to prevent. A build tree
+whose `CMakeCache.txt` is gone is treated as gone, so deleting a build directory releases its claims
+without any further ceremony.
+
+For the default cache inside the build tree none of this is pressing: `rm -rf build` reclaims
+everything. It matters when `MEIOS_RESOURCE_CACHE_DIR` points somewhere that outlives a build.
+
 ## `meios_target_deploy_resources`
 
 ```cmake

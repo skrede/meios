@@ -150,6 +150,42 @@ function(_meios_git_acquire name repository ref paths dest)
     file(RENAME "${_scratch}" "${dest}")
 endfunction()
 
+# A build tree lists what it needs, rather than each tree listing who needs it. The direction is
+# what makes collection possible: a claim file is rewritten from scratch by every configure, so
+# renaming a resource or deleting its declaration drops the old entry the next time the project
+# configures. An entry that recorded its users could only ever grow, and would still name a build
+# tree that had long since stopped declaring it.
+function(_meios_resource_root out)
+    set(_root "${MEIOS_RESOURCE_CACHE_DIR}")
+    if(NOT _root)
+        set(_root "${CMAKE_BINARY_DIR}/_meios_resources")
+    endif()
+    set(${out} "${_root}" PARENT_SCOPE)
+endfunction()
+
+function(_meios_claims_file out)
+    _meios_resource_root(_root)
+    string(SHA256 _owner "${CMAKE_BINARY_DIR}")
+    string(SUBSTRING "${_owner}" 0 12 _owner)
+    set(${out} "${_root}/${_owner}.claims" PARENT_SCOPE)
+endfunction()
+
+function(_meios_record_claim entry)
+    _meios_claims_file(_claims)
+    if(NOT EXISTS "${_claims}")
+        file(WRITE "${_claims}" "owner=${CMAKE_BINARY_DIR}\n")
+    endif()
+    file(APPEND "${_claims}" "entry=${entry}\n")
+endfunction()
+
+# Dropped here, at include time, rather than when the first resource is declared: a project that
+# deleted its last declaration never reaches a declaration to reset it, and would go on claiming
+# what it no longer uses. The directory is not created — a consumer that declares nothing leaves
+# no trace.
+_meios_claims_file(_meios_claims)
+file(REMOVE "${_meios_claims}")
+unset(_meios_claims)
+
 function(_meios_register_resource name dir)
     get_property(_known GLOBAL PROPERTY MEIOS_RESOURCES)
     if("${name}" IN_LIST _known)
@@ -256,12 +292,8 @@ function(meios_declare_resource)
         set(ARG_STRIP_TOP_LEVEL TRUE)
     endif()
 
-    set(_root "${MEIOS_RESOURCE_CACHE_DIR}")
-    if(NOT _root)
-        set(_root "${CMAKE_BINARY_DIR}/_meios_resources")
-    endif()
+    _meios_resource_root(_root)
     file(MAKE_DIRECTORY "${_root}")
-    set(_source_dir "${_root}/${ARG_NAME}")
 
     # Pre-populated override: skip all fetching, but still scan — a hand-placed tree can be unsmudged.
     if(ARG_SOURCE_DIR)
@@ -281,22 +313,31 @@ function(meios_declare_resource)
         return()
     endif()
 
-    # Stamp cache keyed on the integrity anchor (hash for URL mode, tag for Git mode). An empty key
-    # (no hash supplied) never matches, forcing a re-fetch — there is no trustworthy cache key without one.
+    # The tree lives at a path derived from every argument that determines its bytes, rather than at
+    # one named after the resource. A key assembled by hand can forget an argument and hand back a
+    # tree fetched under different ones; a key that IS the argument list cannot. It also lets two
+    # build trees pin different revisions of the same resource through one shared cache — sharing a
+    # single <name> directory, they would overwrite each other's tree on every configure.
     if(ARG_URL)
-        set(_want "${ARG_HASH}")
-    else()
-        # The slice is part of what was acquired, not just of what is shipped: widening
-        # SPARSE_PATHS against a key that ignored it would hand back the narrower cached tree.
-        set(_want "git:${ARG_GIT_TAG}:${ARG_SPARSE_PATHS}")
-    endif()
-    set(_stamp "${_root}/${ARG_NAME}.stamp")
-    set(_cached FALSE)
-    if(EXISTS "${_stamp}" AND IS_DIRECTORY "${_source_dir}" AND NOT _want STREQUAL "")
-        file(READ "${_stamp}" _have)
-        if(_have STREQUAL "${_want}")
-            set(_cached TRUE)
+        set(_strip 0)
+        if(ARG_STRIP_TOP_LEVEL)
+            set(_strip 1)
         endif()
+        set(_descriptor "mode=url\nurl=${ARG_URL}\nhash=${ARG_HASH}\nstrip=${_strip}")
+    else()
+        string(CONCAT _descriptor "mode=git\nrepository=${ARG_GIT_REPOSITORY}\n"
+                                  "ref=${ARG_GIT_TAG}\nsparse=${ARG_SPARSE_PATHS}")
+    endif()
+    string(SHA256 _digest "${_descriptor}")
+    string(SUBSTRING "${_digest}" 0 12 _digest)
+    set(_source_dir "${_root}/${ARG_NAME}-${_digest}")
+    set(_stamp "${_source_dir}.stamp")
+
+    # An unpinned URL names where the bytes came from but nothing about what was served, so a tree
+    # fetched under one is never reused however intact it looks.
+    set(_cached FALSE)
+    if(EXISTS "${_stamp}" AND IS_DIRECTORY "${_source_dir}" AND NOT (ARG_URL AND NOT ARG_HASH))
+        set(_cached TRUE)
     endif()
 
     if(NOT _cached AND ARG_URL)
@@ -315,7 +356,7 @@ function(meios_declare_resource)
             set(_tls_ca_arg TLS_CAINFO "${MEIOS_RESOURCE_TLS_CAINFO}")
         endif()
 
-        set(_archive "${_root}/${ARG_NAME}.download")
+        set(_archive "${_source_dir}.download")
         # TLS_VERIFY defaults OFF below CMake 3.31; the project floor is 3.28, so it is passed
         # explicitly on every call and no public knob disables it.
         file(DOWNLOAD "${ARG_URL}" "${_archive}"
@@ -348,7 +389,7 @@ function(meios_declare_resource)
                 "    HASH SHA256=${_computed}")
         endif()
 
-        set(_extract_tmp "${_root}/${ARG_NAME}.extract")
+        set(_extract_tmp "${_source_dir}.extract")
         file(REMOVE_RECURSE "${_extract_tmp}")
         file(ARCHIVE_EXTRACT INPUT "${_archive}" DESTINATION "${_extract_tmp}")
 
@@ -370,6 +411,9 @@ function(meios_declare_resource)
         file(REMOVE_RECURSE "${_source_dir}")
         file(RENAME "${_extracted}" "${_source_dir}")
         file(REMOVE_RECURSE "${_extract_tmp}")
+        # The extracted tree is the cache; keeping the archive beside it stores every resource
+        # twice for the sake of an extract that only happens if the tree is deleted by hand.
+        file(REMOVE "${_archive}")
     elseif(NOT _cached)
         # Escape hatch for LFS, submodules, and private auth, and the only mode that can fetch part
         # of a tree rather than all of it.
@@ -384,8 +428,13 @@ function(meios_declare_resource)
 
     if(NOT _cached)
         _meios_scan_lfs_pointers("${ARG_NAME}" "${_tree}")
-        file(WRITE "${_stamp}" "${_want}")
+        # Written last, so an interrupted fetch leaves a tree with no stamp rather than one that
+        # passes for complete. It also carries the descriptor, which is the only readable account
+        # of what a digest-named directory holds.
+        file(WRITE "${_stamp}" "${_descriptor}\n")
     endif()
+    get_filename_component(_entry "${_source_dir}" NAME)
+    _meios_record_claim("${_entry}")
 
     _meios_register_resource("${ARG_NAME}" "${_tree}")
     if(ARG_OUT_DIR)
