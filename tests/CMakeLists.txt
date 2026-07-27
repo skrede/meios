@@ -216,19 +216,22 @@ if(TARGET urdf_walk_test)
     target_link_libraries(urdf_walk_test PRIVATE meios::bundle)
 endif()
 
-# The vocabulary stem carries TEST_PREFIX so ctest -R can select it by stem; the urdf
-# stems above register their cases under prose names and predate that convention.
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_vocabulary_test.cpp)
-    add_executable(urdf_vocabulary_test ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_vocabulary_test.cpp)
-    target_link_libraries(urdf_vocabulary_test
-        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-            Catch2::Catch2WithMain)
-    target_compile_definitions(urdf_vocabulary_test PRIVATE
-        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-    meios_enable_coverage(urdf_vocabulary_test)
-    meios_warnings(urdf_vocabulary_test)
-    catch_discover_tests(urdf_vocabulary_test TEST_PREFIX "urdf_vocabulary.")
-endif()
+# These stems carry TEST_PREFIX so ctest -R can select them by stem; the urdf stems above
+# register their cases under prose names and predate that convention.
+foreach(stem IN ITEMS urdf_vocabulary urdf_identity)
+    set(prefixed_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${prefixed_test_src})
+        add_executable(${stem}_test ${prefixed_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
+    endif()
+endforeach()
 
 # The profile stems are driven by tests/golden/urdf/profile.cases, so they need the
 # golden directory alongside the fixture directory the other urdf stems get.

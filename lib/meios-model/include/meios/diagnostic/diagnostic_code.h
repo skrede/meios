@@ -44,6 +44,10 @@ enum class diagnostic_code
     unknown_attribute,
     extension_ignored,
     unsupported_version,
+    empty_name,
+    duplicate_name,
+    dangling_mimic,
+    no_links,
 };
 
 constexpr std::string_view to_string(diagnostic_code code) noexcept
@@ -86,6 +90,10 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::unknown_attribute:         return "unknown_attribute";
         case diagnostic_code::extension_ignored:         return "extension_ignored";
         case diagnostic_code::unsupported_version:       return "unsupported_version";
+        case diagnostic_code::empty_name:                return "empty_name";
+        case diagnostic_code::duplicate_name:            return "duplicate_name";
+        case diagnostic_code::dangling_mimic:            return "dangling_mimic";
+        case diagnostic_code::no_links:                  return "no_links";
     }
     return "unknown";
 }

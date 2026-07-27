@@ -81,6 +81,13 @@ bool vocabulary_governs(std::string_view parent, std::string_view element);
 bool check_vocabulary(pugi::xml_node element, std::string_view text,
                       const std::filesystem::path &file, parse_context &ctx);
 
+// Refuses a document whose link, joint or material identity does not hold, or whose joints
+// reference a link or a mimic target the document never declared. Every rule it applies is
+// structural, so the returned flag is false at every document-validity setting; it runs on
+// the pugi node because a record carries no file and line to report against.
+bool check_identity(pugi::xml_node robot, std::string_view text,
+                    const std::filesystem::path &file, parse_context &ctx);
+
 }
 
 #endif

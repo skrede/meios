@@ -67,9 +67,15 @@ void assign_parents(const std::vector<link<Scalar>> &links,
         const joint<Scalar> &edge = joints[j];
         const int pi = index_of(links, edge.parent);
         const int ci = index_of(links, edge.child);
+        // The load rules refuse an undeclared link reference before a record exists, so an
+        // unresolved index here can only come from a model assembled outside them: an
+        // invariant violation rather than a graph property, which no policy setting grades.
         if(pi < 0 || ci < 0)
-            report_topology(log, policy, edge, diagnostic_code::undeclared_link,
-                "joint '" + edge.name + "' names an undeclared link", ok);
+        {
+            log.log(level::error, diagnostic_code::invalid_topology, source_location{},
+                    "joint '" + edge.name + "' names a link absent from the model");
+            ok = false;
+        }
         else if(parent_of[static_cast<std::size_t>(ci)] != -1)
             report_topology(log, policy, edge, diagnostic_code::multiple_parents,
                 "link '" + edge.child + "' has more than one parent joint", ok);

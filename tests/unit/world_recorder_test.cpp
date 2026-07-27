@@ -103,3 +103,44 @@ TEST_CASE("a valid model is ok, has no first failure, and moves out with a popul
     REQUIRE(moved.topo.order.size() == 2);
     REQUIRE(moved.topo.order.front() == 0);
 }
+
+TEST_CASE("the name index and the linear scan answer with the same index", "[model][sink]")
+{
+    std::ostringstream out;
+    meios::log_sink_s log{ out };
+    meios::world_recorder recorder(log, meios::topology_policy::skip);
+
+    recorder.on_robot({ .name = "arm" });
+    for(const char *name : { "base", "link1", "link2" })
+        recorder.on_link({ .name = name });
+    recorder.on_joint({ .name = "j1", .parent = "base", .child = "link1" });
+    recorder.on_joint({ .name = "j2", .parent = "link1", .child = "link2" });
+    recorder.finish();
+
+    const meios::model<double> &view = recorder.result();
+    REQUIRE(recorder.ok());
+    REQUIRE(view.link_index.size() == view.links.size());
+    REQUIRE(view.joint_index.size() == view.joints.size());
+    for(const std::pair<const std::string, int> &named : view.link_index)
+        REQUIRE(named.second == meios::detail::index_of(view.links, named.first));
+    for(const std::pair<const std::string, int> &named : view.joint_index)
+        REQUIRE(named.second == meios::detail::index_of(view.joints, named.first));
+}
+
+TEST_CASE("a model whose index and records disagree on size is reported, not resolved",
+          "[model][sink]")
+{
+    capture_sink sink;
+    meios::world_recorder recorder(sink, meios::topology_policy::skip);
+
+    recorder.on_robot({ .name = "arm" });
+    recorder.on_link({ .name = "twin" });
+    recorder.on_link({ .name = "twin" });
+    recorder.finish();
+
+    REQUIRE(recorder.result().links.size() == 2);
+    REQUIRE(recorder.result().link_index.size() == 1);
+    REQUIRE_FALSE(recorder.ok());
+    REQUIRE(sink.first().has_value());
+    REQUIRE(sink.first()->first == meios::diagnostic_code::duplicate_name);
+}

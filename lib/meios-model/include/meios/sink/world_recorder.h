@@ -37,15 +37,18 @@ public:
         m_model.materials.push_back(mat);
     }
 
+    // The map and the vector are filled in the same statement pair, and emplace keeps the
+    // first insert — the index the model's linear scan finds. operator[] kept the last, so
+    // on a duplicate name the two lookups answered differently.
     void on_link(const link<double> &node)
     {
-        m_model.link_index[node.name] = static_cast<int>(m_model.links.size());
+        m_model.link_index.emplace(node.name, static_cast<int>(m_model.links.size()));
         m_model.links.push_back(node);
     }
 
     void on_joint(const joint<double> &edge)
     {
-        m_model.joint_index[edge.name] = static_cast<int>(m_model.joints.size());
+        m_model.joint_index.emplace(edge.name, static_cast<int>(m_model.joints.size()));
         m_model.joints.push_back(edge);
     }
 
@@ -54,8 +57,9 @@ public:
         first_error_capture capture(m_log, m_first_failure);
         const topology_result topo =
             reconstruct_topology(m_model.links, m_model.joints, capture, m_policy);
+        const bool indexed = indexes_agree(capture);
         m_model.topo = topo.topo;
-        m_ok = topo.ok;
+        m_ok = topo.ok && indexed;
         m_model.kind = m_model.loops.empty() ? structure::tree : structure::closed_chain;
     }
 
@@ -118,6 +122,20 @@ private:
     model<double> m_model;
     bool m_ok = true;
     std::optional<source_location> m_first_failure;
+
+    // A name map shorter than its record vector means two records shared a name. The load
+    // rules refuse that before a record is built, so this is defence in depth for a model
+    // assembled without them; it is reported rather than asserted so a release build says
+    // so too, and no policy setting grades it.
+    bool indexes_agree(log_sink &log)
+    {
+        if(m_model.link_index.size() == m_model.links.size()
+           && m_model.joint_index.size() == m_model.joints.size())
+            return true;
+        log.log(level::error, diagnostic_code::duplicate_name, source_location{},
+                "the model's name index and its records disagree on size");
+        return false;
+    }
 };
 
 }

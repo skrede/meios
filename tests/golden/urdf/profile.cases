@@ -13,3 +13,16 @@ unknown_attribute_joint.urdf	drop	unknown_attribute	unknown-attribute	A misspell
 extension_block.urdf	drop	extension_ignored	extension-disclosed	A simulation block: disclosed, dropped, and the parse claim still stands.
 version_supported.urdf	accept	-	robot-version	The one supported value, recognized rather than reported as an unknown attribute.
 version_unsupported.urdf	refuse	unsupported_version	robot-version	Any other value asserts a format this library does not implement.
+link_name_absent.urdf	refuse	empty_name	link-name-required	A link element carrying no name attribute at all.
+link_name_blank.urdf	refuse	empty_name	link-name-required	A name of nothing but spaces, which is not a name a joint can reference.
+joint_name_absent.urdf	refuse	empty_name	joint-name-required	The same rule on the other element that carries an identity.
+duplicate_link_name.urdf	refuse	duplicate_name	link-name-unique	Two links sharing a name; the wiki states this for joints only.
+duplicate_joint_name.urdf	refuse	duplicate_name	joint-name-unique	Two joints sharing a name, which the wiki does state.
+case_distinct_names.urdf	accept	-	name-exact-bytes	Names differing only in case or in trailing space are distinct, so this loads clean.
+undeclared_parent_link.urdf	refuse	undeclared_link	link-reference-declared	A joint naming a link the document never declares.
+parent_link_attr_absent.urdf	refuse	empty_name	link-attribute-required	A parent element with no link attribute, which would otherwise reference the empty name.
+dangling_mimic.urdf	refuse	dangling_mimic	mimic-target-declared	A mimic naming a joint the document never declares.
+self_mimic.urdf	refuse	dangling_mimic	mimic-target-declared	A mimic naming its own joint, which no evaluation order can satisfy.
+duplicate_material_name.urdf	refuse	duplicate_name	material-name-unique	Two robot-level materials sharing a name, so a reference to it names two colors.
+zero_links.urdf	refuse	no_links	robot-has-links	A robot element declaring no link at all.
+visual_material_unnamed.urdf	refuse	empty_name	visual-material-named	A visual material that neither names one nor defines one.

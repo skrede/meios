@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<robot name="link_name_absent">
+  <link/>
+  <link name="arm_link"/>
+</robot>

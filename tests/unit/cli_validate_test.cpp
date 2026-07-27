@@ -64,6 +64,9 @@ TEST_CASE("cli_validate: a malformed document is class 1")
     std::string printed;
     REQUIRE(run_validate_on(fixture("dup_attr.urdf"), "", printed) == 1);
     REQUIRE(run_validate_on(fixture("trailing_garbage.urdf"), "", printed) == 1);
+    // A joint naming a link the document never declares is a property of the text rather
+    // than of the graph, so it is refused before a record exists and reported as malformed.
+    REQUIRE(run_validate_on(fixture("orphan_joint.urdf"), "", printed) == 1);
 }
 
 TEST_CASE("cli_validate: a connectivity failure is class 2")
@@ -71,7 +74,6 @@ TEST_CASE("cli_validate: a connectivity failure is class 2")
     std::string printed;
     REQUIRE(run_validate_on(fixture("multi_root.urdf"), "", printed) == 2);
     REQUIRE(run_validate_on(fixture("cycle.urdf"), "", printed) == 2);
-    REQUIRE(run_validate_on(fixture("orphan_joint.urdf"), "", printed) == 2);
 }
 
 TEST_CASE("cli_validate: a missing bounded-joint limit is class 3")

@@ -117,28 +117,6 @@ int count_matching(const std::vector<entry> &entries, meios::diagnostic_code cod
 
 }
 
-TEST_CASE("each broken class is a located error under topology_policy::fail", "[urdf][topology]")
-{
-    struct expectation
-    {
-        std::string fixture;
-        meios::diagnostic_code code;
-    };
-    for(const expectation &exp :
-        { expectation{ "multi_root.urdf", meios::diagnostic_code::additional_root },
-          expectation{ "cycle.urdf", meios::diagnostic_code::link_on_cycle },
-          expectation{ "orphan_joint.urdf", meios::diagnostic_code::undeclared_link },
-          expectation{ "unreachable_link.urdf", meios::diagnostic_code::unreachable_link },
-          expectation{ "multi_parent.urdf", meios::diagnostic_code::multiple_parents } })
-    {
-        std::vector<entry> entries;
-        const meios::topology_result result =
-            reconstruct(parse(exp.fixture), entries, meios::topology_policy::fail);
-        REQUIRE_FALSE(result.ok);
-        REQUIRE(located(entries, meios::level::error, exp.code));
-    }
-}
-
 TEST_CASE("a valid branched tree reconstructs with a single root", "[urdf][topology]")
 {
     std::vector<entry> entries;
@@ -164,6 +142,39 @@ TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topolo
     const meios::topology_result skip = reconstruct(robot, skipped, meios::topology_policy::skip);
     REQUIRE(skip.ok);
     REQUIRE(skipped.empty());
+}
+
+// The dangling link reference this loop used to carry left the graph layer: it is a
+// property of the document text, refused before a record exists and at every setting.
+TEST_CASE("the graph policy governs each genuine graph property at each of its settings",
+          "[urdf][topology]")
+{
+    struct expectation
+    {
+        std::string fixture;
+        meios::diagnostic_code code;
+    };
+    for(const expectation &exp :
+        { expectation{ "multi_root.urdf", meios::diagnostic_code::additional_root },
+          expectation{ "cycle.urdf", meios::diagnostic_code::link_on_cycle },
+          expectation{ "unreachable_link.urdf", meios::diagnostic_code::unreachable_link },
+          expectation{ "multi_parent.urdf", meios::diagnostic_code::multiple_parents } })
+    {
+        INFO(exp.fixture);
+        const meios::tree<double> robot = parse(exp.fixture);
+
+        std::vector<entry> failed;
+        REQUIRE_FALSE(reconstruct(robot, failed, meios::topology_policy::fail).ok);
+        REQUIRE(located(failed, meios::level::error, exp.code));
+
+        std::vector<entry> warned;
+        REQUIRE(reconstruct(robot, warned, meios::topology_policy::warn).ok);
+        REQUIRE(located(warned, meios::level::warn, exp.code));
+
+        std::vector<entry> skipped;
+        REQUIRE(reconstruct(robot, skipped, meios::topology_policy::skip).ok);
+        REQUIRE(skipped.empty());
+    }
 }
 
 TEST_CASE("a valid multi-root forest reports no false unreachable under warn", "[urdf][topology]")

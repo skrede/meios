@@ -56,6 +56,12 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         // branching on it nothing at all.
         case diagnostic_code::extension_ignored:         return completeness::none;
         case diagnostic_code::unsupported_version:       return completeness::parsed;
+        // A document whose identity or reference fields do not hold is not a document the
+        // reader read: it never reached a record, so nothing downstream of it is claimed.
+        case diagnostic_code::empty_name:                return completeness::parsed;
+        case diagnostic_code::duplicate_name:            return completeness::parsed;
+        case diagnostic_code::dangling_mimic:            return completeness::parsed;
+        case diagnostic_code::no_links:                  return completeness::parsed;
     }
     return completeness::none;
 }

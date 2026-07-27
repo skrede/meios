@@ -102,6 +102,8 @@ void basic_parser<urdf_reader>::parse_erased(std::string_view source, erased_sin
     if(!detail::run_strictness(doc, source, file, m_context) && m_context.strict == strictness::fail)
         return;
     const pugi::xml_node robot = robot_root(doc);
+    if(!detail::check_identity(robot, source, file, m_context))
+        return;
     sink.on_robot(
         robot_info{ std::string(robot.attribute("name").value()), {}, declared_version(robot) });
     detail::material_table table;

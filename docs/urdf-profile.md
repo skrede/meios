@@ -50,6 +50,30 @@ value is recorded on the robot record, so a description that declared `1.0` stay
 one that said nothing, and a bundle round trip does not invent the attribute for a document that never
 carried it.
 
+**A link name must be present and must be unique.** The wiki states that a joint's name must be
+unique — "the name of the joint, must be unique" on the joint page — and says nothing of the kind
+about links, and nothing anywhere about what an absent or blank name means. meios requires both of a
+link because everything that reads a model reaches it by name: two links sharing one, or several
+sharing the empty string an absent attribute yields, makes every reference to that name ambiguous and
+the choice of which one wins an implementation detail. There is no reading of a duplicate that does
+not silently pick one link and discard the other.
+
+**A robot-level `<material>` must carry a name, and no two may share one.** The wiki does not state
+this either. A robot-level material exists in order to be referenced by name, so one without a name
+can never be reached, and two with the same name make a reference name two different colors. Both are
+refused. A material *defined inline* under a `<visual>` is unaffected: it carries its color or its
+texture with it and needs no name to be read.
+
+**A document declaring no `<link>` is refused.** The wiki never addresses whether an empty `<robot>`
+is a robot. meios refuses it: a description with no links describes no body, every consumer of the
+resulting model would immediately find nothing in it, and refusing at the document says so at a
+`file:line` rather than leaving the consumer to discover an empty model.
+
+**A `<material>` under a `<visual>` that carries no name and defines neither a color nor a texture is
+refused.** The wiki does not mention the construct. It is neither a reference — there is no name to
+resolve — nor a definition, so there is nothing meios could read from it, and accepting it silently
+would leave the visual with a material the author appears to have specified and meios in fact ignored.
+
 ## Where this profile diverges from a stated default
 
 Where the wiki states a default and meios deliberately does something else, the divergence and its
@@ -64,6 +88,37 @@ reason are recorded in this section rather than left for a reader to discover fr
 | any | an attribute the profile does not describe | drop | `unknown_attribute` | `rule:unknown-attribute` |
 | any | a `<gazebo>`, `<ros2_control>`, `<transmission>` or `<sensor>` block | drop | `extension_ignored` | `rule:extension-disclosed` |
 | `<robot>` | the `version` attribute | accept `1.0`, refuse anything else | `unsupported_version` | `rule:robot-version` |
+| `<link>` | the `name` attribute | refuse when absent, empty or blank | `empty_name` | `rule:link-name-required` |
+| `<joint>` | the `name` attribute | refuse when absent, empty or blank | `empty_name` | `rule:joint-name-required` |
+| `<link>` | a name a second link already carries | refuse | `duplicate_name` | `rule:link-name-unique` |
+| `<joint>` | a name a second joint already carries | refuse | `duplicate_name` | `rule:joint-name-unique` |
+| `<material>` | a name a second robot-level material already carries | refuse | `duplicate_name` | `rule:material-name-unique` |
+| any | two names differing only in case or in surrounding whitespace | accept as two names | — | `rule:name-exact-bytes` |
+| `<parent>`, `<child>` | a `link` naming a link the document does not declare | refuse | `undeclared_link` | `rule:link-reference-declared` |
+| `<parent>`, `<child>` | the `link` attribute | refuse when absent, empty or blank | `empty_name` | `rule:link-attribute-required` |
+| `<mimic>` | the `joint` attribute | refuse an undeclared target and a self-reference | `dangling_mimic` | `rule:mimic-target-declared` |
+| `<robot>` | a document declaring no `<link>` | refuse | `no_links` | `rule:robot-has-links` |
+| `<visual>` | a `<material>` that neither names one nor defines one | refuse | `empty_name` | `rule:visual-material-named` |
+
+**Identity and reference integrity are refused at every policy setting.** The rules in the eleven rows
+above are structural: they are properties of the document text rather than of the graph that text
+describes, and no value of the document-validity policy or of the graph policy softens any of them. A
+malformed identity or a reference to something that was never declared is exactly the input that turns
+into plausible physics if it is read anyway, and refusing is strictly better than guessing which link
+the author meant. The permissive settings govern decorative and physical detail — visuals, collisions,
+materials, inertials — never identity and never references.
+
+The graph policy therefore governs only what is genuinely a property of the assembled graph: how many
+roots the links form, whether they contain a cycle, and whether a link has more than one parent joint.
+Setting it permissively can no longer reopen a dangling link reference, which is what it used to do.
+
+**Names are exact bytes.** A name is the attribute value as authored. meios never trims surrounding
+whitespace, folds case, or normalises a name before comparing it, so `Base_Link` and `base_link` are
+two links, and `base_link` and `base_link ` are two more. Any folding would invent an equivalence the
+document never stated and would begin refusing descriptions the reference parser accepts. A name
+containing internal whitespace is a legal name and is left alone. What is refused is a name that is
+absent, empty, or nothing but whitespace: such an element has no identity, several of them silently
+share one, and a joint cannot reference any of them.
 
 **A fixed-length numeric attribute must carry exactly its own number of components.** The wiki
 describes `xyz` as "the x, y, z offset" and `rpy` as the roll, pitch and yaw angles about the fixed
@@ -120,3 +175,10 @@ description vocabulary and is never reported as an unknown attribute.
 **This profile discloses more than the parser it supersedes.** urdfdom ignores both unknown elements
 and unknown attributes in complete silence, at every level, and hands back a model that looks
 complete. Everything above is meios choosing to say what it did not read.
+
+The reference parser also refuses a blank name, a duplicate name and a dangling link reference, so
+every identity rule on this page agrees with it. That agreement is **corroboration, not authority**.
+This profile follows the wiki, and where the wiki is silent it decides for itself and records the
+decision in the own-authority section above; the reference parser is an instrument for reading what
+real descriptions rely on, never a specification meios defers to. Where it happens to agree, the rule
+would stand without it.
