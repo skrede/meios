@@ -76,8 +76,11 @@ if(MEIOS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceCache.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourcePaths.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceLfs.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceArgs.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceGit.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceArchive.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceRegistry.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeployResources.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosPruneResources.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
 endif()

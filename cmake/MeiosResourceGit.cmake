@@ -33,14 +33,7 @@ endfunction()
 # atomic step, and it is also where .git is dropped, so an acquired tree is data alone and matches
 # what the archive path produces. Large-file objects are left as their pointers and submodules
 # uninitialized on purpose — the pointer scan fails loudly rather than shipping stub geometry.
-function(_meios_git_acquire name repository ref paths dest)
-    find_package(Git REQUIRED)
-    if(paths AND GIT_VERSION_STRING VERSION_LESS 2.28)
-        message(FATAL_ERROR
-            "meios_declare_resource(${name}): SPARSE_PATHS needs 'git sparse-checkout set --cone', "
-            "which requires Git 2.28 or newer; found ${GIT_VERSION_STRING}.")
-    endif()
-
+function(_meios_git_clone name repository ref paths scratch)
     set(_branch_arg "")
     if(ref)
         set(_branch_arg --branch "${ref}")
@@ -50,17 +43,28 @@ function(_meios_git_acquire name repository ref paths dest)
         set(_sparse_arg --filter=blob:none --no-checkout)
     endif()
 
-    set(_scratch "${dest}.clone")
-    file(REMOVE_RECURSE "${_scratch}")
+    file(REMOVE_RECURSE "${scratch}")
     execute_process(
         COMMAND "${GIT_EXECUTABLE}" clone --depth 1 ${_branch_arg} ${_sparse_arg}
-                -- "${repository}" "${_scratch}"
+                -- "${repository}" "${scratch}"
         RESULT_VARIABLE _rc
         ERROR_VARIABLE  _err)
     if(NOT _rc EQUAL 0)
-        file(REMOVE_RECURSE "${_scratch}")
+        file(REMOVE_RECURSE "${scratch}")
         message(FATAL_ERROR "meios_declare_resource(${name}): git clone failed: ${_err}")
     endif()
+endfunction()
+
+function(_meios_git_acquire name repository ref paths dest)
+    find_package(Git REQUIRED)
+    if(paths AND GIT_VERSION_STRING VERSION_LESS 2.28)
+        message(FATAL_ERROR
+            "meios_declare_resource(${name}): SPARSE_PATHS needs 'git sparse-checkout set --cone', "
+            "which requires Git 2.28 or newer; found ${GIT_VERSION_STRING}.")
+    endif()
+
+    set(_scratch "${dest}.clone")
+    _meios_git_clone("${name}" "${repository}" "${ref}" "${paths}" "${_scratch}")
 
     if(paths)
         _meios_run_git("${name}" "${_scratch}" "sparse-checkout" sparse-checkout set --cone ${paths})
