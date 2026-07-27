@@ -1,6 +1,6 @@
 function(meios_cmake_case name)
     set(one_value    FIXTURE DRIVER ORIGIN REFUSES MATCHES)
-    set(multi_value  EXTRA)
+    set(multi_value  EXTRA SECOND_CONFIGURE)
     cmake_parse_arguments(ARG "" "${one_value}" "${multi_value}" ${ARGN})
 
     if(NOT ARG_DRIVER)
@@ -22,6 +22,7 @@ function(meios_cmake_case name)
         -DCONFIG=$<CONFIG>
         -DORIGIN=${ARG_ORIGIN}
         "-DEXTRA=${ARG_EXTRA}"
+        "-DSECOND_CONFIGURE=${ARG_SECOND_CONFIGURE}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DRIVER})
 
     # TIMEOUT is not optional: ctest applies its --timeout default to every case that lacks the

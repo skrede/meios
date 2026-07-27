@@ -25,4 +25,12 @@ endif()
 list(APPEND _extra ${EXTRA})
 
 meios_harness_configure("${FIXTURE}" "${WORK}/tree" "${_extra}" _rc)
+
+# One extra value rather than a step language: a case that has something to say about the second
+# configure appends the values that differ, and the first configure's failure is reported as itself.
+if(SECOND_CONFIGURE AND _rc EQUAL 0)
+    list(APPEND _extra ${SECOND_CONFIGURE})
+    meios_harness_configure("${FIXTURE}" "${WORK}/tree" "${_extra}" _rc)
+endif()
+
 meios_harness_sentinel(${_rc})

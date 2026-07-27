@@ -25,11 +25,17 @@ meios_declare_resource(${_args} OUT_DIR _tree)
 # ',' separates a multi-entry assertion because ';' is already spoken for: it is what separates the
 # elements the case hands the driver through a single -D.
 string(REPLACE "," ";" _require_dirs   "${FX_REQUIRE_DIR}")
+string(REPLACE "," ";" _require_files  "${FX_REQUIRE_FILE}")
 string(REPLACE "," ";" _require_absent "${FX_REQUIRE_ABSENT}")
 
 foreach(_rel IN LISTS _require_dirs)
     if(NOT IS_DIRECTORY "${_tree}/${_rel}")
         message(FATAL_ERROR "meios-fixture: '${_rel}' is not a directory under ${_tree}")
+    endif()
+endforeach()
+foreach(_rel IN LISTS _require_files)
+    if(NOT EXISTS "${_tree}/${_rel}" OR IS_DIRECTORY "${_tree}/${_rel}")
+        message(FATAL_ERROR "meios-fixture: '${_rel}' is not a file under ${_tree}")
     endif()
 endforeach()
 foreach(_rel IN LISTS _require_absent)
