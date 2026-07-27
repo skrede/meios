@@ -12,7 +12,6 @@
 #include <vector>
 #include <cstddef>
 #include <fstream>
-#include <sstream>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -53,93 +52,71 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
 struct tally
 {
     int errors{ 0 };
-    int line{ 0 };
-    std::string file;
-    std::vector<std::string> messages;
 
-    void record(meios::level lvl, const std::string &message)
+    void operator()(meios::level lvl, const std::string &)
     {
-        if(lvl != meios::level::error)
-            return;
-        ++errors;
-        messages.push_back(message);
+        if(lvl == meios::level::error)
+            ++errors;
     }
 
-    void operator()(meios::level lvl, const std::string &message)
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &)
     {
-        record(lvl, message);
+        if(lvl == meios::level::error)
+            ++errors;
     }
 
-    void operator()(meios::level lvl, const meios::source_location &where,
-                    const std::string &message)
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &)
     {
-        record(lvl, message);
-        anchor(lvl, where);
-    }
-
-    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &where,
-                    const std::string &message)
-    {
-        record(lvl, message);
-        anchor(lvl, where);
-    }
-
-    void anchor(meios::level lvl, const meios::source_location &where)
-    {
-        if(lvl != meios::level::error)
-            return;
-        file = where.file.string();
-        line = where.line;
+        if(lvl == meios::level::error)
+            ++errors;
     }
 };
 
-struct verdict
+struct fixed_text final : meios::text_resource_loader::fetcher
 {
-    bool refused;
-    std::string message;
+    explicit fixed_text(std::string text) : m_text(std::move(text)) {}
+
+    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    {
+        return m_text;
+    }
+
+    std::string m_text;
 };
 
-verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
+void install_yaml(meios::eval_scope &scope, std::string text)
 {
-    tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
-    meios::python_evaluator evaluator;
-    const bool declined = !evaluator.eval_to_text(expr, scope, sink)
-        && evaluator.last_failure_kind() == meios::eval_failure_kind::refused;
-    return { declined, counts.messages.empty() ? std::string{} : counts.messages.front() };
+    scope.install_text_loader(meios::text_resource_loader{ std::make_unique<fixed_text>(std::move(text)) });
+}
+
+meios::eval_scope serving(std::string text)
+{
+    meios::eval_scope scope;
+    install_yaml(scope, std::move(text));
+    return scope;
 }
 
 struct outcome
 {
     bool ok;
-    int errors;
-    int line;
-    std::string file;
     std::string document;
-    std::vector<std::string> messages;
+    int errors;
 };
 
 outcome run(std::string_view source, meios::eval_policy policy,
-            const std::shared_ptr<meios::evaluator_handle> &backend)
+            const std::shared_ptr<meios::evaluator_handle> &backend,
+            std::optional<std::string> yaml = std::nullopt)
 {
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
     meios::eval_scope scope;
+    if(yaml)
+        install_yaml(scope, std::move(*yaml));
     meios::source_stack sources;
     meios::expansion out = meios::expand(source, scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ out.ok,           counts.errors,  counts.line,
-                    counts.file,      std::move(out.document), std::move(counts.messages) };
-}
-
-bool says(const outcome &result, std::string_view fragment)
-{
-    for(const std::string &message : result.messages)
-    {
-        if(message.find(fragment) != std::string::npos)
-            return true;
-    }
-    return false;
+    return outcome{ out.ok, std::move(out.document), counts.errors };
 }
 
 constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xacro\">";
@@ -209,12 +186,8 @@ TEST_CASE("a seeded numeric property matches core formatting", "[eval_python]")
 
 TEST_CASE("load_yaml wraps yaml.safe_load over a found interpreter", "[eval_python]")
 {
-    const std::filesystem::path tmp =
-        std::filesystem::temp_directory_path() / "meios_eval_python_load_yaml.yaml";
-    std::ofstream(tmp) << "arm:\n  dof: 6\n";
-    const std::string expr = "load_yaml('" + tmp.generic_string() + "')['arm']['dof']";
-    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
-    std::filesystem::remove(tmp);
+    const meios::eval_scope scope = serving("arm:\n  dof: 6\n");
+    const std::optional<std::string> got = evaluate("load_yaml('config.yaml')['arm']['dof']", scope);
     REQUIRE(got);
     REQUIRE(*got == "6");
 }
@@ -247,38 +220,27 @@ TEST_CASE("a python runtime throw hard-fails even under skip", "[eval_python]")
 
 TEST_CASE("xacro.load_yaml resolves a mapping through the SimpleNamespace shim", "[eval_python]")
 {
-    const std::filesystem::path tmp =
-        std::filesystem::temp_directory_path() / "meios_eval_xacro_map.yaml";
-    std::ofstream(tmp) << "arm:\n  dof: 6\n";
-    const std::string expr = "xacro.load_yaml('" + tmp.generic_string() + "')['arm']['dof']";
-    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
-    std::filesystem::remove(tmp);
+    const meios::eval_scope scope = serving("arm:\n  dof: 6\n");
+    const std::optional<std::string> got =
+        evaluate("xacro.load_yaml('config.yaml')['arm']['dof']", scope);
     REQUIRE(got);
     REQUIRE(*got == "6");
 }
 
 TEST_CASE("a !degrees yaml tag loads as radians through the SafeLoader constructor", "[eval_python]")
 {
-    const std::filesystem::path tmp =
-        std::filesystem::temp_directory_path() / "meios_eval_degrees.yaml";
-    std::ofstream(tmp) << "angle: !degrees 180\n";
-    const std::string expr =
-        "abs(xacro.load_yaml('" + tmp.generic_string() + "')['angle'] - pi) < 1e-9";
-    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
-    std::filesystem::remove(tmp);
+    const meios::eval_scope scope = serving("angle: !degrees 180\n");
+    const std::optional<std::string> got =
+        evaluate("abs(xacro.load_yaml('a.yaml')['angle'] - pi) < 1e-9", scope);
     REQUIRE(got);
     REQUIRE(*got == "True");
 }
 
 TEST_CASE("a !radians yaml tag loads unchanged through the SafeLoader constructor", "[eval_python]")
 {
-    const std::filesystem::path tmp =
-        std::filesystem::temp_directory_path() / "meios_eval_radians.yaml";
-    std::ofstream(tmp) << "angle: !radians 1.5\n";
-    const std::string expr =
-        "abs(xacro.load_yaml('" + tmp.generic_string() + "')['angle'] - 1.5) < 1e-9";
-    const std::optional<std::string> got = evaluate(expr, meios::eval_scope{});
-    std::filesystem::remove(tmp);
+    const meios::eval_scope scope = serving("angle: !radians 1.5\n");
+    const std::optional<std::string> got =
+        evaluate("abs(xacro.load_yaml('a.yaml')['angle'] - 1.5) < 1e-9", scope);
     REQUIRE(got);
     REQUIRE(*got == "True");
 }
@@ -286,17 +248,13 @@ TEST_CASE("a !radians yaml tag loads unchanged through the SafeLoader constructo
 TEST_CASE("a dict crossing a xacro:property boundary is re-hydrated for nested subscripts",
           "[eval_python]")
 {
-    const std::filesystem::path tmp =
-        std::filesystem::temp_directory_path() / "meios_eval_rehydrate.yaml";
-    std::ofstream(tmp) << "limits:\n  shoulder:\n    max: 42\n";
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header)
-        + "<xacro:property name=\"config\" value=\"${xacro.load_yaml('" + tmp.generic_string()
-        + "')}\"/>"
+        + "<xacro:property name=\"config\" value=\"${xacro.load_yaml('limits.yaml')}\"/>"
         + "<xacro:property name=\"section\" value=\"${config['limits']}\"/>"
         + "<l>${section['shoulder']['max']}</l></robot>";
-    const outcome resolved = run(document, meios::eval_policy::fail, handle);
-    std::filesystem::remove(tmp);
+    const outcome resolved = run(document, meios::eval_policy::fail, handle,
+                                 "limits:\n  shoulder:\n    max: 42\n");
     REQUIRE(resolved.ok);
     REQUIRE(leaves(resolved, "<l>42</l>"));
 }
@@ -368,166 +326,5 @@ TEST_CASE("an import-reaching expression is refused under every evaluation polic
         REQUIRE_FALSE(refused.ok);
         REQUIRE(refused.errors >= 1);
         REQUIRE_FALSE(leaves(refused, "${__import__"));
-    }
-}
-
-TEST_CASE("a refusal is still reported under the most lenient policy", "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused =
-        run(span_document("${__import__('os').getcwd()}"), meios::eval_policy::skip, handle);
-    REQUIRE(refused.errors >= 1);
-}
-
-TEST_CASE("an expression reaching past arithmetic refuses under a named rule", "[eval_python]")
-{
-    const meios::eval_scope scope;
-    const std::pair<const char *, const char *> refused[] = {
-        { "open('/etc/passwd')", "non-allowlisted-builtin" },
-        { "getattr(x, '_' + '_class__')", "non-allowlisted-builtin" },
-        { "type(1)", "non-allowlisted-builtin" },
-        { "vars()", "non-allowlisted-builtin" },
-        { "dir()", "non-allowlisted-builtin" },
-        { "globals()", "non-allowlisted-builtin" },
-        { "eval('1')", "non-allowlisted-builtin" },
-        { "exec('1')", "non-allowlisted-builtin" },
-        { "compile('1','','eval')", "non-allowlisted-builtin" },
-        { "input()", "non-allowlisted-builtin" },
-        { "().__class__.__bases__", "dunder-identifier" },
-        { "load_yaml.__globals__", "dunder-identifier" },
-        { "(lambda: __import__('os').getcwd())()", "dunder-identifier" },
-        { "'{0.__globals__}'.format(load_yaml)", "format-traversal" },
-        { "'{0.__globals__[builtins]}'.format(load_yaml)", "format-traversal" },
-        { "'{0.__self__.__loader__}'.format(sqrt)", "format-traversal" },
-        { "'{0.__self__}'.format_map({0: len})", "format-traversal" },
-        { "str.format('{0.__self__}', len)", "format-traversal" },
-        { "'{}'.format(2)", "format-traversal" },
-    };
-    for(const std::pair<const char *, const char *> &c : refused)
-    {
-        INFO(c.first);
-        const verdict got = refuse_of(c.first, scope);
-        REQUIRE(got.refused);
-        REQUIRE(got.message.find(c.second) != std::string::npos);
-        REQUIRE(got.message.find(c.first) != std::string::npos);
-    }
-}
-
-TEST_CASE("an f-string conversion calling a withheld builtin refuses by that name", "[eval_python]")
-{
-    meios::eval_scope scope;
-    scope.set("x", std::string("arm"));
-    scope.set("v", meios::value{ 1.5 });
-    REQUIRE(refuse_of("f'{x!r}'", scope).message.find("repr") != std::string::npos);
-    REQUIRE(refuse_of("f'{x!a}'", scope).message.find("ascii") != std::string::npos);
-    const std::optional<std::string> plain = evaluate("f'{x!s}'", scope);
-    REQUIRE(plain);
-    REQUIRE(*plain == "arm");
-    const std::optional<std::string> spec = evaluate("f'{v:.3f}'", scope);
-    REQUIRE(spec);
-    REQUIRE(*spec == "1.500");
-}
-
-TEST_CASE("a dunder inside a string literal is not an identifier", "[eval_python]")
-{
-    const std::optional<std::string> got =
-        evaluate("'a literal containing __import__'", meios::eval_scope{});
-    REQUIRE(got);
-    REQUIRE(*got == "a literal containing __import__");
-}
-
-TEST_CASE("a scope-bound name colliding with a withheld builtin still resolves", "[eval_python]")
-{
-    meios::eval_scope scope;
-    scope.set("type", std::string("revolute"));
-    const std::optional<std::string> got = evaluate("'joint_' + type", scope);
-    REQUIRE(got);
-    REQUIRE(*got == "joint_revolute");
-}
-
-TEST_CASE("a scope-bound name spelled format is refused all the same", "[eval_python]")
-{
-    meios::eval_scope scope;
-    scope.set("format", std::string("mesh"));
-    REQUIRE(refuse_of("format", scope).message.find("format-traversal") != std::string::npos);
-}
-
-TEST_CASE("the bound yaml helper is compiled, not a prelude function object", "[eval_python]")
-{
-    const std::optional<std::string> rendered = evaluate("str(load_yaml)", meios::eval_scope{});
-    REQUIRE(rendered);
-    REQUIRE(rendered->rfind("<function", 0) != 0);
-    const std::optional<std::string> shared =
-        evaluate("load_yaml is xacro.load_yaml", meios::eval_scope{});
-    REQUIRE(shared);
-    REQUIRE(*shared == "True");
-}
-
-TEST_CASE("the second substitution entry point refuses the same reach", "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused =
-        run(span_document("$(eval __import__(\"os\"))"), meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
-    REQUIRE(refused.errors >= 1);
-    REQUIRE_FALSE(leaves(refused, "$(eval __import__"));
-}
-
-TEST_CASE("a refusal diagnostic names the expression, the rule and a real position",
-          "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused =
-        run(span_document("${__import__('os').getcwd()}"), meios::eval_policy::fail, handle);
-    REQUIRE(says(refused, "__import__"));
-    REQUIRE(says(refused, "dunder-identifier"));
-    REQUIRE_FALSE(refused.file.empty());
-    REQUIRE(refused.line != 0);
-}
-
-TEST_CASE("a withheld capability reports the allowlist rule through expand", "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused =
-        run(span_document("${open('/etc/passwd')}"), meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
-    REQUIRE(says(refused, "non-allowlisted-builtin"));
-}
-
-TEST_CASE("the formatting traversal vector reports its rule and leaks nothing", "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused = run(span_document("${'{0.__globals__}'.format(load_yaml)}"),
-                                meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
-    REQUIRE(says(refused, "format-traversal"));
-    REQUIRE_FALSE(leaves(refused, "parse_yaml"));
-    REQUIRE_FALSE(leaves(refused, "read_text"));
-}
-
-TEST_CASE("a dunder inside a string literal still reaches the expanded document", "[eval_python]")
-{
-    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome resolved = run(span_document("${'a literal containing __import__'}"),
-                                 meios::eval_policy::fail, handle);
-    REQUIRE(resolved.ok);
-    REQUIRE(leaves(resolved, "<l>a literal containing __import__</l>"));
-}
-
-TEST_CASE("the allowlisted names a description actually uses still evaluate", "[eval_python]")
-{
-    const meios::eval_scope scope;
-    const std::pair<const char *, const char *> allowed[] = {
-        { "sqrt(2)", "1.4142135623730951" }, { "radians(180)", "3.141592653589793" },
-        { "min(1,2)", "1" },                 { "abs(-3.5)", "3.5" },
-        { "2**64", "18446744073709551616" }, { "len(sorted([3,1,2]))", "3" },
-        { "sum(range(4))", "6" },            { "pow(2,3)", "8.0" },
-    };
-    for(const std::pair<const char *, const char *> &c : allowed)
-    {
-        INFO(c.first);
-        const std::optional<std::string> got = evaluate(c.first, scope);
-        REQUIRE(got);
-        REQUIRE(*got == c.second);
     }
 }

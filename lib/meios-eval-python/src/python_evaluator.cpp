@@ -62,24 +62,45 @@ py::object to_py_object(const binding &bound)
     return py::float_(std::get<double>(v));
 }
 
+constexpr std::string_view uncontained_rule = "uncontained-yaml-path";
+
+struct yaml_context
+{
+    log_sink &log;
+    const eval_scope &scope;
+    std::optional<std::string> rule;
+};
+
+// The refusal is recorded in evaluation-local state before the throw, so the outer handler
+// classifies it without inspecting the raised exception's text.
+py::object fetch_and_parse(const py::object &parse, yaml_context &ctx, const std::string &spec)
+{
+    const std::optional<std::string> text = ctx.scope.load_text(spec);
+    if(text)
+        return parse(py::str(*text));
+    ctx.rule = std::string(uncontained_rule);
+    ctx.log.log(level::error,
+                "yaml resource \"" + spec + "\" is not reachable inside a containment root");
+    throw py::value_error("unreachable yaml resource \"" + spec + '"');
+}
+
 // A compiled callable carries no defining-globals attribute, so the privileged namespace
 // holding the real builtins and the yaml module is not merely guarded against from the user
 // namespace — it is absent from the reach of everything bound there.
-py::object yaml_helper(const py::dict &priv)
+py::object yaml_helper(const py::dict &priv, yaml_context &ctx)
 {
-    py::object read  = priv["read_text"];
     py::object parse = priv["parse_yaml"];
-    return py::cpp_function([read, parse](const std::string &spec) { return parse(read(py::str(spec))); });
+    return py::cpp_function([parse, &ctx](const std::string &spec) { return fetch_and_parse(parse, ctx, spec); });
 }
 
 // pybind11 injects the real builtins module into any globals dict that lacks the key, on every
 // eval and exec alike, so the curated allowlist has to be the dict's first entry or it is inert.
-py::dict restricted_globals(const py::dict &priv)
+py::dict restricted_globals(const py::dict &priv, yaml_context &ctx)
 {
     py::dict globals;
     globals["__builtins__"] = priv["allowed_builtins"]();
     globals.attr("update")(priv["math_names"]());
-    py::object helper    = yaml_helper(priv);
+    py::object helper    = yaml_helper(priv, ctx);
     globals["load_yaml"] = helper;
     globals["xacro"]     = py::module_::import("types").attr("SimpleNamespace")(py::arg("load_yaml") = helper);
     return globals;
@@ -122,11 +143,31 @@ std::optional<std::string> report(eval_failure_kind &kind, eval_failure_kind whi
     return std::nullopt;
 }
 
-py::object seed_and_eval(const py::dict &priv, std::string_view expr, const eval_scope &scope)
+std::optional<std::string> classify(eval_failure_kind &kind, const yaml_context &ctx,
+                                    const std::string &quoted, const std::string &fallback)
 {
-    py::dict globals = restricted_globals(priv);
-    seed_scope(globals, expr, scope);
+    if(ctx.rule)
+        return report(kind, eval_failure_kind::refused, ctx.log, "meios refused the expression " + quoted + ": " + *ctx.rule);
+    return report(kind, eval_failure_kind::error, ctx.log, fallback);
+}
+
+py::object seed_and_eval(const py::dict &priv, std::string_view expr, yaml_context &ctx)
+{
+    py::dict globals = restricted_globals(priv, ctx);
+    seed_scope(globals, expr, ctx.scope);
     return py::eval(std::string(expr), globals);
+}
+
+std::optional<std::string> eval_or_refuse(std::string_view expr, yaml_context &ctx,
+                                          const std::string &quoted, eval_failure_kind &kind)
+{
+    const py::dict priv    = detail::privileged_namespace();
+    const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(expr, ctx.scope));
+    if(!rule.empty())
+        return report(kind, eval_failure_kind::refused, ctx.log, "meios refused the expression " + quoted + ": " + rule);
+    std::string text = format_result(seed_and_eval(priv, expr, ctx));
+    kind = eval_failure_kind::none;
+    return text;
 }
 
 }
@@ -137,23 +178,18 @@ std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
     detail::ensure_interpreter();
     py::gil_scoped_acquire gil;
     const std::string quoted = "\"" + std::string(expr) + "\"";
+    yaml_context ctx{ log, scope, std::nullopt };
     try
     {
-        const py::dict priv    = detail::privileged_namespace();
-        const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(expr, scope));
-        if(!rule.empty())
-            return report(m_kind, eval_failure_kind::refused, log, "meios refused the expression " + quoted + ": " + rule);
-        std::string text = format_result(seed_and_eval(priv, expr, scope));
-        m_kind = eval_failure_kind::none;
-        return text;
+        return eval_or_refuse(expr, ctx, quoted, m_kind);
     }
     catch(py::error_already_set &raised)
     {
-        return report(m_kind, eval_failure_kind::error, log, "python evaluation of " + quoted + " raised: " + raised.what());
+        return classify(m_kind, ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what());
     }
     catch(const std::exception &raised)
     {
-        return report(m_kind, eval_failure_kind::error, log, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
+        return classify(m_kind, ctx, quoted, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
     }
 }
 

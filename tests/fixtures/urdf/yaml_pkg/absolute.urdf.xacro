@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="yaml_pkg_absolute">
+  <xacro:property name="config" value="${xacro.load_yaml('/etc/passwd')}"/>
+
+  <link name="base_link"/>
+  <link name="shoulder_link"/>
+
+  <joint name="shoulder_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="shoulder_link"/>
+    <origin xyz="0 0 ${len(config)}" rpy="0 0 0"/>
+  </joint>
+</robot>

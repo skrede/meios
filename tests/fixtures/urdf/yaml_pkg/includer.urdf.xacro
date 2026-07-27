@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="yaml_pkg_includer">
+  <link name="base_link"/>
+  <xacro:include filename="package://yaml_pkg/nested/inner.urdf.xacro"/>
+</robot>

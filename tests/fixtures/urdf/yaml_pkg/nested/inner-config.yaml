@@ -1,0 +1,7 @@
+joints:
+  shoulder:
+    height: 0.75
+    lower: !degrees -45
+    upper: 2.5
+    effort: 300.0
+    velocity: 4.0

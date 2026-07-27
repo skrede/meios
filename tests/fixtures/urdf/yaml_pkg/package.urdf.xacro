@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://ros.org/wiki/xacro" name="yaml_arm">
-  <xacro:property name="config" value="${xacro.load_yaml('config.yaml')}"/>
-  <xacro:property name="joints" value="${config['joints']}"/>
-  <xacro:property name="shoulder" value="${joints['shoulder']}"/>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="yaml_pkg_package">
+  <xacro:property name="config" value="${xacro.load_yaml('package://yaml_pkg/description/config.yaml')}"/>
+  <xacro:property name="shoulder" value="${config['joints']['shoulder']}"/>
 
   <link name="base_link"/>
   <link name="shoulder_link"/>

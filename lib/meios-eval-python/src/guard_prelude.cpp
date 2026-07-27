@@ -100,11 +100,7 @@ std::string_view guard_prelude_source()
            "    import yaml\n"
            "    for tag, factor in _UNITS:\n"
            "        yaml.SafeLoader.add_constructor(tag, _unit(factor))\n"
-           "    return yaml.load(text, Loader=yaml.SafeLoader)\n"
-           "\n"
-           "def read_text(spec):\n"
-           "    with open(spec) as stream:\n"
-           "        return stream.read()\n";
+           "    return yaml.load(text, Loader=yaml.SafeLoader)\n";
 }
 
 }

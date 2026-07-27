@@ -4,14 +4,24 @@
 #include <meios/model.h>
 #include <meios/xacro.h>
 
+#include <meios/io/source_stack.h>
+#include <meios/io/source_handle.h>
+#include <meios/io/package_source.h>
+#include <meios/io/resolved_asset.h>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <span>
 #include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstddef>
+#include <cstring>
+#include <utility>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -28,6 +38,11 @@ std::filesystem::path fixture(std::string_view name)
     return std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / name;
 }
 
+std::vector<std::filesystem::path> fixture_roots()
+{
+    return { std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } };
+}
+
 const meios::joint<double> *find_joint(const meios::model<double> &robot, std::string_view name)
 {
     for(const meios::joint<double> &j : robot.joints)
@@ -37,12 +52,12 @@ const meios::joint<double> *find_joint(const meios::model<double> &robot, std::s
 }
 
 // Builds the options in a frame that has returned by the time load() runs: the backend
-// is owned by the options, so no caller has to keep storage alive alongside them.
-meios::load_options python_options(const std::filesystem::path &config)
+// is owned by the options, so no caller has to keep storage alive alongside them. A
+// description names its own auxiliary resources, so nothing is seeded here.
+meios::load_options python_options()
 {
     meios::load_options opts;
     opts.backend = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    opts.args["config_path"] = config.generic_string();
     return opts;
 }
 
@@ -63,7 +78,133 @@ struct tally
     }
 };
 
+struct journal
+{
+    int errors{ 0 };
+    std::string report;
+
+    void record(meios::level lvl, const std::string &message)
+    {
+        if(lvl != meios::level::error)
+            return;
+        ++errors;
+        report += message + '\n';
+    }
+
+    void operator()(meios::level lvl, const std::string &message)
+    {
+        record(lvl, message);
+    }
+
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
+    {
+        record(lvl, message);
+    }
+};
+
+struct attempt
+{
+    int errors;
+    std::string report;
+    std::optional<meios::model<double>> robot;
+};
+
+attempt flatten(const std::filesystem::path &path, meios::eval_policy policy,
+                const std::vector<std::filesystem::path> &roots)
+{
+    journal book;
+    meios::log_sink_f sink{ std::ref(book) };
+    meios::load_options opts = python_options();
+    opts.eval                = policy;
+    opts.package_roots       = roots;
+    meios::expected<meios::model<double>, meios::load_error> loaded = meios::load(path, opts, sink);
+    if(!loaded)
+        return { book.errors, book.report + loaded.error().message, std::nullopt };
+    return { book.errors, std::move(book.report), std::move(*loaded) };
+}
+
+attempt flatten_over(const std::filesystem::path &path, meios::source_stack &sources)
+{
+    journal book;
+    meios::log_sink_f sink{ std::ref(book) };
+    const meios::load_options opts = python_options();
+    meios::expected<meios::model<double>, meios::load_error> loaded =
+        meios::load(path, opts, sources, sink);
+    if(!loaded)
+        return { book.errors, book.report + loaded.error().message, std::nullopt };
+    return { book.errors, std::move(book.report), std::move(*loaded) };
+}
+
+void expect_shoulder(const attempt &got, double height, double upper)
+{
+    REQUIRE(got.robot.has_value());
+    REQUIRE(got.errors == 0);
+    const meios::joint<double> *shoulder = find_joint(*got.robot, "shoulder_joint");
+    REQUIRE(shoulder != nullptr);
+    REQUIRE(shoulder->origin.translation.z == Catch::Approx(height));
+    REQUIRE(shoulder->limits.has_value());
+    REQUIRE(shoulder->limits->upper == Catch::Approx(upper));
+}
+
+// The diagnostic deliberately echoes the offending expression, so the leak probe looks for
+// the target file's own content instead: nothing of /etc/passwd may reach any output.
+void expect_refused(const attempt &got)
+{
+    REQUIRE_FALSE(got.robot.has_value());
+    REQUIRE(got.errors >= 1);
+    REQUIRE(got.report.find("uncontained-yaml-path") != std::string::npos);
+    REQUIRE(got.report.find("root:") == std::string::npos);
+    REQUIRE(got.report.find("/bin/") == std::string::npos);
+}
+
+// A layer that answers only with bytes, never a path: the shape a bundle or an in-memory
+// overlay presents, and the one an implementation reaching for a filesystem path breaks on.
+struct string_puller final : meios::byte_reader::puller
+{
+    explicit string_puller(std::string text) : m_at(0), m_text(std::move(text)) {}
+
+    std::size_t read(std::span<std::byte> out) override
+    {
+        const std::size_t got = std::min(out.size(), m_text.size() - m_at);
+        std::memcpy(out.data(), m_text.data() + m_at, got);
+        m_at += got;
+        return got;
+    }
+
+    std::size_t m_at;
+    std::string m_text;
+};
+
+struct memory_yaml
+{
+    std::string text;
+
+    meios::capability_descriptor capabilities() const
+    {
+        return { meios::source_kind::memory, false, false };
+    }
+
+    std::optional<meios::resolved_asset> locate(std::string_view pkg, std::string_view rel)
+    {
+        if(pkg != "memory_pkg" || rel != "config.yaml")
+            return std::nullopt;
+        return meios::resolved_asset{ meios::byte_reader{ std::make_unique<string_puller>(text) } };
+    }
+};
+
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
+// The smoke cases drive real published descriptions, which are far too large to vendor. A
+// developer points MEIOS_SMOKE_CORPUS_DIR at a local checkout to make them live; with no
+// definition they report a skip, so the suite stays green on a machine without the corpus.
+std::filesystem::path corpus_root()
+{
+#ifdef MEIOS_SMOKE_CORPUS_DIR
+    return std::filesystem::path{ MEIOS_SMOKE_CORPUS_DIR };
+#else
+    return {};
+#endif
+}
+
 struct shell_result
 {
     int status;
@@ -92,7 +233,7 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
     int errors = 0;
     meios::log_sink_f sink{ tally{ errors } };
 
-    const meios::load_options opts = python_options(fixture("yaml_arm/config.yaml"));
+    const meios::load_options opts = python_options();
 
     const meios::expected<meios::model<double>, meios::load_error> loaded =
         meios::load(fixture("yaml_arm/arm.urdf.xacro"), opts, sink);
@@ -113,13 +254,83 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
     REQUIRE(shoulder->limits->velocity == Catch::Approx(2.0));
 }
 
+TEST_CASE("a package-qualified yaml spec resolves through the source stack",
+          "[urdf][yaml][flatten]")
+{
+    expect_shoulder(flatten(fixture("yaml_pkg/package.urdf.xacro"), meios::eval_policy::fail,
+                            fixture_roots()),
+                    0.25, 1.5);
+}
+
+TEST_CASE("a find token written inside an expression resolves the same way",
+          "[urdf][yaml][flatten]")
+{
+    expect_shoulder(flatten(fixture("yaml_pkg/find.urdf.xacro"), meios::eval_policy::fail,
+                            fixture_roots()),
+                    0.25, 1.5);
+}
+
+// The decoy beside the top-level document carries different values, so reading the wrong
+// directory would succeed with the wrong numbers rather than merely fail to resolve.
+TEST_CASE("a bare yaml spec resolves against the including document, not the top-level one",
+          "[urdf][yaml][flatten]")
+{
+    const attempt got =
+        flatten(fixture("yaml_pkg/includer.urdf.xacro"), meios::eval_policy::fail, fixture_roots());
+    expect_shoulder(got, 0.75, 2.5);
+    REQUIRE(find_joint(*got.robot, "shoulder_joint")->origin.translation.z
+            != Catch::Approx(0.11));
+}
+
+TEST_CASE("an absolute yaml spec fails the load and leaks no file content",
+          "[urdf][yaml][flatten]")
+{
+    expect_refused(flatten(fixture("yaml_pkg/absolute.urdf.xacro"), meios::eval_policy::fail,
+                           fixture_roots()));
+}
+
+TEST_CASE("a traversal-escaping yaml spec fails the load and leaks no file content",
+          "[urdf][yaml][flatten]")
+{
+    expect_refused(flatten(fixture("yaml_pkg/traversal.urdf.xacro"), meios::eval_policy::fail,
+                           fixture_roots()));
+}
+
+TEST_CASE("a yaml refusal still fails the load under the most lenient policy",
+          "[urdf][yaml][flatten]")
+{
+    expect_refused(flatten(fixture("yaml_pkg/absolute.urdf.xacro"), meios::eval_policy::skip,
+                           fixture_roots()));
+    expect_refused(flatten(fixture("yaml_pkg/traversal.urdf.xacro"), meios::eval_policy::skip,
+                           fixture_roots()));
+}
+
+TEST_CASE("an accepted yaml spec loads identically under the most lenient policy",
+          "[urdf][yaml][flatten]")
+{
+    expect_shoulder(flatten(fixture("yaml_pkg/package.urdf.xacro"), meios::eval_policy::skip,
+                            fixture_roots()),
+                    0.25, 1.5);
+}
+
+TEST_CASE("a byte-backed source layer serves a working configuration", "[urdf][yaml][flatten]")
+{
+    meios::source_stack sources;
+    sources.push_back(meios::source_handle(memory_yaml{ "joints:\n  shoulder:\n    height: 0.5\n"
+                                                        "    lower: !degrees -30\n"
+                                                        "    upper: 3.0\n"
+                                                        "    effort: 50.0\n"
+                                                        "    velocity: 1.0\n" }));
+    expect_shoulder(flatten_over(fixture("yaml_pkg/bytes.urdf.xacro"), sources), 0.5, 3.0);
+}
+
 TEST_CASE("the real UR description clears the yaml parity layer", "[urdf][yaml][flatten][smoke]")
 {
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
-    const std::filesystem::path root = "/home/skrede/Workspace/ros/robots";
+    const std::filesystem::path root = corpus_root();
     const std::filesystem::path ur =
         root / "Universal_Robots_ROS2_Description/urdf/ur.urdf.xacro";
-    if(!std::filesystem::exists(ur))
+    if(root.empty() || !std::filesystem::exists(ur))
     {
         SUCCEED("UR corpus absent — smoke skipped");
         return;
@@ -139,10 +350,10 @@ TEST_CASE("the real UR description clears the yaml parity layer", "[urdf][yaml][
 TEST_CASE("a ROS1 kuka description flattens through the core evaluator", "[urdf][flatten][smoke]")
 {
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
-    const std::filesystem::path root = "/home/skrede/Workspace/ros/robots";
+    const std::filesystem::path root = corpus_root();
     const std::filesystem::path kuka =
         root / "kuka_experimental/kuka_kr16_support/urdf/kr16_2.xacro";
-    if(!std::filesystem::exists(kuka))
+    if(root.empty() || !std::filesystem::exists(kuka))
     {
         SUCCEED("kuka corpus absent — smoke skipped");
         return;
