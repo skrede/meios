@@ -1,4 +1,5 @@
 #include "fixture_path.h"
+#include "consumer_probe.h"
 
 #include <meios/io.h>
 #include <meios/urdf.h>
@@ -10,80 +11,10 @@
 #include <cstddef>
 #include <iostream>
 #include <algorithm>
-#include <string_view>
 #include <unordered_map>
 
 namespace
 {
-
-// A model_sink defined entirely outside the meios source tree. It is deliberately
-// none of the sinks the reader ever explicitly instantiated, so it can only link if
-// the parse boundary is genuinely type-erased in the installed package.
-struct record_counter
-{
-    int robots = 0;
-    int materials = 0;
-    int links = 0;
-    int joints = 0;
-    bool finished = false;
-
-    void on_robot(const meios::robot_info &) { ++robots; }
-    void on_material(const meios::material<double> &) { ++materials; }
-    void on_link(const meios::link<double> &) { ++links; }
-    void on_joint(const meios::joint<double> &) { ++joints; }
-    void finish() { finished = true; }
-};
-
-constexpr std::string_view probe_urdf = R"(<?xml version="1.0"?>
-<robot name="counter_probe">
-  <material name="grey">
-    <color rgba="0.5 0.5 0.5 1.0"/>
-  </material>
-  <link name="base_link"/>
-  <link name="tool"/>
-  <joint name="base_to_tool" type="fixed">
-    <parent link="base_link"/>
-    <child link="tool"/>
-    <origin xyz="0 0 0.1" rpy="0 0 0"/>
-  </joint>
-</robot>
-)";
-
-struct diagnostic_record
-{
-    meios::level lvl;
-    meios::diagnostic_code code;
-    std::string message;
-};
-
-// A diagnostic sink living entirely in the consumer's tree: it lifts every library
-// diagnostic straight into the consumer's own diagnostic_record. The four-argument
-// overload is the one that carries the typed diagnostic_code across the install
-// boundary, so a code-bearing diagnostic lands with its code intact.
-class diagnostic_lift
-{
-public:
-    explicit diagnostic_lift(std::vector<diagnostic_record> &out) : m_out(out) {}
-
-    void operator()(meios::level lvl, const std::string &message)
-    {
-        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message });
-    }
-
-    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
-    {
-        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message });
-    }
-
-    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
-                    const std::string &message)
-    {
-        m_out.push_back({ lvl, code, message });
-    }
-
-private:
-    std::vector<diagnostic_record> &m_out;
-};
 
 bool nearly_equal(double a, double b) { return (a < b ? b - a : a - b) < 1e-9; }
 
@@ -96,8 +27,8 @@ int run_out_of_tree_sink()
                               meios::topology_policy::fail, meios::material_policy::warn,
                               meios::strictness::fail, {} };
     meios::basic_parser<meios::urdf_reader> parser(ctx);
-    record_counter sink;
-    parser.parse(probe_urdf, sink);
+    consumer::record_counter sink;
+    parser.parse(consumer::probe_urdf, sink);
 
     const bool ok = sink.finished && sink.robots == 1 && sink.materials == 1
                     && sink.links == 2 && sink.joints == 1;
@@ -116,8 +47,8 @@ int run_out_of_tree_sink()
 
 int run_vendored_load()
 {
-    std::vector<diagnostic_record> diagnostics;
-    meios::log_sink_f diagnostic_sink{ diagnostic_lift{ diagnostics } };
+    std::vector<consumer::diagnostic_record> diagnostics;
+    meios::log_sink_f diagnostic_sink{ consumer::diagnostic_lift{ diagnostics } };
 
     meios::load_options opts;
     opts.materials = meios::material_policy::warn;
@@ -167,7 +98,7 @@ int run_vendored_load()
     }
 
     const bool carried_code = std::any_of(diagnostics.begin(), diagnostics.end(),
-        [](const diagnostic_record &record) {
+        [](const consumer::diagnostic_record &record) {
             return record.code == meios::diagnostic_code::undefined_material
                    && record.lvl == meios::level::warn;
         });
@@ -190,6 +121,8 @@ int main()
     if(const int rc = run_out_of_tree_sink())
         return rc;
     if(const int rc = run_vendored_load())
+        return rc;
+    if(const int rc = consumer::run_facade())
         return rc;
     return 0;
 }

@@ -7,7 +7,10 @@ find_package(meios CONFIG REQUIRED)
 
 # The standard is deliberately not set on the target: it must arrive through the
 # exported interface, proving the installed package carries it.
-add_executable(integration_test main.cpp)
+#
+# Both sources build into the one executable rather than into a second target, so the
+# facade exercise runs under the single command the continuous-integration jobs invoke.
+add_executable(integration_test main.cpp facade.cpp)
 target_link_libraries(integration_test PRIVATE meios::urdf)
 
 # The consumer derives the vendored fixture's location itself: the xacro is copied
