@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pkg_outer</name>
+  <version>1.0.0</version>
+  <description>Vendoring package whose own manifest ends the crawl above the one below it.</description>
+  <maintainer email="dev@example.invalid">meios</maintainer>
+  <license>Apache-2.0</license>
+</package>

@@ -65,6 +65,21 @@ meios_cmake_case(cmake_flatten_orders_after_deploy
     REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml
     REQUIRE_CONTAINS models/robot.urdf,harness_arm)
 
+# What makes the entry load-bearing is the crawl stopping at a manifest: pkg_inner sits under
+# pkg_outer's directory, so the acquired tree as the sole root reaches pkg_outer and stops, and the
+# include fails to resolve. The vendored directory is named inner_dir rather than pkg_inner so that
+# joining the reference onto the entry cannot resolve it either — only the manifest read under the
+# added root can — and the expected link exists in no other package in the tree.
+meios_cmake_case(cmake_flatten_package_path_reaches_vendored_package
+    FIXTURE flatten
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   "${_cli}"
+            -DFX_INPUT=pkg_outer/urdf/nested.urdf.xacro
+            -DFX_OUTPUT=urdf/nested.urdf
+            -DFX_PACKAGE_PATH=pkg_outer/vendor
+    REQUIRE_CONTAINS urdf/nested.urdf,harness_vendored_link)
+
 # The one case that executes Python, so it registers only where the binary was really built with the
 # enrichment. What it injects is the value of the property the binary's own listfile recorded, not a
 # claim about it: a sub-configure is a separate process with no meios package to look up, so a global

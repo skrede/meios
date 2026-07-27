@@ -53,7 +53,15 @@ meios_cmake_case(cmake_flatten_unknown_input_refusal
     REFUSES "names[ \t\r\n]+no[ \t\r\n]+file[ \t\r\n]+in[ \t\r\n]+resource")
 
 # Each containment pattern names its own keyword, because one shared message serves all three and a
-# pattern binding only to the shared half would pass whichever keyword had been checked.
+# pattern binding only to the shared half would pass whichever keyword had been checked. INPUT is
+# checked before the path is looked for on disk, and that order is what the case pins: with the
+# check gone the value reaches the existence test instead, which refuses under different text.
+meios_cmake_case(cmake_flatten_input_containment_refusal
+    FIXTURE flatten
+    ORIGIN  tarball
+    EXTRA   "${_cli}" -DFX_INPUT=../escape/robot.urdf.xacro -DFX_OUTPUT=urdf/robot.urdf
+    REFUSES "INPUT[ \t\r\n]+entry[ \t\r\n]+'[.][.]/escape/robot[.]urdf[.]xacro'")
+
 meios_cmake_case(cmake_flatten_output_containment_refusal
     FIXTURE flatten
     ORIGIN  tarball
@@ -80,10 +88,20 @@ meios_cmake_case(cmake_flatten_args_shape_refusal
     EXTRA   "${_cli}" ${_declare} -DFX_ARGS=prefix:=zz_,tail
     REFUSES "is[ \t\r\n]+not[ \t\r\n]+key:=value")
 
+# Both install-keyword patterns carry the calling function's own prefix, because the deploy call
+# refuses the same two mistakes under the same words: a pattern without the prefix would be
+# satisfied by the deploy module's message and stop pinning the guard the case names.
 meios_cmake_case(cmake_flatten_install_component_alone_refusal
     FIXTURE flatten
     ORIGIN  tarball
     EXTRA   "${_cli}" ${_declare} -DFX_INSTALL_COMPONENT=descriptions
-    REFUSES "INSTALL_COMPONENT[ \t\r\n]+requires[ \t\r\n]+INSTALL_DESTINATION")
+    REFUSES "meios_target_flatten_resource\\(app\\):[ \t\r\n]+INSTALL_COMPONENT[ \t\r\n]+requires[ \t\r\n]+INSTALL_DESTINATION")
+
+meios_cmake_case(cmake_flatten_install_location_conflict_refusal
+    FIXTURE flatten
+    ORIGIN  tarball
+    EXTRA   "${_cli}" ${_declare} -DFX_INSTALL_RUNTIME_RELATIVE=ON
+            -DFX_INSTALL_DESTINATION=share/robot
+    REFUSES "meios_target_flatten_resource\\(app\\):[ \t\r\n]+INSTALL_RUNTIME_RELATIVE[ \t\r\n]+and[ \t\r\n]+INSTALL_DESTINATION[ \t\r\n]+both")
 
 endif()
