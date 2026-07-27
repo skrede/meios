@@ -72,6 +72,7 @@ endfunction()
 # picks which one). A found pugixml keeps meios::core's exported target an imported
 # reference; a fetched (non-imported) pugixml cannot join install(EXPORT) on the
 # $<LINK_ONLY:> edge, which is why the fetched case disables install below.
+# GLOBAL: pugixml is the one dependency linked from outside this directory.
 set(PUGIXML_BUILD_TESTS OFF)
 set(PUGIXML_INSTALL OFF)
 FetchContent_Declare(
@@ -79,7 +80,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/zeux/pugixml.git
     GIT_TAG c8033ce9d039e7f9d134877c363397b3cfe20816  # pugixml v1.16
     SYSTEM
-    FIND_PACKAGE_ARGS 1.16 NAMES pugixml
+    FIND_PACKAGE_ARGS 1.16 NAMES pugixml GLOBAL
 )
 FetchContent_MakeAvailable(pugixml)
 
