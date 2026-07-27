@@ -45,14 +45,24 @@ simulator, controller, transmission, or sensor configuration cannot recover it f
 and must read the source document itself. Preserving these losslessly is planned; until it lands,
 treat a meios load as lossy for everything outside the URDF kinematic and visual surface.
 
-**The Python evaluator runs untrusted input with your process's authority.** `meios::eval-python`
-hands the expression to CPython with the ordinary builtins in scope, so a description can reach
-`__import__` and from there the filesystem, the network, and the process. Canonical xacro's
-`safe_eval` removes `__builtins__` and rejects double-underscore names; meios currently does
-neither, which makes this backend *less* restrictive than the compatibility target it is measured
-against. Enable it only for descriptions you would be willing to run as a script. The built-in core
-evaluator has no such exposure — it evaluates a fixed numeric and boolean grammar and loud-fails on
-anything outside it.
+**The Python evaluator runs a restricted subset, and the restriction has false refusals.**
+`meios::eval-python` refuses an expression that reaches past arithmetic, comprehensions, the
+mathematics names and twenty builtins — the import machinery, the filesystem and the process are not
+reachable through it. That costs coverage in both directions: `map` and `filter` are not available,
+every use of the string formatting method is refused including an innocent one, and a description
+property named `format` is refused the moment it enters a composed expression. The full subset, the
+four refusal rules and the divergences from canonical xacro are in the [evaluation
+guide](evaluation.md), which also covers `meios::unrestricted_python_evaluator` — a supported backend
+that applies none of those rules and is reachable only from C++. The built-in core evaluator has no
+such exposure — it evaluates a fixed numeric and boolean grammar and loud-fails on anything outside
+it.
+
+**The evaluator has no bound on resource exhaustion.** An expression such as `${10**10**10}` or
+`${[0]*10**12}` is refused by nothing — it names no withheld builtin, traverses no attribute and
+touches no file — and will burn processor time and memory. The restriction above is about authority
+(the filesystem, the network, the process), never about availability. A real bound needs a
+per-expression watchdog against an embedded interpreter holding the interpreter lock, portable across
+macOS, Linux and Windows; there is none today.
 
 **Python xacro expressions are recovered by literal re-parsing.** With the Python evaluation
 enrichment enabled, the result of a Python expression is re-hydrated by re-parsing its literal form.

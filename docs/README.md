@@ -62,5 +62,7 @@ dependency-light nucleus and carries no reader; `meios::urdf` is the surface a c
 - [Engine guide](engine-guide.md) — receive the resolved robot into your own types via `model_sink`.
 - [Resource guide](resources-guide.md) — acquire a description package in CMake and deploy it where
   your program looks for it, instead of vendoring it into your repository.
+- [Evaluation](evaluation.md) — what a description's expressions may run, the rules that refuse the
+  rest, and how the resource helper resolves a file.
 - [Known limitations](known-limitations.md) — every defect and caveat live at this point in the
   library's life, described by its user-facing effect.

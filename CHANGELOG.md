@@ -16,6 +16,9 @@ changes onwards to a stable `v1.0.0` release.
 - A documented consumer surface. The exported, installed `meios::urdf` target — the one a newcomer
   links to reach the public API — is now spelled out for both the FetchContent and `find_package`
   integration paths.
+- An unrestricted Python evaluator, for a consumer who wants the wider expression surface
+  deliberately. It is a separate class reachable only from code: the command-line tool never
+  constructs it and carries no flag for it.
 
 ### Changed
 
@@ -26,6 +29,15 @@ changes onwards to a stable `v1.0.0` release.
   consumer's representation without an intermediate format.
 - Project status moved to public preview, with the README documenting the exported consumer target
   and the integration path a first-time adopter follows.
+- The Python evaluation enrichment now restricts what a description's expressions can reach. An
+  expression that reaches past the supported subset — the import machinery, the filesystem, the
+  process — is refused with a located diagnostic naming the rule that refused it, instead of being
+  executed. `docs/evaluation.md` states the subset, the refusal rules, and where they diverge from
+  canonical xacro.
+- An auxiliary configuration file loaded from an expression now resolves through the same source
+  stack as every other asset. A `package://` or `$(find)` spec resolves the way a mesh does, a
+  relative spec resolves against the document it is written in, a source layer that serves bytes
+  rather than a path works, and a spec that resolves outside every containment root is refused.
 
 ### Fixed
 
@@ -33,3 +45,5 @@ changes onwards to a stable `v1.0.0` release.
   accept — `resolve` reads a `package://<pkg>/<rel>` reference and fails loudly on anything else —
   and `deps` gained the `key:=value` property override and the evaluation flag its behavior always
   implied.
+- A refused expression is no longer softened by a lenient evaluation policy, and no longer leaves the
+  unevaluated expression behind in the flattened output.
