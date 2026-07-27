@@ -62,7 +62,7 @@ meios::tree<double> sample_tree()
 
     meios::joint<double> edge{};
     edge.name = "j1";
-    edge.kind = meios::joint_kind::revolute;
+    edge.kind = meios::joint_kind::continuous;
     edge.parent = "base";
     edge.child = "tool";
     edge.axis = meios::vector3<double>{ 0.0, 0.0, 1.0 };
@@ -114,7 +114,7 @@ TEST_CASE("a resolved tree replays to a single well-formed flat urdf", "[bundle]
     const meios::tree<double> round = reparse(urdf, relog);
     REQUIRE(round.links.size() == robot.links.size());
     REQUIRE(round.joints.size() == robot.joints.size());
-    REQUIRE(round.joints[0].kind == meios::joint_kind::revolute);
+    REQUIRE(round.joints[0].kind == meios::joint_kind::continuous);
 }
 
 TEST_CASE("special characters in a name round-trip through escaping", "[bundle][writer]")

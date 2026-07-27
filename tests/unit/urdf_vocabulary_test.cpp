@@ -136,7 +136,7 @@ TEST_CASE("an unrecognized child of a joint is named, the other level that used 
     REQUIRE_FALSE(loaded->robot.joints.at(0).limits.has_value());
 }
 
-TEST_CASE("a misspelled joint attribute is named rather than left to its downstream effect",
+TEST_CASE("an unrecognized joint attribute is named rather than left to its downstream effect",
           "[urdf][vocabulary]")
 {
     std::vector<note> notes;
@@ -146,7 +146,7 @@ TEST_CASE("a misspelled joint attribute is named rather than left to its downstr
 
     REQUIRE(loaded);
     REQUIRE(errors(notes) == 0);
-    REQUIRE(naming(notes, meios::diagnostic_code::unknown_attribute, "tpye") == 1);
+    REQUIRE(naming(notes, meios::diagnostic_code::unknown_attribute, "damping") == 1);
     REQUIRE(loaded->robot.joints.at(0).kind == meios::joint_kind::fixed);
 }
 

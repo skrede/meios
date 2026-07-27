@@ -218,7 +218,7 @@ endif()
 
 # These stems carry TEST_PREFIX so ctest -R can select them by stem; the urdf stems above
 # register their cases under prose names and predate that convention.
-foreach(stem IN ITEMS urdf_vocabulary urdf_identity)
+foreach(stem IN ITEMS urdf_vocabulary urdf_identity urdf_fields urdf_joint_rules)
     set(prefixed_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${prefixed_test_src})
         add_executable(${stem}_test ${prefixed_test_src})

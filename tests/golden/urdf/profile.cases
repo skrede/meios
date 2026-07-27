@@ -26,3 +26,23 @@ self_mimic.urdf	refuse	dangling_mimic	mimic-target-declared	A mimic naming its o
 duplicate_material_name.urdf	refuse	duplicate_name	material-name-unique	Two robot-level materials sharing a name, so a reference to it names two colors.
 zero_links.urdf	refuse	no_links	robot-has-links	A robot element declaring no link at all.
 visual_material_unnamed.urdf	refuse	empty_name	visual-material-named	A visual material that neither names one nor defines one.
+mass_value_not_a_number.urdf	refuse	invalid_number	numeric-value-finite	Text that is not a number was kept as whatever the field already held.
+inertial_mass_absent.urdf	refuse	missing_required_field	mass-required	An inertial with no mass child; the mass used to stay at an invented zero.
+mass_value_absent.urdf	refuse	missing_required_field	mass-value-required	A mass element carrying no value attribute.
+inertia_absent.urdf	refuse	missing_required_field	inertia-required	An inertial with no inertia child; all six components used to stay zero.
+inertia_component_absent.urdf	refuse	missing_required_field	inertia-component-required	One of the six tensor components is absent, and the message names it.
+inertial_absent.urdf	accept	-	inertial-optional	No inertial element at all, which the wiki marks optional.
+joint_type_absent.urdf	refuse	missing_joint_type	joint-type-required	A joint with no type attribute used to become a rigid connection.
+joint_type_unknown.urdf	refuse	unknown_joint_type	joint-type-known	A misspelled type used to become a rigid connection; the message names the declared set.
+geometry_absent.urdf	refuse	missing_geometry	geometry-required	A visual with no geometry child, which the wiki marks required.
+geometry_shape_absent.urdf	refuse	missing_geometry	geometry-shape-required	A geometry element with no shape child used to become an empty mesh.
+geometry_shape_unknown.urdf	refuse	unknown_geometry_shape	geometry-shape-known	An unrecognized shape used to become an empty mesh.
+mesh_filename_absent.urdf	refuse	missing_required_field	mesh-filename-required	A mesh with no filename used to resolve nothing, silently.
+box_size_absent.urdf	refuse	missing_required_field	box-size-required	A box with no size used to become a zero-volume box.
+sphere_radius_absent.urdf	refuse	missing_required_field	sphere-radius-required	A sphere with no radius used to become a zero-radius sphere.
+cylinder_dimension_absent.urdf	refuse	missing_required_field	cylinder-dimension-required	A cylinder missing one of its two dimensions.
+joint_limit_absent.urdf	refuse	missing_limit	limit-required-bounded	A bounded joint with no limit, a rule only the command-line verb used to apply.
+limit_effort_absent.urdf	refuse	missing_required_field	limit-effort-required	A limit element with no effort attribute.
+limit_velocity_absent.urdf	refuse	missing_required_field	limit-velocity-required	A limit element with no velocity attribute.
+wiki_defaults.urdf	accept	-	wiki-defaults-preserved	An absent origin, an absent axis and an absent mimic offset keep the defaults the wiki states.
+mimic_multiplier_default.urdf	accept	-	mimic-multiplier-default	A mimic with no multiplier keeps one, which this profile decides on its own authority.

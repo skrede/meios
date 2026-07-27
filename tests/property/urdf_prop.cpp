@@ -33,6 +33,11 @@ bool needs_axis(int kind)
     return kind == 1 || kind == 2 || kind == 3 || kind == 5;
 }
 
+bool needs_limit(int kind)
+{
+    return kind == 1 || kind == 3;
+}
+
 std::string emit_urdf(int links, const std::vector<int> &parent, const std::vector<int> &kind)
 {
     std::string out = "<robot name=\"gen\">\n";
@@ -47,6 +52,8 @@ std::string emit_urdf(int links, const std::vector<int> &parent, const std::vect
         out += "    <origin xyz=\"0 0 0.1\" rpy=\"0 0 0\"/>\n";
         if(needs_axis(k))
             out += "    <axis xyz=\"0 0 1\"/>\n";
+        if(needs_limit(k))
+            out += "    <limit effort=\"10\" velocity=\"1\"/>\n";
         out += "  </joint>\n";
     }
     return out + "</robot>\n";

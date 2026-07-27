@@ -93,7 +93,7 @@ void add(validation_report &report, int code, std::string klass, std::vector<std
 
 validation_report assemble_report(bool xacro, bool expand_ok, const topology_result &topo,
                                   recording_sink &well_formed, recording_sink &expansion,
-                                  recording_sink &topology, recording_sink &schema)
+                                  recording_sink &topology)
 {
     validation_report report;
     // Class 1 covers a document that (or whose immediate asset references) cannot be
@@ -105,8 +105,6 @@ validation_report assemble_report(bool xacro, bool expand_ok, const topology_res
         add(report, 4, "unsupported-feature", expansion.messages());
     if(!topo.ok)
         add(report, 2, "connectivity", topology.messages());
-    if(schema.had_error())
-        add(report, 3, "schema", schema.messages());
     return report;
 }
 
@@ -121,7 +119,6 @@ validation_report classify(const std::filesystem::path &path,
     recording_sink well_formed;
     recording_sink expansion;
     recording_sink topology;
-    recording_sink schema;
 
     source_stack sources = build_sources(roots, well_formed);
     const expected<load_result, load_error> loaded =
@@ -134,9 +131,8 @@ validation_report classify(const std::filesystem::path &path,
     const bool expand_ok = xacro ? xacro_expands(bytes, path, roots, expansion) : true;
     const topology_result topo =
         reconstruct_topology(robot.links, robot.joints, topology, topology_policy::fail);
-    schema_check(robot, schema);
 
-    return assemble_report(xacro, expand_ok, topo, well_formed, expansion, topology, schema);
+    return assemble_report(xacro, expand_ok, topo, well_formed, expansion, topology);
 }
 
 }

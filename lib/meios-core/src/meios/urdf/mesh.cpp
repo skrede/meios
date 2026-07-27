@@ -21,21 +21,6 @@ namespace meios::detail
 namespace
 {
 
-cylinder<double> read_cylinder(pugi::xml_node node, parse_context &ctx, const source_location &loc)
-{
-    cylinder<double> out{};
-    read_finite(node.attribute("radius").value(), out.radius, ctx, loc, "radius");
-    read_finite(node.attribute("length").value(), out.length, ctx, loc, "length");
-    return out;
-}
-
-sphere<double> read_sphere(pugi::xml_node node, parse_context &ctx, const source_location &loc)
-{
-    sphere<double> out{};
-    read_finite(node.attribute("radius").value(), out.radius, ctx, loc, "radius");
-    return out;
-}
-
 void report_missing(parse_context &ctx, const source_location &loc, const std::string &uri)
 {
     if(ctx.on_missing == missing_asset::skip)
@@ -59,16 +44,6 @@ void record_resolved(mesh<double> &shape, resolved_asset &&asset, parse_context 
                 "mesh '" + shape.filename
                     + "' resolves to a byte-backed source; meios cannot yet hand out a path that "
                       "outlives the load");
-}
-
-mesh<double> read_mesh(pugi::xml_node node, parse_context &ctx, const source_location &loc)
-{
-    mesh<double> out{};
-    out.filename = node.attribute("filename").value();
-    out.scale = node.attribute("scale") ? read_vec3(node.attribute("scale").value(), ctx, loc, "scale")
-                                        : vector3<double>{ 1.0, 1.0, 1.0 };
-    resolve_mesh(out, ctx, loc);
-    return out;
 }
 
 }
@@ -102,20 +77,6 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
                     "resolved mesh '" + shape.filename + "' is an unsmudged Git-LFS pointer, not geometry");
         shape.resolved_path.reset();
     }
-}
-
-geometry<double> read_geometry(pugi::xml_node node, parse_context &ctx, const source_location &loc)
-{
-    geometry<double> out{};
-    if(pugi::xml_node box_node = node.child("box"))
-        out.shape = box<double>{ read_vec3(box_node.attribute("size").value(), ctx, loc, "size") };
-    else if(pugi::xml_node cylinder_node = node.child("cylinder"))
-        out.shape = read_cylinder(cylinder_node, ctx, loc);
-    else if(pugi::xml_node sphere_node = node.child("sphere"))
-        out.shape = read_sphere(sphere_node, ctx, loc);
-    else if(pugi::xml_node mesh_node = node.child("mesh"))
-        out.shape = read_mesh(mesh_node, ctx, loc);
-    return out;
 }
 
 }

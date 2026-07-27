@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<robot name="unknown_attribute_joint">
+<robot name="wiki_defaults">
   <link name="base_link"/>
   <link name="arm_link"/>
-  <joint name="shoulder" type="fixed" damping="0.1">
+  <joint name="shoulder" type="continuous">
     <parent link="base_link"/>
     <child link="arm_link"/>
   </joint>

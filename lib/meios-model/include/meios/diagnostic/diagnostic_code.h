@@ -48,6 +48,13 @@ enum class diagnostic_code
     duplicate_name,
     dangling_mimic,
     no_links,
+    invalid_number,
+    missing_required_field,
+    missing_joint_type,
+    unknown_joint_type,
+    missing_geometry,
+    unknown_geometry_shape,
+    missing_limit,
 };
 
 constexpr std::string_view to_string(diagnostic_code code) noexcept
@@ -94,6 +101,13 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::duplicate_name:            return "duplicate_name";
         case diagnostic_code::dangling_mimic:            return "dangling_mimic";
         case diagnostic_code::no_links:                  return "no_links";
+        case diagnostic_code::invalid_number:            return "invalid_number";
+        case diagnostic_code::missing_required_field:    return "missing_required_field";
+        case diagnostic_code::missing_joint_type:        return "missing_joint_type";
+        case diagnostic_code::unknown_joint_type:        return "unknown_joint_type";
+        case diagnostic_code::missing_geometry:          return "missing_geometry";
+        case diagnostic_code::unknown_geometry_shape:    return "unknown_geometry_shape";
+        case diagnostic_code::missing_limit:             return "missing_limit";
     }
     return "unknown";
 }

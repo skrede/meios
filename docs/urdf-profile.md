@@ -74,10 +74,37 @@ refused.** The wiki does not mention the construct. It is neither a reference �
 resolve — nor a definition, so there is nothing meios could read from it, and accepting it silently
 would leave the visual with a material the author appears to have specified and meios in fact ignored.
 
+**A `<mimic>` with no `multiplier` gets one, on this profile's authority rather than the wiki's.** The
+joint page states that the `<mimic>` `offset` "Defaults to 0" and states no default at all for the
+multiplier, so keeping one cannot be presented as following the specification. meios keeps it because
+one is the only value that makes the relation the wiki documents — `value = multiplier * other +
+offset` — an identity, so a `<mimic>` that names only its target still means what an author writing it
+would expect; the reference parser agrees. This is the single value in this profile that is defaulted
+without a citation. `rule:mimic-multiplier-default`
+
+**A shape element the profile does not describe is not read as a shape.** The wiki gives `<geometry>`
+exactly four children — `<box>`, `<cylinder>`, `<sphere>` and `<mesh>` — and says nothing about a
+fifth. meios refuses one rather than falling through to a shape it invented; before this rule a
+`<trapezoid>` produced a mesh with an empty filename, which is a shape the document never mentioned
+and which no consumer could distinguish from an authored one.
+
+**A numeric attribute must carry a number meios can read, and that number must be finite.** The wiki
+never states what may appear in a numeric attribute. meios refuses text it cannot parse and text that
+parses to an infinity or a NaN, because both reach a consumer as a coordinate, a mass or a limit and
+propagate through every arithmetic that touches them.
+
 ## Where this profile diverges from a stated default
 
 Where the wiki states a default and meios deliberately does something else, the divergence and its
 reason are recorded in this section rather than left for a reader to discover from behavior.
+
+**An absent `<inertial>` yields no inertial, not the zero the wiki states.** The link page marks
+`<inertial>` "optional: defaults to a zero mass and zero inertia if not specified". meios instead
+leaves the link's inertial absent, so a document that said nothing stays distinguishable from one that
+authored a zero mass — a distinction the stated default destroys, and one a consumer computing a
+dynamics model needs, because a zero-mass body and an unspecified body are not the same input. A
+consumer that wants the wiki's default can apply it itself; it cannot recover the distinction meios
+would have thrown away. `rule:inertial-optional`
 
 ## Rules
 
@@ -99,6 +126,46 @@ reason are recorded in this section rather than left for a reader to discover fr
 | `<mimic>` | the `joint` attribute | refuse an undeclared target and a self-reference | `dangling_mimic` | `rule:mimic-target-declared` |
 | `<robot>` | a document declaring no `<link>` | refuse | `no_links` | `rule:robot-has-links` |
 | `<visual>` | a `<material>` that neither names one nor defines one | refuse | `empty_name` | `rule:visual-material-named` |
+| any | a numeric attribute whose text is not a finite number | refuse | `invalid_number` | `rule:numeric-value-finite` |
+| `<inertial>` | the `<mass>` child | refuse when absent | `missing_required_field` | `rule:mass-required` |
+| `<mass>` | the `value` attribute | refuse when absent | `missing_required_field` | `rule:mass-value-required` |
+| `<inertial>` | the `<inertia>` child | refuse when absent | `missing_required_field` | `rule:inertia-required` |
+| `<inertia>` | each of the six tensor attributes | refuse when any is absent | `missing_required_field` | `rule:inertia-component-required` |
+| `<joint>` | the `type` attribute | refuse when absent | `missing_joint_type` | `rule:joint-type-required` |
+| `<joint>` | a `type` outside the declared six | refuse | `unknown_joint_type` | `rule:joint-type-known` |
+| `<visual>`, `<collision>` | the `<geometry>` child | refuse when absent | `missing_geometry` | `rule:geometry-required` |
+| `<geometry>` | a shape child | refuse when absent | `missing_geometry` | `rule:geometry-shape-required` |
+| `<geometry>` | a shape child outside the declared four | refuse | `unknown_geometry_shape` | `rule:geometry-shape-known` |
+| `<mesh>` | the `filename` attribute | refuse when absent | `missing_required_field` | `rule:mesh-filename-required` |
+| `<box>` | the `size` attribute | refuse when absent | `missing_required_field` | `rule:box-size-required` |
+| `<sphere>` | the `radius` attribute | refuse when absent | `missing_required_field` | `rule:sphere-radius-required` |
+| `<cylinder>` | the `radius` and `length` attributes | refuse when either is absent | `missing_required_field` | `rule:cylinder-dimension-required` |
+| `<joint>` | a `<limit>` on a bounded joint | refuse when absent | `missing_limit` | `rule:limit-required-bounded` |
+| `<limit>` | the `effort` attribute | refuse when absent | `missing_required_field` | `rule:limit-effort-required` |
+| `<limit>` | the `velocity` attribute | refuse when absent | `missing_required_field` | `rule:limit-velocity-required` |
+| `<origin>`, `<axis>`, `<mimic>` | a default the wiki states | accept and keep the default | — | `rule:wiki-defaults-preserved` |
+
+**A required part that is missing drops the element that contained it — it is never completed with a
+value nothing specified.** Under the strict document-validity setting each row above refuses the
+document outright. Under the permissive settings the same diagnostic is emitted at warning level, or
+at no level under `skip`, and the containing element is dropped: an `<inertial>` whose `<mass>` is
+missing leaves the link with no inertial at all, and a `<visual>` or `<collision>` whose geometry
+cannot be read is not added to the link. The accepted cost is that under a permissive setting a
+consumer loses a partially-valid element rather than receiving the fields that were present. That is
+the deliberate trade: a link with no inertial is a fact a consumer can see and act on, while a link
+carrying a zero mass nobody wrote is indistinguishable from a real one.
+
+The drop stops at the structural boundary. A `<link>` and a `<joint>` are never dropped, so a field of
+a joint that meios cannot read — its `<origin>`, for one — is refused under the strict setting and
+disclosed under the permissive ones, where the joint keeps the default the wiki states for that field.
+There is no containing element to drop without changing the robot's topology, which no setting may do.
+
+**`revolute` and `prismatic` are the two kinds that must declare a `<limit>`**, and the rule is
+enforced by the library on every load rather than by a command-line pass a consumer may never run.
+`continuous`, `fixed`, `floating` and `planar` are unbounded and need none. Within a `<limit>`,
+`effort` and `velocity` are required and `lower` and `upper` are optional with a stated default of
+zero. Until this rule moved into the library, a bounded joint with no limit loaded clean through every
+entry point and was reported only by `meios validate`.
 
 **Identity and reference integrity are refused at every policy setting.** The rules in the eleven rows
 above are structural: they are properties of the document text rather than of the graph that text

@@ -70,7 +70,7 @@ std::string flavor(int i)
 
 std::string link_name(int i)
 {
-    return i == 0 ? std::string() : flavor(i) + "link" + std::to_string(i);
+    return i == 0 ? std::string("base") : flavor(i) + "link" + std::to_string(i);
 }
 
 std::string joint_name(int i)
@@ -101,6 +101,7 @@ std::vector<meios::joint<double>> build_joints(const std::vector<int> &parent, c
         edge.parent = link_name(parent[static_cast<std::size_t>(i)]);
         edge.child = link_name(i);
         edge.axis = meios::vector3<double>{ 0.0, 0.0, 1.0 };
+        edge.limits = meios::joint_limits<double>{ -1.0, 1.0, 10.0, 1.0 };
         joints.push_back(edge);
     }
     return joints;

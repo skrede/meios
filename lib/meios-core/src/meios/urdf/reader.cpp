@@ -81,7 +81,8 @@ void emit_joints(pugi::xml_node robot, std::string_view text, const std::filesys
                  parse_context &ctx, Sink &sink)
 {
     for(pugi::xml_node node : robot.children("joint"))
-        sink.on_joint(detail::extract_joint(node, text, file, ctx));
+        if(std::optional<joint<double>> built = detail::extract_joint(node, text, file, ctx))
+            sink.on_joint(*built);
 }
 
 }

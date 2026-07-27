@@ -14,9 +14,9 @@ namespace meios::cli
 {
 
 // One failing validation class: its exit code, a stable machine-readable name,
-// and the diagnostics the responsible pass produced. The four classes and their
-// severity order are locked; the exit code is the most-severe (lowest) failing
-// code, so a lower code always dominates a higher one.
+// and the diagnostics the responsible pass produced. The severity order is locked;
+// the exit code is the most-severe (lowest) failing code, so a lower code always
+// dominates a higher one.
 struct validation_finding
 {
     int code;
@@ -55,14 +55,12 @@ private:
 };
 
 // Runs the staged library passes and buckets each failure by the pass that raised
-// it (design A): well-formedness/strictness (1), xacro expansion (4), topology (2),
-// and the named schema rules (3).
+// it: well-formedness and document validity (1), xacro expansion (4), topology (2).
+// Code 3 named a schema stage that duplicated the library's bounded-joint limit
+// rule; the library owns that rule, so the stage no longer exists and the code is
+// not reused.
 validation_report classify(const std::filesystem::path &path,
                            const std::vector<std::filesystem::path> &roots);
-
-// Appends the single named schema rule's violations (a revolute or prismatic joint
-// must declare a <limit>) to the sink as errors. This is the only rule enforced.
-void schema_check(const model<double> &robot, log_sink &log);
 
 std::string format_text(const validation_report &report);
 

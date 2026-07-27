@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
-<robot name="unknown_attribute_joint">
+<robot name="joint_limit_absent">
   <link name="base_link"/>
   <link name="arm_link"/>
-  <joint name="shoulder" type="fixed" damping="0.1">
+  <joint name="shoulder" type="revolute">
     <parent link="base_link"/>
     <child link="arm_link"/>
+    <axis xyz="0 0 1"/>
   </joint>
 </robot>

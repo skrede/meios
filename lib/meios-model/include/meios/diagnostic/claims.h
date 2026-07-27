@@ -62,6 +62,16 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::duplicate_name:            return completeness::parsed;
         case diagnostic_code::dangling_mimic:            return completeness::parsed;
         case diagnostic_code::no_links:                  return completeness::parsed;
+        // A field the reader could not read, and an element dropped because one of its
+        // required parts was missing, are both authored content that did not reach the
+        // model, which is exactly what the parse claim answers for.
+        case diagnostic_code::invalid_number:            return completeness::parsed;
+        case diagnostic_code::missing_required_field:    return completeness::parsed;
+        case diagnostic_code::missing_joint_type:        return completeness::parsed;
+        case diagnostic_code::unknown_joint_type:        return completeness::parsed;
+        case diagnostic_code::missing_geometry:          return completeness::parsed;
+        case diagnostic_code::unknown_geometry_shape:    return completeness::parsed;
+        case diagnostic_code::missing_limit:             return completeness::parsed;
     }
     return completeness::none;
 }

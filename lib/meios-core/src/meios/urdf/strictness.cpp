@@ -88,6 +88,13 @@ void report(parse_context &ctx, const source_location &loc, diagnostic_code code
         ok = false;
 }
 
+void report_drop(parse_context &ctx, const source_location &loc, diagnostic_code code,
+                 const std::string &message)
+{
+    bool unused = true;
+    report(ctx, loc, code, message, unused);
+}
+
 void report_structural(parse_context &ctx, const source_location &loc, diagnostic_code code,
                        const std::string &message, bool &ok)
 {

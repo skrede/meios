@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <sstream>
 #include <iostream>
 #include <filesystem>
@@ -36,6 +37,15 @@ private:
     std::ostringstream m_buffer;
     std::streambuf *m_saved;
 };
+
+std::size_t count_of(const std::string &text, const std::string &needle)
+{
+    std::size_t found = 0;
+    for(std::string::size_type at = text.find(needle); at != std::string::npos;
+        at = text.find(needle, at + needle.size()))
+        ++found;
+    return found;
+}
 
 int run_validate_on(const std::string &file, const std::string &format, std::string &printed)
 {
@@ -76,11 +86,14 @@ TEST_CASE("cli_validate: a connectivity failure is class 2")
     REQUIRE(run_validate_on(fixture("cycle.urdf"), "", printed) == 2);
 }
 
-TEST_CASE("cli_validate: a missing bounded-joint limit is class 3")
+// The library refuses a bounded joint that declares no limit, so the rule is reported by the
+// load rather than by a second command-line pass, and it is reported exactly once.
+TEST_CASE("cli_validate: a missing bounded-joint limit is reported once, by the library")
 {
     std::string printed;
-    REQUIRE(run_validate_on(fixture("schema_missing_limit.urdf"), "", printed) == 3);
-    REQUIRE(printed.find("schema") != std::string::npos);
+    REQUIRE(run_validate_on(fixture("profile/joint_limit_absent.urdf"), "", printed) == 1);
+    REQUIRE(printed.find("malformed") != std::string::npos);
+    REQUIRE(count_of(printed, "<limit>") == 1);
 }
 
 TEST_CASE("cli_validate: an unsupported xacro feature is class 4")
@@ -89,21 +102,27 @@ TEST_CASE("cli_validate: an unsupported xacro feature is class 4")
     REQUIRE(run_validate_on(fixture("unsupported_xacro.xacro"), "", printed) == 4);
 }
 
+// The rule the classes obey is a property of the report rather than of any one document, and
+// no document produces two classes now that the library owns every rule the verb once had.
 TEST_CASE("cli_validate: the most-severe class wins and the report lists the rest")
 {
-    std::string printed;
-    const int code = run_validate_on(fixture("multi_class.urdf"), "", printed);
-    REQUIRE(code == 2);
+    cli::validation_report report;
+    report.findings.push_back(cli::validation_finding{ 4, "unsupported-feature", { "a" } });
+    report.findings.push_back(cli::validation_finding{ 2, "connectivity", { "b" } });
+
+    const std::string printed = cli::format_text(report);
+    REQUIRE(cli::exit_code(report) == 2);
     REQUIRE(printed.find("[2]") != std::string::npos);
-    REQUIRE(printed.find("[3]") != std::string::npos);
+    REQUIRE(printed.find("[4]") != std::string::npos);
+    REQUIRE(cli::format_json(report).find("\"exit_code\":2") != std::string::npos);
 }
 
 TEST_CASE("cli_validate: the exit code agrees with the reported status in both modes")
 {
     std::string text;
     std::string json;
-    const int text_code = run_validate_on(fixture("multi_class.urdf"), "", text);
-    const int json_code = run_validate_on(fixture("multi_class.urdf"), "json", json);
+    const int text_code = run_validate_on(fixture("multi_root.urdf"), "", text);
+    const int json_code = run_validate_on(fixture("multi_root.urdf"), "json", json);
 
     REQUIRE(text_code == json_code);
     REQUIRE(text.find("FAIL") != std::string::npos);
