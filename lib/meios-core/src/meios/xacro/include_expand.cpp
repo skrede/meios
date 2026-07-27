@@ -104,9 +104,28 @@ std::optional<std::string> read_asset(resolved_asset &&hit)
     }
 }
 
+// The active document tracks the include stack, because a relative resource spec belongs
+// to the file it is written in rather than to the file that began the expansion. It is
+// not the stack's key: that key is a package-relative identity used for cycle detection,
+// not a location. A byte-backed layer has no location at all and so contributes an empty
+// document, leaving only the configured roots to probe.
+bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked,
+             const std::filesystem::path &key, std::filesystem::path located, pugi::xml_node out)
+{
+    ctx.include_stack.push_back(key);
+    ctx.origins.push_back(emit_origin{ key, parked });
+    std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(located));
+    bool ok = process_children(ctx, doc.first_child(), out, key);
+    ctx.scope.set_active_document(std::move(enclosing));
+    ctx.origins.pop_back();
+    ctx.include_stack.pop_back();
+    return ok;
+}
+
 bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
             const std::filesystem::path &key, pugi::xml_node out)
 {
+    std::filesystem::path located = hit.holds_path() ? hit.path() : std::filesystem::path{};
     std::optional<std::string> bytes = read_asset(std::move(hit));
     if(!bytes)
         return fail(ctx, in, diagnostic_code::unresolved_include,
@@ -122,12 +141,7 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
         return fail(ctx, offset_location(parked, parsed.offset, key),
                     diagnostic_code::xacro_parse_error,
                     std::string("xacro:include parse error: ") + parsed.description());
-    ctx.include_stack.push_back(key);
-    ctx.origins.push_back(emit_origin{ key, parked });
-    bool ok = process_children(ctx, doc.first_child(), out, key);
-    ctx.origins.pop_back();
-    ctx.include_stack.pop_back();
-    return ok;
+    return descend(ctx, doc, parked, key, std::move(located), out);
 }
 
 }

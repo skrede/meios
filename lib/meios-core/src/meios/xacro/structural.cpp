@@ -202,6 +202,7 @@ expansion expand(std::string_view source, eval_scope &scope, source_stack &sourc
     std::error_code canon_ec;
     std::filesystem::path canonical_key = std::filesystem::weakly_canonical(document, canon_ec);
     ctx.include_stack.push_back(canon_ec ? document : canonical_key);
+    scope.set_active_document(ctx.include_stack.back());
     ctx.origins.push_back(detail::emit_origin{ document, source });
     seed_declared_args(scope, doc);
     pugi::xml_document result;

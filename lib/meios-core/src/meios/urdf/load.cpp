@@ -1,4 +1,5 @@
 #include "urdf_detail.h"
+#include "yaml_resource.h"
 
 #include "meios/urdf/load.h"
 #include "meios/urdf/urdf_reader.h"
@@ -14,6 +15,7 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/structural.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/text_resource_loader.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -83,6 +85,7 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
     }
     eval_scope scope;
     seed_caller_args(scope, opts.args);
+    scope.install_text_loader(detail::make_yaml_text_loader(ctx.sources, opts.package_roots, ctx.log));
     const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{},
                                       opts.eval, opts.backend, ctx.log);
     // A failed expansion yields an empty document; parsing it would append a
