@@ -344,11 +344,13 @@ absolute path, a `..` component, or a leading `-` is refused by name.
 `ARGS` passes xacro argument overrides, one `key:=value` per entry — the spelling the command line
 takes, and the one place this call is easy to get wrong; see below.
 
-`PACKAGE_PATH` adds package search roots, each relative to the acquired tree — and on this call it
-cannot change anything. The tree is always passed as the first root, a root is crawled to any depth,
-and every entry here has to stay inside that tree, so an entry names packages the crawl has already
-found and names them at lower precedence. It is accepted, and containment-checked, for the layouts a
-future acquisition mode might produce; today there is no call it makes a difference to.
+`PACKAGE_PATH` adds package search roots, each relative to the acquired tree, and the tree itself is
+always passed as the first and highest-precedence root — so an entry cannot outrank the tree for a
+package the tree's own crawl found. What an entry adds is reach. A root is crawled until the first
+package on each branch and no further, so a package vendored inside another package's directory is
+invisible from the tree root and resolves only when the directory holding it is named here:
+`PACKAGE_PATH pkg_outer/vendor` reaches a package under `pkg_outer/vendor/`. A package sitting under
+ordinary directories is found at any depth with no entry at all.
 
 `EVAL` selects the evaluator backend, `core` or `python`. `core` is the default and evaluates the
 fixed numeric and boolean grammar; `python` needs a binary built with the evaluation enrichment. The

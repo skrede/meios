@@ -101,13 +101,12 @@ example is built, installed, and run — but no automated run flattens a descrip
 installed meios. Every build carrying the Python evaluator has the install step switched off, and
 the tests reach the modules through the module path instead.
 
-**`PACKAGE_PATH` on the flatten call cannot affect any legal call.** Every entry has to stay inside
-the acquired tree, that tree is already passed as the first and highest-precedence search root, and a
-root is crawled to any depth — so an entry names packages that were found anyway, at a precedence
-that cannot win. Measured in both directions: a package three levels down inside the tree resolves
-with no `PACKAGE_PATH` at all, and with two same-named packages inside the tree, adding the deeper
-one as a root does not change which is chosen. The containment refusal is exercised by a test; the
-accepting path is exercised by nothing, because there is nothing for a test to observe.
+**Precedence between `PACKAGE_PATH` entries is reasoned about, not measured.** That an entry adds
+reach is exercised in both directions: a package vendored inside another package's directory is
+invisible to the crawl of the tree root and resolves once the directory holding it is passed. What
+no test covers is two roots offering the same package name. The acquired tree goes first and the
+entries follow in the order written, and the first root to supply a name is the one that wins, so
+an entry cannot displace the tree — but that ordering is read off the module rather than observed.
 
 **Flattening with the Python backend is only ever really run on Linux.** No macOS or Windows build
 carries the evaluation enrichment. On those platforms the configure-time behavior — the disclosure,
