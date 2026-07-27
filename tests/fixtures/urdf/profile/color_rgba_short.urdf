@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<robot name="color_rgba_short">
+  <material name="red">
+    <color rgba="1 0 0"/>
+  </material>
+  <link name="base_link"/>
+</robot>

@@ -203,14 +203,24 @@ four-component string is supposed to mean. There is no reading of a two-componen
 not invent the missing number, and no reading of a four-component one that does not discard an
 authored one. Both are documents meios cannot read, so both are refused. An **absent** `<origin>`, or
 an absent `xyz` or `rpy` attribute, is not a violation: the wiki states those are optional and states
-their defaults, and meios keeps them. The same reader enforces the same count on every other
-fixed-length numeric attribute in a description; those constructs get their own rows here as the
-profile is completed, and until a row exists, treat only the `<origin>` row as published.
+their defaults, and meios keeps them.
+
+**The same count, and the same consequence, on `<mesh scale>` and on `<color rgba>`.** One reader
+counts the components of every fixed-length numeric attribute, and the three constructs above are the
+three it is asked for. The consequence is the same shape at every one of them: under the default the
+document is refused, and under a permissive setting the element the attribute belongs to is dropped —
+the `<visual>` or `<collision>` whose origin could not be read, the shape whose scale could not, the
+`<material>` whose color could not. Nothing is completed with a value the document did not write, and
+lowering the setting lowers only how loudly the refusal is said. The reader enforces the same count on
+any further fixed-length numeric attribute a later revision of this profile describes; those
+constructs get their own rows here, and until a row exists, treat only the three above as published.
 
 Before this rule, meios did what the parsers it supersedes do: a two-component offset was completed
 with a third zero, a four-component one was truncated to its first three, and both **silently**, with
 no diagnostic at any level. A description with a typo in an offset loaded clean and placed a link
-somewhere its author never wrote. That is the behavior this rule exists to end.
+somewhere its author never wrote. A two-component `scale` was worse still: the mesh reached the
+consumer scaled by zero, which is not a shape at all, and which discarded the two factors the author
+did write. That is the behavior this rule exists to end.
 
 **Every rule about what an inertial may contain is this profile's own.** The link page names `mass` and
 the six tensor attributes and stops there: it never says the mass must be non-negative, never says the
@@ -342,6 +352,8 @@ identity rule on this page would stand without it.
 | Element | Construct | Verdict | Diagnostic code | Rule id |
 |---|---|---|---|---|
 | `<origin>` | the `xyz` and `rpy` attributes | refuse | `vector_arity` | `rule:origin-xyz-arity` |
+| `<mesh>` | the `scale` attribute | refuse | `vector_arity` | `rule:mesh-scale-arity` |
+| `<color>` | the `rgba` attribute | refuse | `vector_arity` | `rule:material-rgba-arity` |
 | any | a child element the profile does not describe | drop | `unknown_element` | `rule:unknown-element` |
 | any | an attribute the profile does not describe | drop | `unknown_attribute` | `rule:unknown-attribute` |
 | any | a `<gazebo>`, `<ros2_control>`, `<transmission>` or `<sensor>` block | drop | `extension_ignored` | `rule:extension-disclosed` |

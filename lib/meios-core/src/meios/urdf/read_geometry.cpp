@@ -70,9 +70,9 @@ std::optional<mesh<double>> read_mesh(pugi::xml_node node, parse_context &ctx,
     }
     mesh<double> out{};
     out.filename = filename.value();
-    out.scale = node.attribute("scale")
-                    ? read_vec3(node.attribute("scale").value(), ctx, loc, "scale")
-                    : vector3<double>{ 1.0, 1.0, 1.0 };
+    out.scale = vector3<double>{ 1.0, 1.0, 1.0 };
+    if(!read_vec3(node.attribute("scale").value(), out.scale, ctx, loc, "scale"))
+        return std::nullopt;
     resolve_mesh(out, ctx, loc);
     return out;
 }

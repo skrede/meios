@@ -16,11 +16,19 @@ namespace meios::detail
 namespace
 {
 
-rgba<double> read_rgba(std::string_view text, parse_context &ctx, const source_location &loc)
+// A color the reader refuses is not a color the document authored, so the material is
+// dropped rather than completed with one nothing states.
+bool read_color(pugi::xml_node node, material<double> &out, parse_context &ctx,
+                const source_location &loc)
 {
+    const pugi::xml_node color = node.child("color");
+    if(!color)
+        return true;
     double v[4] = { 0.0, 0.0, 0.0, 1.0 };
-    read_scalars(text, v, 4, ctx, loc, "rgba");
-    return rgba<double>{ v[0], v[1], v[2], v[3] };
+    if(!read_scalars(color.attribute("rgba").value(), v, 4, ctx, loc, "rgba"))
+        return false;
+    out.color = rgba<double>{ v[0], v[1], v[2], v[3] };
+    return true;
 }
 
 std::optional<std::string> resolve_material_ref(pugi::xml_node node, const material_table &table,
@@ -86,12 +94,14 @@ std::optional<collision<double>> read_collision(pugi::xml_node node, std::string
 
 }
 
-vector3<double> read_vec3(std::string_view text, parse_context &ctx, const source_location &loc,
-                          std::string_view field)
+bool read_vec3(std::string_view text, vector3<double> &out, parse_context &ctx,
+               const source_location &loc, std::string_view field)
 {
-    double v[3] = { 0.0, 0.0, 0.0 };
-    read_scalars(text, v, 3, ctx, loc, field);
-    return vector3<double>{ v[0], v[1], v[2] };
+    double v[3] = { out.x, out.y, out.z };
+    if(!read_scalars(text, v, 3, ctx, loc, field))
+        return false;
+    out = vector3<double>{ v[0], v[1], v[2] };
+    return true;
 }
 
 bool read_transform(pugi::xml_node origin, transform<double> &out, parse_context &ctx,
@@ -106,14 +116,15 @@ bool read_transform(pugi::xml_node origin, transform<double> &out, parse_context
     return moved && turned;
 }
 
-material<double> extract_material(pugi::xml_node node, std::string_view text,
-                                  const std::filesystem::path &file, parse_context &ctx)
+std::optional<material<double>> extract_material(pugi::xml_node node, std::string_view text,
+                                                 const std::filesystem::path &file,
+                                                 parse_context &ctx)
 {
     const source_location loc = node_location(node, text, file);
     material<double> out{};
     out.name = node.attribute("name").value();
-    if(pugi::xml_node color = node.child("color"))
-        out.color = read_rgba(color.attribute("rgba").value(), ctx, loc);
+    if(!read_color(node, out, ctx, loc))
+        return std::nullopt;
     if(pugi::xml_node texture = node.child("texture"))
         out.texture = std::string(texture.attribute("filename").value());
     return out;

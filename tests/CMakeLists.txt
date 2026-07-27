@@ -250,7 +250,7 @@ endif()
 
 # The profile stems are driven by tests/golden/urdf/profile.cases, so they need the
 # golden directory alongside the fixture directory the other urdf stems get.
-foreach(stem IN ITEMS urdf_profile profile_drift)
+foreach(stem IN ITEMS urdf_profile profile_drift profile_permissive)
     set(profile_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${profile_test_src})
         add_executable(${stem}_test ${profile_test_src})

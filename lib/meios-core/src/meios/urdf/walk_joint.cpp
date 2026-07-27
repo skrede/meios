@@ -121,7 +121,11 @@ vector3<double> read_axis(pugi::xml_node node, joint_kind kind, parse_context &c
     const pugi::xml_node axis = node.child("axis");
     if(!axis)
         return vector3<double>{ 1.0, 0.0, 0.0 };
-    const vector3<double> out = read_vec3(axis.attribute("xyz").value(), ctx, loc, "axis");
+    // A present element seeds the zero vector rather than the wiki default, so an xyz that
+    // is absent or that the reader refuses reaches the zero-axis rule instead of passing as
+    // a direction nothing wrote.
+    vector3<double> out{ 0.0, 0.0, 0.0 };
+    read_vec3(axis.attribute("xyz").value(), out, ctx, loc, "axis");
     if(uses_axis(kind))
         check_axis(axis, out, node.attribute("name").value(), ctx, loc, ok);
     return out;

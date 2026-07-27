@@ -36,11 +36,11 @@ void emit_materials(pugi::xml_node robot, std::string_view text, const std::file
                     parse_context &ctx, detail::material_table &table, Sink &sink)
 {
     for(pugi::xml_node node : robot.children("material"))
-    {
-        material<double> mat = detail::extract_material(node, text, file, ctx);
-        table.emplace(mat.name, mat);
-        sink.on_material(mat);
-    }
+        if(std::optional<material<double>> mat = detail::extract_material(node, text, file, ctx))
+        {
+            table.emplace(mat->name, *mat);
+            sink.on_material(*mat);
+        }
 }
 
 template <typename Sink>

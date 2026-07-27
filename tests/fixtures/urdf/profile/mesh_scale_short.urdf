@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="mesh_scale_short">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="body.stl" scale="1 2"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

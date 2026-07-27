@@ -50,16 +50,21 @@ bool read_required(pugi::xml_node node, const char *field, double &out, parse_co
 bool read_scalars(std::string_view text, double *out, std::size_t count, parse_context &ctx,
                   const source_location &loc, std::string_view field);
 
-vector3<double> read_vec3(std::string_view text, parse_context &ctx, const source_location &loc,
-                          std::string_view field);
+// Leaves out at whatever the caller seeded and answers false only when a present attribute
+// could not be read, which is the caller's cue to drop the element the vector belongs to.
+bool read_vec3(std::string_view text, vector3<double> &out, parse_context &ctx,
+               const source_location &loc, std::string_view field);
 
 // Leaves out at the identity the wiki states for an absent origin and answers false only
 // when a present attribute could not be read, which is the caller's cue to drop.
 bool read_transform(pugi::xml_node origin, transform<double> &out, parse_context &ctx,
                     const source_location &loc);
 
-material<double> extract_material(pugi::xml_node node, std::string_view text,
-                                  const std::filesystem::path &file, parse_context &ctx);
+// Answers empty for a material whose color the reader refused: the containing <material>
+// is dropped rather than carried with a color the document never wrote.
+std::optional<material<double>> extract_material(pugi::xml_node node, std::string_view text,
+                                                 const std::filesystem::path &file,
+                                                 parse_context &ctx);
 
 link<double> extract_link(pugi::xml_node node, std::string_view text,
                           const std::filesystem::path &file, parse_context &ctx,

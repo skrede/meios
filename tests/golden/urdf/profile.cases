@@ -6,6 +6,9 @@
 origin_xyz_short.urdf	refuse	vector_arity	origin-xyz-arity	A two-component offset was silently completed to a third zero.
 origin_xyz_long.urdf	refuse	vector_arity	origin-xyz-arity	A four-component offset was silently truncated to three.
 origin_xyz_ok.urdf	accept	-	origin-xyz-arity	Three components, and an absent rpy keeping its documented default.
+visual_origin_short.urdf	refuse	vector_arity	origin-xyz-arity	The same rule on a visual, whose containing element is dropped under a permissive setting rather than refused.
+mesh_scale_short.urdf	refuse	vector_arity	mesh-scale-arity	A two-component scale used to reach the consumer as three zeros, a mesh scaled to nothing.
+color_rgba_short.urdf	refuse	vector_arity	material-rgba-arity	A three-component color used to reach the consumer as opaque black, which is neither the authored color nor an absent one.
 unknown_element_robot.urdf	drop	unknown_element	unknown-element	The element sits directly under <robot>.
 unknown_element_link.urdf	drop	unknown_element	unknown-element	The element sits inside a <link>, a level that was silent before this rule.
 unknown_element_joint.urdf	drop	unknown_element	unknown-element	The element sits inside a <joint>, the other level that was silent.
