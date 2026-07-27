@@ -287,7 +287,8 @@ endforeach()
 # which carries CLI11 PRIVATE. The TARGET guard keeps a MEIOS_BUILD_TOOLS=OFF
 # configure green even once these sources land.
 if(TARGET meios_cli)
-    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift cli_eval_backend)
+    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift cli_eval_backend
+            cmake_eval_vocabulary)
         set(cli_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
         if(EXISTS ${cli_test_src})
             add_executable(${stem}_test ${cli_test_src})
@@ -302,6 +303,18 @@ if(TARGET meios_cli)
             catch_discover_tests(${stem}_test)
         endif()
     endforeach()
+
+    # This stem alone reads the installed CMake modules and drives the built binary; the
+    # other CLI stems have no use for either and would gain a coupling to a directory they
+    # never open.
+    if(TARGET cmake_eval_vocabulary_test)
+        target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
+            MEIOS_CMAKE_MODULE_DIR="${CMAKE_SOURCE_DIR}/cmake")
+        if(TARGET meios)
+            target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
+                MEIOS_CLI_BINARY="$<TARGET_FILE:meios>")
+        endif()
+    endif()
 endif()
 
 # Enrichment unit stems. Each scanner/ros/zip/python stem is gated on both its
