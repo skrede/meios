@@ -34,13 +34,34 @@ function(meios_harness_configure source binary extra out_rc)
     set(${out_rc} "${_rc}" PARENT_SCOPE)
 endfunction()
 
-function(meios_harness_build binary out_rc)
-    set(_config_args "")
+function(_meios_harness_config_args out)
+    set(_args "")
     if(CONFIG)
-        set(_config_args --config "${CONFIG}")
+        set(_args --config "${CONFIG}")
+    endif()
+    set(${out} "${_args}" PARENT_SCOPE)
+endfunction()
+
+# An empty target builds everything, which is what a case that has nothing to say about build order
+# wants; naming one is how a case observes what a single rule pulls in behind it.
+function(meios_harness_build binary target out_rc)
+    _meios_harness_config_args(_args)
+    if(target)
+        list(APPEND _args --target "${target}")
     endif()
     execute_process(
-        COMMAND "${CMAKE_COMMAND}" --build "${binary}" ${_config_args}
+        COMMAND "${CMAKE_COMMAND}" --build "${binary}" ${_args}
+        RESULT_VARIABLE _rc)
+    set(${out_rc} "${_rc}" PARENT_SCOPE)
+endfunction()
+
+function(meios_harness_install binary prefix component out_rc)
+    _meios_harness_config_args(_args)
+    if(component)
+        list(APPEND _args --component "${component}")
+    endif()
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}" --install "${binary}" --prefix "${prefix}" ${_args}
         RESULT_VARIABLE _rc)
     set(${out_rc} "${_rc}" PARENT_SCOPE)
 endfunction()

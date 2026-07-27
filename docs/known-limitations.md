@@ -101,6 +101,14 @@ example is built, installed, and run — but no automated run flattens a descrip
 installed meios. Every build carrying the Python evaluator has the install step switched off, and
 the tests reach the modules through the module path instead.
 
+**`PACKAGE_PATH` on the flatten call cannot affect any legal call.** Every entry has to stay inside
+the acquired tree, that tree is already passed as the first and highest-precedence search root, and a
+root is crawled to any depth — so an entry names packages that were found anyway, at a precedence
+that cannot win. Measured in both directions: a package three levels down inside the tree resolves
+with no `PACKAGE_PATH` at all, and with two same-named packages inside the tree, adding the deeper
+one as a root does not change which is chosen. The containment refusal is exercised by a test; the
+accepting path is exercised by nothing, because there is nothing for a test to observe.
+
 **Flattening with the Python backend is only ever really run on Linux.** No macOS or Windows build
 carries the evaluation enrichment. On those platforms the configure-time behavior — the disclosure,
 the refusal, the accepted backend names — is exercised with the capability supplied by hand, and the

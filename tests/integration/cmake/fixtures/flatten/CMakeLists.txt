@@ -16,17 +16,29 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_BINARY_DIR}/run")
 add_executable(app main.cpp)
 
 include(MeiosDeclareResource)
-meios_declare_resource(NAME demo URL "${FX_URL}" HASH "${FX_HASH}")
+meios_declare_resource(NAME demo URL "${FX_URL}" HASH "${FX_HASH}" OUT_DIR _tree)
+
+# The acquired tree sits at a digest-named path only the module can derive, and the driver has to
+# edit the description inside it to prove an edit alone re-expands.
+file(WRITE "${CMAKE_BINARY_DIR}/harness_tree.txt" "${_tree}")
 
 # Deployment is present so the flatten call has a deploy target to order against, which is the
 # arrangement a consumer actually writes: the tree lands beside the document that was expanded
 # out of it.
-meios_target_deploy_resources(app RESOURCES demo SUBDIR models)
+set(_deploy RESOURCES demo SUBDIR models)
+if(FX_DEPLOY_INSTALL_RUNTIME_RELATIVE)
+    list(APPEND _deploy INSTALL_RUNTIME_RELATIVE)
+endif()
+meios_target_deploy_resources(app ${_deploy})
 
 set(_call RESOURCE demo INPUT "${FX_INPUT}" OUTPUT "${FX_OUTPUT}")
 if(FX_ARGS)
     string(REPLACE "," ";" _overrides "${FX_ARGS}")
     list(APPEND _call ARGS ${_overrides})
+endif()
+if(FX_PACKAGE_PATH)
+    string(REPLACE "," ";" _roots "${FX_PACKAGE_PATH}")
+    list(APPEND _call PACKAGE_PATH ${_roots})
 endif()
 if(FX_EVAL)
     list(APPEND _call EVAL "${FX_EVAL}")

@@ -1,5 +1,7 @@
-# Every case here drives the meios binary this build produces, so the whole file registers only
-# where that binary exists and a tools-off configure lists no flatten case at all.
+# The cases here build. Their configure-only siblings are in cases-flatten-configure.cmake and the
+# ones that also install are in cases-flatten-install.cmake. Every one drives the meios binary this
+# build produces, so each file registers only where that binary exists and a tools-off configure
+# lists no flatten case at all.
 if(TARGET meios)
 
 # The sub-configure reaches the modules through CMAKE_MODULE_PATH and this repository publishes no
@@ -33,42 +35,35 @@ meios_cmake_case(cmake_flatten_failure_diagnostic
     REFUSES "broken[.]urdf[.]xacro:[0-9]+:[0-9]+:[ \t\r\n]+\\[error\\][ \t\r\n]+\\(undefined_property\\)"
     REQUIRE_ABSENT urdf/broken.urdf,urdf/broken.urdf.tmp)
 
-# The four configure-time refusals need no build, so they go through the default driver. Every
-# pattern spells its inter-word spaces as a character class because CMake re-wraps message text at
-# roughly 78 columns and breaks only at whitespace.
-set(_declare -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro -DFX_OUTPUT=urdf/robot.urdf)
-
-# The fragment binds to the accepted values being listed, not merely to the value being rejected:
-# a pass regex is one alternation, so it has to be the half that only appears when the list prints.
-meios_cmake_case(cmake_flatten_eval_unknown_refusal
+# The edit replaces the description the rule reads and touches no source file, so nothing relinks:
+# a rule attached to the target's link step would leave the stale document in place with no sign
+# anything was wrong. The expected name exists nowhere in the acquired tree, so a document that was
+# not regenerated cannot carry it.
+meios_cmake_case(cmake_flatten_reruns_on_edit
     FIXTURE flatten
+    DRIVER  meios_build_case.cmake
     ORIGIN  tarball
-    EXTRA   "${_cli}" ${_declare} -DFX_EVAL=pyhton
-    REFUSES "Pass[ \t\r\n]+one[ \t\r\n]+of:[ \t\r\n]+core,[ \t\r\n]+python[.]")
+    EXTRA   "${_cli}"
+            -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
+            -DFX_OUTPUT=urdf/robot.urdf
+    MUTATE      pkg_a/urdf/robot.urdf.xacro
+    MUTATE_FROM mutations/robot.urdf.xacro
+    REQUIRE_CONTAINS urdf/robot.urdf,meios_harness_mutated)
 
-# The capability is injected rather than read for the next two cases, because the logic has to be
-# exercised in every job while the behavior can only be exercised where the enrichment was actually
-# built, which is one job on one of the three platforms. Neither case builds, so a claim that does
-# not match the binary can never become an execution attempt.
-meios_cmake_case(cmake_flatten_eval_python_refusal
+# Only the flatten rule is built, which is what makes the ordering observable at all: the document
+# lands inside the deployment root and the wrapper creates its own parent, so a rule not depending
+# on the deploy target would produce the document into an otherwise empty directory. Naming the rule
+# is the point of the case: nothing else selects it on its own.
+meios_cmake_case(cmake_flatten_orders_after_deploy
     FIXTURE flatten
+    DRIVER  meios_build_case.cmake
     ORIGIN  tarball
-    EXTRA   "${_cli}" ${_declare} -DFX_EVAL=python -DMEIOS_CLI_HAS_EVAL_PYTHON=FALSE
-    REFUSES "Configure[ \t\r\n]+with[ \t\r\n]+MEIOS_BUILD_EVAL_PYTHON=ON")
-
-meios_cmake_case(cmake_flatten_eval_python_statement
-    FIXTURE flatten
-    ORIGIN  tarball
-    EXTRA   "${_cli}" ${_declare} -DFX_EVAL=python -DMEIOS_CLI_HAS_EVAL_PYTHON=TRUE
-    MATCHES "with[ \t\r\n]+the[ \t\r\n]+python[ \t\r\n]+evaluator,[ \t\r\n]+which[ \t\r\n]+executes[ \t\r\n]+Python[ \t\r\n]+during[ \t\r\n]+the[ \t\r\n]+build")
-
-# Nothing is injected: the sub-configure reaches the modules through the module path and so has no
-# meios binary of any kind, which is the situation this refusal was written for.
-meios_cmake_case(cmake_flatten_no_cli_refusal
-    FIXTURE flatten
-    ORIGIN  tarball
-    EXTRA   ${_declare}
-    REFUSES "Configure[ \t\r\n]+with[ \t\r\n]+MEIOS_BUILD_TOOLS=ON")
+    EXTRA   "${_cli}"
+            -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
+            -DFX_OUTPUT=models/robot.urdf
+    BUILD_TARGET app_flatten_models_robot_urdf
+    REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml
+    REQUIRE_CONTAINS models/robot.urdf,harness_arm)
 
 # The one case that executes Python, so it registers only where the binary was really built with the
 # enrichment. What it injects is the value of the property the binary's own listfile recorded, not a

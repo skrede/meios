@@ -21,15 +21,26 @@ list(APPEND _extra ${EXTRA})
 
 meios_harness_configure("${FIXTURE}" "${WORK}/tree" "${_extra}" _rc)
 if(_rc EQUAL 0)
-    meios_harness_build("${WORK}/tree" _rc)
+    meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
 endif()
 
 # The edit lands inside the acquired tree and touches no source file, which is the only way to tell
 # a rule keyed on the tree's contents apart from one that merely runs when the target relinks.
+# A case whose rule reads the edited file as a description names a replacement document instead of
+# taking the token, which is not one and would fail the rule rather than show it reran.
 if(_rc EQUAL 0 AND MUTATE)
     file(READ "${WORK}/tree/harness_tree.txt" _acquired)
-    file(WRITE "${_acquired}/${MUTATE}" "${_mutation}\n")
-    meios_harness_build("${WORK}/tree" _rc)
+    if(MUTATE_FROM)
+        configure_file("${HARNESS_DIR}/${MUTATE_FROM}" "${_acquired}/${MUTATE}" COPYONLY)
+    else()
+        file(WRITE "${_acquired}/${MUTATE}" "${_mutation}\n")
+    endif()
+    meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
+endif()
+
+set(_prefix "${WORK}/prefix")
+if(_rc EQUAL 0 AND REQUIRE_INSTALLED)
+    meios_harness_install("${WORK}/tree" "${_prefix}" "${COMPONENT}" _rc)
 endif()
 
 set(_run "${WORK}/tree/run")
@@ -37,6 +48,10 @@ if(_rc EQUAL 0)
     string(REPLACE "," ";" _present "${REQUIRE_PRESENT}")
     foreach(_rel IN LISTS _present)
         meios_harness_require_file("${_run}/${_rel}")
+    endforeach()
+    string(REPLACE "," ";" _installed "${REQUIRE_INSTALLED}")
+    foreach(_rel IN LISTS _installed)
+        meios_harness_require_file("${_prefix}/${_rel}")
     endforeach()
 endif()
 
