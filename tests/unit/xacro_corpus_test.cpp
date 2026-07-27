@@ -49,6 +49,22 @@ std::vector<expr_case> read_cases(const std::filesystem::path &file)
     return cases;
 }
 
+// A frozen expression corpus row is expression<TAB>expected. A file whose rows carry further
+// columns is a different table sharing the directory, not a corpus the core evaluator can render.
+bool two_column(const std::filesystem::path &file)
+{
+    std::ifstream input(file);
+    std::string line;
+    while(std::getline(input, line))
+    {
+        const std::string stripped = trim(line);
+        if(stripped.empty() || stripped.front() == '#')
+            continue;
+        return line.find('\t', line.find('\t') + 1) == std::string::npos;
+    }
+    return false;
+}
+
 std::string eval_str(const std::string &expression)
 {
     meios::core_evaluator evaluator;
@@ -65,7 +81,7 @@ TEST_CASE("every frozen golden expression matches the core evaluator", "[xacro][
     int total = 0;
     for(const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(root))
     {
-        if(entry.path().extension() != ".cases")
+        if(entry.path().extension() != ".cases" || !two_column(entry.path()))
             continue;
         for(const expr_case &row : read_cases(entry.path()))
         {

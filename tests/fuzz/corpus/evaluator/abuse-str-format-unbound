@@ -1,0 +1,1 @@
+str.format('{0.__self__}', len)
