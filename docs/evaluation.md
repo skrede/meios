@@ -20,8 +20,9 @@ near the end.
 
 - Arithmetic, comparison and boolean operators over numbers and strings, including `**`, `//` and the
   `%` operator in both its numeric and its string-formatting sense.
-- The mathematics module: every public name of Python's `math`, bound both as `math.<name>` and
-  directly, so `sqrt(2)`, `radians(180)` and `pi` all work.
+- The mathematics module: every public name of Python's `math`, bound directly as a bare name, so
+  `sqrt(2)`, `radians(180)` and `pi` all work. The module object itself is never bound, so the
+  `math.<name>` spelling is not available and `${math.pi}` fails with a `NameError`.
 - List, dict and set comprehensions, generator expressions, and lambdas.
 - String operations — concatenation, slicing, `join`, `split`, the case and strip methods — with the
   single exception of the two formatting methods named in the next section.
@@ -153,10 +154,12 @@ never passed through silently.
 
 **Parity gaps that predate this restriction.** Dotted access into a loaded configuration is not
 supported — the reference wraps loaded yaml so `${cfg.wheel.radius}` works, meios returns plain
-mappings, so `${cfg['wheel']['radius']}` is the spelling. The reference's argument, tokenizing and
-message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning` / `error` / `fatal`) are not
-exposed at all. A unit-tagged yaml value is read as a literal here, where the reference evaluates it as
-an expression.
+mappings, so `${cfg['wheel']['radius']}` is the spelling. The mathematics names carry the same shape of
+gap: the reference spreads them into a `math` namespace beside the bare ones, so `${math.pi}` works
+there, while meios binds only the bare names and the dotted spelling raises a `NameError` rather than a
+refusal. The reference's argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`,
+`xacro.message` / `warning` / `error` / `fatal`) are not exposed at all. A unit-tagged yaml value is
+read as a literal here, where the reference evaluates it as an expression.
 
 ## What this is not
 
@@ -174,10 +177,12 @@ not read first, this restriction is not the thing that makes that safe.
 
 `load_yaml(spec)` — also spelled `xacro.load_yaml(spec)` — is the only way an expression reaches a
 file, and it does not read one itself. C++ resolves the spec, enforces containment and reads the bytes;
-the interpreter is handed *text* and parses it. No `open` exists in any namespace an expression can
-reach, on either backend. An evaluation scope with no resource loader installed refuses every spec:
-the capability is absent by default, its absence is a checked refusal, and there is no fallback read
-anywhere.
+the interpreter is handed *text* and parses it. Under the restricted evaluator no `open` exists in any
+namespace an expression can reach, so the helper is the only route to a file there; under the
+unrestricted evaluator `open` is an ordinary reachable builtin, so containment governs `load_yaml` and
+not what an expression reads by other means. An evaluation scope with no resource loader installed
+refuses every spec: the capability is absent by default, its absence is a checked refusal, and there is
+no fallback read anywhere.
 
 Three spec forms are accepted:
 
@@ -232,8 +237,9 @@ include line and a construction site, both visible in review.
 The two classes share **one** resolution and containment implementation. The unrestricted class refuses
 `load_yaml('/etc/passwd')` under the same `uncontained-yaml-path` rule, resolves `package://` the same
 way, and reads byte-backed sources the same way. The expression sandbox is the only difference between
-them: the unrestricted class widens what an expression may *compute*, never what it may *reach* on
-disk.
+them, and what it widens is the expression itself — which is enough to reach the filesystem directly,
+`open` included. The helper's resolution and containment are identical under both, so an unrestricted
+expression is bounded where it goes through `load_yaml` and unbounded where it does not.
 
 What you accept by choosing it: every expression in every description you load — including ones pulled
 in by an include, from a package you did not write — runs with your process's authority. Choose it for

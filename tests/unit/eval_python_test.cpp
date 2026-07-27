@@ -52,24 +52,25 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
 struct tally
 {
     int errors{ 0 };
+    std::string last;
 
-    void operator()(meios::level lvl, const std::string &)
+    void operator()(meios::level lvl, const std::string &message)
     {
-        if(lvl == meios::level::error)
-            ++errors;
+        if(lvl != meios::level::error)
+            return;
+        ++errors;
+        last = message;
     }
 
-    void operator()(meios::level lvl, const meios::source_location &, const std::string &)
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
     {
-        if(lvl == meios::level::error)
-            ++errors;
+        (*this)(lvl, message);
     }
 
     void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
-                    const std::string &)
+                    const std::string &message)
     {
-        if(lvl == meios::level::error)
-            ++errors;
+        (*this)(lvl, message);
     }
 };
 
@@ -148,6 +149,21 @@ TEST_CASE("python evaluator matches the golden CPython corpus", "[eval_python]")
             REQUIRE(*got == c.expected);
         }
     }
+}
+
+TEST_CASE("a mathematics name is bound bare and carries no math namespace", "[eval_python]")
+{
+    const meios::eval_scope scope;
+    const std::optional<std::string> bare = evaluate("sqrt(2)", scope);
+    REQUIRE(bare);
+    REQUIRE(*bare == "1.4142135623730951");
+
+    tally counts;
+    meios::log_sink_f sink{ std::ref(counts) };
+    meios::python_evaluator evaluator;
+    REQUIRE_FALSE(evaluator.eval_to_text("math.sqrt(2)", scope, sink));
+    REQUIRE(evaluator.last_failure_kind() == meios::eval_failure_kind::error);
+    REQUIRE(counts.last.find("NameError") != std::string::npos);
 }
 
 TEST_CASE("a string-producing expression returns its python str", "[eval_python]")
