@@ -60,8 +60,9 @@ dependency-light nucleus and carries no reader; `meios::urdf` is the surface a c
 
 - [Consumer guide](consumer-guide.md) — `load()` a description and read the resolved `model`.
 - [Engine guide](engine-guide.md) — receive the resolved robot into your own types via `model_sink`.
-- [Resource guide](resources-guide.md) — acquire a description package in CMake and deploy it where
-  your program looks for it, instead of vendoring it into your repository.
+- [Resource guide](resources-guide.md) — acquire a description package in CMake, deploy it where
+  your program looks for it, and flatten one description to a file when something downstream needs
+  a plain URDF, instead of vendoring the tree into your repository.
 - [Evaluation](evaluation.md) — what a description's expressions may run, the rules that refuse the
   rest, and how the resource helper resolves a file.
 - [Known limitations](known-limitations.md) — every defect and caveat live at this point in the

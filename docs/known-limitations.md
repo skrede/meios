@@ -77,6 +77,63 @@ non-zero with no output and `meios complete` yields no completions, rather than 
 view. This follows from silent-by-default plus the default `fail` topology policy. `meios tree` uses a
 `warn` policy and still prints what it can.
 
+## The CMake resource modules
+
+**The automated tests never reach the network.** Every acquisition case builds its own origin on the
+local disk, so nothing in the routine test set exercises a transport failure, a redirect, a
+certificate problem, or a host that serves different bytes than it did last week. A live fetch runs
+separately, in the corpus acquisition behind its own option, and the split is deliberate: the tests
+that must pass on every machine cannot depend on a third party being up.
+
+**The `GITHUB` short form is never exercised end to end.** It rewrites into `URL` or
+`GIT_REPOSITORY`, and both of those are exercised — but the rewrite itself needs a real host, so a
+defect in the archive URL it composes, or in the `STRIP_TOP_LEVEL` it implies, would surface on your
+first configure rather than in the test set.
+
+**`MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing.** Forwarding a CA bundle to the download
+needs an origin served over TLS, which nothing offline can be. On a machine whose CMake ships
+without a trust store that variable is the documented way through, and it is also the one thing on
+this page with nothing at all standing behind it.
+
+**Flattening is not proven from an installed package.** That an installed meios carries acquisition
+and deployment to a `find_package` consumer is proven on all three platforms — the install-consumer
+example is built, installed, and run — but no automated run flattens a description through an
+installed meios. Every build carrying the Python evaluator has the install step switched off, and
+the tests reach the modules through the module path instead.
+
+**Flattening with the Python backend is only ever really run on Linux.** No macOS or Windows build
+carries the evaluation enrichment. On those platforms the configure-time behavior — the disclosure,
+the refusal, the accepted backend names — is exercised with the capability supplied by hand, and the
+expansion itself is not exercised at all.
+
+**Submodules and large-file objects are left alone in a real clone, by design.** meios initializes
+no submodule and fetches no Git-LFS object of its own; what a clone brings back is whatever the
+host's git is configured to bring back, and an unsmudged mesh pointer that survives is refused
+loudly rather than shipped as stub geometry. No test clones a repository that has either, so the
+behavior you get on a machine without git-lfs configured is the loud refusal and nothing more
+graceful.
+
+**Nothing in the automated set cross-compiles.** `meios_target_flatten_resource` refuses a cross
+build that has not been handed a host-runnable binary, and both that refusal and the path it points
+at — a flatten driven by a binary built for the build host — are reasoned about rather than
+measured. If you cross-compile and flatten, you are the first to do it.
+
+**How the build integration finds the command-line tool is proven for one of the three ways it can
+be found.** Every test either hands the module an explicit path to a binary or hands it nothing and
+checks that it refuses. Neither of the two ordinary routes is exercised: picking the tool up from an
+installed package, and picking it up as a target in a build that also builds the tool. Those are
+exactly the routes that motivated exporting the tool as a target rather than recording a path
+string, because a target resolves to the right binary on a generator that builds several
+configurations out of one project — and that property is reasoned about, not measured. The effect
+for you is that the two ordinary ways of getting the tool are the two the tests do not exercise.
+
+**An unrecognized evaluator name is refused by the build integration and accepted by the
+command-line tool.** `meios_target_flatten_resource(… EVAL pyhton)` is a configure error listing the
+names that are accepted. `meios flatten … --eval pyhton` is not an error at all: the tool carries no
+list of accepted names, silently uses its default for anything it does not recognize, and prints a
+document with no diagnostic. A typo therefore changes which evaluator runs, and the only sign is
+that an expression the core evaluator refuses starts failing to resolve.
+
 ## API stability
 
 **No deprecation cushion before `v1.0.0`.** meios is pre-release. A superseded type or function is

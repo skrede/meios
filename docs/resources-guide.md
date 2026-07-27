@@ -1,10 +1,10 @@
 # Resource guide: acquiring and deploying descriptions
 
-A robot description is data, not code. meios ships two CMake functions so a non-ROS project can
-acquire a description package and put it where its program will look for it, without vendoring the
-tree into the repository and without hand-rolling copy commands.
+A robot description is data, not code. meios ships CMake functions so a non-ROS project can acquire
+a description package and put it where its program will look for it, without vendoring the tree into
+the repository and without hand-rolling copy commands.
 
-The two are deliberately separate:
+Two of them carry the whole story, and they are deliberately separate:
 
 - **`meios_declare_resource`** answers *where do the bytes come from* — a pinned archive, a Git
   clone, or a directory already on disk. It registers the resulting tree under a name.
@@ -39,6 +39,13 @@ meios_target_deploy_resources(app RESOURCES kuka SUBDIR urdf)
 
 The registry is global, which is what makes the cross-directory case work — a name declared in the
 top-level listfile is visible in any subdirectory, including a sibling of the one that declared it.
+
+A third function, `meios_target_flatten_resource`, expands one description to a file during your
+build. It is a deployment convenience for a program that needs a plain URDF on disk rather than the
+way descriptions are meant to be consumed, and it is documented after the two above.
+
+What these functions are *not* proven to do — the paths no automated test reaches — is listed under
+[Known limitations](known-limitations.md).
 
 ## `meios_declare_resource`
 
@@ -298,6 +305,161 @@ cleanly and still breaks a program that looks beside its own binary. Pick the de
 how your program actually resolves the path; the two are not independent.
 
 `INSTALL_COMPONENT` names the component for either install form.
+
+## `meios_target_flatten_resource`
+
+Flattening at build time runs the `meios` binary over one description out of an acquired tree and
+writes the resolved document beside your program: xacro expanded, arguments applied, `package://`
+and `$(find …)` references resolved, one file with nothing left to look up.
+
+It is a **deployment convenience**, and it is worth being explicit about what it is not. It exists
+for something downstream that insists on a plain file — a viewer that reads URDF and nothing else, a
+tool that cannot run an expander, a runtime that must not. It is not how this library is meant to be
+consumed: `load()` resolves a description into your own types with no intermediate file and no
+expansion step in anybody's build, and that is the path to reach for. Flatten because something
+outside your program needs the file, never to spare your own program the work.
+
+```cmake
+meios_target_flatten_resource(<target>
+    RESOURCE <name>
+    INPUT    <relative/path>
+    OUTPUT   <relative/path>
+
+    [ARGS <key>:=<value>...]            # no ';' inside a value
+    [PACKAGE_PATH <relative/path>...]
+    [EVAL core|python]
+    [INSTALL_RUNTIME_RELATIVE | INSTALL_DESTINATION <dir>]
+    [INSTALL_COMPONENT <component>])
+```
+
+`RESOURCE` names a declared resource and `INPUT` is a path inside the tree that declaration acquired
+— the acquired tree, not the deployed copy. A path naming no file there fails the configure and
+prints the full path it looked at.
+
+`OUTPUT` is relative to the target's runtime directory, the same root that
+`meios_target_deploy_resources` writes into, so `OUTPUT urdf/ur5e.urdf` lands inside a tree deployed
+with `SUBDIR urdf`. `INPUT`, `OUTPUT` and `PACKAGE_PATH` each have to stay inside their tree: an
+absolute path, a `..` component, or a leading `-` is refused by name.
+
+`ARGS` passes xacro argument overrides, one `key:=value` per entry — the spelling the command line
+takes, and the one place this call is easy to get wrong; see below.
+
+`PACKAGE_PATH` adds package search roots, each relative to the acquired tree. That tree is always a
+root already, so name a subdirectory here only when the packages sit a level down inside it.
+
+`EVAL` selects the evaluator backend, `core` or `python`. `core` is the default and evaluates the
+fixed numeric and boolean grammar; `python` needs a binary built with the evaluation enrichment. The
+choice is not a detail — see below.
+
+`INSTALL_RUNTIME_RELATIVE`, `INSTALL_DESTINATION` and `INSTALL_COMPONENT` install the flattened
+document under the same rules the deploy call uses, and carry the same trap: without one of them the
+build tree alone is populated. `INSTALL_RUNTIME_RELATIVE` installs it to `${CMAKE_INSTALL_BINDIR}`
+followed by the directory part of `OUTPUT`, mirroring the build-tree layout; `INSTALL_DESTINATION
+<dir>` installs it to exactly `<dir>`, with nothing appended. `INSTALL_COMPONENT` without either is
+a configure error.
+
+With `ur` declared at the top level the way the examples above declare a resource, deploy the tree
+and expand one description out of it — here a parameterized top-level xacro resolved for one robot
+variant:
+
+```cmake
+add_executable(app main.cpp)
+target_link_libraries(app PRIVATE meios::urdf)
+
+meios_target_deploy_resources(app
+    RESOURCES ur
+    SUBDIR    urdf
+    INSTALL_RUNTIME_RELATIVE)
+
+meios_target_flatten_resource(app
+    RESOURCE ur
+    INPUT    ur_description/urdf/ur.urdf.xacro
+    OUTPUT   urdf/ur5e.urdf
+    ARGS     ur_type:=ur5e name:=ur5e
+    INSTALL_RUNTIME_RELATIVE)
+```
+
+`app` ends up with the deployed tree under `urdf/` and `urdf/ur5e.urdf` beside it, in the build tree
+and in the install tree alike.
+
+### Which binary does the expanding
+
+The rule needs a `meios` binary that runs on the build host, and it takes the first of three it
+finds: `MEIOS_CLI_EXECUTABLE`, a cache entry naming a binary you already have; the imported
+`meios::cli` target, from a `find_package(meios)` whose installed package carries the tool; or the
+in-tree `meios` target, in a build that builds meios itself with `MEIOS_BUILD_TOOLS=ON`.
+
+Nothing searches `PATH` — a binary found there is version skew between these modules and whatever
+expansion semantics that binary happens to carry — and nothing turns the tools option on for you,
+because a function call that quietly rewrites a build setting you chose is not a diagnostic. With
+none of the three present the configure fails, naming both the option and the cache entry.
+
+Ask for the tool explicitly if your build depends on it, and the failure moves to `find_package`
+where it belongs:
+
+```cmake
+find_package(meios CONFIG REQUIRED COMPONENTS urdf cli)
+```
+
+Cross-compiling always needs `MEIOS_CLI_EXECUTABLE`: the flatten runs on the build host while the
+binary this build produces is built for the target. That is refused at configure time rather than
+left to surface as an exec-format error out of the build tool.
+
+### The evaluator is stated at configure time, and never substituted
+
+Every call prints which backend it will use:
+
+```
+-- meios flatten (app): ur.urdf.xacro with the core evaluator
+```
+
+and the python backend says outright what asking for it means:
+
+```
+-- meios flatten (app): ur.urdf.xacro with the python evaluator, which executes Python during the build
+```
+
+That is the whole disclosure, and it is informative rather than a gate — you opened the door by
+writing the backend into your own listfile. What is a gate is the other direction: asking for
+`python` in a build whose binary does not carry the evaluation enrichment is a configure error
+naming `MEIOS_BUILD_EVAL_PYTHON`, never a quiet substitution of the core evaluator. A backend name
+that is neither of the two is refused with the accepted values listed.
+
+The command-line tool is not as strict about that last one. See
+[Known limitations](known-limitations.md).
+
+### Argument overrides are a CMake list
+
+Each `ARGS` entry is one `key:=value` token. The key must be non-empty; the value need not be, so
+`name:=` is a legal override setting the argument to the empty string.
+
+Two spellings are refused rather than passed along. An entry beginning with `-` reaches the binary
+as an option instead of an override. And a `;` inside a value does not survive the list: CMake
+splits the entry into two elements before the function is ever entered, leaving a half that carries
+no assignment at all, so the call fails with a message saying to write the value without one. There
+is no escape that gets a semicolon through this argument — run the binary yourself if you need one.
+
+### Ordering and rebuilds
+
+The rule watches the acquired tree's `.urdf`, `.xacro`, `.xml` and `.yaml` files, so editing a
+description re-runs the flatten on the next build even though no source file changed — the same
+reason deployment is wired into the build graph rather than attached as a post-build step. It also
+depends on the binary, and it is ordered after the deploy rule for the same resource on the same
+target, so the tree and the document expanded out of it are never written in the other order.
+
+### A failed flatten leaves nothing behind
+
+A description that does not resolve fails the build, and the binary's typed diagnostic reaches your
+build log with its file and line intact:
+
+```
+…/ur_description/urdf/ur.urdf.xacro:8:27: [error] (undefined_property) name 'ur_typ' is not defined
+```
+
+Nothing is written: not a truncated document, not an empty one, and not the temporary the rule
+captures into. The document is published by renaming that temporary once the binary has exited zero,
+because build tools disagree about what to do with a failed command's leftovers and a half-written
+URDF parses far enough to look like a whole one.
 
 ## Loading what you deployed
 
