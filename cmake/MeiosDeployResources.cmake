@@ -83,7 +83,7 @@ endfunction()
 # without touching a source file would leave a stale tree deployed with no sign
 # anything was wrong. copy_directory_if_different keeps an unchanged tree from
 # restamping every file.
-function(_meios_deploy_command target slot label src dst)
+function(_meios_deploy_command target slot label src dst out_rule)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy")
     file(GLOB_RECURSE _files CONFIGURE_DEPENDS "${src}/*")
     # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
@@ -102,8 +102,10 @@ function(_meios_deploy_command target slot label src dst)
         DEPENDS ${_files}
         COMMENT "Deploying resource '${label}' to ${dst}"
         VERBATIM)
-    add_custom_target(${target}_deploy_${slot}_${_label_slot} DEPENDS "${_stamp}")
-    add_dependencies(${target} ${target}_deploy_${slot}_${_label_slot})
+    set(_rule ${target}_deploy_${slot}_${_label_slot})
+    add_custom_target(${_rule} DEPENDS "${_stamp}")
+    add_dependencies(${target} ${_rule})
+    set(${out_rule} "${_rule}" PARENT_SCOPE)
 endfunction()
 
 function(_meios_deploy_install install_dest component tree src)
@@ -135,7 +137,10 @@ function(_meios_deploy_rule target name dir tree dest slot install_dest componen
         set(_dst "${dest}/${tree}")
         set(_label "${name}.${tree}")
     endif()
-    _meios_deploy_command("${target}" "${slot}" "${_label}" "${_src}" "${_dst}")
+    _meios_deploy_command("${target}" "${slot}" "${_label}" "${_src}" "${_dst}" _rule)
+    # Published rather than left to be reconstructed: a module ordering against this rule would
+    # otherwise couple itself to a target-name format that the next edit here breaks.
+    set_property(GLOBAL APPEND PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${name} "${_rule}")
     if(install_dest)
         _meios_deploy_install("${install_dest}" "${component}" "${tree}" "${_src}")
     endif()

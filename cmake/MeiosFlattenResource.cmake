@@ -5,83 +5,22 @@ include_guard(GLOBAL)
 # a consumer that wants a resolved model asks the library for one and never reads a file written
 # here.
 
-include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourcePaths.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosFlattenArgs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeployResources.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourceRegistry.cmake")
 
 # Captured while the module is being read: inside a function body the current list directory is the
 # caller's, so a function locating its sibling script from there would look beside whichever
-# listfile called it.
-set(MEIOS_CMAKE_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
-
-set(MEIOS_FLATTEN_EVAL_BACKENDS core python)
+# listfile called it. A GLOBAL property rather than a variable because include_guard runs this file
+# once, in whichever directory reaches it first, and that directory's siblings never see a variable
+# set there.
+set_property(GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
 # Caller-supplied on both of its paths and never a discovery mechanism: it is the seam a
 # cross-compiling build uses to name a binary that runs on the build host, and it is equally how a
 # build with no meios package to look up points the rule at a binary it already has.
 set(MEIOS_CLI_EXECUTABLE "" CACHE FILEPATH
     "Host-runnable meios binary used by the build-time flatten rule.")
-
-function(_meios_flatten_validate target unparsed resource input output)
-    if(NOT TARGET ${target})
-        message(FATAL_ERROR
-            "meios_target_flatten_resource: '${target}' is not a target.")
-    endif()
-    if(unparsed)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): unknown args: ${unparsed}")
-    endif()
-    if(NOT resource)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): RESOURCE is required.")
-    endif()
-    if(NOT input)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): INPUT names the description to expand, "
-            "relative to the resource tree; it is required.")
-    endif()
-    if(NOT output)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): OUTPUT is required.")
-    endif()
-endfunction()
-
-function(_meios_flatten_check_install target runtime_relative install_dest component)
-    if(runtime_relative AND install_dest)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): INSTALL_RUNTIME_RELATIVE and "
-            "INSTALL_DESTINATION both name an install location; pass one.")
-    endif()
-    if(component AND NOT runtime_relative AND NOT install_dest)
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): INSTALL_COMPONENT requires "
-            "INSTALL_DESTINATION or INSTALL_RUNTIME_RELATIVE.")
-    endif()
-endfunction()
-
-function(_meios_flatten_paths target input output package_path)
-    set(_context "meios_target_flatten_resource(${target})")
-    _meios_check_contained_paths("${_context}" INPUT "${input}")
-    _meios_check_contained_paths("${_context}" OUTPUT "${output}")
-    _meios_check_contained_paths("${_context}" PACKAGE_PATH "${package_path}")
-endfunction()
-
-# Two distinct failures arrive as an ill-formed entry. A leading '-' reaches the binary as an
-# option rather than an override, and a ';' inside a value splits the entry into two list elements
-# before this function is ever entered, so the second half turns up carrying no assignment at all.
-function(_meios_flatten_check_args target args)
-    foreach(_arg IN LISTS args)
-        if(_arg MATCHES "^-")
-            message(FATAL_ERROR
-                "meios_target_flatten_resource(${target}): ARGS entry '${_arg}' begins with '-', "
-                "which the meios binary reads as an option; write it as key:=value.")
-        endif()
-        if(NOT _arg MATCHES "^.+:=")
-            message(FATAL_ERROR
-                "meios_target_flatten_resource(${target}): ARGS entry '${_arg}' is not "
-                "key:=value. A ';' inside a value splits the entry in two before this function "
-                "sees it; write the value without one.")
-        endif()
-    endforeach()
-endfunction()
 
 # The order is fixed and stops where it stops. Nothing searches the path for a binary — one found
 # there is version skew between this module and whatever expansion semantics that binary carries —
@@ -110,53 +49,90 @@ function(_meios_flatten_cli target out)
     endif()
 endfunction()
 
-# Precedence, and the reason it is written this way: a cache entry of this name is a caller stating
-# the fact deliberately, which is how both the refusal and the accepting path stay reachable on a
-# machine that cannot build the enrichment. The property carries the answer otherwise, written by
-# the binary's own listfile in-tree and by the substituted package config once installed. Only the
-# CACHE test tells the injection apart from the plain variable the top-level build sets to feed
-# that substitution.
-function(_meios_flatten_eval_python_linked out)
-    if(DEFINED CACHE{MEIOS_CLI_HAS_EVAL_PYTHON})
-        set(${out} "$CACHE{MEIOS_CLI_HAS_EVAL_PYTHON}" PARENT_SCOPE)
+function(_meios_flatten_input target resource input out)
+    meios_resource_dir("${resource}" _dir)
+    if(NOT EXISTS "${_dir}/${input}")
+        message(FATAL_ERROR
+            "meios_target_flatten_resource(${target}): INPUT '${input}' names no file in "
+            "resource '${resource}':\n  ${_dir}/${input}")
+    endif()
+    set(${out} "${_dir}" PARENT_SCOPE)
+endfunction()
+
+# PACKAGE_PATH entries are relative to the acquired tree, which is itself always a search root:
+# a package:// reference in the description resolves against the tree it was acquired with.
+function(_meios_flatten_argv dir input args package_path eval out)
+    set(_argv --eval "${eval}" --package-path "${dir}")
+    foreach(_root IN LISTS package_path)
+        list(APPEND _argv --package-path "${dir}/${_root}")
+    endforeach()
+    list(APPEND _argv "${dir}/${input}" ${args})
+    set(${out} "${_argv}" PARENT_SCOPE)
+endfunction()
+
+# Keyed on the acquired tree rather than the deployed copy, and on the tree's contents rather than
+# the consumer's link step: the deployed path is written by another directory's command and carries
+# a generator expression, so it cannot be globbed at configure time, and a POST_BUILD command would
+# run only when the target relinks, leaving a stale document behind after an edit to a description.
+function(_meios_flatten_command target cli argv dir out_file stamp)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_flatten")
+    file(GLOB_RECURSE _files CONFIGURE_DEPENDS
+         "${dir}/*.urdf" "${dir}/*.xacro" "${dir}/*.xml" "${dir}/*.yaml")
+    set(_run "${cli}")
+    if(TARGET ${cli})
+        set(_run "$<TARGET_FILE:${cli}>")
+    endif()
+    # List expansion of the command splits every unescaped ';' in an argument, so the vector has to
+    # arrive escaped or the wrapper would receive its first element and nothing else. $<SEMICOLON>
+    # does not survive it either: it is evaluated before the split.
+    string(REPLACE ";" "\;" _args "${argv}")
+    get_property(_module_dir GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR)
+    add_custom_command(
+        OUTPUT  "${stamp}"
+        COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${_run}" "-DMEIOS_FLATTEN_ARGS=${_args}"
+                "-DMEIOS_FLATTEN_OUT=${out_file}"
+                -P "${_module_dir}/MeiosFlattenRun.cmake"
+        COMMAND ${CMAKE_COMMAND} -E touch "${stamp}"
+        DEPENDS ${_files} "${_run}"
+        COMMENT "Flattening ${out_file}"
+        VERBATIM COMMAND_EXPAND_LISTS)
+endfunction()
+
+function(_meios_flatten_rule target resource input output args package_path cli eval out)
+    _meios_flatten_input("${target}" "${resource}" "${input}" _dir)
+    _meios_flatten_argv("${_dir}" "${input}" "${args}" "${package_path}" "${eval}" _argv)
+    set(_file "$<TARGET_FILE_DIR:${target}>/${output}")
+    string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _slug "${output}")
+    # A rule's output may not carry a target-dependent expression, so the rule produces a stamp and
+    # writes the document where the deployed tree lives. The stamp carries the configuration for the
+    # same reason the deployed tree's does: each configuration has its own runtime directory, and
+    # one shared stamp would let the first configuration built mark the rest up to date.
+    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/meios_flatten/${target}.${_slug}.$<CONFIG>.stamp")
+    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_dir}" "${_file}" "${_stamp}")
+    add_custom_target(${target}_flatten_${_slug} DEPENDS "${_stamp}")
+    # Ordering onto the deploy rule is a target dependency rather than a dependency on its stamp
+    # file, because a file dependency only connects two commands issued in one directory and flatten
+    # may be called from another.
+    get_property(_deploy GLOBAL PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${resource})
+    if(_deploy)
+        add_dependencies(${target}_flatten_${_slug} ${_deploy})
+    endif()
+    add_dependencies(${target} ${target}_flatten_${_slug})
+    set(${out} "${_file}" PARENT_SCOPE)
+endfunction()
+
+function(_meios_flatten_install target output runtime_relative install_dest component out_file)
+    get_filename_component(_subdir "${output}" DIRECTORY)
+    _meios_deploy_destination("${target}" "${_subdir}" "${runtime_relative}" "${component}"
+                              "${install_dest}" _dest _unused_dir _unused_slot)
+    if(NOT _dest)
         return()
     endif()
-    get_property(_linked GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON)
-    set(${out} "${_linked}" PARENT_SCOPE)
-endfunction()
-
-function(_meios_flatten_eval target eval out)
-    list(GET MEIOS_FLATTEN_EVAL_BACKENDS 0 _default)
-    if(NOT eval)
-        set(eval "${_default}")
+    set(_component_arg "")
+    if(component)
+        set(_component_arg COMPONENT "${component}")
     endif()
-    if(NOT "${eval}" IN_LIST MEIOS_FLATTEN_EVAL_BACKENDS)
-        string(REPLACE ";" ", " _list "${MEIOS_FLATTEN_EVAL_BACKENDS}")
-        message(FATAL_ERROR
-            "meios_target_flatten_resource(${target}): EVAL '${eval}' is not an evaluator "
-            "backend. Pass one of: ${_list}.")
-    endif()
-    if(eval STREQUAL "python")
-        _meios_flatten_eval_python_linked(_linked)
-        if(NOT _linked)
-            message(FATAL_ERROR
-                "meios_target_flatten_resource(${target}): EVAL python needs a meios binary "
-                "built with the python evaluator, and this one is not. Configure with "
-                "MEIOS_BUILD_EVAL_PYTHON=ON, or pass EVAL ${_default}.")
-        endif()
-    endif()
-    set(${out} "${eval}" PARENT_SCOPE)
-endfunction()
-
-# Informative, never a gate: a second opt-in variable would be a second lock on a door the consumer
-# just chose to open by writing the backend into their own listfile.
-function(_meios_flatten_announce target input eval)
-    set(_note "")
-    if(eval STREQUAL "python")
-        set(_note ", which executes Python during the build")
-    endif()
-    message(STATUS
-        "meios flatten (${target}): ${input} with the ${eval} evaluator${_note}")
+    install(FILES "${out_file}" DESTINATION "${_dest}" ${_component_arg})
 endfunction()
 
 # Expand one description out of a declared resource tree. INPUT is relative to that tree; OUTPUT is
@@ -175,4 +151,8 @@ function(meios_target_flatten_resource target)
     _meios_flatten_cli("${target}" _cli)
     _meios_flatten_eval("${target}" "${ARG_EVAL}" _eval)
     _meios_flatten_announce("${target}" "${ARG_INPUT}" "${_eval}")
+    _meios_flatten_rule("${target}" "${ARG_RESOURCE}" "${ARG_INPUT}" "${ARG_OUTPUT}" "${ARG_ARGS}"
+                        "${ARG_PACKAGE_PATH}" "${_cli}" "${_eval}" _out)
+    _meios_flatten_install("${target}" "${ARG_OUTPUT}" "${ARG_INSTALL_RUNTIME_RELATIVE}"
+                           "${ARG_INSTALL_DESTINATION}" "${ARG_INSTALL_COMPONENT}" "${_out}")
 endfunction()
