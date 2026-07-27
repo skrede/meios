@@ -95,6 +95,8 @@ if(MEIOS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceRegistry.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeployResources.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosPruneResources.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenResource.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenRun.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
 endif()
 

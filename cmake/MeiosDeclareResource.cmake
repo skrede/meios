@@ -17,6 +17,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourceRegistry.cmake")
 # package config template for the installed path — so a consumer that includes only this module
 # must still reach every public resource function.
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeployResources.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosFlattenResource.cmake")
 
 # The tree lives at a path derived from every argument that determines its bytes, rather than at
 # one named after the resource. A key assembled by hand can forget an argument and hand back a
