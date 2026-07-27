@@ -218,8 +218,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python development headers
-        run: sudo apt-get update && sudo apt-get install -y python3-dev
+      # python3-yaml comes from the image's own repositories and is built for the
+      # same interpreter python3-dev configures against, so the resource helper's
+      # tests run instead of skipping on a missing module.
+      - name: Install Python development headers and the yaml module
+        run: sudo apt-get update && sudo apt-get install -y python3-dev python3-yaml
 
       - name: Install pugixml
         run: |
@@ -242,13 +245,28 @@ jobs:
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
             -DMEIOS_BUILD_TESTS=ON \
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
-            -DMEIOS_BUILD_EVAL_PYTHON=ON
+            -DMEIOS_BUILD_EVAL_PYTHON=ON \
+            -DMEIOS_REQUIRE_EVAL_PYTHON=ON
 
       - name: Build (Python found)
         run: cmake --build build-py
 
       - name: Test (Python found)
         run: cd build-py && ctest --output-on-failure
+
+      # ctest reports success when a -R filter selects nothing, so the leg that
+      # requires the enrichment asserts the abuse suite exists before running it;
+      # otherwise a vanished test stem passes as a green filtered run.
+      - name: Assert the abuse suite ran (Python found)
+        run: |
+          cd build-py
+          registered=$(ctest -N -R eval_python_abuse | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "eval_python_abuse registered no tests"
+            exit 1
+          fi
+          echo "eval_python_abuse registered $registered test(s)"
+          ctest -R eval_python_abuse --output-on-failure
 
       # Python absent: the eval-python target must be skipped and the always-on
       # core-evaluator eval_policy tests must stay green.

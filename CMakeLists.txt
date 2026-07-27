@@ -25,6 +25,7 @@ option(MEIOS_BUILD_SCAN_GLTF "Build meios::scan-gltf (nlohmann/json)" OFF)
 option(MEIOS_BUILD_ROS "Build meios::ros (pugixml)" OFF)
 option(MEIOS_BUILD_ARCHIVE_ZIP "Build meios::archive-zip (miniz)" OFF)
 option(MEIOS_BUILD_EVAL_PYTHON "Build meios::eval-python (pybind11 + found Python3)" OFF)
+option(MEIOS_REQUIRE_EVAL_PYTHON "Turn a skipped meios::eval-python into a configure error" OFF)
 option(MEIOS_BUILD_TOOLS "Build the meios CLI" OFF)
 
 # Install is gated off only for a backend whose link edge cannot be re-resolved by
