@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot name="harness_python" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="a_"/>
+
+  <link name="$(arg prefix)${'base upper'.split()[1]}"/>
+</robot>

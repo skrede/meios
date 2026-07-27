@@ -45,21 +45,29 @@ function(meios_harness_build binary out_rc)
     set(${out_rc} "${_rc}" PARENT_SCOPE)
 endfunction()
 
+# A case that binds a pass regex to a refusal matches it against the whole transcript, so an
+# assertion failing afterwards would leave the case green with the failure printed underneath it.
+# This token is bound as a failure regex on every case, which is what lets a refusal case assert
+# anything about the tree at all.
+function(meios_harness_failed_assertion text)
+    message(FATAL_ERROR "MEIOS_HARNESS_ASSERT_FAILED ${text}")
+endfunction()
+
 function(meios_harness_require_dir path)
     if(NOT IS_DIRECTORY "${path}")
-        message(FATAL_ERROR "meios-harness: expected a directory at ${path}")
+        meios_harness_failed_assertion("expected a directory at ${path}")
     endif()
 endfunction()
 
 function(meios_harness_require_file path)
     if(NOT EXISTS "${path}" OR IS_DIRECTORY "${path}")
-        message(FATAL_ERROR "meios-harness: expected a file at ${path}")
+        meios_harness_failed_assertion("expected a file at ${path}")
     endif()
 endfunction()
 
 function(meios_harness_require_absent path)
     if(EXISTS "${path}")
-        message(FATAL_ERROR "meios-harness: expected nothing at ${path}")
+        meios_harness_failed_assertion("expected nothing at ${path}")
     endif()
 endfunction()
 

@@ -236,6 +236,11 @@ jobs:
       # eval-python forces install off (its pybind11-embed link edge cannot be
       # re-resolved from an installed tree), so it never joins an install-consumer
       # leg. This job exercises only build+test, never install.
+      #
+      # MEIOS_BUILD_TOOLS is on here and nowhere else alongside the enrichment:
+      # the build-time flatten that really executes Python needs the CLI and the
+      # python backend in one tree, and this is the job that requires the
+      # enrichment rather than merely offering it.
       - name: Configure (Python found)
         env:
           CC: gcc-14
@@ -244,6 +249,7 @@ jobs:
           cmake . -B build-py -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
             -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_BUILD_TOOLS=ON \
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
             -DMEIOS_BUILD_EVAL_PYTHON=ON \
             -DMEIOS_REQUIRE_EVAL_PYTHON=ON
@@ -267,6 +273,21 @@ jobs:
           fi
           echo "eval_python_abuse registered $registered test(s)"
           ctest -R eval_python_abuse --output-on-failure
+
+      # The build-time flatten that really runs Python registers only where the
+      # CLI carries the backend, so it is asserted present for the same reason:
+      # a case that quietly stopped registering would pass as a green filtered
+      # run and this job is the only one that can run it at all.
+      - name: Assert the build-time python flatten ran (Python found)
+        run: |
+          cd build-py
+          registered=$(ctest -N -R cmake_flatten_eval_python_live | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "cmake_flatten_eval_python_live registered no tests"
+            exit 1
+          fi
+          echo "cmake_flatten_eval_python_live registered $registered test(s)"
+          ctest -R cmake_flatten_eval_python_live --output-on-failure
 
       # Python absent: the eval-python target must be skipped and the always-on
       # core-evaluator eval_policy tests must stay green.

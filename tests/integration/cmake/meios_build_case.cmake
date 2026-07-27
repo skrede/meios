@@ -38,11 +38,15 @@ if(_rc EQUAL 0)
     foreach(_rel IN LISTS _present)
         meios_harness_require_file("${_run}/${_rel}")
     endforeach()
-    string(REPLACE "," ";" _absent "${REQUIRE_ABSENT}")
-    foreach(_rel IN LISTS _absent)
-        meios_harness_require_absent("${_run}/${_rel}")
-    endforeach()
 endif()
+
+# Absence is asserted whatever the build did, because the case that cares most about it is the one
+# whose build failed: a rule that writes straight into its output leaves a half-written document
+# behind exactly there, and a check skipped on failure would never see it.
+string(REPLACE "," ";" _absent "${REQUIRE_ABSENT}")
+foreach(_rel IN LISTS _absent)
+    meios_harness_require_absent("${_run}/${_rel}")
+endforeach()
 
 if(_rc EQUAL 0 AND REQUIRE_CONTAINS)
     string(REPLACE "," ";" _pair "${REQUIRE_CONTAINS}")
@@ -51,7 +55,7 @@ if(_rc EQUAL 0 AND REQUIRE_CONTAINS)
     meios_harness_require_file("${_run}/${_rel}")
     file(READ "${_run}/${_rel}" _deployed)
     if(NOT _deployed MATCHES "${_needle}")
-        message(FATAL_ERROR "meios-harness: ${_rel} does not carry '${_needle}'")
+        meios_harness_failed_assertion("${_rel} does not carry '${_needle}'")
     endif()
 endif()
 

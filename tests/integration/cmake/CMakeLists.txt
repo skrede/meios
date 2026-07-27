@@ -41,11 +41,11 @@ function(meios_cmake_case name)
     if(ARG_REFUSES)
         set_tests_properties(${name} PROPERTIES
             PASS_REGULAR_EXPRESSION "${ARG_REFUSES}"
-            FAIL_REGULAR_EXPRESSION "MEIOS_HARNESS_OK")
+            FAIL_REGULAR_EXPRESSION "MEIOS_HARNESS_OK;MEIOS_HARNESS_ASSERT_FAILED")
     elseif(ARG_MATCHES)
         set_tests_properties(${name} PROPERTIES
             PASS_REGULAR_EXPRESSION "${ARG_MATCHES}"
-            FAIL_REGULAR_EXPRESSION "MEIOS_HARNESS_FAILED")
+            FAIL_REGULAR_EXPRESSION "MEIOS_HARNESS_FAILED;MEIOS_HARNESS_ASSERT_FAILED")
     endif()
 endfunction()
 
