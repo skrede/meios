@@ -3,9 +3,11 @@
 The consumer tier is a single call. Hand `load()` a path to a URDF or xacro description; it reads the
 file, expands xacro, resolves `package://` and `$(find)` references, builds a global material table,
 and reconstructs the kinematic topology. What you get back is an
-`expected<model<double>, load_error>`: on success a fully resolved `model`, on failure a typed
-`file:line` diagnostic on the error channel. There is no intermediate serialization format and no
-silent partial result — a description that cannot be resolved fails loudly.
+`expected<load_result, load_error>`: on success a `load_result` carrying the fully resolved `robot`,
+every diagnostic the load raised, and the completeness claims the result is willing to make; on
+failure a typed `file:line` diagnostic on the error channel, alongside that same diagnostic list.
+There is no intermediate serialization format and no silent partial result — a description that
+cannot be resolved fails loudly.
 
 ## Loading a description and reading the model
 

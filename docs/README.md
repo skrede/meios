@@ -8,8 +8,8 @@ you consume the library, then follow the one guide that matches.
 meios has two tiers. You are on exactly one of them; read only its guide.
 
 **Use the consumer tier if you want the resolved robot and nothing else.** You call `load()`, get an
-`expected<model<double>, load_error>` back, and read the flattened links, joints, materials, and
-topology out of the `model`. This is the tier for a tool that inspects a description, a converter, or
+`expected<load_result, load_error>` back, and read the flattened links, joints, materials, and
+topology out of the result's `robot`. This is the tier for a tool that inspects a description, a converter, or
 any consumer that is happy to hold the model in meios's own `model` type. Read the
 [consumer guide](consumer-guide.md).
 
