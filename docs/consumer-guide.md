@@ -7,7 +7,9 @@ and reconstructs the kinematic topology. What you get back is an
 every diagnostic the load raised, and the completeness claims the result is willing to make; on
 failure a typed `file:line` diagnostic on the error channel, alongside that same diagnostic list.
 There is no intermediate serialization format and no silent partial result — a description that
-cannot be resolved fails loudly.
+cannot be resolved fails loudly, and that includes one whose `package://` meshes are not there. The
+[resources guide](resources-guide.md) covers how to opt into loading a description without its
+assets, and what the result tells you when you do.
 
 ## Loading a description and reading the model
 

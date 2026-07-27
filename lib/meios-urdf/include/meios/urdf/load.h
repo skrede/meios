@@ -31,7 +31,7 @@ class evaluator_handle;
 struct load_options
 {
     load_options()
-        : on_missing(missing_asset::warn),
+        : on_missing(missing_asset::fail),
           topology(topology_policy::fail),
           materials(material_policy::warn),
           strict(strictness::fail),

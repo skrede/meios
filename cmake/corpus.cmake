@@ -38,9 +38,10 @@ if(NOT MEIOS_FETCH_CORPUS)
     return()
 endif()
 
-# The known-good half of the pair: one small, pre-expanded serial-arm URDF
-# that parses with zero error-level diagnostics (its package:// meshes surface as
-# warn-level unresolved_mesh, never errors).
+# The known-good half of the pair: one small, pre-expanded serial-arm URDF that parses
+# with zero error-level diagnostics. Its package:// meshes are not deployed, so that
+# holds only because the harness builds its own context asking for warn-level
+# unresolved_mesh; the library itself refuses an unresolved asset by default.
 meios_declare_resource(
     NAME kuka_experimental
     URL  https://github.com/ros-industrial/kuka_experimental/archive/8d9292b04a22628b1b78d989e2ddd3abb913bf92.tar.gz

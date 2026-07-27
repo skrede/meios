@@ -156,6 +156,8 @@ int run_info(const verb_context &ctx)
     log_sink_s log(std::cerr);
     deferred_error_sink sink(log);
     load_options opts;
+    // Which meshes failed to resolve is part of this verb's report; refusing would withhold it.
+    opts.on_missing = missing_asset::warn;
     opts.package_roots = to_paths(ctx.package_paths);
     source_stack sources = build_sources(opts.package_roots, sink);
     const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);

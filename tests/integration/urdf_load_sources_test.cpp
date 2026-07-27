@@ -100,7 +100,8 @@ TEST_CASE("a package miss is reported, not silently dropped", "[urdf][load][sour
     REQUIRE_FALSE(first_mesh_path(robot).value_or("").size() > 0);
 }
 
-TEST_CASE("the two-arg load is silent even on an unresolved package", "[urdf][load][sources]")
+TEST_CASE("the two-arg load stays silent while refusing an unresolved package",
+          "[urdf][load][sources]")
 {
     std::ostringstream redirect;
     std::streambuf *previous = std::cerr.rdbuf(redirect.rdbuf());
@@ -110,9 +111,9 @@ TEST_CASE("the two-arg load is silent even on an unresolved package", "[urdf][lo
         meios::load(fixture("package_mesh.urdf"), opts);
 
     std::cerr.rdbuf(previous);
-    REQUIRE(loaded.has_value());
+    REQUIRE_FALSE(loaded.has_value());
+    REQUIRE(loaded.error().code == meios::diagnostic_code::unresolved_mesh);
     REQUIRE(redirect.str().empty());
-    REQUIRE_FALSE(first_mesh_path(loaded->robot).value_or("").size() > 0);
 }
 
 TEST_CASE("the source_stack overload threads a caller stack into resolution", "[urdf][load][sources]")

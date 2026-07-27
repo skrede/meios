@@ -32,13 +32,15 @@ std::string slurp(const std::filesystem::path &path)
 }
 
 // Drives the exact load -> flatten sequence the CLI's flatten verb does, into a
-// string, so the bytes asserted here are the bytes a consumer would get. The
-// discard sink swallows the pinned description's warn-level unresolved_mesh notes;
-// only an error-level diagnostic would leave load without a value.
+// string, so the bytes asserted here are the bytes a consumer would get. The pinned
+// description's package:// meshes are not fetched with it, and the subject here is
+// the flattened bytes rather than asset resolution, so the asset policy is lowered to
+// warn and the discard sink swallows the notes it produces.
 std::string flatten_known_good()
 {
     meios::log_sink discard;
-    const meios::load_options opts;
+    meios::load_options opts;
+    opts.on_missing = meios::missing_asset::warn;
     const std::filesystem::path source{ MEIOS_CORPUS_KNOWN_GOOD };
     const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(source, opts, discard);

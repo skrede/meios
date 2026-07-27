@@ -501,6 +501,14 @@ A `package://<name>/<path>` reference resolves to `<package root>/<name>/<path>`
 directory must contain the package directory — deploy the tree that *holds* the packages, not one
 package's own root.
 
+If a reference does not resolve, the load fails: `load_options::on_missing` defaults to
+`missing_asset::fail`, so a description naming a mesh that is not there never reaches you looking
+complete. Lower it to `missing_asset::warn` when you genuinely want the model without the assets —
+an inspection pass, a kinematics-only consumer. You still get an honest value: the result's
+`claims` no longer carry `completeness::deployment_complete`, and its `diagnostics` name every
+reference that failed, one entry each. `missing_asset::skip` drops the diagnostics too, and with
+them any record that anything was missing.
+
 ## Worked examples
 
 Two, covering the two halves of the story:

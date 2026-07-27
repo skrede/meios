@@ -272,8 +272,12 @@ TEST_CASE("a root-escaping package path fails the load under the default policy"
 TEST_CASE("a successful load returns every diagnostic the document raised, not the first",
           "[urdf][load_failure]")
 {
+    // The fixture's three diagnostics span all three claims, and two of the three policies
+    // that raise them refuse by default; both are relaxed so the load reaches the success
+    // arm this case is about.
     meios::load_options opts;
     opts.topology = meios::topology_policy::warn;
+    opts.on_missing = meios::missing_asset::warn;
     const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("profile/three_diagnostics_ok.urdf"), opts);
 
@@ -314,6 +318,7 @@ TEST_CASE("an unresolved asset and a broken topology clear their own claims and 
 {
     meios::load_options opts;
     opts.topology = meios::topology_policy::warn;
+    opts.on_missing = meios::missing_asset::warn;
     const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("profile/three_diagnostics_ok.urdf"), opts);
 

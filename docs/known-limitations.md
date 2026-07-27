@@ -25,9 +25,10 @@ but it has not been proven against a live `--symlink-install` workspace.
 **A successful `load()` does not mean a clean load.** `load(path).has_value() == true` tells you the
 description resolved far enough to produce a model — it does **not** tell you no warnings were raised.
 The convenience `load()` overload is silent by default: it surfaces only the first fatal error, on the
-`load_error` channel, and drops every `level::warn` diagnostic. An unresolved `package://` reference,
-a material collision under a `warn` policy, or a topology issue under a `warn` policy will all pass
-without a trace on this path.
+`load_error` channel, and drops every `level::warn` diagnostic. A material collision under a `warn`
+policy, or a topology issue under a `warn` policy, will pass without a trace on this path. An
+unresolved `package://` reference does not: it fails the load by default, and if you lower
+`on_missing` to `warn` it joins the same silent tier as the others.
 
 **Warnings require an injected sink.** To see the dropped `warn`-tier diagnostics, call the overload
 that takes a `log_sink` and inject one. Without a sink, the whole `warn` tier is discarded — by
@@ -76,6 +77,11 @@ reconstruct — a link with more than one parent, a cycle, an undeclared link �
 non-zero with no output and `meios complete` yields no completions, rather than printing a partial
 view. This follows from silent-by-default plus the default `fail` topology policy. `meios tree` uses a
 `warn` policy and still prints what it can.
+
+**Unresolved meshes do not stop the reporting verbs.** `info`, `tree`, and `complete` lower
+`on_missing` to `warn`, because none of them renders asset bytes and `info`'s mesh listing is the
+report of what did *not* resolve. `flatten`, `bundle`, and `deps` keep the refusing default: each
+produces an artifact that names or needs the asset.
 
 ## The CMake resource modules
 

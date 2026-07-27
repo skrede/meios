@@ -78,8 +78,12 @@ int emit(const std::vector<std::string> &candidates, std::string_view directive)
 model<double> quiet_load(const std::string &model_path)
 {
     log_sink quiet;
+    load_options opts;
+    // Completion offers link and joint names and has no channel to report on; under the
+    // library's refusing default an unresolved mesh would silently offer nothing at all.
+    opts.on_missing = missing_asset::warn;
     const expected<load_result, load_error> loaded =
-        load(std::filesystem::path(model_path), load_options{}, quiet);
+        load(std::filesystem::path(model_path), opts, quiet);
     return loaded ? loaded->robot : model<double>{};
 }
 
