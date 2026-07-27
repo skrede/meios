@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="short_offset">
+  <link name="base"/>
+  <link name="tip"/>
+  <joint name="base_to_tip" type="fixed">
+    <parent link="base"/>
+    <child link="tip"/>
+    <origin xyz="0 0.5" rpy="0 0 0"/>
+  </joint>
+</robot>

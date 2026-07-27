@@ -10,7 +10,6 @@
 
 #include <cmath>
 #include <string>
-#include <cstddef>
 #include <optional>
 #include <string_view>
 
@@ -19,28 +18,6 @@ namespace meios::detail
 
 namespace
 {
-
-bool is_space(char c)
-{
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
-}
-
-void read_scalars(std::string_view text, double *out, std::size_t count, parse_context &ctx,
-                  const source_location &loc, std::string_view field)
-{
-    std::size_t i = 0;
-    std::size_t pos = 0;
-    while(i < count && pos < text.size())
-    {
-        while(pos < text.size() && is_space(text[pos]))
-            ++pos;
-        const std::size_t start = pos;
-        while(pos < text.size() && !is_space(text[pos]))
-            ++pos;
-        if(pos > start)
-            read_finite(text.substr(start, pos - start), out[i++], ctx, loc, field);
-    }
-}
 
 rgba<double> read_rgba(std::string_view text, parse_context &ctx, const source_location &loc)
 {

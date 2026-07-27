@@ -1,0 +1,8 @@
+# fixture <TAB> verdict <TAB> code <TAB> rule <TAB> note. The fixture resolves under the profile
+# subdirectory of the URDF fixture directory. The verdict vocabulary is exactly refuse, drop, accept;
+# a non-refusing row's code column is a bare -. The code column carries the exact to_string spelling
+# of the diagnostic_code enumerator the refusal reports, and the rule column carries the bare slug the
+# published profile document names for that rule. The note column is free text the loader discards.
+origin_xyz_short.urdf	refuse	vector_arity	origin-xyz-arity	A two-component offset was silently completed to a third zero.
+origin_xyz_long.urdf	refuse	vector_arity	origin-xyz-arity	A four-component offset was silently truncated to three.
+origin_xyz_ok.urdf	accept	-	origin-xyz-arity	Three components, and an absent rpy keeping its documented default.

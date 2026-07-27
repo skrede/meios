@@ -32,6 +32,12 @@ using material_table = std::unordered_map<std::string, material<double>>;
 bool read_finite(std::string_view text, double &out, parse_context &ctx,
                  const source_location &loc, std::string_view field);
 
+// Fills out[0..count) only when the text carries exactly count whitespace-separated
+// tokens; an empty or all-whitespace text leaves the caller's defaults and is not a
+// violation, so an absent attribute keeps the default the profile documents.
+bool read_scalars(std::string_view text, double *out, std::size_t count, parse_context &ctx,
+                  const source_location &loc, std::string_view field);
+
 vector3<double> read_vec3(std::string_view text, parse_context &ctx, const source_location &loc,
                           std::string_view field);
 

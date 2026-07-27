@@ -39,6 +39,7 @@ enum class diagnostic_code
     xacro_parse_error,
     xacro_structural_error,
     expansion_budget_exceeded,
+    vector_arity,
 };
 
 constexpr std::string_view to_string(diagnostic_code code) noexcept
@@ -76,6 +77,7 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::xacro_parse_error:         return "xacro_parse_error";
         case diagnostic_code::xacro_structural_error:    return "xacro_structural_error";
         case diagnostic_code::expansion_budget_exceeded: return "expansion_budget_exceeded";
+        case diagnostic_code::vector_arity:              return "vector_arity";
     }
     return "unknown";
 }

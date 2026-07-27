@@ -211,6 +211,33 @@ foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_stric
     endif()
 endforeach()
 
+# The profile stems are driven by tests/golden/urdf/profile.cases, so they need the
+# golden directory alongside the fixture directory the other urdf stems get.
+foreach(stem IN ITEMS urdf_profile profile_drift)
+    set(profile_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${profile_test_src})
+        add_executable(${stem}_test ${profile_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        # Catch2 registers a case under its prose name, so the stem is only selectable
+        # by regex once it prefixes them.
+        catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
+    endif()
+endforeach()
+
+# This stem alone reads the published profile document; the runner opens the rule
+# table only, and no other target has any use for the documentation directory.
+if(TARGET profile_drift_test)
+    target_compile_definitions(profile_drift_test PRIVATE
+        MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
+endif()
+
 foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})

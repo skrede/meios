@@ -65,5 +65,7 @@ dependency-light nucleus and carries no reader; `meios::urdf` is the surface a c
   a plain URDF, instead of vendoring the tree into your repository.
 - [Evaluation](evaluation.md) — what a description's expressions may run, the rules that refuse the
   rest, and how the resource helper resolves a file.
+- [URDF profile](urdf-profile.md) — the expanded URDF document meios reads, the rules that refuse the
+  rest, and the diagnostic code each refusal carries.
 - [Known limitations](known-limitations.md) — every defect and caveat live at this point in the
   library's life, described by its user-facing effect.
