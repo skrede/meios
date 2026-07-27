@@ -20,21 +20,21 @@ workspace, where installed package files are symlinks back into the source tree,
 crafted fixtures rather than a real symlink-installed layout. The path resolution is believed correct,
 but it has not been proven against a live `--symlink-install` workspace.
 
-## Diagnostics you must opt into
+## Diagnostics
 
-**A successful `load()` does not mean a clean load.** `load(path).has_value() == true` tells you the
-description resolved far enough to produce a model — it does **not** tell you no warnings were raised.
-The convenience `load()` overload is silent by default: it surfaces only the first fatal error, on the
-`load_error` channel, and drops every `level::warn` diagnostic. A material collision under a `warn`
-policy, or a topology issue under a `warn` policy, will pass without a trace on this path. An
-unresolved `package://` reference does not: it fails the load by default, and if you lower
-`on_missing` to `warn` it joins the same silent tier as the others.
+**A successful `load()` does not mean a clean load.** A value on the success arm tells you meios
+produced a model, not that the document was clean. A material collision under a `warn` policy, a
+topology issue under a `warn` policy, and an unresolved `package://` reference under a lowered
+`on_missing` all pass without failing the load. The result carries every diagnostic the document
+raised, in source order, alongside the three completeness claims; branch on those rather than on the
+presence of a value. The failure arm carries the same list beside the error that names the failure.
 
-**Warnings require an injected sink.** To see the dropped `warn`-tier diagnostics, call the overload
-that takes a `log_sink` and inject one. Without a sink, the whole `warn` tier is discarded — by
-design, so the library stays silent by default, but it means a consumer who wants the warnings must
-ask for them explicitly. The engine guide shows a sink that captures typed diagnostics into your own
-record type.
+**Nothing is printed unless you ask.** meios installs no output stream of its own. A program that
+injects no `log_sink` sees nothing at the moment a diagnostic is raised and reads the same
+diagnostics off the result afterwards instead. That is deliberate rather than a defect, and it is
+listed here only because silence during a load is easy to mistake for evidence of a clean one. The
+engine guide shows a sink that captures typed diagnostics into your own record type as they are
+raised.
 
 ## Modeling gaps
 
@@ -45,6 +45,36 @@ populates it, and the model's extension collections are always empty. A consumer
 simulator, controller, transmission, or sensor configuration cannot recover it from a loaded model
 and must read the source document itself. Preserving these losslessly is planned; until it lands,
 treat a meios load as lossy for everything outside the URDF kinematic and visual surface.
+
+**An inertia tensor is checked for mathematical admissibility, never for physical plausibility.**
+meios refuses a negative mass, a negative moment of inertia, a tensor that is not positive
+semi-definite, and one that violates a triangle inequality on its diagonal — all properties of the
+tensor alone. It has no model of the link's shape and will not guess one. A tensor that satisfies
+every rule and is off by three orders of magnitude for the body it describes passes, and so does one
+whose principal axes point somewhere the geometry cannot support. Checking a tensor against its
+geometry is a job for a consumer that owns both.
+
+**A repeated element is silently ignored.** Where a document carries two `<origin>` elements on one
+joint, two `<inertial>` elements in one link, or a second `<axis>`, `<limit>`, `<mimic>`,
+`<geometry>`, `<parent>` or `<child>`, meios reads the first and discards the rest with no diagnostic
+at any level. The specification says nothing about how many of these an element may carry, and the
+reader has never counted. This is the one silent acceptance left in the URDF reader.
+
+**Under a permissive document-validity setting a partially-valid element is lost whole.** The default
+setting refuses the document. Lower it and the same defect drops the element that contained it
+instead: an `<inertial>` whose `<mass>` cannot be read leaves the link with no inertial at all rather
+than with the tensor that was present, and a `<visual>` whose geometry cannot be read is not added to
+the link. That is the accepted cost of never completing a value nobody wrote — a link with no
+inertial is a fact you can see and act on, while a link carrying a zero mass nobody authored is
+indistinguishable from a real one.
+
+**`load_into` stages the model before it pushes.** The facade that drives your own `model_sink` from
+a path loads into meios's `model` first and walks that into your sink only once the load has
+succeeded. That is what makes the atomicity guarantee free — a failed load never touches your sink —
+but it means peak memory holds both representations at once, and a description large enough for that
+to matter is better served by loading and walking in two explicit steps you control. The staged
+`model` also carries only the robot's name, so a sink driven through the facade receives a
+`robot_info` whose version and extension collections are empty whatever the document declared.
 
 **The Python evaluator runs a restricted subset, and the restriction has false refusals.**
 `meios::eval-python` refuses an expression that reaches past arithmetic, comprehensions, the

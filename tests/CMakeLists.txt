@@ -275,6 +275,19 @@ if(TARGET profile_drift_test)
         MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
 endif()
 
+# The frame reference is data a consumer diffs against rather than a fixture the library
+# reads, so this stem needs the golden directory and links no meios target at all.
+set(frames_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_frames_test.cpp)
+if(EXISTS ${frames_test_src})
+    add_executable(urdf_frames_test ${frames_test_src})
+    target_link_libraries(urdf_frames_test PRIVATE Catch2::Catch2WithMain)
+    target_compile_definitions(urdf_frames_test PRIVATE
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+    meios_enable_coverage(urdf_frames_test)
+    meios_warnings(urdf_frames_test)
+    catch_discover_tests(urdf_frames_test TEST_PREFIX "urdf_frames.")
+endif()
+
 foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})

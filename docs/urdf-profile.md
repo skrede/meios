@@ -7,7 +7,10 @@ belong to [evaluation](evaluation.md); nothing on this page restates them. If yo
 out what `${…}` may evaluate to, you are on the wrong page.
 
 Each rule below says which construct it governs, what meios does when a document violates it, and the
-diagnostic code the refusal carries so you can branch on it rather than on message text.
+diagnostic code the refusal carries so you can branch on it rather than on message text. The rule
+table is at the end; ahead of it are the specification meios follows, the failure this profile exists
+to prevent, the frame and unit conventions the numbers obey, every rule the specification does not
+state, and every place this profile departs from something it does.
 
 ## Authority
 
@@ -31,10 +34,101 @@ The default answer to silence is a loud refusal rather than a guess: a document 
 without inventing a value is refused with a `file:line` diagnostic, not completed to something
 plausible. Silence is never read as permission to fabricate.
 
+## What this profile exists to prevent
+
+A reader that completes what a document did not say produces a robot nobody wrote, and reports
+success. That failure has a shape worth naming: the defect never surfaces where it was authored, and
+what reaches you is either a plausible-looking model or a complaint about something else entirely.
+
+Two links sharing a name is the clearest illustration. Read permissively, the second declaration is
+simply another link — so the model gains a body no joint attaches, and the first sign of trouble is a
+topology complaint that the robot has an additional root. That complaint is true and useless: the
+defect is a duplicated name several lines earlier, and nothing in the output points at it.
+
+`tests/fixtures/urdf/profile/coercion_probe.urdf` is the other half of the same story, and it is kept
+in the repository for exactly that reason. It carries an unsupported version, an unknown attribute on
+`<robot>`, a two-component offset, an empty mass, a negative inertia diagonal, an unknown geometry
+shape, an unknown child inside a link, a misspelled `type` attribute, a four-component offset, a zero
+axis, and a mimic naming a joint that does not exist. Before the rules on this page existed, `meios
+validate` printed `validation: OK (exit 0)` on it and `meios info` reported one rigid connection and
+zero degrees of freedom, with no diagnostic at any level. It is now refused, and the refusal names a
+defect at its own `file:line`.
+
+A load stops at the first class of defect it refuses rather than reporting every one: identity and
+reference integrity are settled before a field is read, and a field is not read out of an element
+whose identity is already wrong. Repairing a document that broken is therefore iterative. Every rule
+this page publishes is proven on a document of its own, one defect at a time; that one is kept whole
+because what it demonstrates is the silence, not any single rule.
+
+## Frames, units and composition
+
+These are statements about what the numbers in a document mean, not rules a document can violate, so
+none of them appears in the rule table below. They are here because a consumer that reads them wrong
+places a link somewhere the author never wrote, and no diagnostic can catch that.
+
+**Positions are in metres and angles are in radians.** The joint page states both outright: of
+`<origin>`'s `xyz`, "All positions are specified in metres"; of its `rpy`, "All angles are specified
+in radians" (rev. 2022-06-17). meios neither converts nor scales: an attribute reaches a consumer as
+the number the document authored.
+
+**A joint's `<origin>` is the child frame expressed in the parent.** The joint page says it plainly:
+the origin "is the transform from the parent link to the child link" (rev. 2022-06-17). The joint
+frame is at that transform from the parent's frame, and the child link's frame coincides with it. An
+`<origin>` under a `<visual>`, a `<collision>` or an `<inertial>` is the same kind of quantity one
+level down — the element's own frame expressed in the frame of the link that contains it (rev.
+2022-04-19).
+
+**`rpy` is a fixed-axis composition, roll then pitch then yaw.** The joint page, verbatim:
+"Represents the rotation around fixed axis: first roll around x, then pitch around y and finally yaw
+around z" (rev. 2022-06-17). Because the axes are fixed rather than carried along by the preceding
+rotations, the equivalent matrix product is
+
+```
+R = Rz(yaw) * Ry(pitch) * Rx(roll)
+```
+
+applied to a column vector on the right. The reverse product is a different rotation, and reading the
+sentence as a moving-axis composition produces exactly that reverse — which is why the worked values
+below include a row where the two orders disagree in six of nine components.
+
+**The inertia tensor is expressed in the inertial element's own frame.** The link page places
+`<inertial><origin>` at "the pose of the inertial reference frame, relative to the link reference
+frame", with its origin "at the center of mass of the link" and its axes those of the principal
+frame (rev. 2022-04-19). The six components meios stores are therefore about that frame, not about
+the link's frame; a consumer that wants them about the link's origin applies the parallel-axis
+theorem itself, using the origin the record carries.
+
+**meios composes nothing.** `rpy`, `transform` and `inertia` are stored as the plain numbers the
+document authored, and no part of this library multiplies, converts or normalizes them — there is no
+rotation conversion in the interface and none is planned for it. That is deliberate: the consumer
+owns kinematics, and a conversion here would be a second implementation to keep honest. What this
+page ships instead is worked evidence.
+
+`tests/golden/urdf/rpy_reference.cases` carries a set of `rpy` triples with the rotation matrix and
+the unit quaternion each one denotes under the convention above, at full double precision, one row
+per line with a self-describing header. Point your own implementation at it: if your matrix matches
+every row, you have the same convention meios documents and the reference parser implements. The
+quaternion column follows the reference parser's `setFromRPY`, so the two representations in a row
+are the same rotation and a consumer may check against whichever it computes.
+
 ## Where this profile decides on its own authority
 
 Every rule meios enforces that the wiki does not state is recorded in this section, with the reasoning
 that justifies it, so a reader can tell a specification requirement from a meios decision.
+
+**What a violated "required" does is decided here, because the wiki only ever marks a field
+required.** Nothing on the three pages says what a reader should do about a violation. meios refuses
+the document under the default document-validity setting and drops the containing element under the
+permissive ones; the exact shape of that drop, and where it stops, is spelled out under the rule
+table below. What it never does is supply the missing value.
+
+**How many of an element may appear is decided here too, and the decision is a gap.** The wiki says
+multiple `<visual>` and multiple `<collision>` are allowed and says nothing at all about how many
+`<origin>`, `<inertial>`, `<axis>`, `<limit>`, `<mimic>`, `<geometry>`, `<parent>` or `<child>` an
+element may carry. meios reads the first of each and ignores the rest, with no diagnostic. That is
+the one place on this page where silence is still the behavior rather than the thing being ended, and
+it is stated here rather than left for you to discover: a second `<origin>` on a joint is not a
+second frame, it is an element nobody will tell you was ignored.
 
 **Unknown attributes are dropped with a diagnostic that names them.** The wiki never mentions unknown
 attributes on any of its three pages, so nothing about them is a specification requirement. meios names
@@ -64,6 +158,15 @@ can never be reached, and two with the same name make a reference name two diffe
 refused. A material *defined inline* under a `<visual>` is unaffected: it carries its color or its
 texture with it and needs no name to be read.
 
+**A name is exact bytes, and only an absent, empty or all-whitespace one is refused.** The wiki never
+mentions whitespace or an empty attribute value. meios takes a name to be the attribute value as
+authored: it never trims surrounding whitespace, folds case, or normalises before comparing, so
+`Base_Link` and `base_link` are two links and `base_link` and `base_link ` are two more. Any folding
+would invent an equivalence the document never stated and would begin refusing descriptions the
+reference parser accepts. A name with internal whitespace is a legal name and is left alone. What is
+refused is a name that is absent, empty, or nothing but whitespace: such an element has no identity,
+several of them silently share one, and a joint cannot reference any of them.
+
 **A document declaring no `<link>` is refused.** The wiki never addresses whether an empty `<robot>`
 is a robot. meios refuses it: a description with no links describes no body, every consumer of the
 resulting model would immediately find nothing in it, and refusing at the document says so at a
@@ -92,6 +195,22 @@ and which no consumer could distinguish from an authored one.
 never states what may appear in a numeric attribute. meios refuses text it cannot parse and text that
 parses to an infinity or a NaN, because both reach a consumer as a coordinate, a mass or a limit and
 propagate through every arithmetic that touches them.
+
+**A fixed-length numeric attribute must carry exactly its own number of components.** The wiki
+describes `xyz` as "the x, y, z offset" and `rpy` as the roll, pitch and yaw angles about the fixed
+axes — three components each — and says nothing whatever about what a two-component or a
+four-component string is supposed to mean. There is no reading of a two-component offset that does
+not invent the missing number, and no reading of a four-component one that does not discard an
+authored one. Both are documents meios cannot read, so both are refused. An **absent** `<origin>`, or
+an absent `xyz` or `rpy` attribute, is not a violation: the wiki states those are optional and states
+their defaults, and meios keeps them. The same reader enforces the same count on every other
+fixed-length numeric attribute in a description; those constructs get their own rows here as the
+profile is completed, and until a row exists, treat only the `<origin>` row as published.
+
+Before this rule, meios did what the parsers it supersedes do: a two-component offset was completed
+with a third zero, a four-component one was truncated to its first three, and both **silently**, with
+no diagnostic at any level. A description with a typo in an offset loaded clean and placed a link
+somewhere its author never wrote. That is the behavior this rule exists to end.
 
 **Every rule about what an inertial may contain is this profile's own.** The link page names `mass` and
 the six tensor attributes and stops there: it never says the mass must be non-negative, never says the
@@ -126,7 +245,7 @@ so does one whose principal axes point somewhere the geometry does not support. 
 the link's shape and will not guess one; checking a tensor against its geometry is a separate job for
 a consumer that owns both.
 
-A non-finite mass or tensor component never reaches these rules: the finite-number rule below refuses
+A non-finite mass or tensor component never reaches these rules: the finite-number rule above refuses
 the attribute first. The arithmetic re-checks finiteness anyway, before it forms a single product,
 because a determinant on components near the largest representable double overflows to an infinity —
 and every tolerance derived from an infinite scale is itself infinite, so an unchecked tensor would be
@@ -160,10 +279,12 @@ authored number with a computed one, and refusing anything not already unit-leng
 floating-point tolerance as a contract and begin refusing axes that are unit to fifteen digits. A
 consumer that needs a unit axis normalizes it itself, from a value it can still see.
 
-## Where this profile diverges from a stated default
+## Where this profile diverges
 
-Where the wiki states a default and meios deliberately does something else, the divergence and its
-reason are recorded in this section rather than left for a reader to discover from behavior.
+Two things are worth diverging from and are recorded here rather than left for a reader to discover
+from behavior: a default the wiki states outright, and the parser this library supersedes.
+
+### From a default the wiki states
 
 **An absent `<inertial>` yields no inertial, not the zero the wiki states.** The link page marks
 `<inertial>` "optional: defaults to a zero mass and zero inertia if not specified". meios instead
@@ -172,6 +293,49 @@ authored a zero mass — a distinction the stated default destroys, and one a co
 dynamics model needs, because a zero-mass body and an unspecified body are not the same input. A
 consumer that wants the wiki's default can apply it itself; it cannot recover the distinction meios
 would have thrown away. `rule:inertial-optional`
+
+This is the one default on this page that meios does not simply keep. Every other default the wiki
+states for an element survives verbatim, and a default the wiki does not state is not invented — with
+the single exception recorded in the own-authority section above, the `<mimic>` multiplier.
+
+### From the reference parser
+
+urdfdom is read here as an instrument for finding out what real descriptions rely on, never as a
+specification. Where the two differ, the difference is deliberate.
+
+**meios discloses; urdfdom is silent.** urdfdom ignores unknown elements and unknown attributes in
+complete silence at every level — under `<robot>`, inside a `<link>`, inside a `<joint>` — and hands
+back a model that looks complete. meios names each one at its own `file:line` and withdraws the
+parse-completeness claim. Everything the drop rule below describes is meios choosing to say what it
+did not read.
+
+**meios preserves authoring order; urdfdom sorts.** urdfdom stores links, joints and materials in
+`std::map` keyed by name, so a consumer receives them in alphabetical order and the order the
+document was written in is not recoverable from the model at all. meios keeps the document's own
+order in every collection it hands out. A description's authoring order carries intent — the arm
+before the gripper, the base before what stands on it — and discarding it is a loss no consumer can
+undo.
+
+**urdfdom is more permissive than the wiki about a joint's link references, and meios is not.**
+urdfdom's parse of `<parent>` or `<child>` with no `link` attribute only logs an informational
+message; the load fails later, during the tree build, attributed to the tree rather than to the joint
+that caused it. The wiki calls both `link` attributes mandatory. meios refuses at the attribute, so
+the diagnostic points at the element the author has to fix.
+
+**urdfdom is more permissive than the wiki about a coordinate-less `<axis>`, and meios is not.** An
+`<axis>` element with no `xyz` leaves urdfdom's axis at all zeros — not the `(1,0,0)` the wiki states
+as the default for an absent element, and not anything the document asked for. meios refuses it: the
+wiki marks `xyz` required on a present element, and substituting the absent-element default would
+treat writing the element and omitting it as the same act.
+
+**urdfdom refuses a `<dynamics>` that sets neither `damping` nor `friction`; meios accepts it.** That
+refusal is urdfdom's own invention — the wiki gives both attributes a stated default of zero, so an
+empty `<dynamics>` is a well-formed element that says nothing. meios keeps the stated defaults and
+reads it as written.
+
+**Where the two agree on an identity rule, that agreement is corroboration and not authority.** The
+reference parser also refuses a blank name, a duplicate name and a dangling link reference, and every
+identity rule on this page would stand without it.
 
 ## Rules
 
@@ -253,32 +417,6 @@ The graph policy therefore governs only what is genuinely a property of the asse
 roots the links form, whether they contain a cycle, and whether a link has more than one parent joint.
 Setting it permissively can no longer reopen a dangling link reference, which is what it used to do.
 
-**Names are exact bytes.** A name is the attribute value as authored. meios never trims surrounding
-whitespace, folds case, or normalises a name before comparing it, so `Base_Link` and `base_link` are
-two links, and `base_link` and `base_link ` are two more. Any folding would invent an equivalence the
-document never stated and would begin refusing descriptions the reference parser accepts. A name
-containing internal whitespace is a legal name and is left alone. What is refused is a name that is
-absent, empty, or nothing but whitespace: such an element has no identity, several of them silently
-share one, and a joint cannot reference any of them.
-
-**A fixed-length numeric attribute must carry exactly its own number of components.** The wiki
-describes `xyz` as "the x, y, z offset" and `rpy` as the roll, pitch and yaw angles about the fixed
-axes — three components each — and says nothing whatever about what a two-component or a
-four-component string is supposed to mean. There is no reading of a two-component offset that does not
-invent the missing number, and no reading of a four-component one that does not discard an authored
-one. Both are documents meios cannot read, so both are refused. An **absent** `<origin>`, or an absent
-`xyz` or `rpy` attribute, is not a violation: the wiki states those are optional and states their
-defaults, and meios keeps them.
-
-The same reader enforces the same count on every other fixed-length numeric attribute in a
-description. Those constructs get their own rows on this page as the profile is completed; until a row
-exists here, treat only the row above as published.
-
-Before this rule, meios did what the parsers it supersedes do: a two-component offset was completed
-with a third zero, a four-component one was truncated to its first three, and both **silently**, with
-no diagnostic at any level. A description with a typo in an offset loaded clean and placed a link
-somewhere its author never wrote. That is the behavior this rule exists to end.
-
 **Content this profile does not describe is dropped, and the drop is said out loud.** An element or an
 attribute meios does not recognize is not read into the model, and a warning names it at its own
 `file:line`. This is one rule at every level of the document: under `<robot>`, inside a `<link>`, and
@@ -286,9 +424,9 @@ inside a `<joint>` alike. Dropping is disclosure rather than fabrication, so it 
 the diagnostic is emitted whatever the document-validity setting says: that setting grades the
 XML-hygiene classes, and this is not one of them. What the drop does cost is the claim — the result
 stops saying it was parsed whole, so a consumer can branch on that instead of scraping a log. Nothing
-inside a dropped
-subtree is judged further: content this profile does not describe is content it has no vocabulary to
-name, and reporting every node beneath an unrecognized element would say the same thing many times.
+inside a dropped subtree is judged further: content this profile does not describe is content it has
+no vocabulary to name, and reporting every node beneath an unrecognized element would say the same
+thing many times.
 
 A hand-maintained list of tolerated unknown elements was deliberately not built. Any such list is a
 false refusal waiting for the first description that carries something nobody thought to add to it.
@@ -312,14 +450,3 @@ two other claims, and the three are independent facts rather than a ranking.
 
 An XML namespace declaration — `xmlns`, or any `xmlns:` prefix — is XML infrastructure rather than
 description vocabulary and is never reported as an unknown attribute.
-
-**This profile discloses more than the parser it supersedes.** urdfdom ignores both unknown elements
-and unknown attributes in complete silence, at every level, and hands back a model that looks
-complete. Everything above is meios choosing to say what it did not read.
-
-The reference parser also refuses a blank name, a duplicate name and a dangling link reference, so
-every identity rule on this page agrees with it. That agreement is **corroboration, not authority**.
-This profile follows the wiki, and where the wiki is silent it decides for itself and records the
-decision in the own-authority section above; the reference parser is an instrument for reading what
-real descriptions rely on, never a specification meios defers to. Where it happens to agree, the rule
-would stand without it.

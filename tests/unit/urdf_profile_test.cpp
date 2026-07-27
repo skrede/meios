@@ -53,14 +53,14 @@ struct outcome
     meios::completeness   claims;
 };
 
-outcome load(const std::string &fixture)
+outcome load_fixture(const std::string &fixture, const meios::load_options &opts = {})
 {
     std::vector<captured> out;
     meios::log_sink_f capture{ recorder{ out } };
     const std::filesystem::path path =
         std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / "profile" / fixture;
     const meios::expected<meios::load_result, meios::load_error> loaded =
-        meios::load(path, meios::load_options{}, capture);
+        meios::load(path, opts, capture);
     if(!loaded)
         return { std::move(out), false, meios::completeness::none };
     return { std::move(out), true, loaded->claims };
@@ -84,6 +84,17 @@ meios::diagnostic_code code_from(const std::string &name)
             return code;
     }
     return meios::diagnostic_code::unspecified;
+}
+
+bool refused_by_a_published_rule(meios::diagnostic_code code)
+{
+    const std::string spelling{ meios::to_string(code) };
+    for(const profile::row &r : profile::load_rows())
+    {
+        if(r.verdict != "accept" && r.code == spelling)
+            return true;
+    }
+    return false;
 }
 
 std::size_t errors(const std::vector<captured> &diagnostics)
@@ -114,7 +125,7 @@ TEST_CASE("every refusing row is refused under its own code at a real location",
         if(r.verdict != "refuse")
             continue;
         INFO(r.fixture);
-        REQUIRE(located(load(r.fixture).diagnostics, meios::level::error, r.code));
+        REQUIRE(located(load_fixture(r.fixture).diagnostics, meios::level::error, r.code));
     }
 }
 
@@ -126,7 +137,7 @@ TEST_CASE("every dropping row discloses its code, still loads, and answers for t
         if(r.verdict != "drop")
             continue;
         INFO(r.fixture);
-        const outcome result = load(r.fixture);
+        const outcome result = load_fixture(r.fixture);
         REQUIRE(result.succeeded);
         REQUIRE(errors(result.diagnostics) == 0);
         REQUIRE(located(result.diagnostics, meios::level::warn, r.code));
@@ -143,8 +154,56 @@ TEST_CASE("every accepting row loads without an error diagnostic", "[urdf][profi
         if(r.verdict != "accept")
             continue;
         INFO(r.fixture);
-        const outcome result = load(r.fixture);
+        const outcome result = load_fixture(r.fixture);
         REQUIRE(result.succeeded);
         REQUIRE(errors(result.diagnostics) == 0);
+    }
+}
+
+// This one document carries many defects at once, which is the opposite shape to the rule
+// table's one-rule-per-row, and it is kept whole for exactly that reason: its point is that
+// a document this broken once reported success, and splitting it would destroy the
+// demonstration while weakening the table's property that a row proves one rule.
+TEST_CASE("the document that once loaded clean is refused and names what it reached",
+          "[urdf][profile]")
+{
+    const outcome plain = load_fixture("coercion_probe.urdf");
+    REQUIRE_FALSE(plain.succeeded);
+    REQUIRE(located(plain.diagnostics, meios::level::error, "unsupported_version"));
+    REQUIRE(located(plain.diagnostics, meios::level::warn, "unknown_attribute"));
+    REQUIRE(located(plain.diagnostics, meios::level::warn, "unknown_element"));
+
+    meios::load_options permissive;
+    permissive.strict = meios::strictness::warn;
+    permissive.topology = meios::topology_policy::warn;
+    const outcome softened = load_fixture("coercion_probe.urdf", permissive);
+    REQUIRE_FALSE(softened.succeeded);
+    REQUIRE(located(softened.diagnostics, meios::level::error, "dangling_mimic"));
+}
+
+// A load stops at the first refusing class it reaches, so no single document can report
+// every defect it carries; each is bound here to the published rule that refuses it and
+// to the table row that proves that rule on a document of its own.
+TEST_CASE("every defect the refused document carries answers to a published rule",
+          "[urdf][profile]")
+{
+    const std::vector<meios::diagnostic_code> defects = {
+        meios::diagnostic_code::unsupported_version,     // version="9.9"
+        meios::diagnostic_code::unknown_attribute,       // bogus="yes" on <robot>
+        meios::diagnostic_code::vector_arity,            // <origin xyz="1 2"/>
+        meios::diagnostic_code::invalid_number,          // <mass value=""/>
+        meios::diagnostic_code::invalid_inertia,         // ixx="-5" against a scale of one
+        meios::diagnostic_code::unknown_geometry_shape,  // <trapezoid/> under <geometry>
+        meios::diagnostic_code::unknown_element,         // <bogus_child/> inside the link
+        meios::diagnostic_code::unknown_attribute,       // tpye="revolute" on <joint>
+        meios::diagnostic_code::missing_joint_type,      // and so the joint has no type
+        meios::diagnostic_code::vector_arity,            // <origin xyz="1 2 3 4"/>
+        meios::diagnostic_code::zero_axis,               // <axis xyz="0 0 0"/>
+        meios::diagnostic_code::dangling_mimic,          // <mimic joint="does_not_exist"/>
+    };
+    for(meios::diagnostic_code code : defects)
+    {
+        INFO(meios::to_string(code));
+        REQUIRE(refused_by_a_published_rule(code));
     }
 }
