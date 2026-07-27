@@ -1,5 +1,6 @@
 function(meios_cmake_case name)
-    set(one_value    FIXTURE DRIVER ORIGIN REFUSES MATCHES)
+    set(one_value    FIXTURE DRIVER ORIGIN REFUSES MATCHES
+                     MUTATE REQUIRE_PRESENT REQUIRE_ABSENT REQUIRE_CONTAINS)
     set(multi_value  EXTRA SECOND_CONFIGURE)
     cmake_parse_arguments(ARG "" "${one_value}" "${multi_value}" ${ARGN})
 
@@ -21,6 +22,10 @@ function(meios_cmake_case name)
         -DGEN_TOOLSET=${CMAKE_GENERATOR_TOOLSET}
         -DCONFIG=$<CONFIG>
         -DORIGIN=${ARG_ORIGIN}
+        -DMUTATE=${ARG_MUTATE}
+        -DREQUIRE_PRESENT=${ARG_REQUIRE_PRESENT}
+        -DREQUIRE_ABSENT=${ARG_REQUIRE_ABSENT}
+        "-DREQUIRE_CONTAINS=${ARG_REQUIRE_CONTAINS}"
         "-DEXTRA=${ARG_EXTRA}"
         "-DSECOND_CONFIGURE=${ARG_SECOND_CONFIGURE}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DRIVER})
