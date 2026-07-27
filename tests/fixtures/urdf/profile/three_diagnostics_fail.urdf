@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="three_diagnostics_fail">
+  <link name="base_link" name="base_link"/>
+  <link name="upper_link" name="upper_link"/>
+  <joint name="base_to_upper" type="fixed" type="fixed">
+    <parent link="base_link"/>
+    <child link="upper_link"/>
+  </joint>
+</robot>

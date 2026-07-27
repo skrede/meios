@@ -108,7 +108,7 @@ int run_flatten(const verb_context &ctx)
        || !select_backend(ctx, opts, log))
         return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -116,7 +116,7 @@ int run_flatten(const verb_context &ctx)
     }
     if(sink.errors() != 0)
         return 1;
-    const emit_result result = flatten(*loaded, std::cout, log);
+    const emit_result result = flatten(loaded->robot, std::cout, log);
     return result.status == emit_status::ok ? 0 : 1;
 }
 
@@ -133,7 +133,7 @@ int run_bundle(const verb_context &ctx)
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -146,7 +146,7 @@ int run_bundle(const verb_context &ctx)
     emit_result out{};
     const folder_request request{ std::filesystem::current_path() / name->second, name->second,
                                   collision_options{ false }, false };
-    const asset_manifest manifest = bundle_to_folder(*loaded, sources, registry, request, out, log);
+    const asset_manifest manifest = bundle_to_folder(loaded->robot, sources, registry, request, out, log);
     return (out.status == emit_status::ok && manifest.unresolved.empty()) ? 0 : 1;
 }
 
@@ -161,7 +161,7 @@ int run_deps(const verb_context &ctx)
        || !select_backend(ctx, opts, log))
         return 1;
     source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -175,7 +175,7 @@ int run_deps(const verb_context &ctx)
     const folder_request request{ std::filesystem::current_path(),
                                   std::filesystem::path(positional(ctx, 0)).stem().string(),
                                   collision_options{ false }, true };
-    const asset_manifest manifest = bundle_to_folder(*loaded, sources, registry, request, out, log);
+    const asset_manifest manifest = bundle_to_folder(loaded->robot, sources, registry, request, out, log);
     for(const bundle_entry &entry : manifest.entries)
         std::cout << entry.copy_source.string() << '\n';
     return manifest.unresolved.empty() ? 0 : 1;

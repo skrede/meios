@@ -27,16 +27,16 @@ int main(int, char **argv)
     meios::load_options options;
     options.package_roots.push_back(package_root);
 
-    const auto robot = meios::load(package_root / "example_arm" / "urdf" / "arm.urdf", options);
-    if (!robot)
+    const auto loaded = meios::load(package_root / "example_arm" / "urdf" / "arm.urdf", options);
+    if (!loaded)
     {
-        std::cout << "load failed at " << meios::to_string(robot.error().loc) << ": "
-                  << robot.error().message << '\n';
+        std::cout << "load failed at " << meios::to_string(loaded.error().loc) << ": "
+                  << loaded.error().message << '\n';
         return 1;
     }
 
-    std::cout << "resolved \"" << robot->name << "\" from " << package_root.string() << '\n';
-    std::cout << "links: " << robot->links.size() << '\n';
+    std::cout << "resolved \"" << loaded->robot.name << "\" from " << package_root.string() << '\n';
+    std::cout << "links: " << loaded->robot.links.size() << '\n';
 
     return 0;
 }

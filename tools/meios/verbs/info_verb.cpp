@@ -158,7 +158,7 @@ int run_info(const verb_context &ctx)
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -169,7 +169,7 @@ int run_info(const verb_context &ctx)
         sink.replay_first(log);
         return 1;
     }
-    const model<double> &robot = *loaded;
+    const model<double> &robot = loaded->robot;
 
     const auto format = ctx.value_flags.find("--format");
     if(format == ctx.value_flags.end() || format->second.empty())

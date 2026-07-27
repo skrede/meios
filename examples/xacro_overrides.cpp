@@ -16,15 +16,15 @@ int main()
 
     meios::log_sink_s log(std::cerr);
 
-    const meios::expected<meios::model<double>, meios::load_error> robot =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(examples::parametric_description, options, log);
-    if(!robot)
+    if(!loaded)
     {
-        std::cout << "load failed: " << robot.error().message << '\n';
+        std::cout << "load failed: " << loaded.error().message << '\n';
         return 1;
     }
 
-    const meios::model<double> &model = *robot;
+    const meios::model<double> &model = loaded->robot;
 
     const std::unordered_map<std::string, int>::const_iterator found =
         model.joint_index.find("base_to_tool");

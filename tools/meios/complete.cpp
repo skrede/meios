@@ -78,9 +78,9 @@ int emit(const std::vector<std::string> &candidates, std::string_view directive)
 model<double> quiet_load(const std::string &model_path)
 {
     log_sink quiet;
-    const expected<model<double>, load_error> loaded =
+    const expected<load_result, load_error> loaded =
         load(std::filesystem::path(model_path), load_options{}, quiet);
-    return loaded ? *loaded : model<double>{};
+    return loaded ? loaded->robot : model<double>{};
 }
 
 int emit_links(const std::string &model_path, bool with_joints)

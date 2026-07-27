@@ -124,11 +124,11 @@ validation_report classify(const std::filesystem::path &path,
     recording_sink schema;
 
     source_stack sources = build_sources(roots, well_formed);
-    const expected<model<double>, load_error> loaded =
+    const expected<load_result, load_error> loaded =
         load(path, probe_options(roots), sources, well_formed);
     model<double> robot{};
     if(loaded)
-        robot = *loaded;
+        robot = loaded->robot;
     else if(!well_formed.had_error())
         well_formed.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
     const bool expand_ok = xacro ? xacro_expands(bytes, path, roots, expansion) : true;

@@ -13,10 +13,10 @@ TEST_CASE("load resolves through all four call forms unambiguously", "[urdf][ove
     meios::log_sink log;
     meios::source_stack sources;
 
-    const meios::expected<meios::model<double>, meios::load_error> a = meios::load(path);
-    const meios::expected<meios::model<double>, meios::load_error> b = meios::load(path, opts);
-    const meios::expected<meios::model<double>, meios::load_error> c = meios::load(path, opts, log);
-    const meios::expected<meios::model<double>, meios::load_error> d =
+    const meios::expected<meios::load_result, meios::load_error> a = meios::load(path);
+    const meios::expected<meios::load_result, meios::load_error> b = meios::load(path, opts);
+    const meios::expected<meios::load_result, meios::load_error> c = meios::load(path, opts, log);
+    const meios::expected<meios::load_result, meios::load_error> d =
         meios::load(path, opts, sources, log);
 
     REQUIRE_FALSE(a.has_value());

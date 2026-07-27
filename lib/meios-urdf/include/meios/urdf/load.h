@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_URDF_LOAD_H
 
 #include "meios/urdf/policy.h"
+#include "meios/urdf/load_result.h"
 
 #include "meios/diagnostic/load_error.h"
 #include "meios/diagnostic/missing_asset.h"
@@ -57,15 +58,15 @@ struct load_options
     std::map<std::string, std::string> args;
 };
 
-expected<model<double>, load_error> load(const std::filesystem::path &path,
-                                         const load_options &opts, log_sink &log);
+expected<load_result, load_error> load(const std::filesystem::path &path,
+                                       const load_options &opts, log_sink &log);
 
-expected<model<double>, load_error> load(const std::filesystem::path &path,
-                                         const load_options &opts, source_stack &sources,
-                                         log_sink &log);
+expected<load_result, load_error> load(const std::filesystem::path &path,
+                                       const load_options &opts, source_stack &sources,
+                                       log_sink &log);
 
-expected<model<double>, load_error> load(const std::filesystem::path &path,
-                                         const load_options &opts = {});
+expected<load_result, load_error> load(const std::filesystem::path &path,
+                                       const load_options &opts = {});
 
 }
 

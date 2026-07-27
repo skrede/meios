@@ -56,7 +56,7 @@ TEST_CASE("a duplicate attribute propagates through load()'s return under the si
           "[urdf][load_failure]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("dup_attr.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -67,7 +67,7 @@ TEST_CASE("trailing content propagates through load()'s return under the silent 
           "[urdf][load_failure]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("trailing_garbage.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -78,7 +78,7 @@ TEST_CASE("an undefined property under eval_policy::fail returns a located error
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("undefined_property.xacro"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -92,7 +92,7 @@ TEST_CASE("an unresolvable $(find) in an attribute returns a located unresolved_
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("unresolvable_find_attr.xacro"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -106,7 +106,7 @@ TEST_CASE("an unresolvable $(find) include under eval_policy::fail returns a loc
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("unresolvable_find_include.xacro"), opts);
 
     // The include seam extracts $(find ...) textually and reports the containing
@@ -122,7 +122,7 @@ TEST_CASE("the undefined-property error reports the failing token column, not th
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("undefined_property.xacro"), opts);
 
     // On line 3 `  <link name="${undeclared_link_name}"/>` the failing `${` starts at
@@ -137,7 +137,7 @@ TEST_CASE("an entity-before-token value degrades to a safe column, never a wrong
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("entity_before_token.xacro"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -159,7 +159,7 @@ TEST_CASE("eval_policy::warn keeps the specific evaluator code on a genuine erro
 {
     meios::load_options opts;
     opts.eval = meios::eval_policy::warn;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("undefined_property.xacro"), opts);
 
     // An undefined name is a genuine evaluator error, not an unsupported construct,
@@ -177,7 +177,7 @@ TEST_CASE("a failed xacro load records no xml_parse_error cascade after the prim
 
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("undefined_property.xacro"), opts, sink);
 
     REQUIRE_FALSE(result.has_value());
@@ -200,7 +200,7 @@ TEST_CASE("an undefined material under material_policy::fail propagates the spec
 {
     meios::load_options opts;
     opts.materials = meios::material_policy::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("unresolved_material.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -212,7 +212,7 @@ TEST_CASE("an unresolved mesh under missing_asset::fail propagates the specific 
 {
     meios::load_options opts;
     opts.on_missing = meios::missing_asset::fail;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("package_mesh.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -223,7 +223,7 @@ TEST_CASE("a warn material policy still returns a populated model", "[urdf][load
 {
     meios::load_options opts;
     opts.materials = meios::material_policy::warn;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("unresolved_material.urdf"), opts);
 
     REQUIRE(result.has_value());
@@ -233,7 +233,7 @@ TEST_CASE("a warn missing-asset policy still returns a populated model", "[urdf]
 {
     meios::load_options opts;
     opts.on_missing = meios::missing_asset::warn;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("package_mesh.urdf"), opts);
 
     REQUIRE(result.has_value());
@@ -247,7 +247,7 @@ TEST_CASE("an over-long include path becomes a typed error, never a filesystem_e
     // typed diagnostic instead of terminating the process.
     meios::load_options opts;
     opts.eval = meios::eval_policy::fail;
-    meios::expected<meios::model<double>, meios::load_error> result =
+    meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("overlong_include.xacro"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -261,10 +261,91 @@ TEST_CASE("a root-escaping package path fails the load under the default policy"
 
     meios::load_options opts;
     opts.package_roots = { root };
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("package_escape_mesh.urdf"), opts);
 
     std::filesystem::remove_all(root);
 
     REQUIRE_FALSE(result.has_value());
+}
+
+TEST_CASE("a successful load returns every diagnostic the document raised, not the first",
+          "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    opts.topology = meios::topology_policy::warn;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/three_diagnostics_ok.urdf"), opts);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->diagnostics.size() >= 3);
+}
+
+TEST_CASE("a failing load returns every diagnostic beside the error that names the failure",
+          "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/three_diagnostics_fail.urdf"), opts);
+
+    REQUIRE_FALSE(result.has_value());
+    REQUIRE(result.error().diagnostics.size() >= 3);
+    REQUIRE(result.error().code == meios::diagnostic_code::duplicate_attribute);
+    REQUIRE(result.error().code == result.error().diagnostics.front().code);
+    REQUIRE(result.error().loc.line == result.error().diagnostics.front().loc.line);
+}
+
+TEST_CASE("the returned diagnostic list keeps the order the document raised them",
+          "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/three_diagnostics_fail.urdf"), opts);
+
+    REQUIRE_FALSE(result.has_value());
+    const std::vector<meios::captured_diagnostic> &records = result.error().diagnostics;
+    REQUIRE(records.size() >= 3);
+    REQUIRE(records[0].loc.line < records[1].loc.line);
+    REQUIRE(records[1].loc.line < records[2].loc.line);
+}
+
+TEST_CASE("an unresolved asset and a broken topology clear their own claims and no other",
+          "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    opts.topology = meios::topology_policy::warn;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/three_diagnostics_ok.urdf"), opts);
+
+    REQUIRE(result.has_value());
+    REQUIRE(meios::has(result->claims, meios::completeness::parsed));
+    REQUIRE_FALSE(meios::has(result->claims, meios::completeness::topology_valid));
+    REQUIRE_FALSE(meios::has(result->claims, meios::completeness::deployment_complete));
+}
+
+TEST_CASE("a document the reader could not read whole still reports a valid topology",
+          "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    opts.strict = meios::strictness::warn;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/three_diagnostics_fail.urdf"), opts);
+
+    REQUIRE(result.has_value());
+    REQUIRE_FALSE(meios::has(result->claims, meios::completeness::parsed));
+    REQUIRE(meios::has(result->claims, meios::completeness::topology_valid));
+    REQUIRE(meios::has(result->claims, meios::completeness::deployment_complete));
+}
+
+TEST_CASE("a clean description returns all three completeness claims", "[urdf][load_failure]")
+{
+    meios::load_options opts;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("profile/origin_xyz_ok.urdf"), opts);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->diagnostics.empty());
+    REQUIRE(meios::has(result->claims, meios::completeness::parsed));
+    REQUIRE(meios::has(result->claims, meios::completeness::topology_valid));
+    REQUIRE(meios::has(result->claims, meios::completeness::deployment_complete));
 }

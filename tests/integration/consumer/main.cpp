@@ -122,7 +122,7 @@ int run_vendored_load()
     meios::load_options opts;
     opts.materials = meios::material_policy::warn;
 
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(consumer::vendored_robot, opts, diagnostic_sink);
     if(!loaded)
     {
@@ -131,7 +131,7 @@ int run_vendored_load()
                   << loaded.error().message << '\n';
         return 1;
     }
-    const meios::model<double> &model = *loaded;
+    const meios::model<double> &model = loaded->robot;
 
     const auto by_name = [&](const std::unordered_map<std::string, int> &index,
                              const std::string &name) -> int {

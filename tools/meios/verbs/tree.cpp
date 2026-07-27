@@ -88,7 +88,7 @@ int run_tree(const verb_context &ctx)
     opts.topology = topology_policy::warn;
     opts.package_roots = to_paths(ctx.package_paths);
     source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<model<double>, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -99,7 +99,7 @@ int run_tree(const verb_context &ctx)
         sink.replay_first(log);
         return 1;
     }
-    const model<double> &robot = *loaded;
+    const model<double> &robot = loaded->robot;
 
     log_sink quiet;
     const topology_result topo =

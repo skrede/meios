@@ -117,10 +117,10 @@ attempt flatten(const std::filesystem::path &path, meios::eval_policy policy,
     meios::load_options opts = python_options();
     opts.eval                = policy;
     opts.package_roots       = roots;
-    meios::expected<meios::model<double>, meios::load_error> loaded = meios::load(path, opts, sink);
+    meios::expected<meios::load_result, meios::load_error> loaded = meios::load(path, opts, sink);
     if(!loaded)
         return { book.errors, book.report + loaded.error().message, std::nullopt };
-    return { book.errors, std::move(book.report), std::move(*loaded) };
+    return { book.errors, std::move(book.report), std::move(loaded->robot) };
 }
 
 attempt flatten_over(const std::filesystem::path &path, meios::source_stack &sources)
@@ -128,11 +128,11 @@ attempt flatten_over(const std::filesystem::path &path, meios::source_stack &sou
     journal book;
     meios::log_sink_f sink{ std::ref(book) };
     const meios::load_options opts = python_options();
-    meios::expected<meios::model<double>, meios::load_error> loaded =
+    meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(path, opts, sources, sink);
     if(!loaded)
         return { book.errors, book.report + loaded.error().message, std::nullopt };
-    return { book.errors, std::move(book.report), std::move(*loaded) };
+    return { book.errors, std::move(book.report), std::move(loaded->robot) };
 }
 
 void expect_shoulder(const attempt &got, double height, double upper)
@@ -235,11 +235,11 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
 
     const meios::load_options opts = python_options();
 
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(fixture("yaml_arm/arm.urdf.xacro"), opts, sink);
 
     REQUIRE(loaded.has_value());
-    const meios::model<double> &robot = *loaded;
+    const meios::model<double> &robot = loaded->robot;
     REQUIRE(errors == 0);
     REQUIRE(robot.links.size() == 2);
 

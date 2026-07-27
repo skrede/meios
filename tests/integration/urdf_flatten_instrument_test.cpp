@@ -40,11 +40,11 @@ std::string flatten_known_good()
     meios::log_sink discard;
     const meios::load_options opts;
     const std::filesystem::path source{ MEIOS_CORPUS_KNOWN_GOOD };
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(source, opts, discard);
     REQUIRE(loaded.has_value());
     std::ostringstream out;
-    const meios::emit_result result = meios::flatten(*loaded, out, discard);
+    const meios::emit_result result = meios::flatten(loaded->robot, out, discard);
     REQUIRE(result.status == meios::emit_status::ok);
     return out.str();
 }

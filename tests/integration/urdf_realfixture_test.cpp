@@ -45,11 +45,11 @@ TEST_CASE("meios::load parses the real single-link description", "[urdf][realfix
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(fixture_path("test-desc.urdf"), opts, capture);
 
     REQUIRE(loaded.has_value());
-    const meios::model<double> &robot = *loaded;
+    const meios::model<double> &robot = loaded->robot;
     REQUIRE(robot.name == "test");
     REQUIRE(robot.links.size() == 1);
     REQUIRE(robot.links.at(0).name == "base_link");
@@ -62,11 +62,11 @@ TEST_CASE("the name-only 'blue' material warns and never resolves to a color", "
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(fixture_path("test-desc.urdf"), opts, capture);
 
     REQUIRE(loaded.has_value());
-    const meios::model<double> &robot = *loaded;
+    const meios::model<double> &robot = loaded->robot;
     REQUIRE(robot.materials.empty());
     REQUIRE_FALSE(robot.links.at(0).visuals.at(0).material_ref.has_value());
     REQUIRE(std::count(levels.begin(), levels.end(), meios::level::warn) == 1);
@@ -85,7 +85,7 @@ TEST_CASE("a non-<robot> root is a loud diagnostic, never a silent misparse", "[
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::expected<meios::model<double>, meios::load_error> loaded =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(fixture_path("not_a_robot.xml"), opts, capture);
 
     REQUIRE_FALSE(loaded.has_value());

@@ -10,15 +10,15 @@
 
 int main()
 {
-    const meios::expected<meios::model<double>, meios::load_error> robot =
+    const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(examples::robot_description);
-    if(!robot)
+    if(!loaded)
     {
-        std::cout << "load failed: " << robot.error().message << '\n';
+        std::cout << "load failed: " << loaded.error().message << '\n';
         return 1;
     }
 
-    const meios::model<double> &model = *robot;
+    const meios::model<double> &model = loaded->robot;
 
     std::cout << "loaded " << model.links.size() << " links\n";
 

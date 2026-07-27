@@ -9,10 +9,12 @@ silent partial result — a description that cannot be resolved fails loudly.
 
 ## Loading a description and reading the model
 
-The `model` carries the flattened `links`, `joints`, and `materials`, plus a reconstructed `topo`
-whose `order` is the root-first visitation sequence and whose `parent_of` gives each link's parent by
-index (a root reports `-1`). The program below loads a description, reports the diagnostic on failure,
-and walks the topology on success.
+A successful load hands back a `load_result` whose `robot` is the model, alongside the full
+`diagnostics` list and the completeness `claims` derived from it. The `model` carries the flattened
+`links`, `joints`, and `materials`, plus a reconstructed `topo` whose `order` is the root-first
+visitation sequence and whose `parent_of` gives each link's parent by index (a root reports `-1`).
+The program below loads a description, reports the diagnostic on failure, and walks the topology on
+success.
 
 <!-- meios:snippet name=load-and-read tu -->
 ```cpp
@@ -23,39 +25,43 @@ and walks the topology on success.
 
 int main()
 {
-    const auto robot = meios::load("two_link.urdf");
-    if (!robot)
+    const auto loaded = meios::load("two_link.urdf");
+    if (!loaded)
     {
-        const meios::load_error &err = robot.error();
+        const meios::load_error &err = loaded.error();
         std::cout << "load failed at " << meios::to_string(err.loc) << ": " << err.message << '\n';
         return 1;
     }
 
-    std::cout << "loaded " << robot->links.size() << " links\n";
+    const meios::model<double> &robot = loaded->robot;
+
+    std::cout << "loaded " << robot.links.size() << " links\n";
 
     std::cout << "root-first order:";
-    for (const int index : robot->topo.order)
-        std::cout << ' ' << robot->links[static_cast<std::size_t>(index)].name;
+    for (const int index : robot.topo.order)
+        std::cout << ' ' << robot.links[static_cast<std::size_t>(index)].name;
     std::cout << '\n';
 
-    for (std::size_t i = 0; i < robot->links.size(); ++i)
+    for (std::size_t i = 0; i < robot.links.size(); ++i)
     {
-        const int parent = robot->topo.parent_of[i];
+        const int parent = robot.topo.parent_of[i];
         if (parent < 0)
-            std::cout << robot->links[i].name << " is the root\n";
+            std::cout << robot.links[i].name << " is the root\n";
         else
-            std::cout << robot->links[i].name << " descends from "
-                      << robot->links[static_cast<std::size_t>(parent)].name << '\n';
+            std::cout << robot.links[i].name << " descends from "
+                      << robot.links[static_cast<std::size_t>(parent)].name << '\n';
     }
 }
 ```
 
 ## The failure channel is not optional
 
-`load()` returns `expected`, not a `model`, precisely so that a broken description cannot masquerade
-as an empty-but-valid robot. Check the result before dereferencing it. On failure the `load_error`
-carries a `loc` (the `file:line:column` where resolution gave up), a human-readable `message`, and a
-typed `code` you can switch on instead of matching message text.
+`load()` returns `expected`, not a `load_result`, precisely so that a broken description cannot
+masquerade as an empty-but-valid robot. Check the result before dereferencing it. On failure the
+`load_error` carries a `loc` (the `file:line:column` where resolution gave up), a human-readable
+`message`, a typed `code` you can switch on instead of matching message text, and the same
+`diagnostics` list the success arm carries — the primary error names where resolution gave up, the
+list says everything else the document raised on the way there.
 
 ## A caveat consumers must know
 

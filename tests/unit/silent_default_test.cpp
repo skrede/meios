@@ -27,7 +27,7 @@ TEST_CASE("a default load writes nothing to cerr or cout", "[urdf][silent]")
     std::streambuf *saved_cout = std::cout.rdbuf(cout_capture.rdbuf());
 
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("test-desc.urdf"), opts);
 
     std::cerr.rdbuf(saved_cerr);

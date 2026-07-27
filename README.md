@@ -92,8 +92,10 @@ how the deployed directory maps onto `package://` resolution.
 ## Usage
 
 Load a URDF/xacro file and hand the resolved model to your own code. `load` returns an
-`expected<model<double>, load_error>`: on success the model carries the flattened links, joints,
-materials, and topology; on failure it carries a typed `file:line` diagnostic.
+`expected<load_result, load_error>`: on success the result carries `robot` — the flattened links,
+joints, materials, and topology — together with every diagnostic the document raised and the
+completeness claims those diagnostics leave standing; on failure it carries a typed `file:line`
+diagnostic and that same full list.
 
 <!-- meios:snippet name=quick-start tu -->
 ```cpp
@@ -103,14 +105,14 @@ materials, and topology; on failure it carries a typed `file:line` diagnostic.
 
 int main()
 {
-    const auto robot = meios::load("robot.urdf");
-    if (!robot)
+    const auto loaded = meios::load("robot.urdf");
+    if (!loaded)
     {
-        std::cout << "load failed: " << robot.error().message << '\n';
+        std::cout << "load failed: " << loaded.error().message << '\n';
         return 1;
     }
 
-    std::cout << "loaded " << robot->links.size() << " links\n";
+    std::cout << "loaded " << loaded->robot.links.size() << " links\n";
 }
 ```
 

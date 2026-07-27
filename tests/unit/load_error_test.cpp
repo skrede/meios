@@ -19,7 +19,7 @@ std::filesystem::path fixture(const std::string &name)
 TEST_CASE("a cannot-open path is reported through load_error carrying the path", "[urdf][load_error]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("does_not_exist.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -29,7 +29,7 @@ TEST_CASE("a cannot-open path is reported through load_error carrying the path",
 TEST_CASE("a malformed-XML document yields a load_error with a converted line", "[urdf][load_error]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("malformed_xml.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -39,7 +39,7 @@ TEST_CASE("a malformed-XML document yields a load_error with a converted line", 
 TEST_CASE("a non-<robot> root yields a load_error with a real location", "[urdf][load_error]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("not_a_robot.xml"), opts);
 
     REQUIRE_FALSE(result.has_value());
@@ -50,10 +50,10 @@ TEST_CASE("a non-<robot> root yields a load_error with a real location", "[urdf]
 TEST_CASE("a valid description yields a populated model", "[urdf][load_error]")
 {
     meios::load_options opts;
-    const meios::expected<meios::model<double>, meios::load_error> result =
+    const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("test-desc.urdf"), opts);
 
     REQUIRE(result.has_value());
-    REQUIRE(result->name == "test");
-    REQUIRE(result->links.size() == 1);
+    REQUIRE(result->robot.name == "test");
+    REQUIRE(result->robot.links.size() == 1);
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="three_diagnostics_ok">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://absent_pkg/meshes/base.stl"/>
+      </geometry>
+      <material name="never_declared"/>
+    </visual>
+  </link>
+  <link name="detached_link"/>
+</robot>

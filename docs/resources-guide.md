@@ -486,14 +486,14 @@ int main(int, char **argv)
     meios::load_options options;
     options.package_roots.push_back(runtime / "urdf");
 
-    const auto robot = meios::load(runtime / "urdf/kuka_lbr_iiwa_support/urdf/arm.urdf", options);
-    if (!robot)
+    const auto loaded = meios::load(runtime / "urdf/kuka_lbr_iiwa_support/urdf/arm.urdf", options);
+    if (!loaded)
     {
-        std::cout << "load failed: " << robot.error().message << '\n';
+        std::cout << "load failed: " << loaded.error().message << '\n';
         return 1;
     }
 
-    std::cout << "loaded " << robot->links.size() << " links\n";
+    std::cout << "loaded " << loaded->robot.links.size() << " links\n";
 }
 ```
 
