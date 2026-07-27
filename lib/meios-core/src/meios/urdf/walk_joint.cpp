@@ -93,26 +93,54 @@ std::optional<joint_limits<double>> read_limits(pugi::xml_node node, parse_conte
     return out;
 }
 
-vector3<double> read_axis(pugi::xml_node node, parse_context &ctx, const source_location &loc)
+bool uses_axis(joint_kind kind)
+{
+    return kind == joint_kind::revolute || kind == joint_kind::continuous
+        || kind == joint_kind::prismatic || kind == joint_kind::planar;
+}
+
+void check_axis(pugi::xml_node axis, const vector3<double> &read, const std::string &owner,
+                parse_context &ctx, const source_location &loc, bool &ok)
+{
+    if(!axis.attribute("xyz"))
+        report_structural(ctx, loc, diagnostic_code::missing_required_field,
+                          "<axis> on joint '" + owner + "' declares no 'xyz'", ok);
+    else if(read.x == 0.0 && read.y == 0.0 && read.z == 0.0)
+        report_structural(ctx, loc, diagnostic_code::zero_axis,
+                          "joint '" + owner + "' turns or slides about its axis and declares "
+                                              "a zero axis, which names no direction",
+                          ok);
+}
+
+// The wiki states that fixed and floating joints do not use the axis field, so the rules
+// are applied only where the axis decides what the joint does. Both are read verbatim: a
+// non-unit axis is what the author wrote, and rescaling it here would invent a value.
+vector3<double> read_axis(pugi::xml_node node, joint_kind kind, parse_context &ctx,
+                          const source_location &loc, bool &ok)
 {
     const pugi::xml_node axis = node.child("axis");
     if(!axis)
         return vector3<double>{ 1.0, 0.0, 0.0 };
-    return read_vec3(axis.attribute("xyz").value(), ctx, loc, "axis");
+    const vector3<double> out = read_vec3(axis.attribute("xyz").value(), ctx, loc, "axis");
+    if(uses_axis(kind))
+        check_axis(axis, out, node.attribute("name").value(), ctx, loc, ok);
+    return out;
 }
 
 // A joint is structural and is never dropped, so an unreadable <origin> is refused under
 // the strict setting and disclosed under the permissive ones; there is no element to drop.
-void read_detail(pugi::xml_node node, joint<double> &out, parse_context &ctx,
+bool read_detail(pugi::xml_node node, joint<double> &out, parse_context &ctx,
                  const source_location &loc)
 {
+    bool ok = true;
     read_transform(node.child("origin"), out.origin, ctx, loc);
-    out.axis = read_axis(node, ctx, loc);
+    out.axis = read_axis(node, out.kind, ctx, loc, ok);
     out.limits = read_limits(node, ctx, loc);
     out.couple = read_mimic(node, ctx, loc);
     out.dyn = read_dynamics(node, ctx, loc);
     out.safety = read_safety(node, ctx, loc);
     out.calib = read_calibration(node, ctx, loc);
+    return ok;
 }
 
 std::optional<joint<double>> refuse_unbounded(const std::string &owner, parse_context &ctx,
@@ -137,7 +165,8 @@ std::optional<joint<double>> extract_joint(pugi::xml_node node, std::string_view
         return std::nullopt;
     out.parent = node.child("parent").attribute("link").value();
     out.child = node.child("child").attribute("link").value();
-    read_detail(node, out, ctx, loc);
+    if(!read_detail(node, out, ctx, loc))
+        return std::nullopt;
     out.closes_loop = false;
     out.origin_loc = loc;
     if(requires_limit(out.kind) && !out.limits)

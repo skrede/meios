@@ -55,6 +55,9 @@ enum class diagnostic_code
     missing_geometry,
     unknown_geometry_shape,
     missing_limit,
+    zero_axis,
+    invalid_mass,
+    invalid_inertia,
 };
 
 constexpr std::string_view to_string(diagnostic_code code) noexcept
@@ -108,6 +111,9 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::missing_geometry:          return "missing_geometry";
         case diagnostic_code::unknown_geometry_shape:    return "unknown_geometry_shape";
         case diagnostic_code::missing_limit:             return "missing_limit";
+        case diagnostic_code::zero_axis:                 return "zero_axis";
+        case diagnostic_code::invalid_mass:              return "invalid_mass";
+        case diagnostic_code::invalid_inertia:           return "invalid_inertia";
     }
     return "unknown";
 }

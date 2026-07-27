@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="zero_axis_fixed">
+  <link name="link_7"/>
+  <link name="tool0"/>
+  <joint name="link_7-tool0" type="fixed">
+    <parent link="link_7"/>
+    <child link="tool0"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+</robot>

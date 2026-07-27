@@ -72,6 +72,12 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::missing_geometry:          return completeness::parsed;
         case diagnostic_code::unknown_geometry_shape:    return completeness::parsed;
         case diagnostic_code::missing_limit:             return completeness::parsed;
+        // A joint that turns about nothing, and a tensor that cannot describe a rigid body,
+        // are authored content the reader would have to reinterpret to accept, so neither
+        // reached the model either.
+        case diagnostic_code::zero_axis:                 return completeness::parsed;
+        case diagnostic_code::invalid_mass:              return completeness::parsed;
+        case diagnostic_code::invalid_inertia:           return completeness::parsed;
     }
     return completeness::none;
 }

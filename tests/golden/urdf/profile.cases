@@ -46,3 +46,16 @@ limit_effort_absent.urdf	refuse	missing_required_field	limit-effort-required	A l
 limit_velocity_absent.urdf	refuse	missing_required_field	limit-velocity-required	A limit element with no velocity attribute.
 wiki_defaults.urdf	accept	-	wiki-defaults-preserved	An absent origin, an absent axis and an absent mimic offset keep the defaults the wiki states.
 mimic_multiplier_default.urdf	accept	-	mimic-multiplier-default	A mimic with no multiplier keeps one, which this profile decides on its own authority.
+zero_axis_revolute.urdf	refuse	zero_axis	axis-nonzero-when-used	A revolute joint told to turn about no direction at all.
+zero_axis_prismatic.urdf	refuse	zero_axis	axis-nonzero-when-used	The same on the sliding kind, whose axis is the direction of travel.
+zero_axis_fixed.urdf	accept	-	axis-not-used-on-fixed-floating	A fixed joint carrying a zero axis, which the wiki says the kind does not use; real shipped descriptions carry exactly this.
+non_unit_axis.urdf	accept	-	axis-passthrough-non-unit	An axis of length two is stored as authored; rescaling it on read would invent a value.
+axis_no_xyz.urdf	refuse	missing_required_field	axis-xyz-required	An axis element with no coordinates, which used to leave a silently zero axis.
+inertia_negative_mass.urdf	refuse	invalid_mass	mass-non-negative	A body of negative mass, which no rigid body has.
+inertia_negative_diagonal.urdf	refuse	invalid_inertia	inertia-semidefinite	ixx is -1 while the scale is 1, so the order-one minor fails by the whole scale.
+inertia_not_semidefinite.urdf	refuse	invalid_inertia	inertia-semidefinite	ixx=0 ixy=0 ixz=0 iyy=1 iyz=2 izz=1: every leading minor is 0 and passes, and only the non-leading minor iyy*izz-iyz^2 = 1-4 = -3 catches it.
+inertia_triangle_violation.urdf	refuse	invalid_inertia	inertia-triangle	Diagonal 1,1,3: ixx+iyy-izz = -1 against a scale of 3, so the margin is a third of the scale.
+inertia_degenerate_scale.urdf	refuse	invalid_inertia	inertia-degenerate-scale	Every diagonal component is zero while ixy is 0.5, so the tensor is malformed rather than massless.
+inertia_zero_massless.urdf	accept	-	inertia-massless-frame	Six exact zeros and a zero mass: the documented convention for a frame-only link.
+inertia_within_tolerance.urdf	accept	-	inertia-semidefinite	ixy = 1.0000000000005, so ixx*iyy-ixy^2 = 1 - 1.000000000001 = -1.0e-12 against a tolerance of 1e-9 times a scale of 1; the margin is a thousandth of the tolerance.
+inertia_outside_tolerance.urdf	refuse	invalid_inertia	inertia-semidefinite	ixy = 1.0000005, so ixx*iyy-ixy^2 = 1 - 1.00000100000025 = -1.0e-6 against the same 1e-9 tolerance; the margin is a thousand times the tolerance.

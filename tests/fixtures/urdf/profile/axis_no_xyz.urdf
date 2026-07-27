@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="axis_no_xyz">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="continuous">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+    <axis/>
+  </joint>
+</robot>

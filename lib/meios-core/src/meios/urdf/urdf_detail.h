@@ -73,6 +73,11 @@ std::optional<joint<double>> extract_joint(pugi::xml_node node, std::string_view
 std::optional<inertial<double>> read_inertial(pugi::xml_node node, parse_context &ctx,
                                               const source_location &loc);
 
+// Answers whether the mass and the tensor can describe a rigid body at all. Every value it
+// reads must already be finite for the arithmetic to mean anything, so it runs only on an
+// inertial the reader accepted whole.
+bool check_inertia(const inertial<double> &body, parse_context &ctx, const source_location &loc);
+
 // owner names the element the geometry belongs to, so an absent one is reported against the
 // element that required it rather than against a node that is not there.
 std::optional<geometry<double>> read_geometry(pugi::xml_node node, std::string_view owner,

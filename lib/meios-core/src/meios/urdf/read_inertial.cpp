@@ -57,7 +57,7 @@ std::optional<inertial<double>> read_inertial(pugi::xml_node node, parse_context
     bool ok = read_transform(node.child("origin"), out.origin, ctx, loc);
     ok = read_mass(node, out.mass, ctx, loc) && ok;
     ok = read_tensor(node, out.tensor, ctx, loc) && ok;
-    if(!ok)
+    if(!ok || !check_inertia(out, ctx, loc))
         return std::nullopt;
     return out;
 }

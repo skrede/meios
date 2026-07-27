@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="inertia_not_semidefinite">
+  <link name="base_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="1" iyz="2" izz="1"/>
+    </inertial>
+  </link>
+</robot>

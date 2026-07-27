@@ -218,7 +218,8 @@ endif()
 
 # These stems carry TEST_PREFIX so ctest -R can select them by stem; the urdf stems above
 # register their cases under prose names and predate that convention.
-foreach(stem IN ITEMS urdf_vocabulary urdf_identity urdf_fields urdf_joint_rules)
+foreach(stem IN ITEMS urdf_vocabulary urdf_identity urdf_fields urdf_joint_rules urdf_axis
+        urdf_inertia)
     set(prefixed_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${prefixed_test_src})
         add_executable(${stem}_test ${prefixed_test_src})
@@ -232,6 +233,16 @@ foreach(stem IN ITEMS urdf_vocabulary urdf_identity urdf_fields urdf_joint_rules
         catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
     endif()
 endforeach()
+
+# The inertia predicate is a compiled core-private symbol reached through the module-private
+# header, so this stem alone reaches into meios-core/src and links the XML library that
+# header takes its node handles from.
+if(TARGET urdf_inertia_test)
+    target_include_directories(urdf_inertia_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/meios-core/src
+        ${CMAKE_SOURCE_DIR}/lib/meios-core/src/meios/urdf)
+    target_link_libraries(urdf_inertia_test PRIVATE pugixml::pugixml)
+endif()
 
 # The profile stems are driven by tests/golden/urdf/profile.cases, so they need the
 # golden directory alongside the fixture directory the other urdf stems get.

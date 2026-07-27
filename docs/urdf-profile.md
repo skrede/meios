@@ -93,6 +93,73 @@ never states what may appear in a numeric attribute. meios refuses text it canno
 parses to an infinity or a NaN, because both reach a consumer as a coordinate, a mass or a limit and
 propagate through every arithmetic that touches them.
 
+**Every rule about what an inertial may contain is this profile's own.** The link page names `mass` and
+the six tensor attributes and stops there: it never says the mass must be non-negative, never says the
+tensor must describe a body that can exist, and never says what a reader should do with one that
+cannot. meios refuses a negative mass, a negative moment of inertia, a tensor that is not positive
+semi-definite, and a tensor that violates one of the three triangle inequalities on its diagonal. None
+of those describes a rigid body, and a consumer computing a dynamics model from one gets an answer with
+no physical meaning and no way to tell that from a real one.
+
+**The tolerance is relative to the tensor's own scale, never an absolute number.** The scale is the
+largest magnitude among the three diagonal components, and every comparison above admits a violation
+of at most one part in a billion of that scale, raised to the order of the quantity being compared.
+Real descriptions carry tensors spanning six orders of magnitude, from a small bracket to a
+multi-tonne base, so a single absolute epsilon either refuses the small end outright or is smaller
+than double-precision round-off at the large end. The epsilon exists only to absorb the round-off in a
+determinant on a badly scaled tensor: the nearest real tensor measured sits about two parts in a
+hundred from the boundary, seven orders of magnitude clear of it. It is not slack for bad data, and
+widening it would not rescue a tensor that is actually wrong.
+
+**A wholly zero tensor paired with a zero mass is accepted, deliberately.** Exact zeros on all six
+components together with a mass of exactly zero is how real descriptions write a frame-only link — a
+tool frame, a mounting flange, a coordinate marker with no body. The carve-out is exact rather than
+near-zero, because the convention is authored zeros and a tolerance here would begin accepting tensors
+that are merely small. `rule:inertia-massless-frame` A tensor whose three diagonal components are zero
+while the tensor is not wholly zero gets no such reading: it is malformed, and it is refused.
+`rule:inertia-degenerate-scale`
+
+**What this profile does not check.** These rules decide a tensor's mathematical admissibility, not
+its physical plausibility for the body it describes. A tensor that is semi-definite, satisfies the
+triangle inequalities and is off by three orders of magnitude for the link it belongs to passes, and
+so does one whose principal axes point somewhere the geometry does not support. meios has no model of
+the link's shape and will not guess one; checking a tensor against its geometry is a separate job for
+a consumer that owns both.
+
+A non-finite mass or tensor component never reaches these rules: the finite-number rule below refuses
+the attribute first. The arithmetic re-checks finiteness anyway, before it forms a single product,
+because a determinant on components near the largest representable double overflows to an infinity —
+and every tolerance derived from an infinite scale is itself infinite, so an unchecked tensor would be
+accepted rather than refused.
+
+**Four joint kinds use the `<axis>` field, and two do not.** The joint page says plainly: "Fixed and
+floating joints do not use the axis field." A `revolute` or `continuous` joint turns about its axis, a
+`prismatic` joint slides along it, and a `planar` joint is normal to it, so on those four an axis of
+all zeros names no direction and describes a motion that cannot happen — meios refuses it. On `fixed`
+and `floating` the element is not read, so an `<axis>` there is neither a violation nor a value: real
+shipped descriptions carry one, and refusing it would refuse working hardware over an element the
+specification says is unused. The wiki does not say what a zero axis on the other four kinds means, so
+the refusal is this profile's decision; it is the only reading that does not silently accept a joint
+that moves about nothing.
+
+**On a `fixed` or `floating` joint, the axis member on the record carries no meaning.** meios's reader
+fills the member for every kind — with the components the document authored if an `<axis>` was present,
+and with the `(1, 0, 0)` the wiki states if it was not — so a consumer reading `joint.axis` on a fixed
+joint receives a value the document never asked for and which the specification excludes. Do not read
+it. Branch on the joint's kind first; the member is meaningful only on the four kinds above.
+
+**An `<axis>` that carries no `xyz` is refused.** The joint page marks the attribute required on a
+present element, and there is no third reading: leaving the axis at zero — which is what the reference
+parser does — is a silently wrong axis, and substituting the absent-element default would treat writing
+the element and omitting it as the same act.
+
+**An axis is stored with exactly the components the document authored, and is never rescaled to unit
+length.** The wiki's own examples are unit vectors and it says the axis is "specified in the joint
+frame", but it states no normalization. meios performs none: rescaling on read would replace an
+authored number with a computed one, and refusing anything not already unit-length would publish a
+floating-point tolerance as a contract and begin refusing axes that are unit to fifteen digits. A
+consumer that needs a unit axis normalizes it itself, from a value it can still see.
+
 ## Where this profile diverges from a stated default
 
 Where the wiki states a default and meios deliberately does something else, the divergence and its
@@ -144,6 +211,13 @@ would have thrown away. `rule:inertial-optional`
 | `<limit>` | the `effort` attribute | refuse when absent | `missing_required_field` | `rule:limit-effort-required` |
 | `<limit>` | the `velocity` attribute | refuse when absent | `missing_required_field` | `rule:limit-velocity-required` |
 | `<origin>`, `<axis>`, `<mimic>` | a default the wiki states | accept and keep the default | — | `rule:wiki-defaults-preserved` |
+| `<axis>` | the `xyz` attribute on a present element | refuse when absent | `missing_required_field` | `rule:axis-xyz-required` |
+| `<axis>` | an axis of all zeros on a kind that uses it | refuse | `zero_axis` | `rule:axis-nonzero-when-used` |
+| `<axis>` | an element on a `fixed` or `floating` joint | accept, and read nothing from it | — | `rule:axis-not-used-on-fixed-floating` |
+| `<axis>` | an axis whose length is not one | accept exactly as authored | — | `rule:axis-passthrough-non-unit` |
+| `<mass>` | a `value` below zero | refuse | `invalid_mass` | `rule:mass-non-negative` |
+| `<inertia>` | a tensor that is not positive semi-definite | refuse | `invalid_inertia` | `rule:inertia-semidefinite` |
+| `<inertia>` | a diagonal violating one of the three triangle inequalities | refuse | `invalid_inertia` | `rule:inertia-triangle` |
 
 **A required part that is missing drops the element that contained it — it is never completed with a
 value nothing specified.** Under the strict document-validity setting each row above refuses the
