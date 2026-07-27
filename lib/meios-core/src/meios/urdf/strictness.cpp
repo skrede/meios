@@ -17,15 +17,6 @@ namespace meios::detail
 namespace
 {
 
-void report(parse_context &ctx, const source_location &loc, diagnostic_code code,
-            const std::string &message, bool &ok)
-{
-    const level lvl = ctx.strict == strictness::strict ? level::error : level::warn;
-    ctx.log.log(lvl, code, loc, message);
-    if(ctx.strict == strictness::strict)
-        ok = false;
-}
-
 bool has_non_space(std::string_view text)
 {
     return std::any_of(text.begin(), text.end(),
@@ -81,6 +72,24 @@ void scan_element(pugi::xml_node element, std::string_view text, const std::file
             scan_element(child, text, file, ctx, ok);
 }
 
+}
+
+void report(parse_context &ctx, const source_location &loc, diagnostic_code code,
+            const std::string &message, bool &ok)
+{
+    if(ctx.strict == strictness::skip)
+        return;
+    const level lvl = ctx.strict == strictness::fail ? level::error : level::warn;
+    ctx.log.log(lvl, code, loc, message);
+    if(ctx.strict == strictness::fail)
+        ok = false;
+}
+
+void report_structural(parse_context &ctx, const source_location &loc, diagnostic_code code,
+                       const std::string &message, bool &ok)
+{
+    ctx.log.log(level::error, code, loc, message);
+    ok = false;
 }
 
 bool run_strictness(pugi::xml_node document, std::string_view text,

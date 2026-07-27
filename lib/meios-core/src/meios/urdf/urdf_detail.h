@@ -11,6 +11,7 @@
 #include "meios/math/vector3.h"
 #include "meios/math/transform.h"
 
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include "meios/detail/text_location.h"
@@ -57,6 +58,14 @@ joint<double> extract_joint(pugi::xml_node node, std::string_view text,
 geometry<double> read_geometry(pugi::xml_node node, parse_context &ctx, const source_location &loc);
 
 void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location &loc);
+
+void report(parse_context &ctx, const source_location &loc, diagnostic_code code,
+            const std::string &message, bool &ok);
+
+// Refuses at error level and clears ok whatever the document-validity policy says; the
+// signature cannot show that it never reads the policy the way report does.
+void report_structural(parse_context &ctx, const source_location &loc, diagnostic_code code,
+                       const std::string &message, bool &ok);
 
 bool run_strictness(pugi::xml_node document, std::string_view text,
                     const std::filesystem::path &file, parse_context &ctx);

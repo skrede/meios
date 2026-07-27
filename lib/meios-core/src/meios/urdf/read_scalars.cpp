@@ -1,7 +1,5 @@
 #include "urdf_detail.h"
 
-#include "meios/diagnostic/level.h"
-#include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
@@ -65,10 +63,14 @@ bool read_scalars(std::string_view text, double *out, std::size_t count, parse_c
     const std::size_t found = count_tokens(text);
     if(found == 0)
         return true;
+    // The policy grades the severity, never the outcome: only an exact token count can
+    // fill out, so the refusal stands at every setting and the flag report would clear
+    // has nothing left to say here.
     if(found != count)
     {
-        ctx.log.log(level::error, diagnostic_code::vector_arity, loc,
-                    arity_message(field, count, found));
+        bool document_ok = true;
+        report(ctx, loc, diagnostic_code::vector_arity, arity_message(field, count, found),
+               document_ok);
         return false;
     }
     return parse_tokens(text, out, count, ctx, loc, field);

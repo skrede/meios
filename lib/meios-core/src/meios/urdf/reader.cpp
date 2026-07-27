@@ -117,7 +117,7 @@ void basic_parser<urdf_reader>::parse_erased(std::string_view source, erased_sin
         return;
     }
     const std::filesystem::path &file = m_context.document;
-    if(!detail::run_strictness(doc, source, file, m_context) && m_context.strict == strictness::strict)
+    if(!detail::run_strictness(doc, source, file, m_context) && m_context.strict == strictness::fail)
         return;
     const pugi::xml_node robot = robot_root(doc);
     sink.on_robot(robot_info{ std::string(robot.attribute("name").value()), {} });

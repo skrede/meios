@@ -58,7 +58,7 @@ TEST_CASE("the streaming walk pushes a branched robot into a pod_recorder", "[ur
     meios::log_sink log;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp("branched_all_joints.urdf"), rec);
@@ -88,7 +88,7 @@ TEST_CASE("a non-finite numeric attribute is rejected with a loud diagnostic", "
     meios::log_sink_f capture{ recorder{ levels } };
     meios::parse_context ctx{ sources, eval, capture, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(capture, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp("nonfinite_origin.urdf"), rec);

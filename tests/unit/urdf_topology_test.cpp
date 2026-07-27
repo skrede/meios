@@ -63,7 +63,7 @@ meios::tree<double> parse(const std::string &fixture)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, silent, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(silent, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp(fixture), rec);

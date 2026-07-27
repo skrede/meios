@@ -129,7 +129,7 @@ meios::tree<double> parse(const std::string &text, meios::log_sink &log)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, "gen.urdf" };
+                              meios::strictness::fail, "gen.urdf" };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(text, rec);

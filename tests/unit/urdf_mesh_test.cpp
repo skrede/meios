@@ -43,7 +43,7 @@ meios::tree<double> parse_mesh(meios::source_stack &sources, meios::missing_asse
 {
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, miss, meios::topology_policy::fail,
-                              meios::material_policy::warn, meios::strictness::strict, {} };
+                              meios::material_policy::warn, meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp("package_mesh.urdf"), rec);

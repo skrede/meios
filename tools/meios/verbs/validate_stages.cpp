@@ -70,7 +70,7 @@ load_options probe_options(const std::vector<std::filesystem::path> &roots)
     opts.topology = topology_policy::skip;
     opts.materials = material_policy::skip;
     opts.on_missing = missing_asset::warn;
-    opts.strict = strictness::strict;
+    opts.strict = strictness::fail;
     opts.package_roots = roots;
     return opts;
 }

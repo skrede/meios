@@ -61,7 +61,7 @@ std::vector<entry> load(const std::filesystem::path &path)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources,                     eval, cap, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict,    path };
+                              meios::strictness::fail,      path };
     meios::pod_recorder<meios::tree<double>> rec(cap, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp(path), rec);

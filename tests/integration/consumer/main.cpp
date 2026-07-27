@@ -94,7 +94,7 @@ int run_out_of_tree_sink()
     meios::log_sink log;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     record_counter sink;
     parser.parse(probe_urdf, sink);

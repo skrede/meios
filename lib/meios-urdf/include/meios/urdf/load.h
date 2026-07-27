@@ -33,7 +33,7 @@ struct load_options
         : on_missing(missing_asset::warn),
           topology(topology_policy::fail),
           materials(material_policy::warn),
-          strict(strictness::strict),
+          strict(strictness::fail),
           eval(eval_policy::fail),
           backend(),
           package_roots(),
