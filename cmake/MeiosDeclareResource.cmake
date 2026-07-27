@@ -563,11 +563,12 @@ function(meios_target_deploy_resources target)
             # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
             # configuration has its own runtime directory, and one shared stamp would let the first
             # configuration built mark the rest up to date and leave them without the tree. The
-            # configuration goes in the file name, not a directory, so the holding directory can be
-            # created once above — `cmake -E touch` does not create parents, and a generator
-            # expression cannot be resolved at configure time to create them.
+            # configuration goes in the file name, not a directory, and the label is slugged for the
+            # same reason — `cmake -E touch` does not create parents, and a generator expression
+            # cannot be resolved at configure time to create them.
+            string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _label_slot "${_label}")
             set(_stamp
-                "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${_slot}.${_label}.$<CONFIG>.stamp")
+                "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${_slot}.${_label_slot}.$<CONFIG>.stamp")
             add_custom_command(
                 OUTPUT  "${_stamp}"
                 COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${_src}" "${_dst}"
@@ -575,7 +576,6 @@ function(meios_target_deploy_resources target)
                 DEPENDS ${_files}
                 COMMENT "Deploying resource '${_label}' to ${_dst}"
                 VERBATIM)
-            string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _label_slot "${_label}")
             add_custom_target(${target}_deploy_${_slot}_${_label_slot} DEPENDS "${_stamp}")
             add_dependencies(${target} ${target}_deploy_${_slot}_${_label_slot})
 
