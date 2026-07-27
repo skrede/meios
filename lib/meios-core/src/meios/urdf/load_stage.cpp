@@ -142,7 +142,7 @@ sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &pa
 }
 
 expected<load_result, load_error> assemble(world_recorder &recorder, capturing_log_sink &wrapper,
-                                           const std::filesystem::path &path)
+                                           const std::filesystem::path &path, completeness withheld)
 {
     std::vector<captured_diagnostic> records = anchored(wrapper.records(), path);
     if(wrapper.errors() > 0)
@@ -151,7 +151,7 @@ expected<load_result, load_error> assemble(world_recorder &recorder, capturing_l
         source_location loc = first.loc.file.empty() ? source_location{ path, 0, 0 } : first.loc;
         return make_error(std::move(loc), first.message, first.code, std::move(records));
     }
-    const completeness claims = claims_from(records);
+    const completeness claims = claims_from(records) & ~withheld;
     return load_result{ recorder.take_model(), std::move(records), claims };
 }
 
@@ -176,7 +176,7 @@ expected<load_result, load_error> drive_load(const std::filesystem::path &path,
     parse_context ctx{ sources, eval, wrapper, opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
     drive(*bytes, path, sniff.expandable, opts, ctx, recorder, wrapper);
-    return assemble(recorder, wrapper, path);
+    return assemble(recorder, wrapper, path, ctx.withheld);
 }
 
 }

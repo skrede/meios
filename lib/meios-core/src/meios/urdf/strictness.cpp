@@ -1,6 +1,7 @@
 #include "urdf_detail.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/claims.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -81,7 +82,10 @@ void report(parse_context &ctx, const source_location &loc, diagnostic_code code
             const std::string &message, bool &ok)
 {
     if(ctx.strict == strictness::skip)
+    {
+        ctx.withheld |= cleared_by(code);
         return;
+    }
     const level lvl = ctx.strict == strictness::fail ? level::error : level::warn;
     ctx.log.log(lvl, code, loc, message);
     if(ctx.strict == strictness::fail)

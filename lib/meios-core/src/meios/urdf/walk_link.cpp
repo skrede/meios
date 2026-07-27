@@ -3,6 +3,7 @@
 #include "meios/records/link.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/claims.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -37,7 +38,9 @@ std::optional<std::string> resolve_material_ref(pugi::xml_node node, const mater
     const std::string name = node.attribute("name").value();
     if(node.child("color") || node.child("texture") || table.count(name) != 0)
         return name;
-    if(ctx.materials != material_policy::skip)
+    if(ctx.materials == material_policy::skip)
+        ctx.withheld |= cleared_by(diagnostic_code::undefined_material);
+    else
     {
         const level lvl = ctx.materials == material_policy::fail ? level::error : level::warn;
         ctx.log.log(lvl, diagnostic_code::undefined_material, loc,

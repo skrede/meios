@@ -7,6 +7,7 @@
 #include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/claims.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -24,7 +25,10 @@ namespace
 void report_missing(parse_context &ctx, const source_location &loc, const std::string &uri)
 {
     if(ctx.on_missing == missing_asset::skip)
+    {
+        ctx.withheld |= cleared_by(diagnostic_code::unresolved_mesh);
         return;
+    }
     const level lvl = ctx.on_missing == missing_asset::fail ? level::error : level::warn;
     ctx.log.log(lvl, diagnostic_code::unresolved_mesh, loc, "could not resolve mesh '" + uri + "'");
 }

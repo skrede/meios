@@ -29,6 +29,17 @@ topology issue under a `warn` policy, and an unresolved `package://` reference u
 raised, in source order, alongside the three completeness claims; branch on those rather than on the
 presence of a value. The failure arm carries the same list beside the error that names the failure.
 
+**Two of the five policies still leave their claim standing when set to `skip`.** A completeness claim
+answers for the document rather than for the log, so silencing a class of diagnostic must not restore
+the content it reported. The document-validity, material and missing-asset policies hold to that: a
+drop they silence withdraws its claim all the same. `topology_policy::skip` and `eval_policy::skip` do
+not. Both suppress at a layer with no reach into the claim accumulator, so a graph defect silenced by
+the first leaves `topology_valid` set on a model whose graph was never checked, and a substitution left
+verbatim by the second leaves `parsed` set on a document that still carries an unevaluated expression.
+Closing them means threading the accumulator through the topology reconstruction and the substitution
+scanner. Until then, do not set either of those two to `skip` and then branch on the claim it governs;
+`warn` costs nothing but the diagnostic and keeps both claims honest.
+
 **Nothing is printed unless you ask.** meios installs no output stream of its own. A program that
 injects no `log_sink` sees nothing at the moment a diagnostic is raised and reads the same
 diagnostics off the result afterwards instead. That is deliberate rather than a defect, and it is
@@ -45,6 +56,14 @@ populates it, and the model's extension collections are always empty. A consumer
 simulator, controller, transmission, or sensor configuration cannot recover it from a loaded model
 and must read the source document itself. Preserving these losslessly is planned; until it lands,
 treat a meios load as lossy for everything outside the URDF kinematic and visual surface.
+
+**An unreadable `<axis>` on a `fixed` or `floating` joint leaves a zero vector in a field nothing
+reads.** The wiki states those two kinds do not use the axis, so this profile applies no rule to it
+there. An `xyz` whose component count is wrong is reported under the document-validity policy and
+withdraws the parse claim, but the joint keeps the zero vector the reader seeded, which is
+indistinguishable from the `<axis xyz="0 0 0"/>` this profile accepts on those kinds. On the four
+kinds that do use the axis the same zeros reach the zero-axis rule and the joint is refused at every
+setting, so what remains is confined to a field the profile already states nothing reads.
 
 **An inertia tensor is checked for mathematical admissibility, never for physical plausibility.**
 meios refuses a negative mass, a negative moment of inertia, a tensor that is not positive

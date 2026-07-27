@@ -460,5 +460,12 @@ disclosed extension block, and it is not a statement about the robot: a document
 and still describe a topology meios refuses, or reference a mesh that is not on disk. Those are the
 two other claims, and the three are independent facts rather than a ranking.
 
+**The claim answers for the document, never for the log.** Silencing a class of diagnostic does not
+restore the content it reported: a document loaded with the document-validity setting at `skip`
+carries the same claims it would carry at `warn`, and content dropped without a word said about it
+withdraws the claim exactly as content dropped loudly does. This is the property that makes the claim
+worth branching on — a claim that tracked what reached the sink would be a restatement of the setting
+and would tell a consumer nothing about the document it just loaded.
+
 An XML namespace declaration — `xmlns`, or any `xmlns:` prefix — is XML infrastructure rather than
 description vocabulary and is never reported as an unknown attribute.

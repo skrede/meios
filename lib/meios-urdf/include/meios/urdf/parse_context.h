@@ -4,6 +4,7 @@
 #include "meios/urdf/policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/completeness.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/topology_policy.h"
 
@@ -25,6 +26,10 @@ struct parse_context
     material_policy materials;
     strictness      strict;
     std::filesystem::path document;
+    // A policy set to skip suppresses the diagnostic, never the drop it reports. The claims
+    // are derived from the emitted diagnostics, so a suppressed one records what it would
+    // have withdrawn here instead and the derivation withdraws it all the same.
+    completeness withheld;
 };
 
 }
