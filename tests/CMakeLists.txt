@@ -77,20 +77,24 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
     target_link_libraries(urdf_corpus_test
         PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
             Catch2::Catch2WithMain)
+    string(REPLACE ";" "|" _corpus_documents "${MEIOS_CORPUS_DOCUMENTS}")
     target_compile_definitions(urdf_corpus_test PRIVATE
         MEIOS_CORPUS_DIR="${MEIOS_CORPUS_KUKA_DIR}"
         MEIOS_CORPUS_KNOWN_GOOD="${MEIOS_CORPUS_KNOWN_GOOD}"
         MEIOS_CORPUS_FAULTY="${MEIOS_CORPUS_FAULTY}"
-        MEIOS_CORPUS_FAULTY_LINE=${MEIOS_CORPUS_FAULTY_LINE})
-    if(MEIOS_CORPUS_BREADTH)
-        string(REPLACE ";" "|" _corpus_breadth_dirs "${MEIOS_CORPUS_BREADTH_DIRS}")
-        target_compile_definitions(urdf_corpus_test PRIVATE
-            MEIOS_CORPUS_BREADTH
-            MEIOS_CORPUS_BREADTH_DIRS="${_corpus_breadth_dirs}")
+        MEIOS_CORPUS_FAULTY_LINE=${MEIOS_CORPUS_FAULTY_LINE}
+        MEIOS_CORPUS_DOCUMENTS="${_corpus_documents}"
+        MEIOS_CORPUS_DOCUMENT_COUNT=${MEIOS_CORPUS_DOCUMENT_COUNT})
+    if(TARGET meios_eval-python)
+        target_link_libraries(urdf_corpus_test PRIVATE meios::eval-python)
+        target_compile_definitions(urdf_corpus_test PRIVATE MEIOS_CORPUS_EVAL_PYTHON)
     endif()
     meios_enable_coverage(urdf_corpus_test)
     meios_warnings(urdf_corpus_test)
-    catch_discover_tests(urdf_corpus_test)
+    # Without the prefix the ctest names are the Catch2 case titles, which the regex
+    # CI selects the corpus by matches none of: the leg then reports success having
+    # run nothing at all.
+    catch_discover_tests(urdf_corpus_test TEST_PREFIX "urdf_corpus.")
 endif()
 
 # The flatten instrument asserts byte identity of flatten output against a

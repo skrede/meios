@@ -83,6 +83,33 @@ view. This follows from silent-by-default plus the default `fail` topology polic
 report of what did *not* resolve. `flatten`, `bundle`, and `deps` keep the refusing default: each
 produces an artifact that names or needs the asset.
 
+## What the description corpus proves
+
+**The blocking corpus reaches one vendor.** Every rule about what a description may say is held
+against pinned, real robot descriptions, and a rule that refuses one of them turns a pull request
+red. What that gate covers, exactly, is the four top-level descriptions
+`ros-industrial/kuka_experimental` ships — named outright in the build, never found by globbing a
+directory. That is one vendor and one authoring style. A description written in some other house
+style can still meet a refusal that nothing here would have caught.
+
+**A second vendor is covered only on the scheduled run, and only on Linux.**
+`UniversalRobots/Universal_Robots_ROS2_Description` expands only through the Python evaluator,
+because its macros subscript mapping values the built-in evaluator cannot. No macOS or Windows build
+carries that evaluator, and building it forces the install option off, so that upstream cannot join
+the always-on leg without taking the install-consumer coverage with it. It is loaded on the
+scheduled run instead, which does not block a pull request.
+
+**A third vendor is named nowhere because it ships nothing to load.**
+`lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
+description of any kind. Every top-level document in it includes description packages that are not
+inside the tarball. Pinning the description packages themselves would be a different upstream with
+its own license determination, and it has not been done.
+
+**Fragments are not loaded, by design.** Macro and include files carrying a `<robot>` root with no
+name and no links are not top-level documents, and the corpus does not treat them as such. That
+means the rules are proven against assembled descriptions only; a refusal that would fire on a
+fragment loaded directly is not exercised.
+
 ## The CMake resource modules
 
 **The automated tests never reach the network.** Every acquisition case builds its own origin on the

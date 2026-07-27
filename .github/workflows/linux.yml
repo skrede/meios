@@ -449,7 +449,7 @@ jobs:
 
   corpus:
     runs-on: ubuntu-24.04
-    name: corpus (pinned known-good + known-faulty pair)
+    name: corpus (pinned known-good + known-faulty pair, every named document)
 
     steps:
       - uses: actions/checkout@v4
@@ -465,8 +465,12 @@ jobs:
 
       # The always-on tier fetches one small pinned known-good description and
       # wires the in-repo crafted known-faulty fixture; it is blocking so a fetch
-      # or parse regression turns the PR red. The larger breadth set stays in the
-      # non-blocking scheduled run.
+      # or parse regression turns the PR red. Breadth is on here too: it names
+      # every top-level document that same fetch already carries, so a rule that
+      # refuses a real robot description turns the PR red without a second
+      # network dependency entering a blocking path. The evaluator-requiring
+      # documents stay in the scheduled run, because building that backend forces
+      # the install option off and the install-consumer legs need it.
       - name: Configure
         env:
           CC: gcc-14
@@ -477,13 +481,26 @@ jobs:
             -DMEIOS_WERROR=ON \
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
             -DMEIOS_BUILD_TESTS=ON \
-            -DMEIOS_FETCH_CORPUS=ON
+            -DMEIOS_FETCH_CORPUS=ON \
+            -DMEIOS_CORPUS_BREADTH=ON
 
       - name: Build
         run: cmake --build build
 
+      # ctest reports success when a -R filter selects nothing, so the selection is
+      # asserted non-empty before it runs; otherwise a gate that gates nothing
+      # passes as a green filtered run. -V puts the loaded/skipped document count
+      # in the log, so the leg states its own coverage.
       - name: Test
-        run: cd build && ctest -R urdf_corpus --output-on-failure
+        run: |
+          cd build
+          registered=$(ctest -N -R urdf_corpus | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "urdf_corpus registered no tests"
+            exit 1
+          fi
+          echo "urdf_corpus registered $registered test(s)"
+          ctest -R urdf_corpus -V
 
       # Byte-identical flatten check against the committed baseline, over the same
       # always-on pinned known-good description. Blocking, so any drift in flatten
