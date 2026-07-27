@@ -382,7 +382,9 @@ function(meios_declare_resource)
         list(GET _dl_status 0 _dl_code)
         list(GET _dl_status 1 _dl_msg)
         if(NOT _dl_code EQUAL 0)
-            # A partial or hash-mismatched file must never survive to look like a valid cache entry.
+            # Only a transport failure reaches here: file(DOWNLOAD ... EXPECTED_HASH) treats a
+            # mismatch as fatal and aborts even with STATUS supplied, so control never returns for
+            # one. The partial file is removed so it cannot survive to look like a cache entry.
             file(REMOVE "${_archive}")
             message(FATAL_ERROR
                 "meios_declare_resource(${ARG_NAME}): download failed "

@@ -17,6 +17,16 @@ meios_cmake_case(cmake_deploy_nested_selection
     EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT models/pkg_b/config/params.yaml)
 
+# The edit touches no source file, so nothing relinks: a deployment attached as a post-build command
+# would leave the stale tree in place with no sign anything was wrong.
+meios_cmake_case(cmake_deploy_reruns_on_edit
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models
+    MUTATE  pkg_a/package.xml
+    REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated)
+
 # Every inter-word space is spelled as a character class because CMake re-wraps message(FATAL_ERROR)
 # text at roughly 78 columns, so a pattern copied verbatim out of the module does not match what the
 # case reads.
