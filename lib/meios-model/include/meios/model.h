@@ -32,10 +32,13 @@
 #include "meios/sink/world_recorder.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/claims.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/load_error.h"
+#include "meios/diagnostic/completeness.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/topology_policy.h"
+#include "meios/diagnostic/captured_diagnostic.h"
 
 #endif

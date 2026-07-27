@@ -1,0 +1,65 @@
+#ifndef HPP_GUARD_MEIOS_MODEL_DIAGNOSTIC_CLAIMS_H
+#define HPP_GUARD_MEIOS_MODEL_DIAGNOSTIC_CLAIMS_H
+
+#include "meios/diagnostic/completeness.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/captured_diagnostic.h"
+
+#include <vector>
+
+namespace meios
+{
+
+// The switch carries no catch-all arm on purpose: a diagnostic code added without a claim
+// is then a -Wswitch error rather than a code that silently leaves every claim standing.
+constexpr completeness cleared_by(diagnostic_code code) noexcept
+{
+    switch(code)
+    {
+        case diagnostic_code::unspecified:               return completeness::none;
+        case diagnostic_code::cannot_open:               return completeness::parsed;
+        case diagnostic_code::xml_parse_error:           return completeness::parsed;
+        case diagnostic_code::non_robot_root:            return completeness::parsed;
+        case diagnostic_code::invalid_topology:          return completeness::topology_valid;
+        case diagnostic_code::additional_root:           return completeness::topology_valid;
+        case diagnostic_code::no_root_cycle:             return completeness::topology_valid;
+        case diagnostic_code::link_on_cycle:             return completeness::topology_valid;
+        case diagnostic_code::undeclared_link:           return completeness::topology_valid;
+        case diagnostic_code::multiple_parents:          return completeness::topology_valid;
+        case diagnostic_code::unreachable_link:          return completeness::topology_valid;
+        case diagnostic_code::duplicate_attribute:       return completeness::parsed;
+        case diagnostic_code::additional_root_element:   return completeness::parsed;
+        case diagnostic_code::trailing_content:          return completeness::parsed;
+        case diagnostic_code::comment_interrupting:      return completeness::parsed;
+        case diagnostic_code::undefined_material:        return completeness::deployment_complete;
+        case diagnostic_code::unresolved_mesh:           return completeness::deployment_complete;
+        case diagnostic_code::malformed_mesh_uri:        return completeness::deployment_complete;
+        case diagnostic_code::lfs_pointer_mesh:          return completeness::deployment_complete;
+        case diagnostic_code::undefined_property:        return completeness::parsed;
+        case diagnostic_code::unresolved_find:           return completeness::parsed;
+        case diagnostic_code::unresolved_arg:            return completeness::parsed;
+        case diagnostic_code::unresolved_env:            return completeness::parsed;
+        case diagnostic_code::unknown_substitution:      return completeness::parsed;
+        case diagnostic_code::unterminated_substitution: return completeness::parsed;
+        case diagnostic_code::expression_error:          return completeness::parsed;
+        case diagnostic_code::unsupported_expression:    return completeness::parsed;
+        case diagnostic_code::unresolved_include:        return completeness::parsed;
+        case diagnostic_code::xacro_parse_error:         return completeness::parsed;
+        case diagnostic_code::xacro_structural_error:    return completeness::parsed;
+        case diagnostic_code::expansion_budget_exceeded: return completeness::parsed;
+        case diagnostic_code::vector_arity:              return completeness::parsed;
+    }
+    return completeness::none;
+}
+
+inline completeness claims_from(const std::vector<captured_diagnostic> &records)
+{
+    completeness claims = all_claims;
+    for(const captured_diagnostic &record : records)
+        claims &= ~cleared_by(record.code);
+    return claims;
+}
+
+}
+
+#endif
