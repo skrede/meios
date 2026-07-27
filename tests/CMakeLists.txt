@@ -531,3 +531,10 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/fail)
     add_subdirectory(compile/fail)
 endif()
+
+# The MEIOS_BUILD_TESTS conjunct is load-bearing: this directory is also entered under
+# MEIOS_BUILD_PROPERTY_TESTS alone, and those jobs must not pick up cases that each run a
+# sub-configure.
+if(MEIOS_BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/cmake)
+    add_subdirectory(integration/cmake)
+endif()
