@@ -40,14 +40,19 @@ endif()
 if(TARGET meios_eval-python)
     target_link_libraries(meios_cli PRIVATE meios::eval-python)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_EVAL_PYTHON)
+    # A global property, not a scoped variable: a value set here would reach only the
+    # parent directory, while the flatten call that reads it may be written in any
+    # directory of a consumer's tree.
+    set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON TRUE)
 endif()
 
 add_executable(meios main.cpp)
 meios_enable_coverage(meios)
 meios_warnings(meios)
 target_link_libraries(meios PRIVATE meios_cli)
-set_target_properties(meios PROPERTIES OUTPUT_NAME meios)
+set_target_properties(meios PROPERTIES OUTPUT_NAME meios EXPORT_NAME cli)
+add_executable(meios::cli ALIAS meios)
 
 if(MEIOS_ENABLE_INSTALL)
-    install(TARGETS meios RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS meios EXPORT meiosTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

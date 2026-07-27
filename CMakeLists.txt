@@ -41,6 +41,7 @@ endif()
 set(MEIOS_CORE_PUGIXML_INSTALLED FALSE)
 set(MEIOS_SCAN_GLTF_INSTALLED FALSE)
 set(MEIOS_ARCHIVE_ZIP_INSTALLED FALSE)
+set(MEIOS_CLI_HAS_EVAL_PYTHON FALSE)
 
 # Set before the subdirectories so lib/ and tests/ share one acquisition policy.
 # NEVER forces every dependency down the fetch path; ALWAYS prefers a discoverable
@@ -52,6 +53,18 @@ else()
 endif()
 
 add_subdirectory(lib)
+
+# Configured before the block below, which substitutes the config file's variables at
+# the point it is written, so a build fact the CLI decides has to be recorded first;
+# and before the tests block, because the CLI test stems guard on a live meios_cli
+# target. The EXISTS guard keeps a pre-tools tree valid.
+if(MEIOS_BUILD_TOOLS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tools/CMakeLists.txt)
+    add_subdirectory(tools)
+endif()
+get_property(_meios_cli_eval_python GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON)
+if(_meios_cli_eval_python)
+    set(MEIOS_CLI_HAS_EVAL_PYTHON TRUE)
+endif()
 
 # Emitted after lib/ so the export sees every module that joined meiosTargets, and
 # the config file is substituted last so the PARENT_SCOPE gate flags are final.
@@ -83,12 +96,6 @@ if(MEIOS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeployResources.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosPruneResources.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
-endif()
-
-# Added before the tests block so the meios_cli support lib is a live TARGET when
-# the CLI test stems configure. The EXISTS guard keeps a pre-tools tree valid.
-if(MEIOS_BUILD_TOOLS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tools/CMakeLists.txt)
-    add_subdirectory(tools)
 endif()
 
 # Reaches lib/'s build-tree meios::* targets, so it must follow add_subdirectory(lib);
