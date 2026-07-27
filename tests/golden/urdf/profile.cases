@@ -6,3 +6,10 @@
 origin_xyz_short.urdf	refuse	vector_arity	origin-xyz-arity	A two-component offset was silently completed to a third zero.
 origin_xyz_long.urdf	refuse	vector_arity	origin-xyz-arity	A four-component offset was silently truncated to three.
 origin_xyz_ok.urdf	accept	-	origin-xyz-arity	Three components, and an absent rpy keeping its documented default.
+unknown_element_robot.urdf	drop	unknown_element	unknown-element	The element sits directly under <robot>.
+unknown_element_link.urdf	drop	unknown_element	unknown-element	The element sits inside a <link>, a level that was silent before this rule.
+unknown_element_joint.urdf	drop	unknown_element	unknown-element	The element sits inside a <joint>, the other level that was silent.
+unknown_attribute_joint.urdf	drop	unknown_attribute	unknown-attribute	A misspelled joint type attribute, now named rather than left to its downstream effect.
+extension_block.urdf	drop	extension_ignored	extension-disclosed	A simulation block: disclosed, dropped, and the parse claim still stands.
+version_supported.urdf	accept	-	robot-version	The one supported value, recognized rather than reported as an unknown attribute.
+version_unsupported.urdf	refuse	unsupported_version	robot-version	Any other value asserts a format this library does not implement.

@@ -70,6 +70,17 @@ void report_structural(parse_context &ctx, const source_location &loc, diagnosti
 bool run_strictness(pugi::xml_node document, std::string_view text,
                     const std::filesystem::path &file, parse_context &ctx);
 
+// Answers whether the profile governs the named child of the named parent. An extension
+// block and an unrecognized element both carry content this library does not describe, so
+// the descent stops judging inside their subtrees rather than naming every node in them.
+bool vocabulary_governs(std::string_view parent, std::string_view element);
+
+// Discloses unrecognized children and attributes of one element the profile governs; the
+// returned flag is cleared only by a structural refusal, never by a disclosure, because
+// dropping unrecognized content is legal at every document-validity setting.
+bool check_vocabulary(pugi::xml_node element, std::string_view text,
+                      const std::filesystem::path &file, parse_context &ctx);
+
 }
 
 #endif

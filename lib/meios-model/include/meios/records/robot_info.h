@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 
 namespace meios
 {
@@ -13,6 +14,7 @@ struct robot_info
 {
     std::string name;
     std::vector<extension> extensions;
+    std::optional<std::string> version;
 };
 
 }

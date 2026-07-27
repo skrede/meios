@@ -52,7 +52,7 @@ void check_trailing_garbage(std::string_view text, const std::filesystem::path &
 }
 
 void scan_element(pugi::xml_node element, std::string_view text, const std::filesystem::path &file,
-                  parse_context &ctx, bool &ok)
+                  parse_context &ctx, bool &ok, bool governed)
 {
     std::set<std::string> seen;
     for(pugi::xml_attribute attr = element.first_attribute(); attr; attr = attr.next_attribute())
@@ -67,9 +67,12 @@ void scan_element(pugi::xml_node element, std::string_view text, const std::file
         if(child.type() == pugi::node_comment && text_value)
             report(ctx, node_location(child, text, file), diagnostic_code::comment_interrupting,
                    "comment interrupting element text", ok);
+    if(governed && !check_vocabulary(element, text, file, ctx))
+        ok = false;
     for(pugi::xml_node child : element.children())
         if(child.type() == pugi::node_element)
-            scan_element(child, text, file, ctx, ok);
+            scan_element(child, text, file, ctx, ok,
+                         governed && vocabulary_governs(element.name(), child.name()));
 }
 
 }
@@ -100,7 +103,7 @@ bool run_strictness(pugi::xml_node document, std::string_view text,
     check_trailing_garbage(text, file, ctx, ok);
     for(pugi::xml_node child : document.children())
         if(child.type() == pugi::node_element)
-            scan_element(child, text, file, ctx, ok);
+            scan_element(child, text, file, ctx, ok, child.name() == std::string_view("robot"));
     return ok;
 }
 

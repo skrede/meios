@@ -103,7 +103,7 @@ TEST_CASE("every diagnostic code the rule table names round-trips through to_str
     }
 }
 
-TEST_CASE("a refusing row alone names a diagnostic code, under a declared verdict",
+TEST_CASE("a row names a diagnostic code exactly when its verdict reports one",
           "[profile][drift]")
 {
     const std::vector<profile::row> rows = profile::load_rows();
@@ -112,9 +112,9 @@ TEST_CASE("a refusing row alone names a diagnostic code, under a declared verdic
     {
         INFO(r.fixture);
         REQUIRE(profile::declared_verdict(r.verdict));
-        if(r.verdict == "refuse")
-            REQUIRE(r.code != profile::no_code);
-        else
+        if(r.verdict == "accept")
             REQUIRE(r.code == profile::no_code);
+        else
+            REQUIRE(r.code != profile::no_code);
     }
 }

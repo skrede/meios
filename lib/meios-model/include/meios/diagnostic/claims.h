@@ -48,6 +48,14 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::xacro_structural_error:    return completeness::parsed;
         case diagnostic_code::expansion_budget_exceeded: return completeness::parsed;
         case diagnostic_code::vector_arity:              return completeness::parsed;
+        case diagnostic_code::unknown_element:           return completeness::parsed;
+        case diagnostic_code::unknown_attribute:         return completeness::parsed;
+        // A simulation or control block is content the ROS wiki blesses a reader for
+        // ignoring, and nearly every shipped description carries one. Clearing the parse
+        // claim on them would leave it clear for every real robot, which tells a consumer
+        // branching on it nothing at all.
+        case diagnostic_code::extension_ignored:         return completeness::none;
+        case diagnostic_code::unsupported_version:       return completeness::parsed;
     }
     return completeness::none;
 }

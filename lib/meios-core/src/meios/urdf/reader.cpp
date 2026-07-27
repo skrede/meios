@@ -13,6 +13,7 @@
 #include <pugixml.hpp>
 
 #include <string>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -68,30 +69,11 @@ void emit_links(pugi::xml_node robot, std::string_view text, const std::filesyst
     }
 }
 
-bool is_handled_child(std::string_view tag)
+std::optional<std::string> declared_version(pugi::xml_node robot)
 {
-    return tag == "material" || tag == "link" || tag == "joint";
-}
-
-bool is_known_extension(std::string_view tag)
-{
-    return tag == "gazebo" || tag == "ros2_control" || tag == "transmission" || tag == "sensor";
-}
-
-void warn_unhandled(pugi::xml_node robot, std::string_view text, const std::filesystem::path &file,
-                    parse_context &ctx)
-{
-    for(pugi::xml_node child : robot.children())
-    {
-        if(child.type() != pugi::node_element || is_handled_child(child.name()))
-            continue;
-        std::string named = child.name();
-        if(pugi::xml_attribute name = child.attribute("name"))
-            named += " name='" + std::string(name.value()) + '\'';
-        const std::string kind = is_known_extension(child.name()) ? "extension " : "";
-        ctx.log.log(level::warn, detail::node_location(child, text, file),
-                    "dropping unhandled robot-level " + kind + "element <" + named + '>');
-    }
+    if(pugi::xml_attribute version = robot.attribute("version"))
+        return std::string(version.value());
+    return std::nullopt;
 }
 
 template <typename Sink>
@@ -120,12 +102,12 @@ void basic_parser<urdf_reader>::parse_erased(std::string_view source, erased_sin
     if(!detail::run_strictness(doc, source, file, m_context) && m_context.strict == strictness::fail)
         return;
     const pugi::xml_node robot = robot_root(doc);
-    sink.on_robot(robot_info{ std::string(robot.attribute("name").value()), {} });
+    sink.on_robot(
+        robot_info{ std::string(robot.attribute("name").value()), {}, declared_version(robot) });
     detail::material_table table;
     emit_materials(robot, source, file, m_context, table, sink);
     emit_links(robot, source, file, m_context, table, sink);
     emit_joints(robot, source, file, m_context, sink);
-    warn_unhandled(robot, source, file, m_context);
     sink.finish();
 }
 

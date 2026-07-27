@@ -46,22 +46,44 @@ struct recorder
     }
 };
 
-std::vector<captured> load(const std::string &fixture)
+struct outcome
+{
+    std::vector<captured> diagnostics;
+    bool                  succeeded;
+    meios::completeness   claims;
+};
+
+outcome load(const std::string &fixture)
 {
     std::vector<captured> out;
     meios::log_sink_f capture{ recorder{ out } };
     const std::filesystem::path path =
         std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / "profile" / fixture;
-    meios::load(path, meios::load_options{}, capture);
-    return out;
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(path, meios::load_options{}, capture);
+    if(!loaded)
+        return { std::move(out), false, meios::completeness::none };
+    return { std::move(out), true, loaded->claims };
 }
 
-bool located_refusal(const std::vector<captured> &diagnostics, const std::string &code)
+bool located(const std::vector<captured> &diagnostics, meios::level lvl, const std::string &code)
 {
-    return std::any_of(diagnostics.begin(), diagnostics.end(), [&code](const captured &d) {
-        return d.lvl == meios::level::error && meios::to_string(d.code) == code
-            && !d.loc.file.empty() && d.loc.line > 0;
+    return std::any_of(diagnostics.begin(), diagnostics.end(), [lvl, &code](const captured &d) {
+        return d.lvl == lvl && meios::to_string(d.code) == code && !d.loc.file.empty()
+            && d.loc.line > 0;
     });
+}
+
+meios::diagnostic_code code_from(const std::string &name)
+{
+    for(int value = 0; meios::to_string(static_cast<meios::diagnostic_code>(value)) != "unknown";
+        ++value)
+    {
+        const meios::diagnostic_code code = static_cast<meios::diagnostic_code>(value);
+        if(meios::to_string(code) == name)
+            return code;
+    }
+    return meios::diagnostic_code::unspecified;
 }
 
 std::size_t errors(const std::vector<captured> &diagnostics)
@@ -92,7 +114,25 @@ TEST_CASE("every refusing row is refused under its own code at a real location",
         if(r.verdict != "refuse")
             continue;
         INFO(r.fixture);
-        REQUIRE(located_refusal(load(r.fixture), r.code));
+        REQUIRE(located(load(r.fixture).diagnostics, meios::level::error, r.code));
+    }
+}
+
+TEST_CASE("every dropping row discloses its code, still loads, and answers for the parse claim",
+          "[urdf][profile]")
+{
+    for(const profile::row &r : profile::load_rows())
+    {
+        if(r.verdict != "drop")
+            continue;
+        INFO(r.fixture);
+        const outcome result = load(r.fixture);
+        REQUIRE(result.succeeded);
+        REQUIRE(errors(result.diagnostics) == 0);
+        REQUIRE(located(result.diagnostics, meios::level::warn, r.code));
+        const meios::completeness cleared = meios::cleared_by(code_from(r.code));
+        REQUIRE(meios::has(result.claims, meios::completeness::parsed)
+                == !meios::has(cleared, meios::completeness::parsed));
     }
 }
 
@@ -103,6 +143,8 @@ TEST_CASE("every accepting row loads without an error diagnostic", "[urdf][profi
         if(r.verdict != "accept")
             continue;
         INFO(r.fixture);
-        REQUIRE(errors(load(r.fixture)) == 0);
+        const outcome result = load(r.fixture);
+        REQUIRE(result.succeeded);
+        REQUIRE(errors(result.diagnostics) == 0);
     }
 }

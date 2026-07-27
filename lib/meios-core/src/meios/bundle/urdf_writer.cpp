@@ -78,6 +78,8 @@ void urdf_writer::on_robot(const robot_info &robot)
     warn_empty(robot.name);
     m_doc->root = m_doc->doc.append_child("robot");
     m_doc->root.append_attribute("name").set_value(robot.name.c_str());
+    if(robot.version)
+        m_doc->root.append_attribute("version").set_value(robot.version->c_str());
 }
 
 void urdf_writer::on_material(const material<double> &mat)

@@ -40,6 +40,10 @@ enum class diagnostic_code
     xacro_structural_error,
     expansion_budget_exceeded,
     vector_arity,
+    unknown_element,
+    unknown_attribute,
+    extension_ignored,
+    unsupported_version,
 };
 
 constexpr std::string_view to_string(diagnostic_code code) noexcept
@@ -78,6 +82,10 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::xacro_structural_error:    return "xacro_structural_error";
         case diagnostic_code::expansion_budget_exceeded: return "expansion_budget_exceeded";
         case diagnostic_code::vector_arity:              return "vector_arity";
+        case diagnostic_code::unknown_element:           return "unknown_element";
+        case diagnostic_code::unknown_attribute:         return "unknown_attribute";
+        case diagnostic_code::extension_ignored:         return "extension_ignored";
+        case diagnostic_code::unsupported_version:       return "unsupported_version";
     }
     return "unknown";
 }

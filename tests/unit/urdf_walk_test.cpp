@@ -2,6 +2,7 @@
 #include <meios/model.h>
 #include <meios/io.h>
 #include <meios/xacro.h>
+#include <meios/bundle.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -19,13 +20,56 @@ static_assert(meios::model_sink<meios::world_recorder>);
 namespace
 {
 
+std::filesystem::path fixture(const std::string &name)
+{
+    return std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / name;
+}
+
 std::string slurp(const std::string &name)
 {
-    const std::filesystem::path path = std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / name;
-    std::ifstream in(path, std::ios::binary);
+    std::ifstream in(fixture(name), std::ios::binary);
     std::ostringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
+}
+
+struct robot_capture
+{
+    meios::robot_info info;
+
+    void on_robot(const meios::robot_info &robot) { info = robot; }
+    void on_material(const meios::material<double> &) {}
+    void on_link(const meios::link<double> &) {}
+    void on_joint(const meios::joint<double> &) {}
+    void finish() {}
+};
+
+meios::robot_info read_robot(const std::string &name)
+{
+    meios::source_stack sources{};
+    meios::core_evaluator eval;
+    meios::log_sink log;
+    meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
+                              meios::topology_policy::fail, meios::material_policy::warn,
+                              meios::strictness::fail, {} };
+    robot_capture capture;
+    meios::basic_parser<meios::urdf_reader> parser(ctx);
+    parser.parse(slurp(name), capture);
+    return capture.info;
+}
+
+// The saved document opens with an XML declaration that also spells version=, so the
+// round trip is only observable on the robot element's own start tag.
+std::string written_robot_element(const meios::robot_info &robot)
+{
+    std::ostringstream out;
+    meios::log_sink log;
+    meios::urdf_writer writer(out, log);
+    writer.on_robot(robot);
+    writer.finish();
+    const std::string document = out.str();
+    const std::string::size_type at = document.find("<robot");
+    return document.substr(at, document.find('>', at) - at);
 }
 
 struct recorder
@@ -95,4 +139,48 @@ TEST_CASE("a non-finite numeric attribute is rejected with a loud diagnostic", "
 
     REQUIRE_FALSE(levels.empty());
     REQUIRE(std::count(levels.begin(), levels.end(), meios::level::error) >= 1);
+}
+
+TEST_CASE("a document that declares no version records none", "[urdf][walk]")
+{
+    REQUIRE_FALSE(read_robot("branched_all_joints.urdf").version.has_value());
+}
+
+TEST_CASE("a document declaring the supported version records it", "[urdf][walk]")
+{
+    const meios::robot_info robot = read_robot("profile/version_supported.urdf");
+
+    REQUIRE(robot.version.has_value());
+    REQUIRE(robot.version.value() == "1.0");
+}
+
+TEST_CASE("a document declaring any other version is refused at a real location", "[urdf][walk]")
+{
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture("profile/version_unsupported.urdf"));
+
+    REQUIRE_FALSE(loaded);
+    REQUIRE(loaded.error().code == meios::diagnostic_code::unsupported_version);
+    REQUIRE_FALSE(loaded.error().loc.file.empty());
+    REQUIRE(loaded.error().loc.line > 0);
+}
+
+TEST_CASE("the version attribute is recognized rather than reported as unknown", "[urdf][walk]")
+{
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture("profile/version_supported.urdf"));
+
+    REQUIRE(loaded);
+    REQUIRE(meios::has(loaded->claims, meios::completeness::parsed));
+}
+
+TEST_CASE("a recorded version survives a write back out, and an absent one is not invented",
+          "[urdf][walk]")
+{
+    const std::string declared =
+        written_robot_element(read_robot("profile/version_supported.urdf"));
+    const std::string silent = written_robot_element(read_robot("profile/origin_xyz_ok.urdf"));
+
+    REQUIRE(declared.find("version=\"1.0\"") != std::string::npos);
+    REQUIRE(silent.find("version=") == std::string::npos);
 }

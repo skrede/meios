@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="unknown_element_robot">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="fixed">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+  </joint>
+  <telemetry rate="10"/>
+</robot>
