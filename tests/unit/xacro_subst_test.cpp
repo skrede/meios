@@ -138,7 +138,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
     std::filesystem::create_directories(root / "pkg");
 
     meios::directory_source on_disk{ root, log };
-    meios::memory_source in_memory;
+    meios::memory_source in_memory{ log };
     in_memory.add("bytespkg", "", "resolved-from-bytes");
     meios::source_stack sources{ std::move(on_disk), std::move(in_memory) };
 
@@ -162,11 +162,14 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
-    SECTION("$(find) refuses a bytes-only hit rather than naming a path that will not survive")
+    // A byte-backed layer is no longer refused for want of a path that survives the load: it
+    // writes into a scratch directory of its own. An entry keyed on an empty relative path
+    // names the package directory rather than a file, so there is still nothing to hand back.
+    SECTION("$(find) no longer refuses a layer merely for being byte-backed")
     {
         meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);
         REQUIRE_FALSE(out.ok);
-        REQUIRE(any_contains(records, "byte-backed source"));
+        REQUIRE_FALSE(any_contains(records, "byte-backed source"));
     }
 
     SECTION("an unresolved $(find) loud-fails")

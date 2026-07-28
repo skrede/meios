@@ -106,7 +106,7 @@ TEST_CASE("a mutual xacro:include chain is caught by the cycle guard", "[xacro][
     std::vector<std::pair<meios::level, std::string>> records;
     meios::log_sink_f log{ captured_log{ records } };
 
-    meios::memory_source parts;
+    meios::memory_source parts{ log };
     parts.add("pkg", "a.xacro",
               "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
               "<xacro:include filename=\"$(find pkg)/b.xacro\"/></robot>");
@@ -130,7 +130,7 @@ TEST_CASE("an xacro:include escaping the source root is rejected loudly", "[xacr
 {
     std::vector<std::pair<meios::level, std::string>> records;
     meios::log_sink_f log{ captured_log{ records } };
-    meios::memory_source parts;
+    meios::memory_source parts{ log };
     parts.add("pkg", "robot.xacro", "<robot/>");
     meios::source_stack sources{ std::move(parts) };
     meios::eval_scope scope;

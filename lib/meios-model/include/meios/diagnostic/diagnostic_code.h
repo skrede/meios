@@ -27,6 +27,7 @@ enum class diagnostic_code
     unresolved_mesh,
     malformed_mesh_uri,
     lfs_pointer_mesh,
+    asset_write_failed,
     undefined_property,
     unresolved_find,
     unresolved_arg,
@@ -83,6 +84,7 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::unresolved_mesh:           return "unresolved_mesh";
         case diagnostic_code::malformed_mesh_uri:        return "malformed_mesh_uri";
         case diagnostic_code::lfs_pointer_mesh:          return "lfs_pointer_mesh";
+        case diagnostic_code::asset_write_failed:        return "asset_write_failed";
         case diagnostic_code::undefined_property:        return "undefined_property";
         case diagnostic_code::unresolved_find:           return "unresolved_find";
         case diagnostic_code::unresolved_arg:            return "unresolved_arg";

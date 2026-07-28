@@ -1,3 +1,4 @@
+#include <meios/io/scratch_dir.h>
 #include <meios/io/memory_source.h>
 #include <meios/io/materialize.h>
 #include <meios/io/bundle_source.h>
@@ -11,17 +12,20 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <span>
-#include <array>
+#include <memory>
 #include <string>
 #include <vector>
 #include <random>
+#include <cstring>
 #include <utility>
 #include <cstddef>
 #include <fstream>
 #include <iterator>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 static_assert(meios::package_source<meios::memory_source>);
 static_assert(!meios::provides_path<meios::memory_source>);
@@ -56,13 +60,34 @@ std::size_t count_level(const event_log &events, meios::level lvl)
     return total;
 }
 
-std::string read_all(meios::resolved_asset &asset)
+struct string_puller final : meios::byte_reader::puller
 {
-    std::array<std::byte, 8> buffer{};
-    std::string out;
-    for(std::size_t n = asset.bytes().read(buffer); n != 0; n = asset.bytes().read(buffer))
-        out.append(reinterpret_cast<const char *>(buffer.data()), n);
-    return out;
+    explicit string_puller(std::string bytes) : m_data(std::move(bytes)), m_pos(0) {}
+
+    std::size_t read(std::span<std::byte> out) override
+    {
+        const std::size_t n = std::min(out.size(), m_data.size() - m_pos);
+        std::memcpy(out.data(), m_data.data() + m_pos, n);
+        m_pos += n;
+        return n;
+    }
+
+    std::string m_data;
+    std::size_t m_pos;
+};
+
+std::string read_file(const std::filesystem::path &path)
+{
+    std::ifstream in(path, std::ios::binary);
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
+std::filesystem::path locate_path(meios::memory_source &source, const char *relative)
+{
+    std::optional<meios::resolved_asset> hit = source.locate("pkg", relative);
+    REQUIRE(hit.has_value());
+    REQUIRE(hit->holds_path());
+    return hit->path();
 }
 
 std::filesystem::path fresh_dir()
@@ -85,20 +110,123 @@ std::filesystem::path seed_root()
     return root;
 }
 
+// Windows models permissions loosely: filesystem::permissions cannot clear the group and
+// others bits there, so status() reports them set whatever was asked for. Probing a
+// directory of the test's own is what tells that host apart from one where the narrowing
+// is real, so an unobservable narrowing is skipped loudly rather than passing silently.
+bool narrowing_is_observable()
+{
+    const std::filesystem::path probe = fresh_dir();
+    std::error_code ec;
+    std::filesystem::create_directory(probe, ec);
+    std::filesystem::permissions(probe, std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::replace, ec);
+    const std::filesystem::perms mode = std::filesystem::status(probe).permissions();
+    std::filesystem::remove_all(probe, ec);
+    return (mode & std::filesystem::perms::others_read) == std::filesystem::perms::none;
 }
 
-TEST_CASE("memory_source resolves stored keys and misses to nullopt", "[io][sources][memory]")
+}
+
+TEST_CASE("memory_source resolves a stored key to a real path and misses to nullopt",
+          "[io][sources][memory]")
 {
-    meios::memory_source source;
+    meios::log_sink log;
+    meios::memory_source source{ log };
     source.add("pkg", "a/x.stl", "solid-bytes");
 
-    std::optional<meios::resolved_asset> hit = source.locate("pkg", "a/x.stl");
-    REQUIRE(hit.has_value());
-    REQUIRE(hit->holds_bytes());
-    REQUIRE(read_all(*hit) == "solid-bytes");
+    const std::filesystem::path located = locate_path(source, "a/x.stl");
+    REQUIRE(std::filesystem::exists(located));
+    REQUIRE(read_file(located) == "solid-bytes");
 
     REQUIRE_FALSE(source.locate("pkg", "a/missing.stl").has_value());
     REQUIRE(source.capabilities().path_backed == false);
+}
+
+TEST_CASE("a scratch entry keeps the authored extension and mirrors the requested path",
+          "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+
+    const std::filesystem::path located = locate_path(source, "meshes/arm.dae");
+    REQUIRE(located.extension() == ".dae");
+    REQUIRE(located.parent_path().filename() == "meshes");
+}
+
+TEST_CASE("a sibling entry resolves by a plain relative join from a located asset",
+          "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+    source.add("pkg", "meshes/arm.mtl", "material-bytes");
+
+    const std::filesystem::path model = locate_path(source, "meshes/arm.dae");
+    const std::filesystem::path sibling = locate_path(source, "meshes/arm.mtl");
+    REQUIRE(sibling == model.parent_path() / "arm.mtl");
+}
+
+TEST_CASE("an entry no locate asked for is never written", "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+    source.add("pkg", "meshes/leg.dae", "collada-bytes");
+
+    const std::filesystem::path located = locate_path(source, "meshes/arm.dae");
+    REQUIRE(std::filesystem::exists(located));
+    REQUIRE_FALSE(std::filesystem::exists(located.parent_path() / "leg.dae"));
+}
+
+TEST_CASE("locating the same key twice hands back the same path", "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+
+    REQUIRE(locate_path(source, "meshes/arm.dae") == locate_path(source, "meshes/arm.dae"));
+}
+
+TEST_CASE("the scratch tree is removed when the source that owns it dies",
+          "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    std::filesystem::path recorded;
+    {
+        meios::memory_source source{ log };
+        source.add("pkg", "meshes/arm.dae", "collada-bytes");
+        recorded = locate_path(source, "meshes/arm.dae");
+        REQUIRE(std::filesystem::exists(recorded));
+    }
+    REQUIRE_FALSE(std::filesystem::exists(recorded));
+}
+
+TEST_CASE("a scratch root under a parent that cannot hold one is refused",
+          "[io][sources][scratch]")
+{
+    const std::filesystem::path parent = fresh_dir() / "absent";
+    REQUIRE_FALSE(meios::detail::create_scratch_root(parent).has_value());
+}
+
+TEST_CASE("the scratch root is reachable by its owner alone", "[io][sources][scratch]")
+{
+    if(!narrowing_is_observable())
+    {
+        WARN("this host does not express owner-only directory permissions; assertion skipped");
+        return;
+    }
+
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+
+    const std::filesystem::path root =
+        locate_path(source, "meshes/arm.dae").parent_path().parent_path().parent_path();
+    const std::filesystem::perms mode = std::filesystem::status(root).permissions();
+    REQUIRE((mode & std::filesystem::perms::group_all) == std::filesystem::perms::none);
+    REQUIRE((mode & std::filesystem::perms::others_all) == std::filesystem::perms::none);
 }
 
 TEST_CASE("directory_source resolves an in-root file to a path", "[io][sources][dir]")
@@ -192,10 +320,8 @@ TEST_CASE("bundle_source resolves in-root and rejects escape like directory_sour
 TEST_CASE("materialize writes bytes to a temp file, logs once, and unlinks on destruction",
           "[io][sources][materialize]")
 {
-    meios::memory_source source;
-    source.add("pkg", "a/x.stl", "payload-bytes");
-    std::optional<meios::resolved_asset> bytes = source.locate("pkg", "a/x.stl");
-    REQUIRE(bytes.has_value());
+    meios::resolved_asset bytes{ meios::byte_reader{
+        std::make_unique<string_puller>("payload-bytes") } };
 
     event_log events;
     meios::log_sink_f log{ capture{ events } };
@@ -203,7 +329,7 @@ TEST_CASE("materialize writes bytes to a temp file, logs once, and unlinks on de
 
     std::filesystem::path recorded;
     {
-        meios::resolved_asset materialized = meios::materialize(std::move(*bytes), seam);
+        meios::resolved_asset materialized = meios::materialize(std::move(bytes), seam);
         REQUIRE(materialized.holds_path());
         recorded = materialized.path();
         REQUIRE(std::filesystem::exists(recorded));

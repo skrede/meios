@@ -149,7 +149,7 @@ const char *include_at_top =
 
 meios::expansion expand_with_include(const char *source, meios::log_sink &log)
 {
-    meios::memory_source parts;
+    meios::memory_source parts{ log };
     parts.add("pkg", "inc.xacro", include_property_fixture);
     meios::source_stack sources{ std::move(parts) };
     meios::eval_scope scope;

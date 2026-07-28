@@ -8,9 +8,11 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <variant>
 #include <fstream>
 #include <sstream>
+#include <optional>
 #include <algorithm>
 #include <filesystem>
 
@@ -55,6 +57,16 @@ const meios::mesh<double> &first_mesh(const meios::tree<double> &robot)
     return std::get<meios::mesh<double>>(robot.links.at(0).visuals.at(0).geom.shape);
 }
 
+const meios::mesh<double> &first_mesh(const meios::model<double> &robot)
+{
+    return std::get<meios::mesh<double>>(robot.links.at(0).visuals.at(0).geom.shape);
+}
+
+std::filesystem::path mesh_fixture()
+{
+    return std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / "package_mesh.urdf";
+}
+
 }
 
 TEST_CASE("a package:// mesh resolves to a path through the source stack", "[urdf][mesh]")
@@ -74,18 +86,46 @@ TEST_CASE("a package:// mesh resolves to a path through the source stack", "[urd
     std::filesystem::remove_all(root);
 }
 
-TEST_CASE("a bytes-backed package mesh is refused rather than given a dying path", "[urdf][mesh]")
+TEST_CASE("a byte-backed mesh names a file that outlives the returned and moved result",
+          "[urdf][mesh]")
 {
-    meios::log_sink inner;
-    meios::capturing_log_sink log{ inner };
-    meios::memory_source memory;
+    meios::log_sink log;
+    meios::memory_source memory{ log };
     memory.add("somepkg", "meshes/x.stl", "solid\n");
-    meios::source_stack sources{ memory };
-    const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, log);
+    meios::source_stack sources{ std::move(memory) };
 
-    REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
-    REQUIRE(log.errors() == 1);
-    REQUIRE(log.first()->code == meios::diagnostic_code::unresolved_mesh);
+    std::optional<meios::load_result> moved;
+    {
+        const meios::load_options opts;
+        meios::expected<meios::load_result, meios::load_error> loaded =
+            meios::load(mesh_fixture(), opts, sources, log);
+        REQUIRE(loaded.has_value());
+        moved = std::move(*loaded);
+    }
+
+    const meios::mesh<double> &shape = first_mesh(moved->robot);
+    REQUIRE(shape.resolved_path.has_value());
+    REQUIRE(std::filesystem::exists(*shape.resolved_path));
+    REQUIRE(std::filesystem::path(*shape.resolved_path).extension() == ".stl");
+}
+
+TEST_CASE("the resolved path is gone once the stack that owned it is destroyed", "[urdf][mesh]")
+{
+    meios::log_sink log;
+    std::filesystem::path recorded;
+    {
+        meios::memory_source memory{ log };
+        memory.add("somepkg", "meshes/x.stl", "solid\n");
+        meios::source_stack sources{ std::move(memory) };
+
+        const meios::load_options opts;
+        meios::expected<meios::load_result, meios::load_error> loaded =
+            meios::load(mesh_fixture(), opts, sources, log);
+        REQUIRE(loaded.has_value());
+        recorded = *first_mesh(loaded->robot).resolved_path;
+        REQUIRE(std::filesystem::exists(recorded));
+    }
+    REQUIRE_FALSE(std::filesystem::exists(recorded));
 }
 
 TEST_CASE("a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted",

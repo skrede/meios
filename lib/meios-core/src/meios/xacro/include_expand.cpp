@@ -107,8 +107,8 @@ std::optional<std::string> read_asset(resolved_asset &&hit)
 // The active document tracks the include stack, because a relative resource spec belongs
 // to the file it is written in rather than to the file that began the expansion. It is
 // not the stack's key: that key is a package-relative identity used for cycle detection,
-// not a location. A byte-backed layer has no location at all and so contributes an empty
-// document, leaving only the configured roots to probe.
+// not a location. A layer holding only bytes materializes them into a scratch area it owns,
+// so its location is the file it wrote and a relative spec beside it resolves.
 bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked,
              const std::filesystem::path &key, std::filesystem::path located, pugi::xml_node out)
 {

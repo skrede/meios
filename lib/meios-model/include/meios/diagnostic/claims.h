@@ -35,6 +35,7 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::unresolved_mesh:           return completeness::deployment_complete;
         case diagnostic_code::malformed_mesh_uri:        return completeness::deployment_complete;
         case diagnostic_code::lfs_pointer_mesh:          return completeness::deployment_complete;
+        case diagnostic_code::asset_write_failed:        return completeness::deployment_complete;
         case diagnostic_code::undefined_property:        return completeness::parsed;
         case diagnostic_code::unresolved_find:           return completeness::parsed;
         case diagnostic_code::unresolved_arg:            return completeness::parsed;

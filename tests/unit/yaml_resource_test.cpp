@@ -247,7 +247,7 @@ TEST_CASE("a byte-backed layer serves the resource with no path involved", "[yam
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
     meios::source_stack sources;
-    meios::memory_source layer;
+    meios::memory_source layer{ sink };
     layer.add("pkg", "cfg.yaml", "from: bytes");
     sources.push_back(meios::source_handle(std::move(layer)));
 

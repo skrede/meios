@@ -1,50 +1,57 @@
 #ifndef HPP_GUARD_MEIOS_IO_MEMORY_SOURCE_H
 #define HPP_GUARD_MEIOS_IO_MEMORY_SOURCE_H
 
+#include "meios/io/scratch_dir.h"
 #include "meios/io/package_source.h"
 #include "meios/io/resolved_asset.h"
+#include "meios/io/directory_source.h"
+
+#include "meios/diagnostic/level.h"
+#include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <map>
-#include <span>
-#include <memory>
 #include <string>
-#include <cstring>
 #include <utility>
-#include <cstddef>
 #include <optional>
-#include <algorithm>
+#include <functional>
+#include <filesystem>
 #include <string_view>
 
 namespace meios
 {
 
-namespace detail
-{
-
-struct buffer_puller final : byte_reader::puller
-{
-    explicit buffer_puller(std::string bytes) : m_data(std::move(bytes)), m_pos(0) {}
-
-    std::size_t read(std::span<std::byte> out) override
-    {
-        std::size_t n = std::min(out.size(), m_data.size() - m_pos);
-        std::memcpy(out.data(), m_data.data() + m_pos, n);
-        m_pos += n;
-        return n;
-    }
-
-    std::string m_data;
-    std::size_t m_pos;
-};
-
-}
-
-// An in-memory package source keyed by (package, relative). It hands back only
-// byte streams over the stored buffers, so it never satisfies provides_path.
+// An in-memory package source keyed by (package, relative). It owns a scratch
+// directory, writes an entry into it on first locate and mirrors the requested
+// relative path beneath it, so a path it hands back names a real file for exactly as
+// long as the source lives. It never satisfies provides_path: it cannot answer
+// without writing. A source layer has no document position, so its diagnostics carry
+// an empty location for the load to anchor to the input document.
 class memory_source
 {
+    using key = std::pair<std::string, std::string>;
+
 public:
-    memory_source() : m_entries() {}
+    explicit memory_source(log_sink &log) : m_log(log), m_entries(), m_paths(), m_scratch()
+    {
+        std::optional<std::filesystem::path> root =
+            detail::create_scratch_root(std::filesystem::temp_directory_path());
+        if(root)
+        {
+            m_scratch = scratch_dir{ std::move(*root) };
+            return;
+        }
+        m_log.get().log(level::error, diagnostic_code::asset_write_failed, source_location{},
+                        "could not create a scratch directory for a byte-backed source");
+    }
+
+    memory_source(memory_source &&) noexcept = default;
+    memory_source &operator=(memory_source &&) noexcept = default;
+    memory_source(const memory_source &) = delete;
+    memory_source &operator=(const memory_source &) = delete;
+
+    ~memory_source() = default;
 
     memory_source &add(std::string package, std::string relative, std::string bytes)
     {
@@ -58,20 +65,41 @@ public:
         return { source_kind::memory, false, false };
     }
 
-    std::optional<resolved_asset> locate(std::string_view package,
-                                         std::string_view relative) const
+    std::optional<resolved_asset> locate(std::string_view package, std::string_view relative)
     {
-        auto found = m_entries.find(key{ std::string(package), std::string(relative) });
-        if(found == m_entries.end())
+        const key wanted{ std::string(package), std::string(relative) };
+        const std::map<key, std::filesystem::path>::const_iterator cached = m_paths.find(wanted);
+        if(cached != m_paths.end())
+            return resolved_asset{ cached->second };
+        const std::map<key, std::string>::const_iterator entry = m_entries.find(wanted);
+        if(entry == m_entries.end())
             return std::nullopt;
-        return resolved_asset{ byte_reader{
-            std::make_unique<detail::buffer_puller>(found->second) } };
+        return write_entry(wanted, entry->second, package, relative);
     }
 
 private:
-    using key = std::pair<std::string, std::string>;
-
+    std::reference_wrapper<log_sink> m_log;
     std::map<key, std::string> m_entries;
+    std::map<key, std::filesystem::path> m_paths;
+    scratch_dir m_scratch;
+
+    std::optional<resolved_asset> write_entry(const key &wanted, const std::string &bytes,
+                                              std::string_view package, std::string_view relative)
+    {
+        const std::optional<std::filesystem::path> target =
+            detail::contained_candidate(m_scratch.path(), package, relative, m_log.get());
+        if(!target)
+            return std::nullopt;
+        if(!detail::write_scratch_entry(*target, bytes))
+        {
+            m_log.get().log(level::error, diagnostic_code::asset_write_failed, source_location{},
+                            "could not write \"" + std::string(package) + '/'
+                                + std::string(relative) + "\" into the scratch directory");
+            return std::nullopt;
+        }
+        m_paths.insert_or_assign(wanted, *target);
+        return resolved_asset{ *target };
+    }
 };
 
 }
