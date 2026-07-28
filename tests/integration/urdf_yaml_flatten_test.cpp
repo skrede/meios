@@ -5,23 +5,17 @@
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
+#include <meios/io/memory_source.h>
 #include <meios/io/source_handle.h>
-#include <meios/io/package_source.h>
-#include <meios/io/resolved_asset.h>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <span>
 #include <cmath>
-#include <memory>
 #include <string>
 #include <vector>
-#include <cstddef>
-#include <cstring>
 #include <utility>
 #include <optional>
-#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -158,41 +152,6 @@ void expect_refused(const attempt &got)
     REQUIRE(got.report.find("/bin/") == std::string::npos);
 }
 
-// A layer that answers only with bytes, never a path: the shape a bundle or an in-memory
-// overlay presents, and the one an implementation reaching for a filesystem path breaks on.
-struct string_puller final : meios::byte_reader::puller
-{
-    explicit string_puller(std::string text) : m_at(0), m_text(std::move(text)) {}
-
-    std::size_t read(std::span<std::byte> out) override
-    {
-        const std::size_t got = std::min(out.size(), m_text.size() - m_at);
-        std::memcpy(out.data(), m_text.data() + m_at, got);
-        m_at += got;
-        return got;
-    }
-
-    std::size_t m_at;
-    std::string m_text;
-};
-
-struct memory_yaml
-{
-    std::string text;
-
-    meios::capability_descriptor capabilities() const
-    {
-        return { meios::source_kind::memory, false, false };
-    }
-
-    std::optional<meios::resolved_asset> locate(std::string_view pkg, std::string_view rel)
-    {
-        if(pkg != "memory_pkg" || rel != "config.yaml")
-            return std::nullopt;
-        return meios::resolved_asset{ meios::byte_reader{ std::make_unique<string_puller>(text) } };
-    }
-};
-
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
 // The smoke cases drive real published descriptions, which are far too large to vendor. A
 // developer points MEIOS_SMOKE_CORPUS_DIR at a local checkout to make them live; with no
@@ -314,14 +273,18 @@ TEST_CASE("an accepted yaml spec loads identically under the most lenient policy
                     0.25, 1.5);
 }
 
-TEST_CASE("a byte-backed source layer serves a working configuration", "[urdf][yaml][flatten]")
+TEST_CASE("an in-memory source layer serves a working configuration", "[urdf][yaml][flatten]")
 {
+    meios::log_sink silent;
+    meios::memory_source layer{ silent };
+    layer.add("memory_pkg", "config.yaml", "joints:\n  shoulder:\n    height: 0.5\n"
+                                           "    lower: !degrees -30\n"
+                                           "    upper: 3.0\n"
+                                           "    effort: 50.0\n"
+                                           "    velocity: 1.0\n");
+
     meios::source_stack sources;
-    sources.push_back(meios::source_handle(memory_yaml{ "joints:\n  shoulder:\n    height: 0.5\n"
-                                                        "    lower: !degrees -30\n"
-                                                        "    upper: 3.0\n"
-                                                        "    effort: 50.0\n"
-                                                        "    velocity: 1.0\n" }));
+    sources.push_back(meios::source_handle(std::move(layer)));
     expect_shoulder(flatten_over(fixture("yaml_pkg/bytes.urdf.xacro"), sources), 0.5, 3.0);
 }
 

@@ -89,12 +89,10 @@ TEST_CASE("a ROS2 ament prefix resolves package://arm/meshes and reports capabil
 
     const meios::capability_descriptor caps = source.capabilities();
     REQUIRE(caps.kind == meios::source_kind::directory);
-    REQUIRE(caps.path_backed);
     REQUIRE(caps.package_enumerable);
 
-    std::optional<meios::resolved_asset> asset = source.locate("arm", "meshes/x.stl");
+    const std::optional<meios::resolved_asset> asset = source.locate("arm", "meshes/x.stl");
     REQUIRE(asset.has_value());
-    REQUIRE(asset->holds_path());
     REQUIRE(std::filesystem::exists(asset->path()));
     REQUIRE(has_package(source.packages(), "arm"));
 }
@@ -174,7 +172,6 @@ TEST_CASE("a colcon --symlink-install package dir resolves to the real files", "
     REQUIRE(has_package(source.packages(), "arm_hardware"));
     const std::optional<meios::resolved_asset> asset = source.locate("arm_hardware", "meshes/x.stl");
     REQUIRE(asset.has_value());
-    REQUIRE(asset->holds_path());
     REQUIRE(std::filesystem::exists(asset->path()));
     REQUIRE(std::filesystem::equivalent(asset->path(), outside / "meshes" / "x.stl"));
 }

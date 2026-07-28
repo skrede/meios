@@ -39,7 +39,7 @@ struct fixture_source
 
     meios::capability_descriptor capabilities() const
     {
-        return { meios::source_kind::memory, false, false };
+        return { meios::source_kind::memory, false };
     }
 
     std::optional<meios::resolved_asset> locate(std::string_view pkg, std::string_view rel)
@@ -54,7 +54,7 @@ struct path_fixture
 {
     meios::capability_descriptor capabilities() const
     {
-        return { meios::source_kind::directory, true, false };
+        return { meios::source_kind::directory, false };
     }
 
     std::optional<meios::resolved_asset> locate(std::string_view, std::string_view)

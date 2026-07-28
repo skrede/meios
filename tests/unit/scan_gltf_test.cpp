@@ -2,17 +2,16 @@
 
 #include <meios/bundle.h>
 
+#include <meios/io/memory_source.h>
+
 #include <catch2/catch_test_macros.hpp>
 
-#include <span>
 #include <string>
 #include <vector>
-#include <memory>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <utility>
-#include <algorithm>
+#include <optional>
 #include <filesystem>
 
 namespace
@@ -23,26 +22,24 @@ meios::resolved_asset fixture(const char *rel)
     return meios::resolved_asset{ std::filesystem::path{ MEIOS_ASSET_FIXTURE_DIR } / rel };
 }
 
-struct string_puller final : meios::byte_reader::puller
+// A source owns the scratch its assets live in, so the two are held together: the path
+// handed out here stays readable for exactly as long as this fixture does.
+class inline_asset
 {
-    explicit string_puller(std::string data) : m_data(std::move(data)) {}
-
-    std::size_t read(std::span<std::byte> out) override
+public:
+    explicit inline_asset(std::string data) : m_log(), m_source(m_log), m_located()
     {
-        const std::size_t n = std::min(out.size(), m_data.size() - m_pos);
-        std::memcpy(out.data(), m_data.data() + m_pos, n);
-        m_pos += n;
-        return n;
+        m_source.add("pkg", "inline", std::move(data));
+        m_located = m_source.locate("pkg", "inline");
     }
 
-    std::string m_data;
-    std::size_t m_pos = 0;
-};
+    const meios::resolved_asset &asset() const { return m_located.value(); }
 
-meios::resolved_asset bytes_asset(std::string data)
-{
-    return meios::resolved_asset{ meios::byte_reader{ std::make_unique<string_puller>(std::move(data)) } };
-}
+private:
+    meios::log_sink m_log;
+    meios::memory_source m_source;
+    std::optional<meios::resolved_asset> m_located;
+};
 
 struct counting_sink final : meios::log_sink
 {
@@ -103,20 +100,19 @@ TEST_CASE("a fully embedded glb reports zero external assets", "[scan][gltf]")
 {
     meios::gltf_scanner scanner;
     meios::log_sink silent;
-    meios::resolved_asset asset = bytes_asset(make_glb(
-        R"({"images":[{"uri":"data:image/png;base64,AAAA"}],"buffers":[{"byteLength":4}]})", 4));
+    const inline_asset held{ make_glb(
+        R"({"images":[{"uri":"data:image/png;base64,AAAA"}],"buffers":[{"byteLength":4}]})", 4) };
 
-    REQUIRE(scanner.scan(asset, silent).empty());
+    REQUIRE(scanner.scan(held.asset(), silent).empty());
 }
 
 TEST_CASE("a glb with an external buffer uri reports it", "[scan][gltf]")
 {
     meios::gltf_scanner scanner;
     meios::log_sink silent;
-    meios::resolved_asset asset = bytes_asset(make_glb(
-        R"({"buffers":[{"uri":"external.bin","byteLength":4}]})", 4));
+    const inline_asset held{ make_glb(R"({"buffers":[{"uri":"external.bin","byteLength":4}]})", 4) };
 
-    REQUIRE(scanner.scan(asset, silent) == std::vector<std::string>{ "external.bin" });
+    REQUIRE(scanner.scan(held.asset(), silent) == std::vector<std::string>{ "external.bin" });
 }
 
 TEST_CASE("a bad-magic glb yields a diagnostic and an empty list", "[scan][gltf]")
@@ -125,9 +121,9 @@ TEST_CASE("a bad-magic glb yields a diagnostic and an empty list", "[scan][gltf]
     counting_sink log;
     std::string glb = make_glb(R"({"buffers":[]})", 4);
     glb[0] = 'x';
-    meios::resolved_asset asset = bytes_asset(std::move(glb));
+    const inline_asset held{ std::move(glb) };
 
-    REQUIRE(scanner.scan(asset, log).empty());
+    REQUIRE(scanner.scan(held.asset(), log).empty());
 }
 
 TEST_CASE("a wrong-version glb yields a diagnostic and an empty list", "[scan][gltf]")
@@ -136,9 +132,9 @@ TEST_CASE("a wrong-version glb yields a diagnostic and an empty list", "[scan][g
     counting_sink log;
     std::string glb = make_glb(R"({"buffers":[]})", 4);
     glb[4] = 3;
-    meios::resolved_asset asset = bytes_asset(std::move(glb));
+    const inline_asset held{ std::move(glb) };
 
-    REQUIRE(scanner.scan(asset, log).empty());
+    REQUIRE(scanner.scan(held.asset(), log).empty());
     REQUIRE(log.errors > 0);
 }
 
@@ -149,9 +145,9 @@ TEST_CASE("an oversized declared length yields a diagnostic and an empty list", 
     std::string glb = make_glb(R"({"buffers":[]})", 4);
     glb[8] = static_cast<char>(0xFF);
     glb[9] = static_cast<char>(0xFF);
-    meios::resolved_asset asset = bytes_asset(std::move(glb));
+    const inline_asset held{ std::move(glb) };
 
-    REQUIRE(scanner.scan(asset, log).empty());
+    REQUIRE(scanner.scan(held.asset(), log).empty());
     REQUIRE(log.errors > 0);
 }
 
@@ -161,9 +157,9 @@ TEST_CASE("a declared length shorter than the actual byte count yields a diagnos
     counting_sink log;
     std::string glb = make_glb(R"({"buffers":[]})", 4);
     glb.append(4, '\0');
-    meios::resolved_asset asset = bytes_asset(std::move(glb));
+    const inline_asset held{ std::move(glb) };
 
-    REQUIRE(scanner.scan(asset, log).empty());
+    REQUIRE(scanner.scan(held.asset(), log).empty());
     REQUIRE(log.errors > 0);
 }
 

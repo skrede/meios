@@ -34,7 +34,7 @@ struct fake_source
 
     meios::capability_descriptor capabilities() const
     {
-        return meios::capability_descriptor{ meios::source_kind::directory, true, false };
+        return meios::capability_descriptor{ meios::source_kind::directory, false };
     }
 
     std::optional<meios::resolved_asset> locate(std::string_view pkg, std::string_view rel)
