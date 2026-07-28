@@ -209,12 +209,12 @@ always the top-level one:
 - A document served as bytes by a source layer does have a directory: such a layer materializes the
   bytes into a scratch area it owns and hands back the path of the file it wrote, so a relative spec
   written in that document resolves beside it exactly as it would beside a document read off disk.
-  The scratch tree lives for as long as the source does. The package-qualified and find forms are
-  unaffected either way — both substitute a real path whatever kind of source answers them. A
-  byte-backed layer does not answer a find at all: a find asks where a package is rather than for a
-  file inside it, and such a layer writes an entry only when that entry is asked for by name, so the
-  directory it would name would be empty. The find reaches past it to a layer that really holds the
-  package, and fails loudly where no layer does.
+  The scratch tree lives for as long as the source does. The package-qualified form is unaffected
+  either way — it names a file inside a package, and a real path is substituted whatever kind of
+  source answers it. The find form is not: a byte-backed layer does not answer a find at all, because
+  a find asks where a package is rather than for a file inside it, and such a layer writes an entry
+  only when that entry is asked for by name, so the directory it would name would be empty. The find
+  reaches past it to a layer that really holds the package, and fails loudly where no layer does.
 
 **Unit tags.** `!radians`, `!degrees`, `!meters`, `!millimeters`, `!foot` and `!inches` are registered
 as constructors on PyYAML's `SafeLoader` the first time a configuration is parsed, and stay registered

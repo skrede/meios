@@ -174,6 +174,20 @@ TEST_CASE("an entry no locate asked for is never written", "[io][sources][scratc
     REQUIRE_FALSE(std::filesystem::exists(located.parent_path() / "leg.dae"));
 }
 
+TEST_CASE("a package nothing has been located under has no directory at all",
+          "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+    source.add("other", "meshes/leg.dae", "collada-bytes");
+
+    const std::filesystem::path root =
+        locate_path(source, "meshes/arm.dae").parent_path().parent_path().parent_path();
+    REQUIRE(std::filesystem::exists(root / "pkg"));
+    REQUIRE_FALSE(std::filesystem::exists(root / "other"));
+}
+
 TEST_CASE("locating the same key twice hands back the same path", "[io][sources][scratch]")
 {
     meios::log_sink log;
