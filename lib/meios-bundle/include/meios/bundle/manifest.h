@@ -6,7 +6,6 @@
 #include "meios/bundle/scanner_registry.h"
 
 #include "meios/io/source_stack.h"
-#include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/log_sink.h"
 
@@ -78,9 +77,6 @@ private:
     std::unordered_set<std::string> m_seen;
     std::map<std::string, std::string> m_roots;
     std::map<std::string, std::string> m_rewrites;
-    std::vector<resolved_asset> m_retained;
-
-    std::filesystem::path path_of_asset(resolved_asset asset);
 
     std::optional<std::filesystem::path> locate_source(const reference_record &ref,
                                                        const std::string &pkg, const std::string &rel);

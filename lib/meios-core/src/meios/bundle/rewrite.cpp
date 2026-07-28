@@ -2,7 +2,6 @@
 
 #include "meios/bundle/manifest.h"
 
-#include "meios/io/materialize.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
@@ -78,17 +77,8 @@ namespace meios
 manifest_builder::manifest_builder(std::string bundle_name, collision_options opts,
                                    source_stack &sources, log_sink &log)
     : m_log(log), m_status(emit_status::ok), m_opts(opts), m_sources(sources),
-      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_rewrites(),
-      m_retained()
+      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_rewrites()
 {}
-
-std::filesystem::path manifest_builder::path_of_asset(resolved_asset asset)
-{
-    if(asset.holds_path())
-        return asset.path();
-    m_retained.push_back(materialize(std::move(asset), m_log));
-    return m_retained.back().path();
-}
 
 std::optional<std::filesystem::path> manifest_builder::locate_source(const reference_record &ref,
                                                                      const std::string &pkg,
@@ -96,13 +86,13 @@ std::optional<std::filesystem::path> manifest_builder::locate_source(const refer
 {
     if(ref.resolved_path)
         return std::filesystem::path(*ref.resolved_path);
-    std::optional<resolved_asset> hit = m_sources.locate(pkg, rel, m_log);
+    const std::optional<resolved_asset> hit = m_sources.locate(pkg, rel, m_log);
     if(!hit)
     {
         m_log.log(level::warn, "could not resolve reference '" + ref.original + "'");
         return std::nullopt;
     }
-    return path_of_asset(std::move(*hit));
+    return hit->path();
 }
 
 std::optional<std::string> manifest_builder::pkg_dir(const std::string &pkg,

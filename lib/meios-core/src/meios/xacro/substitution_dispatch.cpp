@@ -53,27 +53,16 @@ void note_env_read(subst_ctx &ctx, std::string_view name)
     ctx.log.log(level::info, "read of environment variable \"" + std::string(name) + '"');
 }
 
-// Same ownership limit as a byte-backed mesh: the materialized file dies with the asset, so the
-// substituted text would name a path that is already gone by the time the caller reads it.
-std::optional<std::string> asset_path(subst_ctx &ctx, resolved_asset &&hit)
-{
-    if(hit.holds_bytes())
-        return fail(ctx, diagnostic_code::unresolved_find,
-                    "resolves to a byte-backed source; meios cannot yet substitute a path that "
-                    "outlives the load");
-    return hit.path().string();
-}
-
 std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
 {
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
         return fail(ctx, diagnostic_code::unresolved_find, "$(find) requires a package name");
-    std::optional<resolved_asset> hit = ctx.sources.locate(parts.first, parts.second, ctx.log);
+    const std::optional<resolved_asset> hit = ctx.sources.locate(parts.first, parts.second, ctx.log);
     if(!hit)
         return fail(ctx, diagnostic_code::unresolved_find,
                     "$(find " + std::string(parts.first) + ") did not resolve");
-    return asset_path(ctx, std::move(*hit));
+    return hit->path().string();
 }
 
 std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)

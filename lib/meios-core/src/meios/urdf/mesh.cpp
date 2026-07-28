@@ -12,7 +12,6 @@
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
-#include <utility>
 #include <optional>
 #include <string_view>
 
@@ -33,21 +32,13 @@ void report_missing(parse_context &ctx, const source_location &loc, const std::s
     ctx.log.log(lvl, diagnostic_code::unresolved_mesh, loc, "could not resolve mesh '" + uri + "'");
 }
 
-// A materialized temp file is unlinked when the resolved_asset that owns it dies, and no part of
-// the returned model can hold that ownership, so recording its path would name a file already
-// gone. Failing loudly keeps a byte-backed source from yielding a model that looks resolved.
-void record_resolved(mesh<double> &shape, resolved_asset &&asset, parse_context &ctx,
-                     const source_location &loc)
+void reject_lfs_pointer(mesh<double> &shape, parse_context &ctx, const source_location &loc)
 {
-    if(asset.holds_path())
-    {
-        shape.resolved_path = asset.path().string();
+    if(!is_lfs_pointer(*shape.resolved_path))
         return;
-    }
-    ctx.log.log(level::error, diagnostic_code::unresolved_mesh, loc,
-                "mesh '" + shape.filename
-                    + "' resolves to a byte-backed source; meios cannot yet hand out a path that "
-                      "outlives the load");
+    ctx.log.log(level::error, diagnostic_code::lfs_pointer_mesh, loc,
+                "resolved mesh '" + shape.filename + "' is an unsmudged Git-LFS pointer, not geometry");
+    shape.resolved_path.reset();
 }
 
 }
@@ -68,19 +59,14 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
     }
     const std::string pkg(uri.substr(0, slash));
     const std::string rel(uri.substr(slash + 1));
-    std::optional<resolved_asset> hit = ctx.sources.locate(pkg, rel, ctx.log);
+    const std::optional<resolved_asset> hit = ctx.sources.locate(pkg, rel, ctx.log);
     if(!hit)
     {
         report_missing(ctx, loc, shape.filename);
         return;
     }
-    record_resolved(shape, std::move(*hit), ctx, loc);
-    if(shape.resolved_path && is_lfs_pointer(*shape.resolved_path))
-    {
-        ctx.log.log(level::error, diagnostic_code::lfs_pointer_mesh, loc,
-                    "resolved mesh '" + shape.filename + "' is an unsmudged Git-LFS pointer, not geometry");
-        shape.resolved_path.reset();
-    }
+    shape.resolved_path = hit->path().string();
+    reject_lfs_pointer(shape, ctx, loc);
 }
 
 }

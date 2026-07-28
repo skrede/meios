@@ -12,6 +12,7 @@
 #include "meios/io/source_stack.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/capturing_log_sink.h"
 
 #include <string>
 #include <vector>
@@ -120,9 +121,10 @@ validation_report classify(const std::filesystem::path &path,
     recording_sink expansion;
     recording_sink topology;
 
-    source_stack sources = build_sources(roots, well_formed);
+    capturing_log_sink capture(well_formed);
+    source_stack sources = build_sources(roots, capture);
     const expected<load_result, load_error> loaded =
-        load(path, probe_options(roots), sources, well_formed);
+        load(path, probe_options(roots), sources, capture);
     model<double> robot{};
     if(loaded)
         robot = loaded->robot;

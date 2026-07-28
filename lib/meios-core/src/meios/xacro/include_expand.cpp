@@ -11,7 +11,6 @@
 
 #include <pugixml.hpp>
 
-#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -82,26 +81,14 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     return out;
 }
 
-std::optional<std::string> read_asset(resolved_asset &&hit)
+std::optional<std::string> read_asset(const resolved_asset &hit)
 {
-    if(hit.holds_path())
-    {
-        std::ifstream file(hit.path(), std::ios::binary);
-        if(!file)
-            return std::nullopt;
-        std::ostringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    std::string data;
-    std::array<std::byte, 4096> chunk{};
-    for(byte_reader &reader = hit.bytes();;)
-    {
-        std::size_t got = reader.read(chunk);
-        if(got == 0)
-            return data;
-        data.append(reinterpret_cast<const char *>(chunk.data()), got);
-    }
+    std::ifstream file(hit.path(), std::ios::binary);
+    if(!file)
+        return std::nullopt;
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
 }
 
 // The active document tracks the include stack, because a relative resource spec belongs
@@ -122,18 +109,17 @@ bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked
     return ok;
 }
 
-bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
+bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit,
             const std::filesystem::path &key, pugi::xml_node out)
 {
-    std::filesystem::path located = hit.holds_path() ? hit.path() : std::filesystem::path{};
-    std::optional<std::string> bytes = read_asset(std::move(hit));
-    if(!bytes)
+    std::optional<std::string> text = read_asset(hit);
+    if(!text)
         return fail(ctx, in, diagnostic_code::unresolved_include,
                     "xacro:include could not read \"" + key.string() + '"');
     // load_buffer copies into the document, but macro bodies defined in this include
     // keep string_views onto the source text, so it must outlive this call; park it in
     // owned_text alongside the parked document rather than in this local.
-    ctx.owned_text.push_back(std::make_unique<std::string>(std::move(*bytes)));
+    ctx.owned_text.push_back(std::make_unique<std::string>(std::move(*text)));
     const std::string &parked = *ctx.owned_text.back();
     pugi::xml_document &doc = ctx.park();
     pugi::xml_parse_result parsed = doc.load_buffer(parked.data(), parked.size());
@@ -141,7 +127,7 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, resolved_asset &&hit,
         return fail(ctx, offset_location(parked, parsed.offset, key),
                     diagnostic_code::xacro_parse_error,
                     std::string("xacro:include parse error: ") + parsed.description());
-    return descend(ctx, doc, parked, key, std::move(located), out);
+    return descend(ctx, doc, parked, key, hit.path(), out);
 }
 
 }
@@ -173,7 +159,7 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(!hit)
         return fail(ctx, in, diagnostic_code::unresolved_include,
                     "xacro:include could not resolve \"" + target.package + '/' + normalized + '"');
-    return splice(ctx, in, std::move(*hit), key, out);
+    return splice(ctx, in, *hit, key, out);
 }
 
 }

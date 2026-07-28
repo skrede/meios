@@ -7,7 +7,6 @@
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 
-#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -63,24 +62,6 @@ std::optional<std::string> read_path_text(const std::filesystem::path &path)
     return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
 }
 
-std::string drain_bytes(byte_reader &reader)
-{
-    std::string text;
-    std::array<std::byte, 4096> buffer{};
-    for(std::size_t got = reader.read(buffer); got != 0; got = reader.read(buffer))
-        text.append(reinterpret_cast<const char *>(buffer.data()), got);
-    return text;
-}
-
-std::optional<std::string> text_of(resolved_asset &asset)
-{
-    if(asset.holds_path())
-        return read_path_text(asset.path());
-    if(!asset.bytes().valid())
-        return std::nullopt;
-    return drain_bytes(asset.bytes());
-}
-
 std::optional<std::string> from_package(std::string_view spec, source_stack &sources, log_sink &log)
 {
     const std::optional<package_ref> ref =
@@ -90,13 +71,13 @@ std::optional<std::string> from_package(std::string_view spec, source_stack &sou
         log.log(level::error, "malformed package resource spec \"" + std::string(spec) + '"');
         return std::nullopt;
     }
-    std::optional<resolved_asset> hit = sources.locate(ref->package, ref->relative, log);
+    const std::optional<resolved_asset> hit = sources.locate(ref->package, ref->relative, log);
     if(!hit)
     {
         log.log(level::error, "could not resolve resource \"" + std::string(spec) + '"');
         return std::nullopt;
     }
-    return text_of(*hit);
+    return read_path_text(hit->path());
 }
 
 std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &document,

@@ -56,8 +56,7 @@ int run_resolve(const verb_context &ctx)
     const std::optional<resolved_asset> hit = sources.locate(pkg, rel, log);
     if(!hit)
         return 1;
-    if(hit->holds_path())
-        std::cout << hit->path().string() << '\n';
+    std::cout << hit->path().string() << '\n';
     return 0;
 }
 
