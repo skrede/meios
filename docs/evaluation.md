@@ -206,9 +206,11 @@ always the top-level one:
 - Inside a macro body, the document that **invoked** the macro, not the one that defined it. This
   matches the compatibility target and is not obvious from reading the macro: a macro that loads a
   configuration sitting beside its own definition will not find it when called from elsewhere.
-- A document served as bytes by a source layer has no directory, so a relative spec written in it
-  probes only the configured roots. The package-qualified and find forms are unaffected either way —
-  a source layer that serves bytes rather than a path resolves and is read normally.
+- A document served as bytes by a source layer does have a directory: such a layer materializes the
+  bytes into a scratch area it owns and hands back the path of the file it wrote, so a relative spec
+  written in that document resolves beside it exactly as it would beside a document read off disk.
+  The scratch tree lives for as long as the source does. The package-qualified and find forms are
+  unaffected either way — both substitute a real path whatever kind of source answers them.
 
 **Unit tags.** `!radians`, `!degrees`, `!meters`, `!millimeters`, `!foot` and `!inches` are registered
 as constructors on PyYAML's `SafeLoader` the first time a configuration is parsed, and stay registered

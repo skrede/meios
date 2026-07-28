@@ -20,6 +20,42 @@ workspace, where installed package files are symlinks back into the source tree,
 crafted fixtures rather than a real symlink-installed layout. The path resolution is believed correct,
 but it has not been proven against a live `--symlink-install` workspace.
 
+**A relative asset path anchors to the top-level input document, not to the file it was written in.**
+After include and macro expansion a description is commonly assembled from many files, and a
+`<mesh filename="meshes/base.stl">` written inside an included file is still measured against the
+directory of the document you handed `load()`. Where those two directories differ, that reference does
+not resolve. Anchoring to the writing file needs a map from an expanded node back to the document that
+produced it, and none is built. The `package://` form is unaffected, and it is what real descriptions
+overwhelmingly use. The full rule is in [asset resolution](asset-resolution.md).
+
+**A source that serves bytes leaks its scratch tree on a platform that will not delete an open file.**
+Such a source materializes an asset into a scratch directory it owns and removes the tree when it is
+destroyed. Removal stops at the first error, so a still-open handle to a file inside the tree leaves
+the directory behind rather than corrupting or half-deleting it. What you see is an abandoned
+temporary directory, not a damaged one.
+
+**There is a narrow window between creating a scratch root and narrowing its permissions.** The
+directory is created with an unpredictable name and its permissions are tightened immediately after; a
+process watching the system temporary directory during that interval sees a directory with default
+permissions. Nothing has been written into it yet.
+
+**Nothing exercises the failure path when a scratch root cannot be created.** The creation helper is
+asserted directly against an unusable parent directory, but a source's own reaction to that failure —
+the diagnostic it raises and the refusal that follows — is pinned by reading the code rather than by
+running it. Driving it needs a steerable scratch location the source does not currently offer.
+
+**Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
+against the configured package roots and the input document's directory once, when it is resolved.
+Whether a component that later consumes a resolved path re-checks what it handles is that component's
+own business, so do not read the containment rule as an end-to-end guarantee about every file that
+ends up somewhere.
+
+**A `file://` URI carrying a real authority is refused under a misleading code.**
+`file://host/share/base.stl` is refused, which is the right outcome — but the authority is read as the
+first component of a path and the refusal therefore reports the asset as uncontained rather than
+reporting that a `file://` authority is unsupported. The verdict is correct and fails closed; only the
+diagnostic is wrong about why.
+
 ## Diagnostics
 
 **A successful `load()` does not mean a clean load.** A value on the success arm tells you meios
@@ -140,6 +176,12 @@ red. What that gate covers, exactly, is the four top-level descriptions
 `ros-industrial/kuka_experimental` ships — named outright in the build, never found by globbing a
 directory. That is one vendor and one authoring style. A description written in some other house
 style can still meet a refusal that nothing here would have caught.
+
+**The corpus does not exercise the asset URI contract.** Every asset reference in it is a
+`package://` URI or a `$(find …)` substitution — 256 and 25 of them respectively, and not one
+relative, absolute or `file://` reference. So the corpus proves the package form keeps working; the
+containment rule, the relative base and the `file://` normalization are held by a case table of
+crafted documents and by nothing that ships.
 
 **A second vendor is covered only on the scheduled run, and only on Linux.**
 `UniversalRobots/Universal_Robots_ROS2_Description` expands only through the Python evaluator,

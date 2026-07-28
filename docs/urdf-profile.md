@@ -6,6 +6,12 @@ resolved. Everything a description may run before that point, and the rules that
 belong to [evaluation](evaluation.md); nothing on this page restates them. If you are reading to find
 out what `${…}` may evaluate to, you are on the wrong page.
 
+The same split applies to assets. The rules below govern whether a `<mesh>` or a `<material>` element
+is well formed — whether a `filename` is present, whether a `scale` has three components — and stop
+there. What the string inside that `filename` may name, what a relative one is measured against, what
+meios refuses to reach and how long a resolved path stays valid belong to
+[asset resolution](asset-resolution.md), and are not restated here.
+
 Each rule below says which construct it governs, what meios does when a document violates it, and the
 diagnostic code the refusal carries so you can branch on it rather than on message text. The rule
 table is at the end; ahead of it are the specification meios follows, the failure this profile exists

@@ -65,6 +65,9 @@ dependency-light nucleus and carries no reader; `meios::urdf` is the surface a c
   a plain URDF, instead of vendoring the tree into your repository.
 - [Evaluation](evaluation.md) — what a description's expressions may run, the rules that refuse the
   rest, and how the resource helper resolves a file.
+- [Asset resolution](asset-resolution.md) — what a mesh or texture URI may name: the accepted forms,
+  what a relative path is measured against, the containment rule, how long a resolved path is valid,
+  what happens when an asset is absent, and what a written document carries.
 - [URDF profile](urdf-profile.md) — the expanded URDF document meios reads: every rule, the
   diagnostic code each refusal carries, and the frame and unit conventions the numbers follow. It
   starts where expansion ends, so what a `${…}` may evaluate to is not here — that is
