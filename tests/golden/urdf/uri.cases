@@ -1,0 +1,28 @@
+# fixture <TAB> verdict <TAB> code <TAB> rule <TAB> note. The fixture resolves under the uri
+# subdirectory of the URDF fixture directory. The verdict vocabulary is exactly refuse, drop, accept;
+# a non-refusing row's code column is a bare -. The code column carries the exact to_string spelling
+# of the diagnostic_code enumerator the refusal reports, and the rule column carries the bare slug the
+# published URI document names for that rule. The note column is free text the loader discards.
+#
+# A fixture is a template, not a document: the harness substitutes @ROOT@ for a per-run directory it
+# registers as a package root and writes the document into, and @OUTSIDE@ for a per-run directory it
+# registers nowhere. Both stand for absolute paths, which is how an absolute-path row is committed
+# without a literal path off this machine. A file:// row spells its authority-less form as
+# file://@ROOT@/..., which expands to file:///... wherever the token begins with a separator.
+#
+# A row is a texture row when its fixture filename begins with texture_. That is the whole partition;
+# the runner reads it from the fixture column rather than from a sixth column.
+package_resolves.urdf	accept	-	package-uri-resolves	The one form that already resolved before this contract existed, kept as the row every other row is measured against.
+package_no_slash.urdf	refuse	malformed_asset_uri	package-uri-names-a-path	A package name with nothing after it names no asset, so there is no relative path to look up.
+package_unbacked.urdf	refuse	unresolved_asset	package-uri-backed-by-a-source	No configured root holds this package; the refusal is the missing-asset one, graded by policy, not a containment one.
+relative_resolves.urdf	accept	-	relative-path-against-document-base	The base is the top-level input document's directory, not the included document the mesh was written in.
+relative_climb_out.urdf	refuse	uncontained_asset	relative-path-contained	The climb is spelled through a real subdirectory, so only normalization catches it; a textual prefix test would not.
+absolute_in_root.urdf	accept	-	absolute-path-inside-a-root	Authority is granted per-directory by configuration, so an absolute path a consumer registered is reachable.
+absolute_outside_root.urdf	refuse	uncontained_asset	absolute-path-contained	The file exists and is readable; it is refused for where it is, not for being absent.
+file_scheme_in_root.urdf	accept	-	file-uri-normalized	Normalized to a plain absolute path and then held to the identical containment check, so the scheme buys no authority.
+file_scheme_encoded_space.urdf	accept	-	file-uri-percent-decoded	The directory name really contains a space; an undecoded lookup names a directory that does not exist.
+scheme_http.urdf	refuse	unsupported_uri_scheme	foreign-scheme-refused	Nothing here fetches over a network, and a silent non-resolution was the old answer.
+scheme_model.urdf	refuse	unsupported_uri_scheme	sdf-scheme-refused	The SDF spelling of a package reference; near enough to package:// to be worth its own row.
+texture_resolves.urdf	accept	-	texture-uri-resolves	A texture takes the same vocabulary as a mesh; the bundle closure already resolved textures that load did not.
+texture_climb_out.urdf	refuse	uncontained_asset	texture-path-contained	Containment is a property of the path, so the element that carries it cannot change the answer.
+texture_scheme_http.urdf	refuse	unsupported_uri_scheme	texture-foreign-scheme-refused	The scheme rule reaches textures too, which is the half of the vocabulary that had no reader at all.

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="relative_resolves">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="meshes/base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

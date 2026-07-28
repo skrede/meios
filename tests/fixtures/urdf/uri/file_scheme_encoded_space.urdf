@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="file_scheme_encoded_space">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="file://@ROOT@/spaced%20dir/base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="absolute_in_root">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="@ROOT@/meshes/base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

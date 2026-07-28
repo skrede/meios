@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="absolute_outside_root">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="@OUTSIDE@/stray.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

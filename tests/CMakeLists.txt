@@ -116,6 +116,25 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_flatten_src})
     catch_discover_tests(flatten_instrument_test TEST_PREFIX "flatten_instrument.")
 endif()
 
+# A separate target rather than another case in the instrument above: that one compares
+# against a pinned upstream description and so registers only under the corpus fetch, which
+# would keep a guard written over a small local fixture from ever compiling in a default
+# configure.
+set(urdf_flatten_resolution_src
+    ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_flatten_resolution_test.cpp)
+if(EXISTS ${urdf_flatten_resolution_src})
+    add_executable(urdf_flatten_resolution_test ${urdf_flatten_resolution_src})
+    target_link_libraries(urdf_flatten_resolution_test
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::bundle
+            Catch2::Catch2WithMain)
+    target_compile_definitions(urdf_flatten_resolution_test PRIVATE
+        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+        MEIOS_FLATTEN_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden/flatten")
+    meios_enable_coverage(urdf_flatten_resolution_test)
+    meios_warnings(urdf_flatten_resolution_test)
+    catch_discover_tests(urdf_flatten_resolution_test TEST_PREFIX "flatten_resolution.")
+endif()
+
 foreach(stem IN ITEMS math diag records types sink)
     set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
     if(EXISTS ${model_test_src})
@@ -269,6 +288,38 @@ endforeach()
 if(TARGET profile_drift_test)
     target_compile_definitions(profile_drift_test PRIVATE
         MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
+endif()
+
+# The uri stems are driven by tests/golden/urdf/uri.cases, so they take the same pair of
+# directories the profile stems take.
+foreach(stem IN ITEMS uri_cases uri_drift)
+    set(uri_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(EXISTS ${uri_test_src})
+        add_executable(${stem}_test ${uri_test_src})
+        target_link_libraries(${stem}_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        target_compile_definitions(${stem}_test PRIVATE
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(${stem}_test)
+        meios_warnings(${stem}_test)
+        catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
+    endif()
+endforeach()
+
+# This stem alone reads the published uri document, exactly as the profile drift stem reads
+# the profile one.
+if(TARGET uri_drift_test)
+    target_compile_definitions(uri_drift_test PRIVATE
+        MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
+endif()
+
+# The uri classifier is a compiled core-private symbol reached through a module-private
+# header, so this stem alone reaches into meios-core/src.
+if(TARGET uri_cases_test)
+    target_include_directories(uri_cases_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
 endif()
 
 # The frame reference is data a consumer diffs against rather than a fixture the library
