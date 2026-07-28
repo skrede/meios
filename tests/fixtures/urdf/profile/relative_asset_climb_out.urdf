@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="relative_asset_climb_out">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="meshes/../../../../../stray.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<robot name="unresolved_texture">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.2"/>
+      </geometry>
+      <material name="skin">
+        <texture filename="absent_textures/skin.png"/>
+      </material>
+    </visual>
+  </link>
+</robot>
