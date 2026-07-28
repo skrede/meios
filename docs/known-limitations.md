@@ -37,12 +37,15 @@ temporary directory, not a damaged one.
 **There is a narrow window between creating a scratch root and narrowing its permissions.** The
 directory is created with an unpredictable name and its permissions are tightened immediately after; a
 process watching the system temporary directory during that interval sees a directory with default
-permissions. Nothing has been written into it yet.
+permissions. Nothing has been written into it yet. The window is the whole exposure: a root whose
+permissions could not be narrowed at all is removed and refused rather than served from.
 
-**Nothing exercises the failure path when a scratch root cannot be created.** The creation helper is
-asserted directly against an unusable parent directory, but a source's own reaction to that failure —
-the diagnostic it raises and the refusal that follows — is pinned by reading the code rather than by
-running it. Driving it needs a steerable scratch location the source does not currently offer.
+**One branch of a failing scratch root is driven by a test and one is not.** What a source does when
+the system temporary directory itself does not exist is driven end to end — pointing the
+temporary-directory environment at a path that does not exist is the steering, and what runs is the
+diagnostic the source raises and the refusal that follows. What remains undriven through a source is
+the narrower branch where the temporary directory resolves and the root creation beneath it fails;
+that failure is asserted against the creation helper directly, with an unusable parent.
 
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directory once, when it is resolved.

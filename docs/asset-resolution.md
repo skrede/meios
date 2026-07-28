@@ -152,6 +152,25 @@ construction and lets a sibling reference from inside the asset resolve. The scr
 when the source is destroyed. Keep the source stack alive for as long as you intend to read the paths
 it produced.
 
+**A source that could not obtain a scratch area serves nothing.** It says so once, at error level and
+carrying the system's own reason for the failure, and then declines every lookup with the same code
+rather than writing somewhere it did not intend to. A load through such a source is refused whatever
+the missing-resource policy is set to, because the failure is meios's own environment and not the
+description's.
+
+**A lookup whose relative half is empty names the package directory.** That is what `$(find <pkg>)`
+asks — where a package is, not which file inside it — so a source holding bytes answers with the
+directory its mirroring layout already defines, created at the moment it is asked for. It answers only
+for a package it carries an entry for, so it cannot shadow the layer that really holds one, and it
+refuses an entry offered under that same empty relative, which names a directory and therefore cannot
+also name a file.
+
+**The asset-URI layer takes the opposite position for the same spelling, deliberately.** A
+`package://` URI with nothing after the package name is malformed and is refused, because a `<mesh>`
+or a `<texture>` asks for a file and a directory is not one. The two positions do not contradict each
+other: a package lookup and an asset reference are different questions that happen to be written
+alike, and each is answered for what it asks.
+
 Three residuals are real and are not smoothed over:
 
 - **A platform that refuses to delete a file with an open handle leaks the scratch tree.** Removal
@@ -160,11 +179,14 @@ Three residuals are real and are not smoothed over:
 - **A narrow window exists between creating the scratch root and narrowing its permissions.** The
   directory is created first and its permissions tightened immediately after; a process watching the
   temporary directory in that interval sees a directory with default permissions and an unpredictable
-  name.
-- **Nothing exercises what a source does when the scratch root cannot be created at all.** The
-  creation step is asserted directly against an unusable parent directory, but a source's own reaction
-  to that failure — the diagnostic it raises and the refusal that follows — is pinned by reading the
-  code rather than by running it. Driving it needs a steerable scratch location no source offers.
+  name. It is that interval and nothing longer: a root whose permissions could not be narrowed at all
+  is removed and refused rather than served from.
+- **One branch of a failing scratch root is driven by a test and one is not.** What a source does when
+  the temporary directory itself does not exist — the diagnostic it raises, carrying the system's
+  reason, and the refusal that follows at every missing-resource setting — is driven end to end, by
+  pointing the temporary-directory environment at a path that does not exist. The narrower branch,
+  where the temporary directory resolves and the root creation beneath it fails, is asserted against
+  the creation step directly with an unusable parent and is not driven through a source.
 
 ### Where this diverges from the recommended asset lease
 

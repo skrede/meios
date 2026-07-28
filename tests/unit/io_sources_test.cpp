@@ -196,11 +196,64 @@ TEST_CASE("the scratch tree is removed when the source that owns it dies",
     REQUIRE_FALSE(std::filesystem::exists(recorded));
 }
 
+TEST_CASE("a lookup whose relative half is empty answers with the package directory",
+          "[io][sources][scratch]")
+{
+    meios::log_sink log;
+    meios::memory_source source{ log };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+
+    const std::optional<meios::resolved_asset> hit = source.locate("pkg", "");
+    REQUIRE(hit.has_value());
+    REQUIRE(std::filesystem::is_directory(hit->path()));
+    REQUIRE(hit->path().filename() == "pkg");
+    REQUIRE(hit->path() == locate_path(source, "meshes/arm.dae").parent_path().parent_path());
+}
+
+TEST_CASE("a package the source carries no entry for has no package directory",
+          "[io][sources][scratch]")
+{
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+    meios::memory_source source{ seam };
+    source.add("pkg", "meshes/arm.dae", "collada-bytes");
+
+    REQUIRE_FALSE(source.locate("other", "").has_value());
+    REQUIRE(events.empty());
+}
+
+TEST_CASE("an entry offered under an empty relative is refused rather than stored",
+          "[io][sources][scratch]")
+{
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+    meios::memory_source source{ seam };
+    source.add("pkg", "", "bytes-that-name-no-file");
+
+    REQUIRE(count_code(events, meios::level::error,
+                       meios::diagnostic_code::malformed_asset_uri)
+            == 1);
+    REQUIRE_FALSE(source.locate("pkg", "").has_value());
+}
+
 TEST_CASE("a scratch root under a parent that cannot hold one is refused",
           "[io][sources][scratch]")
 {
     const std::filesystem::path parent = fresh_dir() / "absent";
-    REQUIRE_FALSE(meios::detail::create_scratch_root(parent).has_value());
+    std::error_code ec;
+    REQUIRE_FALSE(meios::detail::create_scratch_root(parent, ec).has_value());
+    REQUIRE(static_cast<bool>(ec));
+}
+
+TEST_CASE("a scratch root that failed permanently is not reported as a name collision",
+          "[io][sources][scratch]")
+{
+    const std::filesystem::path parent = fresh_dir() / "absent";
+    std::error_code ec;
+    REQUIRE_FALSE(meios::detail::create_scratch_root(parent, ec).has_value());
+    REQUIRE(ec.default_error_condition() != std::errc::file_exists);
 }
 
 TEST_CASE("the scratch root is reachable by its owner alone", "[io][sources][scratch]")
@@ -220,6 +273,23 @@ TEST_CASE("the scratch root is reachable by its owner alone", "[io][sources][scr
     const std::filesystem::perms mode = std::filesystem::status(root).permissions();
     REQUIRE((mode & std::filesystem::perms::group_all) == std::filesystem::perms::none);
     REQUIRE((mode & std::filesystem::perms::others_all) == std::filesystem::perms::none);
+}
+
+TEST_CASE("a containment decision on a candidate that is not absolute is refused",
+          "[io][sources][traversal]")
+{
+    REQUIRE_FALSE(meios::detail::contained_under("", "pkg/meshes/x.stl").has_value());
+    REQUIRE_FALSE(meios::detail::contained_under("", "").has_value());
+}
+
+TEST_CASE("a containment decision on an absolute pair still answers", "[io][sources][traversal]")
+{
+    const std::filesystem::path root = seed_root();
+    const std::optional<std::filesystem::path> real =
+        meios::detail::contained_under(root, root / "pkg" / "meshes" / "x.stl");
+    REQUIRE(real.has_value());
+    REQUIRE(real->filename() == "x.stl");
+    std::filesystem::remove_all(root);
 }
 
 TEST_CASE("directory_source resolves an in-root file to a path", "[io][sources][dir]")

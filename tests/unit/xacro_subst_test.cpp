@@ -2,6 +2,7 @@
 
 #include <meios/io/source_stack.h>
 #include <meios/io/memory_source.h>
+#include <meios/io/resolved_asset.h>
 #include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/level.h>
@@ -14,6 +15,7 @@
 #include <vector>
 #include <cstdlib>
 #include <utility>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -139,7 +141,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
 
     meios::directory_source on_disk{ root, log };
     meios::memory_source in_memory{ log };
-    in_memory.add("bytespkg", "", "resolved-from-bytes");
+    in_memory.add("bytespkg", "meshes/arm.dae", "resolved-from-bytes");
     meios::source_stack sources{ std::move(on_disk), std::move(in_memory) };
 
     meios::eval_scope scope;
@@ -162,14 +164,16 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
-    // A byte-backed layer is no longer refused for want of a path that survives the load: it
-    // writes into a scratch directory of its own. An entry keyed on an empty relative path
-    // names the package directory rather than a file, so there is still nothing to hand back.
-    SECTION("$(find) no longer refuses a layer merely for being byte-backed")
+    SECTION("$(find) on a byte-backed layer substitutes the package directory it materialized")
     {
         meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);
-        REQUIRE_FALSE(out.ok);
-        REQUIRE_FALSE(any_contains(records, "byte-backed source"));
+        REQUIRE(out.ok);
+        REQUIRE(std::filesystem::is_directory(out.text));
+
+        const std::optional<meios::resolved_asset> seeded =
+            sources.locate("bytespkg", "meshes/arm.dae", log);
+        REQUIRE(seeded.has_value());
+        REQUIRE(std::filesystem::path(out.text) == seeded->path().parent_path().parent_path());
     }
 
     SECTION("an unresolved $(find) loud-fails")

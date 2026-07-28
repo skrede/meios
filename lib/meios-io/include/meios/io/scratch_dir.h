@@ -53,7 +53,11 @@ private:
 namespace detail
 {
 
-std::optional<std::filesystem::path> create_scratch_root(const std::filesystem::path &parent);
+// Answers a fresh directory narrowed to its owner, or nothing with the reason left in ec.
+// A root that could not be narrowed is removed rather than served from: a directory other
+// local users can read is worse than no directory at all.
+std::optional<std::filesystem::path> create_scratch_root(const std::filesystem::path &parent,
+                                                         std::error_code &ec);
 
 bool write_scratch_entry(const std::filesystem::path &path, std::string_view bytes);
 

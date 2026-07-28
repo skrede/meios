@@ -210,7 +210,9 @@ always the top-level one:
   bytes into a scratch area it owns and hands back the path of the file it wrote, so a relative spec
   written in that document resolves beside it exactly as it would beside a document read off disk.
   The scratch tree lives for as long as the source does. The package-qualified and find forms are
-  unaffected either way — both substitute a real path whatever kind of source answers them.
+  unaffected either way — both substitute a real path whatever kind of source answers them. A
+  byte-backed layer answers a find with the scratch package directory it materializes on demand, for
+  a package it carries an entry for.
 
 **Unit tags.** `!radians`, `!degrees`, `!meters`, `!millimeters`, `!foot` and `!inches` are registered
 as constructors on PyYAML's `SafeLoader` the first time a configuration is parsed, and stay registered

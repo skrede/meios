@@ -1,7 +1,7 @@
 #include "meios/io/scratch_dir.h"
 
-#include <string>
 #include <random>
+#include <string>
 #include <fstream>
 #include <optional>
 #include <filesystem>
@@ -32,11 +32,20 @@ std::string random_stem()
 
 // mkdir's mode is 0777 masked by umask, so a fresh directory is world-readable until
 // this narrows it; the window is small but real.
-void narrow_to_owner(const std::filesystem::path &directory)
+bool narrow_to_owner(const std::filesystem::path &directory, std::error_code &ec)
 {
-    std::error_code ec;
     std::filesystem::permissions(directory, std::filesystem::perms::owner_all,
                                  std::filesystem::perm_options::replace, ec);
+    return !ec;
+}
+
+// A candidate that could not be narrowed is removed rather than left behind: an abandoned
+// candidate is a directory nothing owns and nothing will delete.
+std::optional<std::filesystem::path> remove_and_refuse(const std::filesystem::path &candidate)
+{
+    std::error_code cleanup;
+    std::filesystem::remove_all(candidate, cleanup);
+    return std::nullopt;
 }
 
 }
@@ -44,18 +53,21 @@ void narrow_to_owner(const std::filesystem::path &directory)
 // create_directory is specified as-if POSIX mkdir, which fails atomically when the
 // path already exists; that is what makes an exclusive create expressible without a
 // platform header, C++20 <fstream> carrying no exclusive open mode (std::ios::noreplace
-// is C++23, P2467R1).
+// is C++23, P2467R1). A create reporting neither success nor an error found the name
+// taken, which is that same collision spelled without an error_code; every other error
+// is permanent for the run and ends the loop with its reason left for the caller.
 std::optional<std::filesystem::path> detail::create_scratch_root(
-    const std::filesystem::path &parent)
+    const std::filesystem::path &parent, std::error_code &ec)
 {
     for(int attempt = 0; attempt < 8; ++attempt)
     {
-        std::error_code ec;
         const std::filesystem::path candidate = parent / random_stem();
-        if(!std::filesystem::create_directory(candidate, ec) || ec)
-            continue;
-        narrow_to_owner(candidate);
-        return candidate;
+        ec.clear();
+        if(std::filesystem::create_directory(candidate, ec))
+            return narrow_to_owner(candidate, ec) ? std::optional{ candidate }
+                                                  : remove_and_refuse(candidate);
+        if(ec && ec != std::errc::file_exists)
+            return std::nullopt;
     }
     return std::nullopt;
 }

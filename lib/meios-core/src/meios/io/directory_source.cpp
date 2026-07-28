@@ -33,15 +33,18 @@ std::string reject_message(std::string_view package, std::string_view relative)
 
 }
 
+// A containment decision is only meaningful between two absolute paths: canonicalizing a
+// path with no existing prefix succeeds and leaves it relative, at which point the escape
+// test measures it against the process working directory rather than against a root.
 std::optional<std::filesystem::path> detail::contained_under(
     const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
     std::error_code ec;
     const std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
-    if(ec)
+    if(ec || !base.is_absolute())
         return std::nullopt;
     const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, ec);
-    if(ec || escapes_root(base, real))
+    if(ec || !real.is_absolute() || escapes_root(base, real))
         return std::nullopt;
     return real;
 }
@@ -50,8 +53,13 @@ std::optional<std::filesystem::path> detail::contained_candidate(
     const std::filesystem::path &root, std::string_view package,
     std::string_view relative, log_sink &log)
 {
-    const std::optional<std::filesystem::path> real =
-        detail::contained_under(root, root / std::string(package) / std::string(relative));
+    // An empty relative names the package directory; appending it would leave the
+    // candidate with an empty final component, which names nothing a file can be
+    // written to.
+    std::filesystem::path candidate = root / std::string(package);
+    if(!relative.empty())
+        candidate /= std::string(relative);
+    const std::optional<std::filesystem::path> real = detail::contained_under(root, candidate);
     if(!real)
     {
         log.log(level::error, diagnostic_code::uncontained_asset, source_location{},
