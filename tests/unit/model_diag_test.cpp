@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <sstream>
 #include <optional>
 
@@ -192,4 +193,40 @@ TEST_CASE("a claim answers to what the document said, not to how loudly", "[mode
     REQUIRE(meios::has(claims, meios::completeness::parsed));
     REQUIRE_FALSE(meios::has(claims, meios::completeness::topology_valid));
     REQUIRE_FALSE(meios::has(claims, meios::completeness::deployment_complete));
+}
+
+TEST_CASE("a mark from one sink asks another for nothing it does not hold", "[model][diag]")
+{
+    meios::log_sink discard;
+    meios::capturing_log_sink busy{ discard };
+    meios::log_sink &seam = busy;
+    seam.log(meios::level::info, "first");
+    seam.log(meios::level::warn, "second");
+    seam.log(meios::level::error, "third");
+
+    const std::size_t elsewhere = busy.size();
+    meios::capturing_log_sink fresh{ discard };
+
+    REQUIRE(elsewhere > fresh.size());
+    REQUIRE(fresh.records(elsewhere).empty());
+    REQUIRE(fresh.errors(elsewhere) == 0);
+    REQUIRE_FALSE(fresh.first(elsewhere).has_value());
+}
+
+TEST_CASE("a mark the sink does hold still answers for what followed it", "[model][diag]")
+{
+    meios::log_sink discard;
+    meios::capturing_log_sink sink{ discard };
+    meios::log_sink &seam = sink;
+    seam.log(meios::level::info, "before the mark");
+
+    const std::size_t taken = sink.size();
+    seam.log(meios::level::warn, "after the mark");
+    seam.log(meios::level::error, "also after the mark");
+
+    const std::vector<meios::captured_diagnostic> since = sink.records(taken);
+    REQUIRE(since.size() == 2);
+    REQUIRE(since.front().message == "after the mark");
+    REQUIRE(since.back().message == "also after the mark");
+    REQUIRE(sink.records().size() == 3);
 }

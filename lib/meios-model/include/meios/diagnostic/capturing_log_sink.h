@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <utility>
 #include <optional>
+#include <algorithm>
 
 namespace meios
 {
@@ -23,6 +24,8 @@ namespace meios
 // A caller that builds its own sources constructs them against this sink and hands the same
 // object to load(): a source reports through the sink it was constructed with, so this is the
 // only channel by which a source's own failure reaches the load and refuses it.
+// That reuse must be sequential: both lists are appended to without synchronization, so two
+// loads running at once against one sink race.
 class capturing_log_sink final : public log_sink
 {
 public:
@@ -65,9 +68,11 @@ public:
         return std::nullopt;
     }
 
+    // A mark is a bare count carrying no tie to the sink it was taken from, so a mark taken
+    // elsewhere reaches here as a plausible number; nothing above this line can rule it out.
     std::vector<captured_diagnostic> records(std::size_t mark = 0) const
     {
-        const std::ptrdiff_t from = static_cast<std::ptrdiff_t>(mark);
+        const std::ptrdiff_t from = static_cast<std::ptrdiff_t>(std::min(mark, m_records.size()));
         return std::vector<captured_diagnostic>(m_records.begin() + from, m_records.end());
     }
 

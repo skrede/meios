@@ -217,7 +217,11 @@ Three residuals are real and are not smoothed over:
   reason, and the refusal that follows at every missing-resource setting — is driven end to end, by
   pointing the temporary-directory environment at a path that does not exist. The narrower branch,
   where the temporary directory resolves and the root creation beneath it fails, is asserted against
-  the creation step directly with an unusable parent and is not driven through a source.
+  the creation step directly with an unusable parent and is not driven through a source. Two branches
+  inside that creation step are reasoned rather than run at all: the retry that tells a name collision
+  apart from a permanent failure, which would take eight consecutive collisions on a 128-bit random
+  name to reach, and the removal of a root whose permissions could not be narrowed, which needs a host
+  on which narrowing fails.
 
 ### Where this diverges from the recommended asset lease
 
