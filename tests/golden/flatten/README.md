@@ -14,7 +14,7 @@ is the scope-creep detector for flatten output.
   `cmake/corpus.cmake`).
 - Description: `kuka_lbr_iiwa_support/urdf/lbr_iiwa_14_r820.urdf` — a pre-expanded,
   pure-URDF serial arm that loads with zero error-level diagnostics (its
-  `package://` meshes surface only as warn-level `unresolved_mesh`, which do not
+  `package://` meshes surface only as warn-level `unresolved_asset`, which do not
   affect the identity-rewritten flatten output).
 
 Because the source is SHA256-pinned through the fetcher, this baseline is

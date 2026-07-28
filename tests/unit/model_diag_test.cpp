@@ -142,7 +142,7 @@ TEST_CASE("a document that said nothing wrong claims everything", "[model][diag]
 TEST_CASE("an unresolved asset clears only the deployment claim", "[model][diag]")
 {
     const std::vector<meios::captured_diagnostic> records{
-        { meios::diagnostic_code::unresolved_mesh, {}, "missing mesh" }
+        { meios::diagnostic_code::unresolved_asset, {}, "missing mesh" }
     };
     const meios::completeness claims = meios::claims_from(records);
 
@@ -166,7 +166,7 @@ TEST_CASE("a broken kinematic structure clears only the topology claim", "[model
 TEST_CASE("claims are cleared independently, not progressively", "[model][diag]")
 {
     const std::vector<meios::captured_diagnostic> records{
-        { meios::diagnostic_code::unresolved_mesh, {}, "missing mesh" },
+        { meios::diagnostic_code::unresolved_asset, {}, "missing mesh" },
         { meios::diagnostic_code::no_root_cycle, {}, "every link has a parent" }
     };
     const meios::completeness claims = meios::claims_from(records);
@@ -181,7 +181,7 @@ TEST_CASE("a claim answers to what the document said, not to how loudly", "[mode
     meios::log_sink discard;
     meios::capturing_log_sink sink{ discard };
     meios::log_sink &seam = sink;
-    seam.log(meios::level::warn, meios::diagnostic_code::unresolved_mesh, meios::source_location{},
+    seam.log(meios::level::warn, meios::diagnostic_code::unresolved_asset, meios::source_location{},
              "missing mesh");
     seam.log(meios::level::info, meios::diagnostic_code::link_on_cycle, meios::source_location{},
              "link sits on a cycle");

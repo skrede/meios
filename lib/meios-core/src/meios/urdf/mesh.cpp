@@ -25,19 +25,21 @@ void report_missing(parse_context &ctx, const source_location &loc, const std::s
 {
     if(ctx.on_missing == missing_asset::skip)
     {
-        ctx.withheld |= cleared_by(diagnostic_code::unresolved_mesh);
+        ctx.withheld |= cleared_by(diagnostic_code::unresolved_asset);
         return;
     }
     const level lvl = ctx.on_missing == missing_asset::fail ? level::error : level::warn;
-    ctx.log.log(lvl, diagnostic_code::unresolved_mesh, loc, "could not resolve mesh '" + uri + "'");
+    ctx.log.log(lvl, diagnostic_code::unresolved_asset, loc,
+                "could not resolve asset '" + uri + "'");
 }
 
 void reject_lfs_pointer(mesh<double> &shape, parse_context &ctx, const source_location &loc)
 {
     if(!is_lfs_pointer(*shape.resolved_path))
         return;
-    ctx.log.log(level::error, diagnostic_code::lfs_pointer_mesh, loc,
-                "resolved mesh '" + shape.filename + "' is an unsmudged Git-LFS pointer, not geometry");
+    ctx.log.log(level::error, diagnostic_code::lfs_pointer_asset, loc,
+                "resolved asset '" + shape.filename
+                    + "' is an unsmudged Git-LFS pointer, not geometry");
     shape.resolved_path.reset();
 }
 
@@ -53,8 +55,8 @@ void resolve_mesh(mesh<double> &shape, parse_context &ctx, const source_location
     const std::size_t slash = uri.find('/');
     if(slash == std::string_view::npos)
     {
-        ctx.log.log(level::error, diagnostic_code::malformed_mesh_uri, loc,
-                    "malformed package:// mesh URI '" + shape.filename + "'");
+        ctx.log.log(level::error, diagnostic_code::malformed_asset_uri, loc,
+                    "malformed package:// asset URI '" + shape.filename + "'");
         return;
     }
     const std::string pkg(uri.substr(0, slash));

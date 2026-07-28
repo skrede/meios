@@ -216,7 +216,7 @@ TEST_CASE("an unresolved mesh under missing_asset::fail propagates the specific 
         meios::load(fixture("package_mesh.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
-    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_mesh);
+    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_asset);
 }
 
 TEST_CASE("a warn material policy still returns a populated model", "[urdf][load_failure]")

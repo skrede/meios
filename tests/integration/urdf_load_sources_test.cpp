@@ -112,7 +112,7 @@ TEST_CASE("the two-arg load stays silent while refusing an unresolved package",
 
     std::cerr.rdbuf(previous);
     REQUIRE_FALSE(loaded.has_value());
-    REQUIRE(loaded.error().code == meios::diagnostic_code::unresolved_mesh);
+    REQUIRE(loaded.error().code == meios::diagnostic_code::unresolved_asset);
     REQUIRE(redirect.str().empty());
 }
 

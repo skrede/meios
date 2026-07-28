@@ -40,15 +40,15 @@ struct recorder
     }
 };
 
-meios::tree<double> parse_mesh(meios::source_stack &sources, meios::missing_asset miss,
-                               meios::log_sink &log)
+meios::tree<double> parse_document(const std::string &document, meios::source_stack &sources,
+                                   meios::missing_asset miss, meios::log_sink &log)
 {
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, miss, meios::topology_policy::fail,
                               meios::material_policy::warn, meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
-    parser.parse(slurp("package_mesh.urdf"), rec);
+    parser.parse(slurp(document), rec);
     return rec.result();
 }
 
@@ -79,7 +79,8 @@ TEST_CASE("a package:// mesh resolves to a path through the source stack", "[urd
     meios::log_sink log;
     meios::directory_source dir{ root, log };
     meios::source_stack sources{ dir };
-    const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, log);
+    const meios::tree<double> robot =
+        parse_document("package_mesh.urdf", sources, meios::missing_asset::warn, log);
 
     REQUIRE(first_mesh(robot).resolved_path.has_value());
     REQUIRE(first_mesh(robot).resolved_path->find("x.stl") != std::string::npos);
@@ -169,15 +170,33 @@ TEST_CASE("a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not
            "oid sha256:4d7a2146e8f0a9c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293\n"
            "size 12345\n";
 
-    std::vector<meios::level> levels;
-    meios::log_sink_f capture{ recorder{ levels } };
+    meios::log_sink inner;
+    meios::capturing_log_sink capture{ inner };
     meios::directory_source dir{ root, capture };
     meios::source_stack sources{ dir };
-    const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, capture);
+    const meios::tree<double> robot =
+        parse_document("package_mesh.urdf", sources, meios::missing_asset::warn, capture);
 
+    const std::optional<meios::captured_diagnostic> refusal = capture.first();
     REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
-    REQUIRE(std::count(levels.begin(), levels.end(), meios::level::error) >= 1);
+    REQUIRE(refusal.has_value());
+    REQUIRE(refusal->code == meios::diagnostic_code::lfs_pointer_asset);
     std::filesystem::remove_all(root);
+}
+
+TEST_CASE("a package:// URI naming no path within the package is refused as malformed",
+          "[urdf][mesh]")
+{
+    meios::log_sink inner;
+    meios::capturing_log_sink capture{ inner };
+    meios::source_stack sources{};
+    const meios::tree<double> robot =
+        parse_document("malformed_package_uri.urdf", sources, meios::missing_asset::warn, capture);
+
+    const std::optional<meios::captured_diagnostic> refusal = capture.first();
+    REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
+    REQUIRE(refusal.has_value());
+    REQUIRE(refusal->code == meios::diagnostic_code::malformed_asset_uri);
 }
 
 TEST_CASE("a missing mesh honors the missing_asset policy", "[urdf][mesh]")
@@ -187,7 +206,8 @@ TEST_CASE("a missing mesh honors the missing_asset policy", "[urdf][mesh]")
         std::vector<meios::level> levels;
         meios::log_sink_f capture{ recorder{ levels } };
         meios::source_stack sources{};
-        const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::fail, capture);
+        const meios::tree<double> robot =
+        parse_document("package_mesh.urdf", sources, meios::missing_asset::fail, capture);
 
         REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
         REQUIRE(std::count(levels.begin(), levels.end(), meios::level::error) >= 1);
@@ -198,7 +218,8 @@ TEST_CASE("a missing mesh honors the missing_asset policy", "[urdf][mesh]")
         std::vector<meios::level> levels;
         meios::log_sink_f capture{ recorder{ levels } };
         meios::source_stack sources{};
-        const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::warn, capture);
+        const meios::tree<double> robot =
+        parse_document("package_mesh.urdf", sources, meios::missing_asset::warn, capture);
 
         REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
         REQUIRE(std::count(levels.begin(), levels.end(), meios::level::warn) >= 1);
@@ -209,7 +230,8 @@ TEST_CASE("a missing mesh honors the missing_asset policy", "[urdf][mesh]")
         std::vector<meios::level> levels;
         meios::log_sink_f capture{ recorder{ levels } };
         meios::source_stack sources{};
-        const meios::tree<double> robot = parse_mesh(sources, meios::missing_asset::skip, capture);
+        const meios::tree<double> robot =
+        parse_document("package_mesh.urdf", sources, meios::missing_asset::skip, capture);
 
         REQUIRE_FALSE(first_mesh(robot).resolved_path.has_value());
         REQUIRE(levels.empty());

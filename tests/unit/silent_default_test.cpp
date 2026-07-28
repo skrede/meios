@@ -80,7 +80,7 @@ TEST_CASE("options nobody configured refuse a document naming an unresolvable as
         meios::load(fixture("profile/unresolved_asset.urdf"), opts);
 
     REQUIRE_FALSE(result.has_value());
-    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_mesh);
+    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_asset);
 }
 
 TEST_CASE("a document whose assets all resolve keeps the deployment claim", "[urdf][silent][asset]")
@@ -122,7 +122,7 @@ TEST_CASE("the permissive path names every asset that did not resolve, one diagn
         meios::load(fixture("profile/unresolved_asset.urdf"), opts);
 
     REQUIRE(result.has_value());
-    REQUIRE(count_code(result->diagnostics, meios::diagnostic_code::unresolved_mesh) == 2);
+    REQUIRE(count_code(result->diagnostics, meios::diagnostic_code::unresolved_asset) == 2);
     REQUIRE(mentions(result->diagnostics, "absent_pkg/meshes/base.stl"));
     REQUIRE(mentions(result->diagnostics, "other_absent_pkg/meshes/upper.stl"));
 }

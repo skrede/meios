@@ -104,7 +104,7 @@ TEST_CASE("every error class reaches the recording sink located with the right l
         { "trailing_garbage.urdf", meios::level::error, meios::diagnostic_code::trailing_content },
         { "comment_in_value.urdf", meios::level::error, meios::diagnostic_code::comment_interrupting },
         { "unresolved_material.urdf", meios::level::warn, meios::diagnostic_code::undefined_material },
-        { "package_mesh.urdf", meios::level::warn, meios::diagnostic_code::unresolved_mesh },
+        { "package_mesh.urdf", meios::level::warn, meios::diagnostic_code::unresolved_asset },
     };
 
     for(const expectation &klass : classes)
