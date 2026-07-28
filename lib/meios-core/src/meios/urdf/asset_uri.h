@@ -25,6 +25,10 @@ std::optional<std::string_view> scheme_of(std::string_view uri);
 
 asset_uri_form classify_asset_uri(std::string_view uri);
 
+// Answers the authority a file:// URI carries, empty for the authority-less spelling and for
+// the lenient drive spelling, which is a path rather than a host.
+std::string_view file_authority(std::string_view uri);
+
 // Strips the scheme and percent-decodes, so a file:// URI becomes the plain absolute path it
 // names and from there travels the identical code path a bare absolute path does.
 std::string file_uri_to_path(std::string_view uri);
@@ -34,13 +38,6 @@ std::string file_uri_to_path(std::string_view uri);
 // or a diagnostic.
 std::optional<std::string> resolve_asset_uri(const std::string &uri, parse_context &ctx,
                                              const source_location &loc);
-
-// Refuses at error level whatever the missing-asset policy says. A separate named function
-// rather than a flag on the policy-honoring helper, so a call site reads as a refusal.
-void report_unreachable(parse_context &ctx, const source_location &loc, const std::string &uri);
-
-void report_foreign_scheme(parse_context &ctx, const source_location &loc, const std::string &uri,
-                           std::string_view scheme);
 
 }
 

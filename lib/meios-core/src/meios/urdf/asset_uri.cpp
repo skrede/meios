@@ -72,6 +72,23 @@ asset_uri_form classify_asset_uri(std::string_view uri)
                                                     : asset_uri_form::relative;
 }
 
+// RFC 8089 section 2 places the authority between the scheme's two separators and the next
+// separator. The two-character drive shape is exempted here rather than at the judging site
+// because reading it as a host would refuse file://c:/path, a spelling this contract publishes
+// as accepted; deciding it by the shape of the text keeps one rule on all three platforms.
+std::string_view file_authority(std::string_view uri)
+{
+    constexpr std::string_view prefix = "file://";
+    if(!uri.starts_with(prefix))
+        return {};
+    const std::string_view rest = uri.substr(prefix.size());
+    const std::size_t end = rest.find('/');
+    const std::string_view head = end == std::string_view::npos ? rest : rest.substr(0, end);
+    if(head.size() == 2 && head[1] == ':' && alphabetic(head[0]))
+        return {};
+    return head;
+}
+
 std::string file_uri_to_path(std::string_view uri)
 {
     constexpr std::string_view prefix = "file://";

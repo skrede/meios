@@ -71,8 +71,18 @@ public:
 
     const std::filesystem::path &root() const { return m_root; }
 
+    // RFC 8089 appendix E.2 spells a drive path with a leading separator, so a row that has to
+    // put something ahead of the root — an authority — needs the root as a URI path component
+    // rather than as a native one, or the two run together on a drive-letter host.
+    std::string root_uri_path() const
+    {
+        const std::string text = m_root.generic_string();
+        return text.starts_with("/") ? text : "/" + text;
+    }
+
     std::filesystem::path write_document(std::string text) const
     {
+        replace_all(text, "@ROOTURI@", root_uri_path());
         replace_all(text, "@ROOT@", m_root.generic_string());
         replace_all(text, "@OUTSIDE@", m_outside.generic_string());
         const std::filesystem::path document = m_root / "document.urdf";

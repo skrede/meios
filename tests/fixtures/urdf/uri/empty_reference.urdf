@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="empty_reference">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename=""/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

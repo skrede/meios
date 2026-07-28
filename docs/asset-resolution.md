@@ -28,6 +28,13 @@ alphabetic character, and otherwise contains only letters, digits, `+`, `-` and 
 other scheme is refused by name under `unsupported_uri_scheme`. A string with no scheme is an absolute
 path when the platform says it is one, and a relative path otherwise.
 
+**An empty reference is not one of the forms.** A `<mesh filename="">`, and a `<texture>` element
+carrying no `filename` attribute at all, name no asset, and both are refused by name under
+`malformed_asset_uri` before anything is classified. The guard is worth stating because the failure it
+replaces is silent: an empty reference joined onto the input document's directory normalizes back to
+that directory, which is contained and which exists, so unguarded it yields a resolved path naming a
+directory rather than a diagnostic.
+
 | Form | Example | How it is resolved |
 |---|---|---|
 | `package://<package>/<path>` | `package://arm_description/meshes/base.stl` | handed to the source stack, which locates it inside the source carrying that package |
@@ -88,17 +95,41 @@ On a POSIX host `/opt/...` is untouched, because `/o` is not a drive letter foll
 | DOS drive, lenient | `file://c:/arm/meshes/base.stl` |
 | DOS drive, strict (RFC 8089 appendix E.2) | `file:///c:/arm/meshes/base.stl` |
 
+**The two drive spellings name an absolute path only where a drive letter is absolute.** Both
+normalize to `c:/arm/meshes/base.stl`, which is an absolute path on Windows and a relative one on a
+POSIX host. A normalized `file://` candidate that is not absolute is refused under
+`malformed_asset_uri` rather than joined onto the document's directory, so on a POSIX host the two
+drive spellings are refused and on Windows they are held to the containment rule as authored. That is
+the same platform split drawn for a bare drive-letter path in [Accepted forms](#accepted-forms), and
+it is drawn the same way: nothing normalizes the divergence away, and no case table can portably name
+a Windows path.
+
 Percent-decoding is applied to the `file://` form and to nothing else. A bare relative or absolute path
 is used exactly as authored, so `%20` in one of those names a directory whose name really contains
 those three characters.
 
-**A `file://` URI carrying a real authority is refused, but the diagnostic it carries is imprecise.**
-`file://host/share/base.stl` has no separator immediately after `file://`, so the authority survives the
-strip and is read as the first component of a relative path. What results is judged by the containment
-rule below and refused under `uncontained_asset` — a containment complaint, where an unsupported-`file://`-
-authority complaint would be the accurate one. The refusal is correct and fails closed; only its
-diagnostic is wrong about why. No case covers this shape, and it is written down here rather than left
-for you to meet.
+**A `file://` URI carrying a host is refused under a code that names the authority.** meios reads the
+authority as the text between `file://` and the next separator, and decides it before the path reaches
+the containment rule. An empty authority is the local filesystem. So is `localhost` — RFC 8089 section
+2 names the two as equivalent — and it is matched without regard to ASCII case, stripped, and resolved
+to exactly the path the authority-less spelling names. Any other authority names a host this library
+will not reach, and `file://host/share/base.stl` is refused under `unsupported_uri_authority`.
+
+Deciding the authority there rather than letting it fall through is what makes the refusal a statement
+about the URI. Read as the first component of a relative path instead, the host would be measured
+against the process's own working directory, and the same document would resolve or refuse depending
+on where it was loaded from.
+
+**A two-character drive prefix is not an authority.** `file://c:/arm/meshes/base.stl` carries `c:`
+where an authority would sit, and that shape is exempted by the same text test that recognizes a drive
+elsewhere on this page. Without the exemption the lenient spelling in the table above would be refused
+as though `c:` named a host.
+
+**The single-separator form RFC 8089 also permits is not accepted.** `file:/opt/arm/base.stl` carries
+no `://`, so by the test above it names no scheme at all: it is read as a relative path whose first
+component is the literal directory name `file:`, and it ends as an unresolved asset. Keeping the `://`
+test is what stops a drive-letter path being misread as a one-letter scheme, and the single-separator
+spelling is vanishingly rare in descriptions, so it is named here rather than accepted.
 
 ## Containment
 
@@ -228,6 +259,13 @@ warning.
 at every setting, as described above. A path a root contains but the filesystem does not hold is
 absent, and only that one is the policy's business.
 
+**A path that is not a regular file is absent.** A candidate a root contains which the filesystem
+holds as a directory, a device or a broken link is graded by this policy exactly as a wholly absent one
+is: the reference is well formed and the root is permitted, and what is wrong is only that there is no
+asset there. The three are deliberately not told apart. Requiring a regular file rather than mere
+existence is what stops a directory from becoming a resolved path that a later file copy would open
+and read as empty geometry.
+
 **Absent is not the same as meios failing.** When a byte-backed source cannot create its scratch
 directory or cannot write an asset into it, that is meios's own environment failing — a full disk, a
 temporary directory it may not write. It is reported under `asset_write_failed` at error level and
@@ -235,9 +273,17 @@ refuses the load at every setting, and it is deliberately never routed through t
 policy. Doing so would misattribute the fault to the description's author, and would let a lowered
 setting turn a full disk into a merely unresolved asset.
 
-Two further refusals are unconditional and belong to no policy: a `package://` URI that names a package
-and nothing after it is malformed, under `malformed_asset_uri`; and a resolved asset whose contents are
-an unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`, which reaches
+Several refusals are unconditional and belong to no policy. An empty reference, a `file://` authority
+naming a host, and a `file://` candidate that does not normalize to an absolute path are three, each
+described in its own section above. Two more are worth naming here, beside the policy they are not
+part of. **A `package://` URI must carry both
+halves at this layer** — a package name and a relative path beneath it — so the spelling that names a
+package and nothing after it, the spelling whose package name is empty, and the spelling that ends at
+the separator are all malformed under `malformed_asset_uri`. A `<mesh>` and a `<texture>` ask for a
+file, and a package directory is not one. The source layer answers the same empty relative with the
+package directory instead; that split is deliberate, and both of its halves are stated in
+[Ownership](#ownership) so neither is met without the other. And a resolved asset whose contents are an
+unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`, which reaches
 meshes and textures alike.
 
 ## Serialization
@@ -262,22 +308,29 @@ authored URI, not a resolved path leaking into a document.
 |---|---|---|---|---|
 | `<mesh>` | `package://<pkg>/<path>` naming a file a configured source holds | accept | — | `rule:package-uri-resolves` |
 | `<mesh>` | `package://<pkg>` with nothing after the package name | refuse | `malformed_asset_uri` | `rule:package-uri-names-a-path` |
+| `<mesh>` | `package:///<path>` whose package name is empty | refuse | `malformed_asset_uri` | `rule:package-uri-names-a-package` |
+| `<mesh>` | `package://<pkg>/` ending at the separator | refuse | `malformed_asset_uri` | `rule:package-uri-carries-a-relative-half` |
 | `<mesh>` | `package://` naming a package no configured source holds | graded by the missing-asset policy | `unresolved_asset` | `rule:package-uri-backed-by-a-source` |
+| `<mesh>` | a `filename` attribute present and empty | refuse | `malformed_asset_uri` | `rule:empty-reference-refused` |
 | `<mesh>` | a relative path resolving under the input document's directory | accept | — | `rule:relative-path-against-document-base` |
+| `<mesh>` | a path a root contains which is not a regular file | graded by the missing-asset policy | `unresolved_asset` | `rule:reference-is-a-regular-file` |
 | `<mesh>` | a relative path climbing out of every root | refuse | `uncontained_asset` | `rule:relative-path-contained` |
 | `<mesh>` | an absolute path inside a registered package root | accept | — | `rule:absolute-path-inside-a-root` |
 | `<mesh>` | an absolute path inside no root | refuse | `uncontained_asset` | `rule:absolute-path-contained` |
 | `<mesh>` | a `file://` URI naming a file inside a root | accept | — | `rule:file-uri-normalized` |
 | `<mesh>` | a `file://` URI whose path carries a percent-encoded byte | accept | — | `rule:file-uri-percent-decoded` |
+| `<mesh>` | a `file://` URI carrying a host name | refuse | `unsupported_uri_authority` | `rule:file-uri-authority-refused` |
+| `<mesh>` | a `file://` URI naming the local host explicitly | accept | — | `rule:file-uri-local-host-accepted` |
 | `<mesh>` | an `http://` URI | refuse | `unsupported_uri_scheme` | `rule:foreign-scheme-refused` |
 | `<mesh>` | a `model://` URI — the SDF spelling of a package reference | refuse | `unsupported_uri_scheme` | `rule:sdf-scheme-refused` |
 | `<texture>` | `package://<pkg>/<path>` naming a file a configured source holds | accept | — | `rule:texture-uri-resolves` |
 | `<texture>` | a relative path climbing out of every root | refuse | `uncontained_asset` | `rule:texture-path-contained` |
 | `<texture>` | an `http://` URI | refuse | `unsupported_uri_scheme` | `rule:texture-foreign-scheme-refused` |
+| `<texture>` | a `<texture>` element carrying no `filename` attribute | refuse | `malformed_asset_uri` | `rule:texture-empty-reference-refused` |
 
 **A texture takes the mesh's vocabulary exactly.** The same classifier, the same base, the same
 normalization, the same containment rule, the same policy and the same claim consequence. Containment
-is a property of the path, so the element carrying it cannot change the answer; the three texture rows
+is a property of the path, so the element carrying it cannot change the answer; the four texture rows
 above exist to hold that claim rather than to state a different one.
 
 **There is no dropping situation in this contract, and the set is empty rather than unpopulated.** The

@@ -37,6 +37,7 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::lfs_pointer_asset:         return completeness::deployment_complete;
         case diagnostic_code::asset_write_failed:        return completeness::deployment_complete;
         case diagnostic_code::unsupported_uri_scheme:    return completeness::deployment_complete;
+        case diagnostic_code::unsupported_uri_authority: return completeness::deployment_complete;
         case diagnostic_code::uncontained_asset:         return completeness::deployment_complete;
         case diagnostic_code::undefined_property:        return completeness::parsed;
         case diagnostic_code::unresolved_find:           return completeness::parsed;

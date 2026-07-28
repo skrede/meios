@@ -5,6 +5,7 @@
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/claims.h>
+#include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/completeness.h>
 #include <meios/diagnostic/missing_asset.h>
 #include <meios/diagnostic/diagnostic_code.h>
@@ -99,6 +100,35 @@ TEST_CASE("uri classification", "[urdf][uri]")
           == asset_uri_form::foreign_scheme);
     CHECK_FALSE(meios::detail::scheme_of("3d://meshes/base.stl").has_value());
     CHECK(meios::detail::classify_asset_uri("3d://meshes/base.stl") == asset_uri_form::relative);
+}
+
+// The lenient drive spelling is a published accepted form whose load verdict differs by
+// platform, so like the bare drive spellings above it takes a case rather than a row. The
+// non-empty half of the first claim is load-bearing: an authority helper answering empty for
+// everything would satisfy the empty half and refuse nothing.
+TEST_CASE("uri file authority", "[urdf][uri]")
+{
+    CHECK(meios::detail::file_authority("file://c:/arm/meshes/base.stl").empty());
+    CHECK(meios::detail::file_authority("file:///opt/arm/meshes/base.stl").empty());
+    CHECK(meios::detail::file_authority("file://host/share/base.stl") == "host");
+    CHECK(meios::detail::file_authority("file://localhost/opt/arm/base.stl") == "localhost");
+
+    const uri::sandbox tree;
+    const std::filesystem::path document = tree.write_document(
+        R"(<?xml version="1.0"?>)"
+        R"(<robot name="drive"><link name="base_link"><visual><geometry>)"
+        R"(<mesh filename="file://c:/arm/meshes/base.stl"/>)"
+        R"(</geometry></visual></link></robot>)");
+    meios::load_options opts;
+    opts.package_roots.push_back(tree.root());
+    std::vector<uri::captured> raised;
+    meios::log_sink_f capture{ uri::recorder{ raised } };
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(document, opts, capture);
+    const bool drive_absolute = std::filesystem::path("c:/arm/meshes/base.stl").is_absolute();
+    CHECK_FALSE(uri::located(raised, meios::level::error, "unsupported_uri_authority"));
+    CHECK(uri::located(raised, meios::level::error, "malformed_asset_uri") == !drive_absolute);
+    CHECK_FALSE(static_cast<bool>(loaded));
 }
 
 // Every table row names its document absolutely and registers its directory as a package
