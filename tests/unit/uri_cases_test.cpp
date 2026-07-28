@@ -1,6 +1,8 @@
 #include "uri_table.h"
 #include "uri_fixture.h"
 
+#include <meios/urdf/asset_uri.h>
+
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/claims.h>
 #include <meios/diagnostic/completeness.h>
@@ -50,6 +52,19 @@ std::optional<uri::row> row_for_rule(std::string_view slug)
     return std::nullopt;
 }
 
+std::optional<meios::material<double>> first_material(const meios::model<double> &robot)
+{
+    for(const meios::link<double> &part : robot.links)
+    {
+        for(const meios::visual<double> &shown : part.visuals)
+        {
+            if(shown.material_inline)
+                return shown.material_inline;
+        }
+    }
+    return std::nullopt;
+}
+
 std::vector<uri::row> rows_with_code(std::string_view code)
 {
     std::vector<uri::row> out;
@@ -61,6 +76,47 @@ std::vector<uri::row> rows_with_code(std::string_view code)
     return out;
 }
 
+}
+
+// A drive-letter spelling classifies identically on all three platforms even though the load
+// verdict for it legitimately does not, which is why the claim is asserted against the
+// classifier here rather than through a row.
+TEST_CASE("uri classification", "[urdf][uri]")
+{
+    using meios::detail::asset_uri_form;
+    for(std::string_view drive : { "C:/meshes/arm.dae", "C:\\meshes\\arm.dae" })
+    {
+        INFO(drive);
+        CHECK_FALSE(meios::detail::scheme_of(drive).has_value());
+        CHECK(meios::detail::classify_asset_uri(drive) != asset_uri_form::foreign_scheme);
+    }
+    CHECK(meios::detail::classify_asset_uri("package://pkg/meshes/base.stl")
+          == asset_uri_form::package);
+    CHECK(meios::detail::classify_asset_uri("file:///meshes/base.stl") == asset_uri_form::absolute);
+    CHECK(meios::detail::classify_asset_uri("http://example.invalid/base.stl")
+          == asset_uri_form::foreign_scheme);
+    CHECK(meios::detail::classify_asset_uri("model://pkg/base.stl")
+          == asset_uri_form::foreign_scheme);
+    CHECK_FALSE(meios::detail::scheme_of("3d://meshes/base.stl").has_value());
+    CHECK(meios::detail::classify_asset_uri("3d://meshes/base.stl") == asset_uri_form::relative);
+}
+
+// Every table row names its document absolutely and registers its directory as a package
+// root, so no row can catch a base that is empty because the caller named the document by a
+// bare filename. No root is registered here on purpose: the document's own directory is then
+// the only thing that can contain the asset, which is exactly the claim under test.
+TEST_CASE("uri relative base survives a document named relatively", "[urdf][uri]")
+{
+    const uri::sandbox tree;
+    const std::filesystem::path document =
+        tree.write_document(uri::fixture_text("relative_resolves.urdf"));
+    const std::filesystem::path previous = std::filesystem::current_path();
+    std::filesystem::current_path(document.parent_path());
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(document.filename(), meios::load_options{});
+    std::filesystem::current_path(previous);
+    REQUIRE(static_cast<bool>(loaded));
+    CHECK(uri::resolved_mesh_path(loaded->robot).has_value());
 }
 
 TEST_CASE("uri table integrity", "[urdf][uri]")
@@ -108,12 +164,17 @@ TEST_CASE("uri rows accepted", "[urdf][uri]")
     }
 }
 
+// The table declares no dropping row today, because every URI decision the contract makes
+// is a refusal or an acceptance. An empty loop would pass while asserting nothing, so the
+// emptiness says so out loud and the case becomes live the moment a dropping row appears.
 TEST_CASE("uri rows dropped", "[urdf][uri]")
 {
+    std::size_t driven = 0;
     for(const uri::row &r : uri::load_rows())
     {
         if(r.verdict != "drop" || uri::texture_row(r))
             continue;
+        ++driven;
         INFO(r.fixture);
         const uri::outcome result = uri::load_fixture(r.fixture);
         CHECK(result.succeeded);
@@ -122,12 +183,12 @@ TEST_CASE("uri rows dropped", "[urdf][uri]")
         CHECK(meios::has(result.claims, meios::completeness::parsed)
               == !meios::has(cleared, meios::completeness::parsed));
     }
+    if(driven == 0)
+        SKIP("uri.cases declares no row whose verdict is drop; this case asserted nothing");
 }
 
-// Textures are resolved by a task of their own, so they get a case of their own: lumped in
-// with the mesh rows they would leave that task without a signal it can read. The accepting
-// arm stops at the absence of an error because material carries no resolved-texture field
-// yet; the task that appends one strengthens this arm.
+// Textures get a case of their own: lumped in with the mesh rows they would leave the
+// resolution of a texture without a signal a reader can separate from a mesh's.
 TEST_CASE("uri rows texture", "[urdf][uri]")
 {
     for(const uri::row &r : uri::load_rows())
@@ -140,6 +201,11 @@ TEST_CASE("uri rows texture", "[urdf][uri]")
         {
             CHECK(result.succeeded);
             CHECK(uri::errors(result.diagnostics) == 0);
+            const std::optional<meios::material<double>> shown = first_material(result.robot);
+            REQUIRE(shown.has_value());
+            REQUIRE(shown->texture.has_value());
+            CHECK(shown->resolved_texture.has_value());
+            CHECK(shown->resolved_texture != shown->texture);
             continue;
         }
         CHECK(uri::located(result.diagnostics, meios::level::error, r.code));

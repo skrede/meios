@@ -17,9 +17,19 @@ namespace meios
 namespace detail
 {
 
-// Joins root/package/relative, canonicalizes it, and returns the candidate only
-// when it stays within the canonicalized root; an escaping candidate is rejected
-// with a loud diagnostic and yields nullopt. Shared by the path-backed sources.
+// Canonicalizes both and answers the canonicalized candidate only when it stays
+// within the root, logging nothing. weakly_canonical resolves symlinks, so an
+// in-root link whose real target leaves the root canonicalizes to an out-of-root
+// path and is rejected here. Symlink-install workspaces are supported at the ros
+// layer, which registers a package name to its real resolved directory before it
+// reaches this guard. A filesystem error (e.g. an over-long attacker path) fails
+// closed: the candidate is rejected rather than accepted uncanonicalized.
+std::optional<std::filesystem::path> contained_under(const std::filesystem::path &root,
+                                                     const std::filesystem::path &candidate);
+
+// Joins root/package/relative and holds it to contained_under; an escaping
+// candidate is rejected with a loud typed diagnostic and yields nullopt. Shared by
+// the path-backed sources.
 std::optional<std::filesystem::path> contained_candidate(
     const std::filesystem::path &root, std::string_view package,
     std::string_view relative, log_sink &log);

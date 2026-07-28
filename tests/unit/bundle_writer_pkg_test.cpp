@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 
 namespace
@@ -23,6 +24,32 @@ struct recorder
         msgs.push_back(msg);
     }
 };
+
+struct code_recorder
+{
+    std::vector<meios::diagnostic_code> &codes;
+
+    void operator()(meios::level, const std::string &)
+    {
+        codes.push_back(meios::diagnostic_code::unspecified);
+    }
+
+    void operator()(meios::level, const meios::source_location &, const std::string &)
+    {
+        codes.push_back(meios::diagnostic_code::unspecified);
+    }
+
+    void operator()(meios::level, meios::diagnostic_code code, const meios::source_location &,
+                    const std::string &)
+    {
+        codes.push_back(code);
+    }
+};
+
+bool carries(const std::vector<meios::diagnostic_code> &codes, meios::diagnostic_code wanted)
+{
+    return std::find(codes.begin(), codes.end(), wanted) != codes.end();
+}
 
 std::filesystem::path scratch_root(const std::string &suffix)
 {
@@ -85,15 +112,17 @@ TEST_CASE("a destination escaping the bundle root is rejected with no write", "[
     const std::filesystem::path root = scratch_root("escape");
     const std::filesystem::path src = write_file(root.parent_path() / "src_evil.stl", "X");
     std::filesystem::create_directories(root);
-    meios::log_sink silent;
+    std::vector<meios::diagnostic_code> codes;
+    meios::log_sink_f log{ code_recorder{ codes } };
     meios::asset_manifest manifest;
     manifest.entries.push_back(
         meios::bundle_entry{ "package://rob/x", src, "../escape.stl" });
 
-    meios::package_writer writer(root, silent);
+    meios::package_writer writer(root, log);
     const meios::emit_result result = writer.write("rob.urdf", "<robot/>", manifest, false);
 
     REQUIRE(result.status == meios::emit_status::io_error);
+    REQUIRE(carries(codes, meios::diagnostic_code::uncontained_asset));
     REQUIRE_FALSE(std::filesystem::exists(root.parent_path() / "escape.stl"));
     std::filesystem::remove_all(root);
     std::filesystem::remove(src);

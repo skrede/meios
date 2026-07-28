@@ -1,6 +1,8 @@
 #include "meios/io/directory_source.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <string>
 #include <utility>
@@ -31,31 +33,32 @@ std::string reject_message(std::string_view package, std::string_view relative)
 
 }
 
+std::optional<std::filesystem::path> detail::contained_under(
+    const std::filesystem::path &root, const std::filesystem::path &candidate)
+{
+    std::error_code ec;
+    const std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
+    if(ec)
+        return std::nullopt;
+    const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, ec);
+    if(ec || escapes_root(base, real))
+        return std::nullopt;
+    return real;
+}
+
 std::optional<std::filesystem::path> detail::contained_candidate(
     const std::filesystem::path &root, std::string_view package,
     std::string_view relative, log_sink &log)
 {
-    // weakly_canonical resolves symlinks, so an in-root link whose real target
-    // leaves the root canonicalizes to an out-of-root path and is rejected below.
-    // Symlink-install workspaces are supported at the ros layer, which registers a
-    // package name to its real resolved directory before it reaches this guard.
-    // A filesystem error (e.g. an over-long attacker path) fails closed: the
-    // candidate is rejected rather than accepted uncanonicalized.
-    std::error_code ec;
-    std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
-    if(ec)
+    const std::optional<std::filesystem::path> real =
+        detail::contained_under(root, root / std::string(package) / std::string(relative));
+    if(!real)
     {
-        log.log(level::error, reject_message(package, relative));
+        log.log(level::error, diagnostic_code::uncontained_asset, source_location{},
+                reject_message(package, relative));
         return std::nullopt;
     }
-    std::filesystem::path candidate = std::filesystem::weakly_canonical(
-        root / std::string(package) / std::string(relative), ec);
-    if(ec || escapes_root(base, candidate))
-    {
-        log.log(level::error, reject_message(package, relative));
-        return std::nullopt;
-    }
-    return candidate;
+    return real;
 }
 
 directory_source::directory_source(std::filesystem::path root, log_sink &log)

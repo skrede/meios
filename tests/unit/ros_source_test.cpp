@@ -7,6 +7,7 @@
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -29,13 +30,31 @@ static_assert(meios::enumerates_packages<meios::ros_package_source>);
 namespace
 {
 
+struct entry
+{
+    meios::level           lvl;
+    meios::diagnostic_code code;
+};
+
 struct capture
 {
-    std::vector<std::pair<meios::level, std::string>> &entries;
+    std::vector<entry> &entries;
 
-    void operator()(meios::level lvl, const std::string &message) { entries.push_back({ lvl, message }); }
+    void operator()(meios::level lvl, const std::string &)
+    {
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified });
+    }
 
-    void operator()(meios::level, const meios::source_location &, const std::string &) {}
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &)
+    {
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
+                    const std::string &)
+    {
+        entries.push_back({ lvl, code });
+    }
 };
 
 struct temp_tree
@@ -83,7 +102,7 @@ TEST_CASE("a ROS2 ament prefix resolves package://arm/meshes and reports capabil
     temp_tree tree;
     make_ament_package(tree.root, "arm");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({}, { tree.root }, log);
 
@@ -102,13 +121,16 @@ TEST_CASE("a relative that escapes the resolved share dir is rejected", "[ros]")
     temp_tree tree;
     make_ament_package(tree.root, "arm");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({}, { tree.root }, log);
 
     REQUIRE_FALSE(source.locate("arm", "../../../etc/passwd").has_value());
     const bool rejected = std::any_of(log_entries.begin(), log_entries.end(),
-        [](const auto &e) { return e.first == meios::level::error; });
+        [](const entry &e) {
+            return e.lvl == meios::level::error
+                && e.code == meios::diagnostic_code::uncontained_asset;
+        });
     REQUIRE(rejected);
 }
 
@@ -122,7 +144,7 @@ TEST_CASE("ROS1 crawl names packages from the manifest and skips CATKIN_IGNORE",
         "<package><name>hidden_pkg</name></package>");
     write_file(tree.root / "hidden" / "CATKIN_IGNORE", "");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({ tree.root }, {}, log);
 
@@ -139,7 +161,7 @@ TEST_CASE("a deeply nested package whose folder differs from its manifest name r
         "<package><name>arm_description</name></package>");
     write_file(tree.root / "a" / "b" / "arm_description_dir" / "meshes" / "x.stl", "solid\n");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({ tree.root }, {}, log);
 
@@ -165,7 +187,7 @@ TEST_CASE("a colcon --symlink-install package dir resolves to the real files", "
         return;
     }
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({ ws }, {}, log);
 
@@ -192,7 +214,7 @@ TEST_CASE("an escaping in-root symlink with no manifest is never registered", "[
         return;
     }
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::ros_package_source source({ ws }, {}, log);
 
@@ -207,7 +229,7 @@ TEST_CASE("stack order encodes explicit-first precedence and shadows lower layer
     write_file(explicit_tree.root / "arm" / "meshes" / "x.stl", "explicit\n");
     make_ament_package(ament_tree.root, "arm");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
+    std::vector<entry> log_entries;
     meios::log_sink_f log{ capture{ log_entries } };
     meios::log_sink &seam = log;
 
@@ -224,6 +246,6 @@ TEST_CASE("stack order encodes explicit-first precedence and shadows lower layer
     REQUIRE(content == "explicit\n");
 
     const bool shadowed = std::any_of(log_entries.begin(), log_entries.end(),
-        [](const auto &e) { return e.first == meios::level::info; });
+        [](const entry &e) { return e.lvl == meios::level::info; });
     REQUIRE(shadowed);
 }

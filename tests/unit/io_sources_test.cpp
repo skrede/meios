@@ -7,6 +7,7 @@
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -32,25 +33,40 @@ static_assert(meios::provides_path<meios::bundle_source>);
 namespace
 {
 
-using event_log = std::vector<std::pair<meios::level, std::string>>;
+struct event
+{
+    meios::level           lvl;
+    meios::diagnostic_code code;
+};
+
+using event_log = std::vector<event>;
 
 struct capture
 {
     event_log &events;
 
-    void operator()(meios::level lvl, const std::string &message)
+    void operator()(meios::level lvl, const std::string &)
     {
-        events.push_back({ lvl, message });
+        events.push_back({ lvl, meios::diagnostic_code::unspecified });
     }
 
-    void operator()(meios::level, const meios::source_location &, const std::string &) {}
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &)
+    {
+        events.push_back({ lvl, meios::diagnostic_code::unspecified });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
+                    const std::string &)
+    {
+        events.push_back({ lvl, code });
+    }
 };
 
-std::size_t count_level(const event_log &events, meios::level lvl)
+std::size_t count_code(const event_log &events, meios::level lvl, meios::diagnostic_code code)
 {
     std::size_t total = 0;
-    for(const std::pair<meios::level, std::string> &event : events)
-        if(event.first == lvl)
+    for(const event &recorded : events)
+        if(recorded.lvl == lvl && recorded.code == code)
             ++total;
     return total;
 }
@@ -237,7 +253,7 @@ TEST_CASE("directory_source rejects a traversal escape with a loud diagnostic",
     REQUIRE_FALSE(source.locate("pkg", "../../etc/passwd").has_value());
     REQUIRE_FALSE(source.locate("pkg", "/etc/passwd").has_value());
     REQUIRE_FALSE(source.path_of("pkg", "../../etc/passwd").has_value());
-    REQUIRE(count_level(events, meios::level::error) == 3);
+    REQUIRE(count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset) == 3);
 
     std::filesystem::remove_all(root);
 }
@@ -271,7 +287,7 @@ TEST_CASE("directory_source rejects an escaping in-root symlink and never reads 
     // behind evil must never be handed back. Symlink-install lives at the ros layer.
     REQUIRE_FALSE(source.locate("evil", "passwd").has_value());
     REQUIRE_FALSE(source.path_of("evil", "passwd").has_value());
-    REQUIRE(count_level(events, meios::level::error) == 2);
+    REQUIRE(count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset) == 2);
 
     std::filesystem::remove_all(parent);
 }
@@ -288,7 +304,7 @@ TEST_CASE("bundle_source resolves in-root and rejects escape like directory_sour
     REQUIRE(source.capabilities().kind == meios::source_kind::bundle);
     REQUIRE(source.locate("pkg", "meshes/x.stl").has_value());
     REQUIRE_FALSE(source.locate("pkg", "../../etc/passwd").has_value());
-    REQUIRE(count_level(events, meios::level::error) == 1);
+    REQUIRE(count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset) == 1);
 
     std::filesystem::remove_all(root);
 }

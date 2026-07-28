@@ -1,3 +1,4 @@
+#include "asset_uri.h"
 #include "urdf_detail.h"
 
 #include "meios/records/link.h"
@@ -129,7 +130,10 @@ std::optional<material<double>> extract_material(pugi::xml_node node, std::strin
     if(!read_color(node, out, ctx, loc))
         return std::nullopt;
     if(pugi::xml_node texture = node.child("texture"))
+    {
         out.texture = std::string(texture.attribute("filename").value());
+        out.resolved_texture = resolve_asset_uri(*out.texture, ctx, loc);
+    }
     return out;
 }
 
