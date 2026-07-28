@@ -164,6 +164,8 @@ enforcement nothing can exercise.
 lookup goes to the source stack, and each source decides what its own root contains — a directory
 source refuses a package-plus-relative pair that canonicalizes outside its root, under the same
 `uncontained_asset` code. What comes back from a source is not re-checked against the configured roots.
+Containment is the source's own answer and is settled there; whether the thing a source named is an
+asset at all is a different question, and it is asked where that answer leaves the resolver.
 
 **Containment is enforced at resolution.** That is a statement about one step and not about the whole
 pipeline. Whether a component that later consumes a resolved path — the bundle writer copying assets
@@ -196,11 +198,12 @@ for a package it carries an entry for, so it cannot shadow the layer that really
 refuses an entry offered under that same empty relative, which names a directory and therefore cannot
 also name a file.
 
-**The asset-URI layer takes the opposite position for the same spelling, deliberately.** A
-`package://` URI with nothing after the package name is malformed and is refused, because a `<mesh>`
-or a `<texture>` asks for a file and a directory is not one. The two positions do not contradict each
-other: a package lookup and an asset reference are different questions that happen to be written
-alike, and each is answered for what it asks.
+**The asset-URI layer takes the opposite position, deliberately, and not only for that one spelling.**
+A `package://` URI with nothing after the package name is malformed and is refused, and any path a
+source answers with which the filesystem does not hold as a regular file is graded by the missing-asset
+policy exactly as an absent one is — because a `<mesh>` or a `<texture>` asks for a file and a
+directory is not one. The two positions do not contradict each other: a source answers where a package
+is, and the asset layer never resolves a directory into an asset, whichever spelling named it.
 
 Three residuals are real and are not smoothed over:
 
@@ -268,7 +271,9 @@ holds as a directory, a device or a broken link is graded by this policy exactly
 is: the reference is well formed and the root is permitted, and what is wrong is only that there is no
 asset there. The three are deliberately not told apart. Requiring a regular file rather than mere
 existence is what stops a directory from becoming a resolved path that a later file copy would open
-and read as empty geometry.
+and read as empty geometry. **The `package://` form is held to this too**: a path a source answers with
+is put to the same test before it leaves the resolver, so the same directory is graded absent whether
+it was named relatively or through a package.
 
 **Absent is not the same as meios failing.** When a byte-backed source cannot create its scratch
 directory or cannot write an asset into it, that is meios's own environment failing — a full disk, a
@@ -283,12 +288,15 @@ described in its own section above. Two more are worth naming here, beside the p
 part of. **A `package://` URI must carry both
 halves at this layer** — a package name and a relative path beneath it — so the spelling that names a
 package and nothing after it, the spelling whose package name is empty, and the spelling that ends at
-the separator are all malformed under `malformed_asset_uri`. A `<mesh>` and a `<texture>` ask for a
-file, and a package directory is not one. The source layer answers the same empty relative with the
-package directory instead; that split is deliberate, and both of its halves are stated in
-[Ownership](#ownership) so neither is met without the other. And a resolved asset whose contents are an
-unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`, which reaches
-meshes and textures alike.
+the separator immediately after the package name are all malformed under `malformed_asset_uri`. That
+guard measures that one separator and no deeper one: a reference ending at a separator further down
+carries a relative half and is looked up, and the directory it names is then graded absent by the
+policy above under `unresolved_asset` rather than being called malformed. A `<mesh>` and a
+`<texture>` ask for a file, and a package directory is not one. The source layer answers the same
+empty relative with the package directory instead; that split is deliberate, and both of its halves
+are stated in [Ownership](#ownership) so neither is met without the other. And a resolved asset whose
+contents are an unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`,
+which reaches meshes and textures alike.
 
 ## Serialization
 
@@ -318,6 +326,8 @@ authored URI, not a resolved path leaking into a document.
 | `<mesh>` | a `filename` attribute present and empty | refuse | `malformed_asset_uri` | `rule:empty-reference-refused` |
 | `<mesh>` | a relative path resolving under the input document's directory | accept | — | `rule:relative-path-against-document-base` |
 | `<mesh>` | a path a root contains which is not a regular file | graded by the missing-asset policy | `unresolved_asset` | `rule:reference-is-a-regular-file` |
+| `<mesh>` | `package://` naming something a source holds which is not a regular file | graded by the missing-asset policy | `unresolved_asset` | `rule:package-reference-is-a-regular-file` |
+| `<mesh>` | `package://` ending at a separator below the package name | graded by the missing-asset policy | `unresolved_asset` | `rule:package-reference-below-the-name` |
 | `<mesh>` | a relative path climbing out of every root | refuse | `uncontained_asset` | `rule:relative-path-contained` |
 | `<mesh>` | an absolute path inside a registered package root | accept | — | `rule:absolute-path-inside-a-root` |
 | `<mesh>` | an absolute path inside no root | refuse | `uncontained_asset` | `rule:absolute-path-contained` |

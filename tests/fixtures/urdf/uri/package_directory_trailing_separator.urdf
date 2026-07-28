@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="package_directory_trailing_separator">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://somepkg/meshes/"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

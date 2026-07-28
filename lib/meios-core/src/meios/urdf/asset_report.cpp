@@ -6,10 +6,23 @@
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
+#include <optional>
+#include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios::detail
 {
+
+std::optional<std::string> asset_or_missing(const std::filesystem::path &real, parse_context &ctx,
+                                            const source_location &loc, const std::string &uri)
+{
+    std::error_code ec;
+    if(std::filesystem::is_regular_file(real, ec))
+        return real.string();
+    report_missing(ctx, loc, uri);
+    return std::nullopt;
+}
 
 void report_missing(parse_context &ctx, const source_location &loc, const std::string &uri)
 {

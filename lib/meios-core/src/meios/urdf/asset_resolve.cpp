@@ -46,9 +46,7 @@ std::optional<std::filesystem::path> first_container(const std::filesystem::path
 }
 
 // A path no root contains is unreachable and a path a root contains but the filesystem does
-// not hold as a regular file is absent; only the second is the missing-asset policy's
-// business. A directory, a device and a broken link are deliberately not told apart: the
-// question a consumer asks is whether there is an asset there, and all three answer no.
+// not hold as a regular file is absent; only the second is the missing-asset policy's business.
 std::optional<std::string> resolve_contained(const std::filesystem::path &candidate,
                                              parse_context &ctx, const source_location &loc,
                                              const std::string &uri)
@@ -59,13 +57,7 @@ std::optional<std::string> resolve_contained(const std::filesystem::path &candid
         report_unreachable(ctx, loc, uri);
         return std::nullopt;
     }
-    std::error_code ec;
-    if(!std::filesystem::is_regular_file(*real, ec))
-    {
-        report_missing(ctx, loc, uri);
-        return std::nullopt;
-    }
-    return real->string();
+    return asset_or_missing(*real, ctx, loc, uri);
 }
 
 std::optional<std::string> resolve_package(const std::string &uri, parse_context &ctx,
@@ -87,7 +79,7 @@ std::optional<std::string> resolve_package(const std::string &uri, parse_context
         report_missing(ctx, loc, uri);
         return std::nullopt;
     }
-    return hit->path().string();
+    return asset_or_missing(hit->path(), ctx, loc, uri);
 }
 
 char ascii_lower(char c)
