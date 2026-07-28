@@ -294,9 +294,17 @@ part of. **A `package://` URI must carry both
 halves at this layer** — a package name and a relative path beneath it — so the spelling that names a
 package and nothing after it, the spelling whose package name is empty, and the spelling that ends at
 the separator immediately after the package name are all malformed under `malformed_asset_uri`. That
-guard measures that one separator and no deeper one: a reference ending at a separator further down
-carries a relative half and is looked up, and the directory it names is then graded absent by the
-policy above under `unresolved_asset` rather than being called malformed. A `<mesh>` and a
+guard measures that one separator and no deeper one, and what a reference ending at a separator
+further down does depends on what precedes that separator. Where a directory below the package name
+is named, the reference carries a relative half, the lookup happens, and a directory it resolves to is
+graded absent by the policy above under `unresolved_asset` rather than being called malformed. Where
+that segment is empty — `package://<pkg>//` — the relative half is a bare separator, which is
+absolute, so composing it against a source's root replaces the candidate instead of extending it and
+the result lands outside that root; what answers is the containment refusal described in
+[Containment](#containment), unchanged. For that one spelling, then, the refusal a reader would
+predict from the shape of the URI is not the refusal that is raised, and the load fails at every
+setting, the silent one included, for a reason that is not absence. It is a known residual rather than
+a promise, which is why no rule below covers it and a case pins it instead. A `<mesh>` and a
 `<texture>` ask for a file, and a package directory is not one. At the source layer a source rooted at
 a directory answers that same empty relative with the package directory instead, while a source
 holding bytes declines it; that split is deliberate, and its halves are stated in
@@ -333,7 +341,7 @@ authored URI, not a resolved path leaking into a document.
 | `<mesh>` | a relative path resolving under the input document's directory | accept | — | `rule:relative-path-against-document-base` |
 | `<mesh>` | a path a root contains which is not a regular file | graded by the missing-asset policy | `unresolved_asset` | `rule:reference-is-a-regular-file` |
 | `<mesh>` | `package://` naming something a source holds which is not a regular file | graded by the missing-asset policy | `unresolved_asset` | `rule:package-reference-is-a-regular-file` |
-| `<mesh>` | `package://` ending at a separator below the package name | graded by the missing-asset policy | `unresolved_asset` | `rule:package-reference-below-the-name` |
+| `<mesh>` | `package://` ending at a separator after a named directory below the package, which the lookup resolves | graded by the missing-asset policy | `unresolved_asset` | `rule:package-reference-below-the-name` |
 | `<mesh>` | a relative path climbing out of every root | refuse | `uncontained_asset` | `rule:relative-path-contained` |
 | `<mesh>` | an absolute path inside a registered package root | accept | — | `rule:absolute-path-inside-a-root` |
 | `<mesh>` | an absolute path inside no root | refuse | `uncontained_asset` | `rule:absolute-path-contained` |

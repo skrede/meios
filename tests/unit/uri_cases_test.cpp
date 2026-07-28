@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -75,6 +76,42 @@ std::vector<uri::row> rows_with_code(std::string_view code)
             out.push_back(r);
     }
     return out;
+}
+
+struct driven_load
+{
+    bool succeeded;
+    std::vector<uri::captured> raised;
+};
+
+// A source layer has no document position, so the containment refusal it raises carries an
+// empty location; uri::located requires a file and a line and would miss it for that reason
+// rather than for the reason under test.
+bool recorded(const std::vector<uri::captured> &diagnostics, meios::level lvl,
+              const std::string &code)
+{
+    return std::any_of(diagnostics.begin(), diagnostics.end(),
+                       [lvl, &code](const uri::captured &d) {
+                           return d.lvl == lvl && meios::to_string(d.code) == code;
+                       });
+}
+
+driven_load drive_empty_segment(meios::missing_asset setting)
+{
+    const uri::sandbox tree;
+    const std::filesystem::path document = tree.write_document(
+        R"(<?xml version="1.0"?>)"
+        R"(<robot name="empty_segment"><link name="base_link"><visual><geometry>)"
+        R"(<mesh filename="package://somepkg//"/>)"
+        R"(</geometry></visual></link></robot>)");
+    meios::load_options opts;
+    opts.on_missing = setting;
+    opts.package_roots.push_back(tree.root());
+    std::vector<uri::captured> raised;
+    meios::log_sink_f capture{ uri::recorder{ raised } };
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(document, opts, capture);
+    return { static_cast<bool>(loaded), std::move(raised) };
 }
 
 }
@@ -273,4 +310,29 @@ TEST_CASE("uri rows absolute inside a registered root", "[urdf][uri]")
     CHECK(result.succeeded);
     CHECK(uri::errors(result.diagnostics) == 0);
     CHECK(uri::resolved_mesh_path(result.robot).has_value());
+}
+
+// A published rule is a promise, and what this holds is a residual: a reference whose segment
+// below the package name is empty composes a candidate that escapes the source root, so it is
+// refused for containment rather than for the shape a reader would predict, at every setting.
+// A row would contract that; a case pins it beside the prose disclosing it and goes red the day
+// it is withdrawn.
+TEST_CASE("uri package empty segment below the name", "[urdf][uri]")
+{
+    constexpr meios::missing_asset settings[] = { meios::missing_asset::skip,
+                                                  meios::missing_asset::warn,
+                                                  meios::missing_asset::fail };
+    for(meios::missing_asset setting : settings)
+    {
+        INFO("missing-asset setting " << static_cast<int>(setting));
+        const driven_load run = drive_empty_segment(setting);
+        const bool graded_error = setting == meios::missing_asset::fail;
+        const bool graded_warn = setting == meios::missing_asset::warn;
+        CHECK_FALSE(run.succeeded);
+        CHECK(recorded(run.raised, meios::level::error, "uncontained_asset"));
+        CHECK(uri::located(run.raised, meios::level::error, "unresolved_asset") == graded_error);
+        CHECK(uri::located(run.raised, meios::level::warn, "unresolved_asset") == graded_warn);
+        CHECK(recorded(run.raised, meios::level::error, "unresolved_asset") == graded_error);
+        CHECK(recorded(run.raised, meios::level::warn, "unresolved_asset") == graded_warn);
+    }
 }
