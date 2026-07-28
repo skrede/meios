@@ -17,7 +17,7 @@ ros_package_source::ros_package_source(std::vector<std::filesystem::path> ros1_r
 
 capability_descriptor ros_package_source::capabilities() const
 {
-    return { source_kind::directory, true, true };
+    return { source_kind::directory, true };
 }
 
 std::optional<std::filesystem::path> ros_package_source::path_of(std::string_view package,

@@ -62,7 +62,7 @@ public:
 
     capability_descriptor capabilities() const
     {
-        return { source_kind::memory, false, false };
+        return { source_kind::memory, false };
     }
 
     std::optional<resolved_asset> locate(std::string_view package, std::string_view relative)

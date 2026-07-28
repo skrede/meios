@@ -34,7 +34,6 @@ constexpr std::string_view to_string(source_kind kind) noexcept
 struct capability_descriptor
 {
     source_kind kind;
-    bool path_backed;
     bool package_enumerable;
 };
 
@@ -45,8 +44,8 @@ concept package_source = requires(S s, std::string_view pkg, std::string_view re
     { s.locate(pkg, rel) } -> std::convertible_to<std::optional<resolved_asset>>;
 };
 
-// Detected (never required): a source that can hand back a real filesystem path
-// for an asset rather than only a byte stream.
+// Detected (never required): a source that can name an asset's path without
+// performing the located read that locate() performs.
 template <typename S>
 concept provides_path =
     package_source<S> &&

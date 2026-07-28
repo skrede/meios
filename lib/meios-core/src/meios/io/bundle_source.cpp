@@ -17,7 +17,7 @@ bundle_source::bundle_source(std::filesystem::path root, log_sink &log)
 
 capability_descriptor bundle_source::capabilities() const
 {
-    return { source_kind::bundle, true, false };
+    return { source_kind::bundle, false };
 }
 
 std::optional<resolved_asset> bundle_source::locate(std::string_view package,

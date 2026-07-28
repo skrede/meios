@@ -65,7 +65,7 @@ directory_source::directory_source(std::filesystem::path root, log_sink &log)
 
 capability_descriptor directory_source::capabilities() const
 {
-    return { source_kind::directory, true, false };
+    return { source_kind::directory, false };
 }
 
 std::optional<resolved_asset> directory_source::locate(std::string_view package,
