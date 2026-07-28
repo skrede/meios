@@ -2,7 +2,6 @@
 
 #include <meios/io/source_stack.h>
 #include <meios/io/memory_source.h>
-#include <meios/io/resolved_asset.h>
 #include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/level.h>
@@ -14,8 +13,8 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <fstream>
 #include <utility>
-#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -164,16 +163,27 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
-    SECTION("$(find) on a byte-backed layer substitutes the package directory it materialized")
+    SECTION("$(find) on a byte-backed layer loud-fails rather than naming a directory")
     {
         meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(std::filesystem::is_directory(out.text));
+        REQUIRE_FALSE(out.ok);
+        REQUIRE(any_contains(records, "did not resolve"));
+    }
 
-        const std::optional<meios::resolved_asset> seeded =
-            sources.locate("bytespkg", "meshes/arm.dae", log);
-        REQUIRE(seeded.has_value());
-        REQUIRE(std::filesystem::path(out.text) == seeded->path().parent_path().parent_path());
+    SECTION("$(find) reaches past a byte-backed layer to the layer that holds the package")
+    {
+        std::filesystem::create_directories(root / "shadowed" / "meshes");
+        std::ofstream(root / "shadowed" / "meshes" / "base.stl") << "solid\n";
+
+        meios::memory_source overlay{ log };
+        overlay.add("shadowed", "meshes/override.stl", "override-bytes");
+        meios::directory_source holder{ root, log };
+        meios::source_stack stacked{ std::move(overlay), std::move(holder) };
+
+        meios::substitution out =
+            meios::substitute("$(find shadowed)/meshes/base.stl", scope, stacked, document, log);
+        REQUIRE(out.ok);
+        REQUIRE(std::filesystem::exists(out.text));
     }
 
     SECTION("an unresolved $(find) loud-fails")

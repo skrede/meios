@@ -1,4 +1,5 @@
 #include <meios/io/scratch_dir.h>
+#include <meios/io/source_stack.h>
 #include <meios/io/memory_source.h>
 #include <meios/io/bundle_source.h>
 #include <meios/io/directory_source.h>
@@ -196,21 +197,7 @@ TEST_CASE("the scratch tree is removed when the source that owns it dies",
     REQUIRE_FALSE(std::filesystem::exists(recorded));
 }
 
-TEST_CASE("a lookup whose relative half is empty answers with the package directory",
-          "[io][sources][scratch]")
-{
-    meios::log_sink log;
-    meios::memory_source source{ log };
-    source.add("pkg", "meshes/arm.dae", "collada-bytes");
-
-    const std::optional<meios::resolved_asset> hit = source.locate("pkg", "");
-    REQUIRE(hit.has_value());
-    REQUIRE(std::filesystem::is_directory(hit->path()));
-    REQUIRE(hit->path().filename() == "pkg");
-    REQUIRE(hit->path() == locate_path(source, "meshes/arm.dae").parent_path().parent_path());
-}
-
-TEST_CASE("a package the source carries no entry for has no package directory",
+TEST_CASE("a byte-backed source declines the empty relative for a package it carries",
           "[io][sources][scratch]")
 {
     event_log events;
@@ -219,12 +206,29 @@ TEST_CASE("a package the source carries no entry for has no package directory",
     meios::memory_source source{ seam };
     source.add("pkg", "meshes/arm.dae", "collada-bytes");
 
-    REQUIRE_FALSE(source.locate("other", "").has_value());
+    REQUIRE_FALSE(source.locate("pkg", "").has_value());
     REQUIRE(events.empty());
 }
 
-TEST_CASE("an entry offered under an empty relative is refused rather than stored",
-          "[io][sources][scratch]")
+TEST_CASE("a stack reaches past a byte-backed layer to the layer that holds the package",
+          "[io][sources][stack]")
+{
+    const std::filesystem::path root = seed_root();
+    meios::log_sink log;
+    meios::memory_source overlay{ log };
+    overlay.add("pkg", "meshes/override.stl", "override-bytes");
+    meios::directory_source holder{ root, log };
+    meios::source_stack stacked{ std::move(overlay), std::move(holder) };
+
+    const std::optional<meios::resolved_asset> hit = stacked.locate("pkg", "", log);
+    REQUIRE(hit.has_value());
+    REQUIRE(std::filesystem::equivalent(hit->path(), root / "pkg"));
+    REQUIRE(std::filesystem::exists(hit->path() / "meshes" / "x.stl"));
+
+    std::filesystem::remove_all(root);
+}
+
+TEST_CASE("an entry offered under an empty relative is refused", "[io][sources][scratch]")
 {
     event_log events;
     meios::log_sink_f log{ capture{ events } };
@@ -235,7 +239,6 @@ TEST_CASE("an entry offered under an empty relative is refused rather than store
     REQUIRE(count_code(events, meios::level::error,
                        meios::diagnostic_code::malformed_asset_uri)
             == 1);
-    REQUIRE_FALSE(source.locate("pkg", "").has_value());
 }
 
 TEST_CASE("a scratch root under a parent that cannot hold one is refused",

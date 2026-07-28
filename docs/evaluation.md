@@ -211,8 +211,10 @@ always the top-level one:
   written in that document resolves beside it exactly as it would beside a document read off disk.
   The scratch tree lives for as long as the source does. The package-qualified and find forms are
   unaffected either way — both substitute a real path whatever kind of source answers them. A
-  byte-backed layer answers a find with the scratch package directory it materializes on demand, for
-  a package it carries an entry for.
+  byte-backed layer does not answer a find at all: a find asks where a package is rather than for a
+  file inside it, and such a layer writes an entry only when that entry is asked for by name, so the
+  directory it would name would be empty. The find reaches past it to a layer that really holds the
+  package, and fails loudly where no layer does.
 
 **Unit tags.** `!radians`, `!degrees`, `!meters`, `!millimeters`, `!foot` and `!inches` are registered
 as constructors on PyYAML's `SafeLoader` the first time a configuration is parsed, and stay registered

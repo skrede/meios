@@ -28,10 +28,12 @@ namespace meios
 // relative path beneath it, so a path it hands back names a real file for exactly as
 // long as the source lives. It never satisfies provides_path: it cannot answer
 // without writing. A source layer has no document position, so its diagnostics carry
-// an empty location for the load to anchor to the input document. A lookup whose
-// relative half is empty names the package directory that layout defines, materialized
-// on demand; an entry offered under that same empty relative is refused, because it
-// cannot also name a file.
+// an empty location for the load to anchor to the input document. It declines the
+// lookup that asks where a package is — the one whose relative half is empty — because
+// it writes an entry only when that entry is asked for by name, so a directory it named
+// would be empty and every path composed beneath it would name nothing; the lookup goes
+// on to a layer that really holds the package. An entry offered under that same empty
+// relative is refused, because it cannot also name a file.
 class memory_source
 {
     using key = std::pair<std::string, std::string>;
@@ -83,7 +85,7 @@ public:
     std::optional<resolved_asset> locate(std::string_view package, std::string_view relative)
     {
         if(relative.empty())
-            return package_directory(package);
+            return std::nullopt;
         const key wanted{ std::string(package), std::string(relative) };
         const std::map<key, std::filesystem::path>::const_iterator cached = m_paths.find(wanted);
         if(cached != m_paths.end())
@@ -107,48 +109,6 @@ private:
                         "no scratch directory; cannot serve \"" + std::string(package) + '/'
                             + std::string(relative) + '"');
         return std::nullopt;
-    }
-
-    // An empty relative names the package directory, answered only for a package this
-    // source carries an entry for: one that answered for every package would shadow the
-    // layer that really holds it and fire the stack's shadow diagnostic on every lookup.
-    std::optional<resolved_asset> package_directory(std::string_view package)
-    {
-        const key wanted{ std::string(package), std::string() };
-        const std::map<key, std::filesystem::path>::const_iterator cached = m_paths.find(wanted);
-        if(cached != m_paths.end())
-            return resolved_asset{ cached->second };
-        if(!carries(package))
-            return std::nullopt;
-        if(!m_scratch.valid())
-            return refuse_without_scratch(package, std::string_view{});
-        return create_package_directory(wanted, package);
-    }
-
-    bool carries(std::string_view package) const
-    {
-        const std::map<key, std::string>::const_iterator first =
-            m_entries.lower_bound(key{ std::string(package), std::string() });
-        return first != m_entries.end() && first->first.first == package;
-    }
-
-    std::optional<resolved_asset> create_package_directory(const key &wanted,
-                                                           std::string_view package)
-    {
-        const std::optional<std::filesystem::path> target = detail::contained_candidate(
-            m_scratch.path(), package, std::string_view{}, m_log.get());
-        std::error_code ec;
-        if(target)
-            std::filesystem::create_directories(*target, ec);
-        if(!target || ec)
-        {
-            m_log.get().log(level::error, diagnostic_code::asset_write_failed, source_location{},
-                            "could not create the scratch directory for package \""
-                                + std::string(package) + '"');
-            return std::nullopt;
-        }
-        m_paths.insert_or_assign(wanted, *target);
-        return resolved_asset{ *target };
     }
 
     std::optional<resolved_asset> write_entry(const key &wanted, const std::string &bytes,

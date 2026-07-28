@@ -87,7 +87,9 @@ The second step is RFC 8089 appendix E.2, which spells an authority-less DOS dri
 recognizes it by the shape of the text and not by a platform macro, so the rule is the same everywhere.
 On a POSIX host `/opt/...` is untouched, because `/o` is not a drive letter followed by a colon.
 
-**Three `file://` spellings are therefore accepted, and all three reach the same path:**
+**Three `file://` spellings are therefore recognized here, and the two drive spellings normalize to
+one and the same path.** Whether a spelling is then allowed to resolve is a different question, and it
+is the one the paragraph beneath the table answers.
 
 | Spelling | Example |
 |---|---|
@@ -191,12 +193,15 @@ rather than writing somewhere it did not intend to. A load through such a source
 the missing-resource policy is set to, because the failure is meios's own environment and not the
 description's.
 
-**A lookup whose relative half is empty names the package directory.** That is what `$(find <pkg>)`
-asks — where a package is, not which file inside it — so a source holding bytes answers with the
-directory its mirroring layout already defines, created at the moment it is asked for. It answers only
-for a package it carries an entry for, so it cannot shadow the layer that really holds one, and it
-refuses an entry offered under that same empty relative, which names a directory and therefore cannot
-also name a file.
+**A lookup whose relative half is empty asks where a package is**, not which file inside it, which is
+what `$(find <pkg>)` asks. A source rooted at a directory answers it with the package directory
+beneath that root, which already exists and already holds whatever was put there. **A source holding
+bytes declines it.** Such a source writes an entry only when that entry is asked for by name, so a
+directory it named would be empty at the moment it named it, and every path a description composed
+beneath that answer would name nothing. Declining sends the lookup on to a layer that really holds the
+package; where no layer does, the `$(find)` fails loudly under `unresolved_find` rather than
+substituting a directory nothing was written into. A source holding bytes still refuses an entry
+offered under that same empty relative, which names a directory and therefore cannot also name a file.
 
 **The asset-URI layer takes the opposite position, deliberately, and not only for that one spelling.**
 A `package://` URI with nothing after the package name is malformed and is refused, and any path a
@@ -292,9 +297,10 @@ the separator immediately after the package name are all malformed under `malfor
 guard measures that one separator and no deeper one: a reference ending at a separator further down
 carries a relative half and is looked up, and the directory it names is then graded absent by the
 policy above under `unresolved_asset` rather than being called malformed. A `<mesh>` and a
-`<texture>` ask for a file, and a package directory is not one. The source layer answers the same
-empty relative with the package directory instead; that split is deliberate, and both of its halves
-are stated in [Ownership](#ownership) so neither is met without the other. And a resolved asset whose
+`<texture>` ask for a file, and a package directory is not one. At the source layer a source rooted at
+a directory answers that same empty relative with the package directory instead, while a source
+holding bytes declines it; that split is deliberate, and its halves are stated in
+[Ownership](#ownership) so none of them is met without the others. And a resolved asset whose
 contents are an unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`,
 which reaches meshes and textures alike.
 
