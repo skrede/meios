@@ -84,14 +84,16 @@ int run_tree(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     deferred_error_sink sink(log);
+    capturing_log_sink capture(sink);
     load_options opts;
     opts.topology = topology_policy::warn;
     // The tree renders kinematics and never an asset, so an unresolved mesh must not
     // withhold the drawing the caller asked for; the library default would refuse.
     opts.on_missing = missing_asset::warn;
     opts.package_roots = to_paths(ctx.package_paths);
-    source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    const expected<load_result, load_error> loaded =
+        load(positional(ctx, 0), opts, sources, capture);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);

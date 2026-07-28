@@ -101,14 +101,16 @@ int run_flatten(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
+    capturing_log_sink capture(sink);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     opts.eval = eval_policy_of(ctx);
     if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
        || !select_backend(ctx, opts, log))
         return 1;
-    source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    const expected<load_result, load_error> loaded =
+        load(positional(ctx, 0), opts, sources, capture);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -124,6 +126,7 @@ int run_bundle(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
+    capturing_log_sink capture(sink);
     const auto name = ctx.value_flags.find("--name");
     if(name == ctx.value_flags.end() || name->second.empty())
     {
@@ -132,8 +135,9 @@ int run_bundle(const verb_context &ctx)
     }
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
-    source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    const expected<load_result, load_error> loaded =
+        load(positional(ctx, 0), opts, sources, capture);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
@@ -154,14 +158,16 @@ int run_deps(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
     counting_log_sink sink(log);
+    capturing_log_sink capture(sink);
     load_options opts;
     opts.package_roots = to_paths(ctx.package_paths);
     opts.eval = eval_policy_of(ctx);
     if(!collect_arg_overrides(ctx.arg_overrides, opts.args, sink)
        || !select_backend(ctx, opts, log))
         return 1;
-    source_stack sources = build_sources(opts.package_roots, sink);
-    const expected<load_result, load_error> loaded = load(positional(ctx, 0), opts, sources, sink);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    const expected<load_result, load_error> loaded =
+        load(positional(ctx, 0), opts, sources, capture);
     if(!loaded)
     {
         log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);

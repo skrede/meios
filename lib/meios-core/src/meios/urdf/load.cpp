@@ -31,20 +31,17 @@ source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_
 expected<load_result, load_error> load(const std::filesystem::path &path,
                                        const load_options &opts, log_sink &log)
 {
-    // Wrap before building sources so a directory_source containment rejection, which
-    // it emits to the sink it was constructed with, is counted at the load boundary
-    // rather than escaping to the raw sink as a silent error.
-    capturing_log_sink wrapper(log);
-    source_stack sources = build_sources(opts.package_roots, wrapper);
-    return detail::drive_load(path, opts, sources, wrapper);
+    capturing_log_sink capture(log);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    return load(path, opts, sources, capture);
 }
 
 expected<load_result, load_error> load(const std::filesystem::path &path,
                                        const load_options &opts, source_stack &sources,
-                                       log_sink &log)
+                                       capturing_log_sink &log)
 {
-    capturing_log_sink wrapper(log);
-    return detail::drive_load(path, opts, sources, wrapper);
+    capture_window window(log);
+    return detail::drive_load(path, opts, sources, window);
 }
 
 expected<load_result, load_error> load(const std::filesystem::path &path, const load_options &opts)

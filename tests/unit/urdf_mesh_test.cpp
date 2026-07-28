@@ -89,7 +89,8 @@ TEST_CASE("a package:// mesh resolves to a path through the source stack", "[urd
 TEST_CASE("a byte-backed mesh names a file that outlives the returned and moved result",
           "[urdf][mesh]")
 {
-    meios::log_sink log;
+    meios::log_sink inner;
+    meios::capturing_log_sink log{ inner };
     meios::memory_source memory{ log };
     memory.add("somepkg", "meshes/x.stl", "solid\n");
     meios::source_stack sources{ std::move(memory) };
@@ -111,7 +112,8 @@ TEST_CASE("a byte-backed mesh names a file that outlives the returned and moved 
 
 TEST_CASE("the resolved path is gone once the stack that owned it is destroyed", "[urdf][mesh]")
 {
-    meios::log_sink log;
+    meios::log_sink inner;
+    meios::capturing_log_sink log{ inner };
     std::filesystem::path recorded;
     {
         meios::memory_source memory{ log };
@@ -126,6 +128,34 @@ TEST_CASE("the resolved path is gone once the stack that owned it is destroyed",
         REQUIRE(std::filesystem::exists(recorded));
     }
     REQUIRE_FALSE(std::filesystem::exists(recorded));
+}
+
+TEST_CASE("a failed scratch write refuses the load at every missing_asset setting",
+          "[urdf][mesh]")
+{
+    meios::log_sink inner;
+    meios::capturing_log_sink log{ inner };
+    meios::memory_source memory{ log };
+    // An archive can legitimately hold both an entry named "meshes" and an entry named
+    // "meshes/x.stl", so writing the first as a regular file and then asking for the second
+    // is a real failure mode rather than a contrivance.
+    memory.add("somepkg", "meshes", "not-a-directory\n");
+    memory.add("somepkg", "meshes/x.stl", "solid\n");
+    REQUIRE(memory.locate("somepkg", "meshes").has_value());
+    meios::source_stack sources{ std::move(memory) };
+
+    for(meios::missing_asset policy : { meios::missing_asset::skip, meios::missing_asset::warn,
+                                        meios::missing_asset::fail })
+    {
+        INFO("missing_asset " << static_cast<int>(policy));
+        meios::load_options opts;
+        opts.on_missing = policy;
+        const meios::expected<meios::load_result, meios::load_error> result =
+            meios::load(mesh_fixture(), opts, sources, log);
+
+        REQUIRE_FALSE(result.has_value());
+        REQUIRE(result.error().code == meios::diagnostic_code::asset_write_failed);
+    }
 }
 
 TEST_CASE("a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted",

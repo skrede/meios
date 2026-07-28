@@ -15,6 +15,7 @@
 #include "meios/xacro/eval_policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/capturing_log_sink.h"
 
 #include <map>
 #include <memory>
@@ -61,9 +62,13 @@ struct load_options
 expected<load_result, load_error> load(const std::filesystem::path &path,
                                        const load_options &opts, log_sink &log);
 
+// This overload takes the capture itself rather than a plain sink: a source the caller built
+// reports through the sink it was constructed with, so unless that sink is this object the
+// load cannot see its errors and cannot refuse on them. Build the sources against the same
+// capture that is handed here.
 expected<load_result, load_error> load(const std::filesystem::path &path,
                                        const load_options &opts, source_stack &sources,
-                                       log_sink &log);
+                                       capturing_log_sink &log);
 
 expected<load_result, load_error> load(const std::filesystem::path &path,
                                        const load_options &opts = {});

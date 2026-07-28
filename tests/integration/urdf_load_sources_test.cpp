@@ -122,12 +122,13 @@ TEST_CASE("the source_stack overload threads a caller stack into resolution", "[
     std::vector<std::string> msgs;
     meios::log_sink_f log{ captured{ msgs } };
 
+    meios::capturing_log_sink capture{ log };
     meios::source_stack sources;
-    sources.push_back(meios::source_handle(meios::directory_source(root, log)));
+    sources.push_back(meios::source_handle(meios::directory_source(root, capture)));
 
     meios::load_options opts;
     const meios::expected<meios::load_result, meios::load_error> loaded =
-        meios::load(fixture("package_mesh.urdf"), opts, sources, log);
+        meios::load(fixture("package_mesh.urdf"), opts, sources, capture);
     REQUIRE(loaded.has_value());
     const meios::model<double> &robot = loaded->robot;
 

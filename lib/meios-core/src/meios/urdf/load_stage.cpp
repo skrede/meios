@@ -73,7 +73,7 @@ void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string
 
 void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
            const load_options &opts, parse_context &ctx, world_recorder &recorder,
-           capturing_log_sink &wrapper)
+           capture_window &window)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
@@ -90,7 +90,7 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
     // misleading secondary "no document element" error after the real root cause
     // already relayed. Skip the parse only when expand reported that root cause;
     // a quiet failure still parses and fails loudly.
-    if(!expanded.ok && wrapper.errors() > 0)
+    if(!expanded.ok && window.errors() > 0)
         return;
     parser.parse(expanded.document, recorder);
 }
@@ -141,13 +141,13 @@ sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &pa
     return { std::nullopt, declares_xacro(root) };
 }
 
-expected<load_result, load_error> assemble(world_recorder &recorder, capturing_log_sink &wrapper,
+expected<load_result, load_error> assemble(world_recorder &recorder, capture_window &window,
                                            const std::filesystem::path &path, completeness withheld)
 {
-    std::vector<captured_diagnostic> records = anchored(wrapper.records(), path);
-    if(wrapper.errors() > 0)
+    std::vector<captured_diagnostic> records = anchored(window.records(), path);
+    if(window.errors() > 0)
     {
-        const captured_diagnostic &first = *wrapper.first();
+        const captured_diagnostic first = *window.first();
         source_location loc = first.loc.file.empty() ? source_location{ path, 0, 0 } : first.loc;
         return make_error(std::move(loc), first.message, first.code, std::move(records));
     }
@@ -159,24 +159,24 @@ expected<load_result, load_error> assemble(world_recorder &recorder, capturing_l
 
 expected<load_result, load_error> drive_load(const std::filesystem::path &path,
                                              const load_options &opts, source_stack &sources,
-                                             capturing_log_sink &wrapper)
+                                             capture_window &window)
 {
     const std::optional<std::string> bytes = read_file(path);
     if(!bytes)
         return make_error(source_location{ path, 0, 0 }, "cannot open input file",
-                          diagnostic_code::cannot_open, anchored(wrapper.records(), path));
+                          diagnostic_code::cannot_open, anchored(window.records(), path));
 
     const sniff_result sniff = sniff_robot(*bytes, path);
     if(sniff.error)
         return make_error(sniff.error->loc, sniff.error->message, sniff.error->code,
-                          anchored(wrapper.records(), path));
+                          anchored(window.records(), path));
 
-    world_recorder recorder(wrapper, opts.topology);
+    world_recorder recorder(window.log(), opts.topology);
     core_evaluator eval;
-    parse_context ctx{ sources, eval, wrapper, opts.on_missing, opts.topology, opts.materials,
+    parse_context ctx{ sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials,
                        opts.strict, path };
-    drive(*bytes, path, sniff.expandable, opts, ctx, recorder, wrapper);
-    return assemble(recorder, wrapper, path, ctx.withheld);
+    drive(*bytes, path, sniff.expandable, opts, ctx, recorder, window);
+    return assemble(recorder, window, path, ctx.withheld);
 }
 
 }

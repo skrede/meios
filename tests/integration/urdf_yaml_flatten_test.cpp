@@ -127,9 +127,10 @@ attempt flatten_over(const std::filesystem::path &path, meios::source_stack &sou
 {
     journal book;
     meios::log_sink_f sink{ std::ref(book) };
+    meios::capturing_log_sink capture{ sink };
     const meios::load_options opts = python_options();
     meios::expected<meios::load_result, meios::load_error> loaded =
-        meios::load(path, opts, sources, sink);
+        meios::load(path, opts, sources, capture);
     if(!loaded)
         return { book.errors, book.report + loaded.error().message, std::nullopt };
     return { book.errors, std::move(book.report), std::move(loaded->robot) };
