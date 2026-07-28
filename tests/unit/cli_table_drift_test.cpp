@@ -71,7 +71,7 @@ TEST_CASE("cli_table_drift: the completion verb is part of the shared surface")
     REQUIRE(found);
 }
 
-TEST_CASE("cli_table_drift: resolve names its package reference and deps carries the override surface")
+TEST_CASE("cli_table_drift: resolve names every accepted asset form and deps carries the override surface")
 {
     const std::vector<command_spec> &table = cli_table();
 
@@ -88,7 +88,10 @@ TEST_CASE("cli_table_drift: resolve names its package reference and deps carries
     REQUIRE(deps != nullptr);
 
     REQUIRE(resolve->description.find("package://") != std::string::npos);
+    REQUIRE(resolve->description.find("relative") != std::string::npos);
+    REQUIRE(resolve->description.find("file://") != std::string::npos);
     REQUIRE(resolve->description.find("link or joint") == std::string::npos);
+    REQUIRE(resolve->description.find("any other target fails loudly") == std::string::npos);
 
     const positional_spec *target = nullptr;
     for(const positional_spec &positional : resolve->positionals)
@@ -96,6 +99,8 @@ TEST_CASE("cli_table_drift: resolve names its package reference and deps carries
             target = &positional;
     REQUIRE(target != nullptr);
     REQUIRE(target->description.find("package://") != std::string::npos);
+    REQUIRE(target->description.find("relative") != std::string::npos);
+    REQUIRE(target->description.find("Package reference") == std::string::npos);
 
     bool deps_has_eval = false;
     for(const flag_spec &flag : deps->flags)

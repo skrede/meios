@@ -11,7 +11,7 @@ complete -c meios -n '__fish_use_subcommand' -a 'validate' -d 'Check the model a
 complete -c meios -n '__fish_use_subcommand' -a 'tree' -d 'Print the link and joint topology.'
 complete -c meios -n '__fish_use_subcommand' -a 'deps' -d 'List the assets the model references.'
 complete -c meios -n '__fish_use_subcommand' -a 'args' -d 'List the declared arguments of the document.'
-complete -c meios -n '__fish_use_subcommand' -a 'resolve' -d 'Resolve a package://<pkg>/<rel> reference to its on-disk path; any other target fails loudly.'
+complete -c meios -n '__fish_use_subcommand' -a 'resolve' -d 'Resolve an asset reference (package://, relative, absolute or file://) to its on-disk path; a relative one is measured against the model document'\''s directory, and an unreachable path or unsupported scheme is refused.'
 complete -c meios -n '__fish_use_subcommand' -a 'completion' -d 'Generate a shell completion script.'
 complete -c meios -n '__fish_seen_subcommand_from flatten' -l package-path -r -d 'Additional package search root, repeatable.'
 complete -c meios -n '__fish_seen_subcommand_from flatten' -l eval -r -d 'Expression evaluator backend: core or python.'

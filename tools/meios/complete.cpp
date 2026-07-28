@@ -9,7 +9,6 @@
 #include "meios/model/model.h"
 
 #include "meios/records/link.h"
-#include "meios/records/joint.h"
 
 #include "meios/xacro/arg_scan.h"
 
@@ -79,23 +78,20 @@ model<double> quiet_load(const std::string &model_path)
 {
     log_sink quiet;
     load_options opts;
-    // Completion offers link and joint names and has no channel to report on; under the
-    // library's refusing default an unresolved mesh would silently offer nothing at all.
+    // Completion offers link names and has no channel to report on; under the library's
+    // refusing default an unresolved mesh would silently offer nothing at all.
     opts.on_missing = missing_asset::warn;
     const expected<load_result, load_error> loaded =
         load(std::filesystem::path(model_path), opts, quiet);
     return loaded ? loaded->robot : model<double>{};
 }
 
-int emit_links(const std::string &model_path, bool with_joints)
+int emit_links(const std::string &model_path)
 {
     const model<double> robot = quiet_load(model_path);
     std::vector<std::string> names;
     for(const link<double> &node : robot.links)
         names.push_back(node.name);
-    if(with_joints)
-        for(const joint<double> &edge : robot.joints)
-            names.push_back(edge.name);
     return emit(names, directive_no_file);
 }
 
@@ -130,9 +126,7 @@ int run_complete(const std::vector<std::string> &argv)
     const bool at_second_positional = positionals.size() == 1;
 
     if(previous == "--root" && verb == "tree" && model_given)
-        return emit_links(positionals.front(), false);
-    if(verb == "resolve" && at_second_positional)
-        return emit_links(positionals.front(), true);
+        return emit_links(positionals.front());
     if(verb == "args" && at_second_positional)
         return emit_args(positionals.front());
     return emit({}, directive_default);

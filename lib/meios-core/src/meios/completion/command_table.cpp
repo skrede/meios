@@ -99,12 +99,14 @@ command_spec args_command()
 command_spec resolve_command()
 {
     return command_spec{ "resolve", "resolve",
-                         "Resolve a package://<pkg>/<rel> reference to its on-disk path; "
-                         "any other target fails loudly.",
+                         "Resolve an asset reference (package://, relative, absolute or "
+                         "file://) to its on-disk path; a relative one is measured against "
+                         "the model document's directory, and an unreachable path or "
+                         "unsupported scheme is refused.",
                          { package_path_flag() },
                          { model_positional(),
-                           { "target", "Package reference of the shape package://<pkg>/<rel> "
-                                       "to resolve.", true } } };
+                           { "target", "Asset reference to resolve: package://<pkg>/<rel>, a "
+                                       "relative or absolute path, or a file:// URI.", true } } };
 }
 
 command_spec completion_command()

@@ -11,6 +11,11 @@ meios_enable_coverage(meios_cli)
 meios_warnings(meios_cli)
 target_compile_features(meios_cli PUBLIC cxx_std_20)
 target_include_directories(meios_cli PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# The resolve verb answers for the same URI vocabulary the loader does, by calling the
+# loader's own resolver rather than carrying a second parser. That resolver is deliberately
+# not installed public API, so the tool reaches it through core's private source root the way
+# a test stem does, instead of the vocabulary being published to external consumers.
+target_include_directories(meios_cli PRIVATE ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
 target_link_libraries(meios_cli
     PUBLIC meios::urdf meios::bundle meios::completion
     PRIVATE CLI11::CLI11)

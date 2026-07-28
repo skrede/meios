@@ -7,7 +7,7 @@
 #   tree - Print the link and joint topology.
 #   deps - List the assets the model references.
 #   args - List the declared arguments of the document.
-#   resolve - Resolve a package://<pkg>/<rel> reference to its on-disk path; any other target fails loudly.
+#   resolve - Resolve an asset reference (package://, relative, absolute or file://) to its on-disk path; a relative one is measured against the model document's directory, and an unreachable path or unsupported scheme is refused.
 #   completion - Generate a shell completion script.
 _meios() {
     local cur words cword
