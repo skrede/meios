@@ -298,19 +298,20 @@ guard measures that one separator and no deeper one, and what a reference ending
 further down does depends on what precedes that separator. Where a directory below the package name
 is named, the reference carries a relative half, the lookup happens, and a directory it resolves to is
 graded absent by the policy above under `unresolved_asset` rather than being called malformed. Where
-that segment is empty — `package://<pkg>//` — the relative half is a bare separator, which is
-absolute, so composing it against a source's root replaces the candidate instead of extending it and
-the result lands outside that root; what answers is the containment refusal described in
-[Containment](#containment), unchanged. For that one spelling, then, the refusal a reader would
-predict from the shape of the URI is not the refusal that is raised, and the load fails at every
-setting, the silent one included, for a reason that is not absence. It is a known residual rather than
-a promise, which is why no rule below covers it and a case pins it instead. A `<mesh>` and a
-`<texture>` ask for a file, and a package directory is not one. At the source layer a source rooted at
-a directory answers that same empty relative with the package directory instead, while a source
-holding bytes declines it; that split is deliberate, and its halves are stated in
-[Ownership](#ownership) so none of them is met without the others. And a resolved asset whose
-contents are an unsmudged Git-LFS pointer rather than geometry is refused under `lfs_pointer_asset`,
-which reaches meshes and textures alike.
+that segment is empty — `package://<pkg>//` — the relative half is a bare separator. For a source whose
+canonical root is below its filesystem root, joining that separator onto the package directory
+discards the directory instead of extending it and leaves a filesystem-root candidate outside the
+source root; what answers is the containment refusal described in [Containment](#containment),
+unchanged. The missing-asset policy still handles the unresolved lookup as usual, but the unsoftened
+`uncontained_asset` remains at error level under every setting, so the load through such a source fails
+even at the silent one. This behavior is a known residual rather than a promise, which is why no rule
+below covers it and a case pins it instead. A `<mesh>` and a `<texture>` ask for a file, and a package
+directory is not one. At the source layer, the genuinely empty relative used by the bare
+`$(find <pkg>)` substitution command is answered with the package directory by a directory-rooted
+source holding the package, while a source holding bytes declines it; that split is deliberate, and
+its halves are stated in [Ownership](#ownership) so none of them is met without the others. And a
+resolved asset whose contents are an unsmudged Git-LFS pointer rather than geometry is refused under
+`lfs_pointer_asset`, which reaches meshes and textures alike.
 
 ## Serialization
 
