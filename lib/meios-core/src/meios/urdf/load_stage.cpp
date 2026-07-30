@@ -1,6 +1,6 @@
-#include "load_acquire.h"
 #include "load_stage.h"
 #include "urdf_detail.h"
+#include "load_acquire.h"
 #include "yaml_resource.h"
 
 #include "meios/io/text_reader_operations.h"
@@ -27,11 +27,11 @@
 #include <pugixml.hpp>
 
 #include <map>
-#include <algorithm>
 #include <string>
 #include <vector>
 #include <utility>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -83,8 +83,14 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
 
 struct sniff_result
 {
+    sniff_result(std::optional<load_error> error_value, bool expandable_value)
+            : error(std::move(error_value))
+            , expandable(expandable_value)
+    {
+    }
+
     std::optional<load_error> error;
-    bool expandable{false};
+    bool expandable;
 };
 
 // A record logged through an overload that carries no location names no document, which

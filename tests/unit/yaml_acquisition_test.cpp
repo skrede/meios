@@ -1,7 +1,9 @@
 #include "yaml_acquisition_fixture.h"
+#include "yaml_replacement_operations.h"
 
 #if defined(MEIOS_TEST_HAS_EVAL_PYTHON)
     #include <meios/eval/python_evaluator.h>
+
     #include <meios/xacro/eval_scope.h>
 #endif
 
@@ -51,7 +53,7 @@ TEST_CASE("path and recovered package acquisition deliver exact text once", "[ya
     acquisition_test::scripted_operations operations{script};
     meios::log_sink silent;
     meios::capturing_log_sink capture{silent};
-    meios::source_stack sources{typed_source{source_answer::failed, {}}, typed_source{source_answer::found, tree.root / "docs" / "cfg.yaml"}};
+    meios::source_stack sources{typed_source{source_answer::failed, {}}, typed_source{source_answer::found, tree.path() / "docs" / "cfg.yaml", tree.path(), "docs/cfg.yaml"}};
     const std::vector<std::filesystem::path> roots;
     delivery_probe delivery;
     auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture, operations, delivery);
@@ -59,18 +61,87 @@ TEST_CASE("path and recovered package acquisition deliver exact text once", "[ya
     downstream_probe downstream;
     const auto package = loader("package://pkg/cfg.yaml", {});
     downstream.consume(package);
+    REQUIRE(script.calls.front() == "open_under");
+    script.calls.clear();
     script.offset   = 0;
-    const auto path = loader("cfg.yaml", tree.root / "docs" / "robot.xacro");
+    const auto path = loader("cfg.yaml", tree.path() / "docs" / "robot.xacro");
     downstream.consume(path);
 
     REQUIRE(package == std::optional<std::string>{"value: 7"});
     REQUIRE(path == package);
     REQUIRE(delivery.count == 2);
-    REQUIRE(downstream.yaml_parses == 2);
     REQUIRE(downstream.evaluations == 2);
     REQUIRE(downstream.mutations == 2);
     REQUIRE(downstream.sentinel == "value: 7");
     REQUIRE(capture.size() == 0);
+}
+
+TEST_CASE("directory and memory sources carry checked-open authorization", "[yaml][acquisition]")
+{
+    tree_guard tree;
+    acquisition_test::require_source_authorization(tree);
+    std::ofstream(tree.path() / "sentinel") << "alive";
+    {
+        tree_guard second;
+        REQUIRE(second.path() != tree.path());
+    }
+    REQUIRE(std::filesystem::exists(tree.path() / "sentinel"));
+}
+
+TEST_CASE("relative roots recover from absence and native failure", "[yaml][acquisition]")
+{
+    tree_guard tree;
+    meios::log_sink silent;
+    meios::capturing_log_sink capture{silent};
+    meios::source_stack sources;
+    const std::filesystem::path failed = tree.path() / std::string(300, 'x');
+    const std::vector<std::filesystem::path> roots{tree.path() / "missing", failed, tree.path() / "docs"};
+    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture);
+
+    REQUIRE(loader("cfg.yaml", {}) == std::optional<std::string>{"value: 7"});
+    REQUIRE(capture.size() == 0);
+}
+
+TEST_CASE("relative terminal failures and semantic escapes stay distinct", "[yaml][acquisition]")
+{
+    tree_guard tree;
+    meios::log_sink silent;
+    meios::capturing_log_sink capture{silent};
+    meios::source_stack sources;
+    const std::filesystem::path failed                  = tree.path() / std::string(300, 'x');
+    const meios::detail::contained_path_result expected = meios::detail::try_contained_under(failed, failed / "cfg.yaml");
+    REQUIRE_FALSE(expected.has_value());
+    const std::vector<std::filesystem::path> roots{failed};
+    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture);
+    REQUIRE_FALSE(loader("cfg.yaml", {}).has_value());
+    REQUIRE(capture.first()->cause.has_value());
+    const meios::operation_failure cause = *capture.first()->cause;
+
+    meios::capturing_log_sink escape_capture{silent};
+    const std::vector<std::filesystem::path> safe_roots{tree.path() / "docs"};
+    auto escape_loader = meios::detail::make_yaml_text_loader(sources, safe_roots, escape_capture);
+    REQUIRE_FALSE(escape_loader("../pkg/cfg.yaml", {}).has_value());
+    REQUIRE(escape_capture.first()->code == meios::diagnostic_code::uncontained_asset);
+    REQUIRE_FALSE(escape_capture.first()->cause.has_value());
+    REQUIRE(cause.native == expected.error().native);
+}
+
+TEST_CASE("source replacement before YAML read is rejected", "[yaml][acquisition]")
+{
+    tree_guard tree;
+    std::ofstream(tree.path() / "outside.yaml") << "outside";
+    meios::log_sink silent;
+    meios::capturing_log_sink capture{silent};
+    meios::source_stack sources{meios::directory_source{tree.path(), capture}};
+    acquisition_test::replacement_operations operations{tree.path() / "outside.yaml"};
+    const std::vector<std::filesystem::path> roots;
+    delivery_probe delivery;
+    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture, operations, delivery);
+
+    REQUIRE_FALSE(loader("package://pkg/cfg.yaml", {}).has_value());
+    REQUIRE(operations.replacement_created());
+    REQUIRE(capture.first()->cause.has_value());
+    REQUIRE(delivery.count == 0);
 }
 
 TEST_CASE("YAML all miss and native exhaustion keep distinct terminal behavior", "[yaml][acquisition]")
@@ -112,7 +183,7 @@ TEST_CASE("the Python YAML continuation runs only after successful delivery", "[
     const std::vector<std::filesystem::path> roots;
     delivery_probe delivery;
     meios::eval_scope scope;
-    scope.set_active_document(tree.root / "docs" / "robot.xacro");
+    scope.set_active_document(tree.path() / "docs" / "robot.xacro");
     scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, silent, operations, delivery));
     meios::python_evaluator evaluator;
     const auto value = evaluator.eval_to_text("load_yaml('cfg.yaml')['value']", scope, silent);

@@ -33,6 +33,7 @@ protected:
 };
 
 using text_file_result   = expected<std::unique_ptr<text_file>, std::error_code>;
+using text_open_result   = expected<std::unique_ptr<text_file>, text_read_failure>;
 using text_status_result = expected<std::filesystem::file_status, std::error_code>;
 
 class text_reader_operations
@@ -43,6 +44,8 @@ public:
 
     virtual text_status_result status(const std::filesystem::path &path) const noexcept = 0;
     virtual text_file_result open(const std::filesystem::path &path) const noexcept     = 0;
+    virtual text_open_result open_checked(const std::filesystem::path &path) const noexcept;
+    virtual text_open_result open_under(const std::filesystem::path &root, const std::filesystem::path &relative) const noexcept;
 
 protected:
     text_reader_operations(const text_reader_operations &)            = default;
@@ -53,6 +56,8 @@ protected:
 
 const text_reader_operations &default_text_reader_operations() noexcept;
 text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations);
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations);
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative);
 
 }
 

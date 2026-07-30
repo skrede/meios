@@ -3,9 +3,9 @@
 #include "meios/expected.h"
 
 #include "meios/diagnostic/level.h"
-#include "meios/diagnostic/operation_failure.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/operation_failure.h"
 
 #include <string>
 #include <utility>
@@ -39,6 +39,14 @@ std::filesystem::path package_candidate(const std::filesystem::path &root, std::
     if(!relative.empty())
         candidate /= std::string(relative);
     return candidate;
+}
+
+std::filesystem::path package_request(std::string_view package, std::string_view relative)
+{
+    std::filesystem::path request = std::string(package);
+    if(!relative.empty())
+        request /= std::string(relative);
+    return request;
 }
 
 bool is_absent(const std::error_code &error)
@@ -91,7 +99,7 @@ directory_source::directory_source(std::filesystem::path root, log_sink &log)
 {
 }
 
-capability_descriptor directory_source::capabilities() const
+capability_descriptor directory_source::capabilities()
 {
     return {source_kind::directory, false};
 }
@@ -102,7 +110,7 @@ std::optional<resolved_asset> directory_source::locate(std::string_view package,
     std::error_code ec;
     if(!candidate || !std::filesystem::exists(*candidate, ec))
         return std::nullopt;
-    return resolved_asset{*candidate};
+    return resolved_asset{*candidate, m_root, package_request(package, relative)};
 }
 
 source_lookup_result directory_source::try_locate(std::string_view package, std::string_view relative)
@@ -123,7 +131,7 @@ source_lookup_result directory_source::try_locate(std::string_view package, std:
         return unexpected<operation_failure>({operation_kind::status, error});
     if(!std::filesystem::exists(status))
         return std::optional<resolved_asset>{};
-    return std::optional{resolved_asset{**candidate}};
+    return std::optional{resolved_asset{**candidate, m_root, package_request(package, relative)}};
 }
 
 std::optional<std::filesystem::path> directory_source::path_of(std::string_view package, std::string_view relative) const

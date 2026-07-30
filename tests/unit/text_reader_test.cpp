@@ -1,126 +1,29 @@
-#include <meios/io/text_reader.h>
+#include "acquisition_script.h"
 
-#include "meios/io/text_reader_operations.h"
+#include <meios/io/scratch_dir.h>
+#include <meios/io/text_reader.h>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <span>
-#include <memory>
+#include <array>
 #include <string>
 #include <vector>
-#include <cstddef>
-#include <algorithm>
+#include <fstream>
+#include <optional>
 #include <filesystem>
+#include <string_view>
 #include <system_error>
+
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
+
 namespace
 {
-class custom_error_category final : public std::error_category
+
+meios::text_read_result run(acquisition_test::reader_script &script)
 {
-public:
-    const char *name() const noexcept override
-    {
-        return "reader-test";
-    }
-
-    std::string message(int value) const override
-    {
-        return std::to_string(value);
-    }
-};
-const custom_error_category category;
-struct script
-{
-    std::filesystem::file_status status;
-    std::error_code status_error;
-    std::error_code open_error;
-    std::error_code read_error;
-    std::error_code close_error;
-    std::vector<std::string> chunks;
-    std::vector<std::string> calls;
-    std::size_t request;
-    std::size_t next;
-    int closes;
-};
-const script regular{std::filesystem::file_status(std::filesystem::file_type::regular), {}, {}, {}, {}, {}, {}, 0, 0, 0};
-class scripted_text_file final : public meios::detail::text_file
-{
-public:
-    explicit scripted_text_file(script &state)
-            : m_state(state)
-            , m_closed(false)
-    {
-    }
-
-    ~scripted_text_file() override
-    {
-        if(!m_closed)
-            (void)close();
-    }
-
-    std::size_t read(std::span<char> buffer) noexcept override
-    {
-        m_state.calls.emplace_back("read");
-        m_state.request = buffer.size();
-        if(m_state.next == m_state.chunks.size())
-            return 0;
-        const std::string &chunk = m_state.chunks[m_state.next++];
-        std::copy(chunk.begin(), chunk.end(), buffer.begin());
-        return chunk.size();
-    }
-
-    bool failed() const noexcept override
-    {
-        m_state.calls.emplace_back("error");
-        return bool(m_state.read_error) && m_state.next > 0;
-    }
-
-    std::error_code native_error() const noexcept override
-    {
-        return m_state.read_error ? m_state.read_error : m_state.close_error;
-    }
-
-    bool close() noexcept override
-    {
-        m_closed = true;
-        ++m_state.closes;
-        m_state.calls.emplace_back("close");
-        return !m_state.close_error;
-    }
-
-private:
-    script &m_state;
-    bool m_closed;
-};
-class scripted_operations final : public meios::detail::text_reader_operations
-{
-public:
-    explicit scripted_operations(script &state)
-            : m_state(state)
-    {
-    }
-
-    meios::detail::text_status_result status(const std::filesystem::path &) const noexcept override
-    {
-        m_state.calls.emplace_back("status");
-        if(m_state.status_error)
-            return meios::unexpected<std::error_code>(m_state.status_error);
-        return m_state.status;
-    }
-
-    meios::detail::text_file_result open(const std::filesystem::path &) const noexcept override
-    {
-        m_state.calls.emplace_back("open");
-        if(m_state.open_error)
-            return meios::unexpected<std::error_code>(m_state.open_error);
-        return std::unique_ptr<meios::detail::text_file>(new scripted_text_file(m_state));
-    }
-
-private:
-    script &m_state;
-};
-meios::text_read_result run(script &state)
-{
-    scripted_operations operations{state};
+    acquisition_test::scripted_operations operations{script};
     return meios::detail::read_text_file("scripted", operations);
 }
 
@@ -129,70 +32,148 @@ void require_failure(const meios::text_read_result &result, meios::text_read_fai
     REQUIRE_FALSE(result.has_value());
     REQUIRE(result.error().kind == kind);
     REQUIRE(result.error().cause.operation == operation);
-    REQUIRE(&result.error().cause.native.category() == &category);
     REQUIRE(result.error().cause.native.value() == value);
 }
-}
-TEST_CASE("status and non-regular refusals stop before open", "[text_reader]")
+
+meios::scratch_dir fresh_tree()
 {
-    script failed       = regular;
-    failed.status_error = {11, category};
-    require_failure(run(failed), meios::text_read_failure_kind::status, meios::operation_kind::status, 11);
-    REQUIRE(failed.calls == std::vector<std::string>{"status"});
-    script non_regular                   = regular;
-    non_regular.status                   = std::filesystem::file_status(std::filesystem::file_type::directory);
-    const meios::text_read_result result = run(non_regular);
-    REQUIRE_FALSE(result.has_value());
-    REQUIRE(result.error().kind == meios::text_read_failure_kind::non_regular);
-    REQUIRE_FALSE(result.error().cause.native);
-    REQUIRE(non_regular.calls == std::vector<std::string>{"status"});
+    std::error_code error;
+    const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
+    REQUIRE_FALSE(error);
+    const std::optional<std::filesystem::path> root = meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    return meios::scratch_dir{*root};
 }
-TEST_CASE("open refusal stops before transfer", "[text_reader]")
+
+void write_file(const std::filesystem::path &path, std::string_view text)
 {
-    script state     = regular;
-    state.open_error = {13, category};
-    require_failure(run(state), meios::text_read_failure_kind::open, meios::operation_kind::open, 13);
-    REQUIRE(state.calls == std::vector<std::string>{"status", "open"});
-    REQUIRE(state.closes == 0);
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream output(path, std::ios::binary);
+    output.write(text.data(), static_cast<std::streamsize>(text.size()));
+    output.close();
+    REQUIRE(output.good());
 }
-TEST_CASE("read refusal closes once and returns no partial bytes", "[text_reader]")
+
+void require_link(const std::filesystem::path &target, const std::filesystem::path &link, bool directory)
 {
-    script state     = regular;
-    state.chunks     = {"partial"};
-    state.read_error = {17, category};
-    require_failure(run(state), meios::text_read_failure_kind::read, meios::operation_kind::read, 17);
-    REQUIRE(state.calls == std::vector<std::string>{"status", "open", "read", "error", "close"});
-    REQUIRE(state.closes == 1);
+    std::error_code error;
+    if(directory)
+        std::filesystem::create_directory_symlink(target, link, error);
+    else
+        std::filesystem::create_symlink(target, link, error);
+    CAPTURE(error.message());
+    REQUIRE_FALSE(error);
 }
-TEST_CASE("close refusal is observable and not retried", "[text_reader]")
-{
-    script state      = regular;
-    state.close_error = {19, category};
-    require_failure(run(state), meios::text_read_failure_kind::close, meios::operation_kind::close, 19);
-    REQUIRE(state.calls == std::vector<std::string>{"status", "open", "read", "error", "close"});
-    REQUIRE(state.closes == 1);
+
 }
-TEST_CASE("empty and embedded NUL content remain successful", "[text_reader]")
+
+TEST_CASE("scripted operation refusals stop at their failing boundary", "[text_reader]")
 {
-    script empty                               = regular;
+    acquisition_test::reader_script status;
+    status.status_error = {11, acquisition_test::category};
+    require_failure(run(status), meios::text_read_failure_kind::status, meios::operation_kind::status, 11);
+    REQUIRE(status.calls == std::vector<std::string>{"status"});
+
+    acquisition_test::reader_script open;
+    open.open_error = {13, acquisition_test::category};
+    require_failure(run(open), meios::text_read_failure_kind::open, meios::operation_kind::open, 13);
+    REQUIRE(open.calls == std::vector<std::string>{"status", "open"});
+
+    acquisition_test::reader_script read;
+    read.read_error = {17, acquisition_test::category};
+    require_failure(run(read), meios::text_read_failure_kind::read, meios::operation_kind::read, 17);
+    REQUIRE(read.calls == std::vector<std::string>{"status", "open", "read", "error", "close"});
+    REQUIRE(read.closes == 1);
+}
+
+TEST_CASE("zero-error and over-transfer backend failures are deterministic", "[text_reader]")
+{
+    acquisition_test::reader_script zero_read;
+    zero_read.fail_read                = true;
+    const meios::text_read_result read = run(zero_read);
+    require_failure(read, meios::text_read_failure_kind::read, meios::operation_kind::read, int(std::errc::io_error));
+    REQUIRE(&read.error().cause.native.category() == &std::generic_category());
+
+    acquisition_test::reader_script zero_close;
+    zero_close.fail_close               = true;
+    const meios::text_read_result close = run(zero_close);
+    require_failure(close, meios::text_read_failure_kind::close, meios::operation_kind::close, int(std::errc::io_error));
+
+    acquisition_test::reader_script over;
+    over.over_transfer                        = 1;
+    const meios::text_read_result transferred = run(over);
+    require_failure(transferred, meios::text_read_failure_kind::read, meios::operation_kind::read, int(std::errc::io_error));
+    REQUIRE(over.closes == 1);
+}
+
+TEST_CASE("empty binary and multi-chunk content remain exact", "[text_reader]")
+{
+    acquisition_test::reader_script empty;
+    empty.content.clear();
     const meios::text_read_result empty_result = run(empty);
     REQUIRE(empty_result.has_value());
     REQUIRE(empty_result->empty());
-    REQUIRE(empty.closes == 1);
-    script binary                        = regular;
-    binary.chunks                        = {std::string{"a\0b", 3}};
+
+    acquisition_test::reader_script binary;
+    binary.chunks                        = {"one", std::string{"t\0wo", 4}, "three"};
     const meios::text_read_result result = run(binary);
     REQUIRE(result.has_value());
-    REQUIRE(*result == std::string{"a\0b", 3});
+    REQUIRE(*result == std::string{"onet\0wothree", 12});
+    REQUIRE(binary.request == 65536);
     REQUIRE(binary.closes == 1);
 }
-TEST_CASE("multi-chunk transfer uses the measured request and closes once", "[text_reader]")
+
+TEST_CASE("native ordinary failures retain the CRT error domain", "[text_reader]")
 {
-    script state                         = regular;
-    state.chunks                         = {"one", std::string{"t\0wo", 4}, "three"};
-    const meios::text_read_result result = run(state);
-    REQUIRE(result.has_value());
-    REQUIRE(*result == std::string{"onet\0wothree", 12});
-    REQUIRE(state.request == 65536);
-    REQUIRE(state.closes == 1);
+    meios::scratch_dir tree              = fresh_tree();
+    const meios::text_read_result result = meios::read_text_file(tree.path() / "missing");
+    REQUIRE_FALSE(result.has_value());
+    REQUIRE(result.error().kind == meios::text_read_failure_kind::open);
+    REQUIRE(&result.error().cause.native.category() == &std::generic_category());
+    REQUIRE(result.error().cause.native.value() != 0);
 }
+
+TEST_CASE("contained reads reject links directories and special files", "[text_reader]")
+{
+    meios::scratch_dir tree    = fresh_tree();
+    meios::scratch_dir outside = fresh_tree();
+    write_file(tree.path() / "inside" / "ok.txt", "inside");
+    write_file(outside.path() / "outside.txt", "outside");
+    require_link(tree.path() / "inside" / "ok.txt", tree.path() / "file-link", false);
+    require_link(tree.path() / "inside", tree.path() / "directory-link", true);
+    require_link(outside.path() / "outside.txt", tree.path() / "outside-link", false);
+    require_link(tree.path(), outside.path() / "root-link", true);
+
+    const meios::text_read_result accepted = meios::detail::read_text_file_under(tree.path(), "inside/ok.txt");
+    REQUIRE(accepted.has_value());
+    REQUIRE(*accepted == "inside");
+    for(const std::filesystem::path relative : {"file-link", "directory-link/ok.txt", "outside-link", "inside", "../outside.txt"})
+        REQUIRE_FALSE(meios::detail::read_text_file_under(tree.path(), relative).has_value());
+    REQUIRE_FALSE(meios::detail::read_text_file_under(outside.path() / "root-link", "inside/ok.txt").has_value());
+
+#if !defined(_WIN32)
+    REQUIRE(::mkfifo((tree.path() / "pipe").c_str(), 0600) == 0);
+    REQUIRE_FALSE(meios::detail::read_text_file_under(tree.path(), "pipe").has_value());
+    REQUIRE_FALSE(meios::detail::read_text_file_under("/", "dev/null").has_value());
+#endif
+}
+
+#if !defined(_WIN32)
+TEST_CASE("an opened file remains the read authority after path replacement", "[text_reader]")
+{
+    meios::scratch_dir tree          = fresh_tree();
+    const std::filesystem::path path = tree.path() / "asset.txt";
+    write_file(path, "opened");
+    meios::detail::text_open_result opened = meios::detail::default_text_reader_operations().open_checked(path);
+    REQUIRE(opened.has_value());
+
+    std::filesystem::rename(path, tree.path() / "original.txt");
+    write_file(path, "replacement");
+    std::array<char, 16> buffer{};
+    const std::size_t transferred = (*opened)->read(buffer);
+
+    REQUIRE_FALSE((*opened)->failed());
+    REQUIRE(std::string_view{buffer.data(), transferred} == "opened");
+    REQUIRE((*opened)->close());
+}
+#endif

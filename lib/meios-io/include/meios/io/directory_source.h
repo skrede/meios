@@ -49,7 +49,7 @@ class directory_source
 public:
     directory_source(std::filesystem::path root, log_sink &log);
 
-    capability_descriptor capabilities() const;
+    static capability_descriptor capabilities();
 
     std::optional<resolved_asset> locate(std::string_view package, std::string_view relative);
 

@@ -1,9 +1,8 @@
 #include "yaml_resource.h"
+#include "yaml_package_resource.h"
 
 #include "meios/io/text_reader.h"
 #include "meios/io/source_stack.h"
-#include "meios/io/source_lookup.h"
-#include "meios/io/resolved_asset.h"
 #include "meios/io/directory_source.h"
 #include "meios/io/text_reader_operations.h"
 
@@ -26,73 +25,13 @@ namespace meios::detail
 {
 namespace
 {
-constexpr std::string_view package_prefix = "package://";
-constexpr std::string_view find_prefix    = "$(find ";
-struct package_ref
-{
-    std::string package;
-    std::string relative;
-};
-std::optional<package_ref> package_split(std::string_view spec)
-{
-    spec.remove_prefix(package_prefix.size());
-    const std::size_t slash = spec.find('/');
-    if(slash == std::string_view::npos)
-        return std::nullopt;
-    return package_ref{std::string(spec.substr(0, slash)), std::string(spec.substr(slash + 1))};
-}
-std::optional<package_ref> find_split(std::string_view spec)
-{
-    spec.remove_prefix(find_prefix.size());
-    const std::size_t close = spec.find(')');
-    if(close == std::string_view::npos)
-        return std::nullopt;
-    const std::string_view rest = spec.substr(close + 1);
-    if(rest.empty() || (rest.front() != '/' && rest.front() != '\\'))
-        return std::nullopt;
-    return package_ref{std::string(spec.substr(0, close)), std::string(rest.substr(1))};
-}
+
 void report_failure(std::string_view subject, const operation_failure &cause, log_sink &log)
 {
     log.log(level::error, diagnostic_code::cannot_open, source_location{}, cause,
             "cannot " + std::string(to_string(cause.operation)) + " resource \"" + std::string(subject) + "\": " + cause.native.message());
 }
-std::optional<std::string> read_path_text(const std::filesystem::path &path, const text_reader_operations &operations, log_sink &log)
-{
-    text_read_result text = detail::read_text_file(path, operations);
-    if(text)
-        return std::move(*text);
-    report_failure(path.string(), text.error().cause, log);
-    return std::nullopt;
-}
 
-std::optional<resolved_asset> locate_package(std::string_view spec, const package_ref &ref, source_stack &sources, log_sink &log)
-{
-    source_lookup_result hit = sources.try_locate(ref.package, ref.relative, log);
-    if(!hit)
-    {
-        report_failure(spec, hit.error(), log);
-        return std::nullopt;
-    }
-    if(!*hit)
-    {
-        log.log(level::error, "could not resolve resource \"" + std::string(spec) + '"');
-        return std::nullopt;
-    }
-    return std::move(**hit);
-}
-
-std::optional<std::string> from_package(std::string_view spec, source_stack &sources, log_sink &log, const text_reader_operations &operations)
-{
-    const std::optional<package_ref> ref = spec.starts_with(package_prefix) ? package_split(spec) : find_split(spec);
-    if(!ref)
-    {
-        log.log(level::error, "malformed package resource spec \"" + std::string(spec) + '"');
-        return std::nullopt;
-    }
-    const std::optional<resolved_asset> hit = locate_package(spec, *ref, sources, log);
-    return hit ? read_path_text(hit->path(), operations, log) : std::nullopt;
-}
 std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots)
 {
     std::vector<std::filesystem::path> probes;
@@ -102,29 +41,73 @@ std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &docu
     probes.insert(probes.end(), roots.begin(), roots.end());
     return probes;
 }
-std::optional<std::filesystem::path> contained_spec(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots)
+
+expected<std::filesystem::path, operation_failure> root_request(std::string_view spec, const std::filesystem::path &root, const std::filesystem::path &presentation)
 {
-    log_sink quiet;
-    for(const std::filesystem::path &root : probe_roots(document, roots))
-    {
-        const std::optional<std::filesystem::path> candidate = contained_candidate(root, "", spec, quiet);
-        std::error_code error;
-        if(candidate && std::filesystem::exists(*candidate, error))
-            return candidate;
-    }
-    return std::nullopt;
+    const std::filesystem::path requested{spec};
+    if(requested.is_relative())
+        return requested;
+    std::error_code error;
+    const std::filesystem::path base = std::filesystem::weakly_canonical(root, error);
+    if(error)
+        return unexpected<operation_failure>({operation_kind::canonicalize, error});
+    return presentation.lexically_relative(base);
 }
+
+expected<std::optional<std::string>, operation_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, bool &rejected)
+{
+    contained_path_result contained = try_contained_under(root, root / std::filesystem::path(spec));
+    if(!contained)
+        return unexpected<operation_failure>(contained.error());
+    if(!*contained)
+    {
+        rejected = true;
+        return std::optional<std::string>{};
+    }
+    std::error_code error;
+    const std::filesystem::file_status status = std::filesystem::status(**contained, error);
+    if(error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory)
+        return std::optional<std::string>{};
+    if(error)
+        return unexpected<operation_failure>({operation_kind::status, error});
+    if(!std::filesystem::exists(status))
+        return std::optional<std::string>{};
+    expected<std::filesystem::path, operation_failure> relative = root_request(spec, root, **contained);
+    if(!relative)
+        return unexpected<operation_failure>(relative.error());
+    text_read_result text = read_text_file_under(root, *relative, operations);
+    return text ? expected<std::optional<std::string>, operation_failure>{std::optional{std::move(*text)}}
+                : expected<std::optional<std::string>, operation_failure>{unexpected<operation_failure>(text.error().cause)};
+}
+
+void remember(const operation_failure &failure, std::optional<operation_failure> &first)
+{
+    if(!first)
+        first = failure;
+}
+
 std::optional<std::string> from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
                                             const text_reader_operations &operations)
 {
-    const std::optional<std::filesystem::path> path = contained_spec(spec, document, roots);
-    if(!path)
+    bool rejected = false;
+    std::optional<operation_failure> first_failure;
+    for(const std::filesystem::path &root : probe_roots(document, roots))
     {
-        log.log(level::error, "refused resource \"" + std::string(spec) + "\" that resolves outside every containment root");
-        return std::nullopt;
+        expected<std::optional<std::string>, operation_failure> result = try_root(spec, root, operations, rejected);
+        if(!result)
+            remember(result.error(), first_failure);
+        else if(*result)
+            return std::move(**result);
     }
-    return read_path_text(*path, operations, log);
+    if(first_failure)
+        report_failure(spec, *first_failure, log);
+    else if(rejected)
+        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
+    else
+        log.log(level::error, "could not resolve resource \"" + std::string(spec) + '"');
+    return std::nullopt;
 }
+
 class yaml_fetcher final : public text_resource_loader::fetcher
 {
 public:
@@ -136,10 +119,11 @@ public:
             , m_roots(roots)
     {
     }
+
     std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &document) override
     {
-        std::optional<std::string> text = spec.starts_with(package_prefix) || spec.starts_with(find_prefix) ? from_package(spec, m_sources, m_log, m_operations)
-                                                                                                            : from_containment(spec, document, m_roots, m_log, m_operations);
+        std::optional<std::string> text =
+                yaml_package::matches(spec) ? yaml_package::fetch(spec, m_sources, m_log, m_operations) : from_containment(spec, document, m_roots, m_log, m_operations);
         if(text)
             m_probe.delivered();
         return text;
@@ -152,6 +136,7 @@ private:
     const text_reader_operations &m_operations;
     const std::vector<std::filesystem::path> &m_roots;
 };
+
 class null_delivery_probe final : public yaml_text_delivery_probe
 {
 public:
@@ -159,15 +144,19 @@ public:
     {
     }
 };
+
 }
+
 text_resource_loader make_yaml_text_loader(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log, const text_reader_operations &operations,
                                            yaml_text_delivery_probe &probe)
 {
     return text_resource_loader{std::make_unique<yaml_fetcher>(sources, roots, log, operations, probe)};
 }
+
 text_resource_loader make_yaml_text_loader(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log)
 {
     static null_delivery_probe probe;
     return make_yaml_text_loader(sources, roots, log, default_text_reader_operations(), probe);
 }
+
 }

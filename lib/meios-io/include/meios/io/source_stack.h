@@ -26,6 +26,7 @@ class source_stack
 public:
     template<package_source... Ss>
     explicit source_stack(Ss... sources)
+            : m_layers()
     {
         m_layers.reserve(sizeof...(Ss));
         (m_layers.emplace_back(source_handle(std::move(sources))), ...);

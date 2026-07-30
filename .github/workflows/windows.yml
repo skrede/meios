@@ -34,6 +34,76 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Focus text reader tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^text_reader\.' -C Release"
+          $discovery = & ctest -N -R '^text_reader\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No text reader tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^text_reader\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^text_reader\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus operation failure tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^operation_failure\.' -C Release"
+          $discovery = & ctest -N -R '^operation_failure\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No operation failure tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^operation_failure\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^operation_failure\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus YAML acquisition tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^yaml_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^yaml_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No YAML acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^yaml_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^yaml_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus source lookup tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^io_source_lookup\.' -C Release"
+          $discovery = & ctest -N -R '^io_source_lookup\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No source lookup tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^io_source_lookup\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^io_source_lookup\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus load acquisition tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^load_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^load_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No load acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^load_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^load_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
 
@@ -110,6 +180,20 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Focus ROS source tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^ros_source\.' -C Release"
+          $discovery = & ctest -N -R '^ros_source\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No ROS source tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^ros_source\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^ros_source\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
@@ -198,6 +282,36 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Focus operation adapter tests
+        if: hashFiles('tests/unit/operation_adapter_test.cpp') != ''
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^operation_adapter\.' -C Release"
+          $discovery = & ctest -N -R '^operation_adapter\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No operation adapter tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^operation_adapter\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^operation_adapter\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus CLI acquisition tests
+        if: hashFiles('tests/unit/cli_acquisition_test.cpp') != ''
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^cli_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^cli_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No CLI acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^cli_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^cli_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
