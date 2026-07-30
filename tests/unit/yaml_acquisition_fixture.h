@@ -81,7 +81,7 @@ struct typed_source
             , path(std::move(presentation))
             , root(std::move(source_root))
             , relative(std::move(source_relative))
-            , descriptor(meios::source_kind::memory, false)
+            , descriptor{meios::source_kind::memory, false}
     {
     }
 

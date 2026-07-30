@@ -325,6 +325,9 @@ TEST_CASE("cli_verbs: resolve answers for every form the asset matrix accepts")
     const scoped_tree tree(seed_resolve_tree());
     const std::filesystem::path root = tree.path() / "root";
     const std::filesystem::path asset = root / "somepkg" / "meshes" / "x.stl";
+    std::error_code error;
+    const std::filesystem::path expected = std::filesystem::weakly_canonical(asset, error);
+    REQUIRE_FALSE(error);
     const std::vector<std::string> targets = { "package://somepkg/meshes/x.stl",
                                                "somepkg/meshes/x.stl", asset.string(),
                                                "file://" + asset.generic_string() };
@@ -340,7 +343,7 @@ TEST_CASE("cli_verbs: resolve answers for every form the asset matrix accepts")
         const std::string printed = out.str();
         INFO("target " << target);
         REQUIRE(code == 0);
-        REQUIRE(printed == asset.string() + "\n");
+        REQUIRE(printed == expected.string() + "\n");
     }
 }
 
@@ -410,6 +413,10 @@ TEST_CASE("cli_verbs: resolve measures a relative target against the model docum
 {
     const scoped_tree tree(seed_resolve_tree());
     const std::filesystem::path root = tree.path() / "root";
+    const std::filesystem::path asset = root / "somepkg" / "meshes" / "x.stl";
+    std::error_code error;
+    const std::filesystem::path expected = std::filesystem::weakly_canonical(asset, error);
+    REQUIRE_FALSE(error);
 
     verb_context ctx;
     ctx.id = "resolve";
@@ -419,7 +426,7 @@ TEST_CASE("cli_verbs: resolve measures a relative target against the model docum
     const std::string printed = out.str();
 
     REQUIRE(code == 0);
-    REQUIRE(printed == (root / "somepkg" / "meshes" / "x.stl").string() + "\n");
+    REQUIRE(printed == expected.string() + "\n");
 }
 
 TEST_CASE("cli_verbs: flatten resolves a nested folder!=name package through the ros layer")
