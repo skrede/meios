@@ -215,12 +215,8 @@ foreach(stem IN ITEMS
     endif()
 endforeach()
 
-# A byte-backed source takes its scratch parent from the system temporary directory and
-# offers no way to steer it, so the only way to drive its failure is to make that
-# directory unusable for the whole process. All four variable names are set because the
-# three supported platforms consult different ones, which keeps the test source free of a
-# platform branch; the stem is a target of its own because the broken temporary directory
-# would break every unrelated case that needs a real one.
+# Catch discovery transports properties as name/value pairs, so a platform-specific
+# scalar avoids splitting a semicolon-separated environment list into other properties.
 set(scratch_unusable_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scratch_unusable_test.cpp)
 if(EXISTS ${scratch_unusable_test_src})
     set(absent_temp_dir ${CMAKE_CURRENT_BINARY_DIR}/absent-temporary-directory)
@@ -232,10 +228,14 @@ if(EXISTS ${scratch_unusable_test_src})
         MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
     meios_enable_coverage(scratch_unusable_test)
     meios_warnings(scratch_unusable_test)
+    if(WIN32)
+        set(absent_temp_environment "TMP=${absent_temp_dir}")
+    else()
+        set(absent_temp_environment "TMPDIR=${absent_temp_dir}")
+    endif()
     catch_discover_tests(scratch_unusable_test
         TEST_PREFIX "scratch_unusable."
-        PROPERTIES ENVIRONMENT
-            "TMPDIR=${absent_temp_dir};TMP=${absent_temp_dir};TEMP=${absent_temp_dir};TEMPDIR=${absent_temp_dir}")
+        PROPERTIES ENVIRONMENT "${absent_temp_environment}")
 endif()
 
 foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_strict)

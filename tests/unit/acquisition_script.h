@@ -14,7 +14,6 @@
 
 namespace acquisition_test
 {
-
 class error_category final : public std::error_category
 {
 public:
@@ -37,6 +36,7 @@ struct reader_script
             : status(std::filesystem::file_type::regular)
             , status_error()
             , open_error()
+            , next_open_error()
             , read_error()
             , close_error()
             , content(R"(<robot name="checked"><link name="base"/></robot>)")
@@ -56,6 +56,7 @@ struct reader_script
     std::filesystem::file_status status;
     std::error_code status_error;
     std::error_code open_error;
+    std::error_code next_open_error;
     std::error_code read_error;
     std::error_code close_error;
     std::string content;
@@ -168,6 +169,12 @@ public:
     meios::detail::text_open_result open_under(const std::filesystem::path &, const std::filesystem::path &) const noexcept override
     {
         m_script.calls.emplace_back("open_under");
+        if(m_script.next_open_error)
+        {
+            const std::error_code error = m_script.next_open_error;
+            m_script.next_open_error.clear();
+            return refused(meios::text_read_failure_kind::open, meios::operation_kind::open, error);
+        }
         if(m_script.status_error)
             return refused(meios::text_read_failure_kind::status, meios::operation_kind::status, m_script.status_error);
         if(!std::filesystem::is_regular_file(m_script.status))

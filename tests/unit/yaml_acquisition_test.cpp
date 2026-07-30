@@ -91,39 +91,43 @@ TEST_CASE("directory and memory sources carry checked-open authorization", "[yam
 TEST_CASE("relative roots recover from absence and native failure", "[yaml][acquisition]")
 {
     tree_guard tree;
+    acquisition_test::reader_script script;
+    script.content         = "value: 7";
+    script.next_open_error = {31, acquisition_test::category};
+    acquisition_test::scripted_operations operations{script};
     meios::log_sink silent;
     meios::capturing_log_sink capture{silent};
     meios::source_stack sources;
-    const std::filesystem::path failed = tree.path() / std::string(300, 'x');
-    const std::vector<std::filesystem::path> roots{tree.path() / "missing", failed, tree.path() / "docs"};
-    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture);
+    const std::vector<std::filesystem::path> roots{tree.path() / "missing", tree.path() / "pkg", tree.path() / "docs"};
+    delivery_probe delivery;
+    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture, operations, delivery);
 
     REQUIRE(loader("cfg.yaml", {}) == std::optional<std::string>{"value: 7"});
+    REQUIRE(script.calls == std::vector<std::string>{"open_under", "open_under", "read", "error", "read", "error", "close"});
     REQUIRE(capture.size() == 0);
 }
 
 TEST_CASE("relative terminal failures and semantic escapes stay distinct", "[yaml][acquisition]")
 {
     tree_guard tree;
+    acquisition_test::reader_script script;
+    script.open_error = {37, acquisition_test::category};
+    acquisition_test::scripted_operations operations{script};
     meios::log_sink silent;
     meios::capturing_log_sink capture{silent};
     meios::source_stack sources;
-    const std::filesystem::path failed                  = tree.path() / std::string(300, 'x');
-    const meios::detail::contained_path_result expected = meios::detail::try_contained_under(failed, failed / "cfg.yaml");
-    REQUIRE_FALSE(expected.has_value());
-    const std::vector<std::filesystem::path> roots{failed};
-    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture);
+    const std::vector<std::filesystem::path> roots{tree.path() / "docs"};
+    delivery_probe delivery;
+    auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture, operations, delivery);
     REQUIRE_FALSE(loader("cfg.yaml", {}).has_value());
     REQUIRE(capture.first()->cause.has_value());
-    const meios::operation_failure cause = *capture.first()->cause;
-
+    REQUIRE(capture.first()->cause->operation == meios::operation_kind::open);
+    REQUIRE(capture.first()->cause->native == script.open_error);
     meios::capturing_log_sink escape_capture{silent};
-    const std::vector<std::filesystem::path> safe_roots{tree.path() / "docs"};
-    auto escape_loader = meios::detail::make_yaml_text_loader(sources, safe_roots, escape_capture);
+    auto escape_loader = meios::detail::make_yaml_text_loader(sources, roots, escape_capture, operations, delivery);
     REQUIRE_FALSE(escape_loader("../pkg/cfg.yaml", {}).has_value());
     REQUIRE(escape_capture.first()->code == meios::diagnostic_code::uncontained_asset);
     REQUIRE_FALSE(escape_capture.first()->cause.has_value());
-    REQUIRE(cause.native == expected.error().native);
 }
 
 TEST_CASE("source replacement before YAML read is rejected", "[yaml][acquisition]")

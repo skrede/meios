@@ -1,6 +1,7 @@
 #include "source_lookup_fixture.h"
 #include "meios/urdf/asset_uri.h"
 
+#include <meios/io/scratch_dir.h>
 #include <meios/io/source_stack.h>
 #include <meios/io/package_source.h>
 #include <meios/io/directory_source.h>
@@ -103,9 +104,17 @@ TEST_CASE("the asset terminal emits one structured record after native exhaustio
 
 TEST_CASE("canonicalization failure remains distinct from containment rejection", "[io][lookup]")
 {
-    const std::filesystem::path overlong = std::filesystem::temp_directory_path() / std::string(4096, 'x');
-    const auto failed                    = meios::detail::try_contained_under(std::filesystem::temp_directory_path(), overlong);
-    const auto rejected                  = meios::detail::try_contained_under({}, {});
+    std::error_code error;
+    const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
+    REQUIRE_FALSE(error);
+    const auto root = meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    meios::scratch_dir tree{*root};
+    const std::filesystem::path loop = tree.path() / "loop";
+    std::filesystem::create_directory_symlink(loop, loop, error);
+    REQUIRE_FALSE(error);
+    const auto failed   = meios::detail::try_contained_under(tree.path(), loop / "child");
+    const auto rejected = meios::detail::try_contained_under({}, {});
 
     REQUIRE_FALSE(failed.has_value());
     REQUIRE(failed.error().operation == meios::operation_kind::canonicalize);
@@ -114,7 +123,7 @@ TEST_CASE("canonicalization failure remains distinct from containment rejection"
     REQUIRE_FALSE(rejected->has_value());
 
     meios::log_sink log;
-    meios::directory_source directory{std::filesystem::temp_directory_path(), log};
+    meios::directory_source directory{tree.path(), log};
     const meios::source_lookup_result missing = directory.try_locate("missing-package", "missing-file");
     REQUIRE(missing.has_value());
     REQUIRE_FALSE(missing->has_value());
