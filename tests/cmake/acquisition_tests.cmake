@@ -1,24 +1,31 @@
-set(operation_failure_test_src
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit/operation_failure_test.cpp)
-if(EXISTS ${operation_failure_test_src})
-    add_executable(operation_failure_test ${operation_failure_test_src})
-    target_include_directories(operation_failure_test PRIVATE
+function(meios_add_acquisition_test stem)
+    set(test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(NOT EXISTS ${test_src})
+        return()
+    endif()
+    add_executable(${stem}_test ${test_src})
+    target_include_directories(${stem}_test PRIVATE
         ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
-    target_link_libraries(operation_failure_test
-        PRIVATE meios::core meios::model meios::io Catch2::Catch2WithMain)
-    meios_enable_coverage(operation_failure_test)
-    meios_warnings(operation_failure_test)
-    catch_discover_tests(operation_failure_test TEST_PREFIX "operation_failure.")
+    target_link_libraries(${stem}_test PRIVATE
+        meios::core meios::model meios::io meios::urdf meios::xacro
+        Catch2::Catch2WithMain)
+    meios_enable_coverage(${stem}_test)
+    meios_warnings(${stem}_test)
+    catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
+endfunction()
+
+foreach(stem IN ITEMS operation_failure text_reader io_source_lookup
+                      load_acquisition yaml_acquisition)
+    meios_add_acquisition_test(${stem})
+endforeach()
+
+if(TARGET load_acquisition_test)
+    target_compile_definitions(load_acquisition_test PRIVATE
+        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
 endif()
 
-set(text_reader_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/text_reader_test.cpp)
-if(EXISTS ${text_reader_test_src})
-    add_executable(text_reader_test ${text_reader_test_src})
-    target_include_directories(text_reader_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
-    target_link_libraries(text_reader_test
-        PRIVATE meios::core meios::model meios::io Catch2::Catch2WithMain)
-    meios_enable_coverage(text_reader_test)
-    meios_warnings(text_reader_test)
-    catch_discover_tests(text_reader_test TEST_PREFIX "text_reader.")
+if(TARGET yaml_acquisition_test AND TARGET meios_eval-python)
+    target_link_libraries(yaml_acquisition_test PRIVATE meios::eval-python)
+    target_compile_definitions(yaml_acquisition_test PRIVATE
+        MEIOS_TEST_HAS_EVAL_PYTHON=1)
 endif()

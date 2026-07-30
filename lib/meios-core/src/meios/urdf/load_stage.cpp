@@ -1,6 +1,9 @@
+#include "load_acquire.h"
 #include "load_stage.h"
 #include "urdf_detail.h"
 #include "yaml_resource.h"
+
+#include "meios/io/text_reader_operations.h"
 
 #include "meios/urdf/load.h"
 #include "meios/urdf/urdf_reader.h"
@@ -24,10 +27,9 @@
 #include <pugixml.hpp>
 
 #include <map>
+#include <algorithm>
 #include <string>
 #include <vector>
-#include <fstream>
-#include <sstream>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -39,17 +41,7 @@ namespace meios::detail
 namespace
 {
 
-std::optional<std::string> read_file(const std::filesystem::path &path)
-{
-    std::ifstream in(path, std::ios::binary);
-    if(!in)
-        return std::nullopt;
-    std::ostringstream buffer;
-    buffer << in.rdbuf();
-    return buffer.str();
-}
-
-pugi::xml_node first_element(pugi::xml_node document)
+pugi::xml_node first_element(const pugi::xml_node &document)
 {
     for(pugi::xml_node child : document.children())
         if(child.type() == pugi::node_element)
@@ -59,10 +51,7 @@ pugi::xml_node first_element(pugi::xml_node document)
 
 bool declares_xacro(pugi::xml_node root)
 {
-    for(pugi::xml_attribute attr : root.attributes())
-        if(std::string_view(attr.name()) == "xmlns:xacro")
-            return true;
-    return false;
+    return std::ranges::any_of(root.attributes(), [](pugi::xml_attribute attr) { return std::string_view(attr.name()) == "xmlns:xacro"; });
 }
 
 void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string> &args)
@@ -71,9 +60,7 @@ void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string
         scope.set(arg.first, classify(arg.second));
 }
 
-void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
-           const load_options &opts, parse_context &ctx, world_recorder &recorder,
-           capture_window &window)
+void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable, const load_options &opts, parse_context &ctx, world_recorder &recorder, capture_window &window)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
@@ -84,8 +71,7 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
     eval_scope scope;
     seed_caller_args(scope, opts.args);
     scope.install_text_loader(make_yaml_text_loader(ctx.sources, opts.package_roots, ctx.log));
-    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{},
-                                      opts.eval, opts.backend, ctx.log);
+    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{}, opts.eval, opts.backend, ctx.log);
     // A failed expansion yields an empty document; parsing it would append a
     // misleading secondary "no document element" error after the real root cause
     // already relayed. Skip the parse only when expand reported that root cause;
@@ -98,13 +84,12 @@ void drive(std::string_view bytes, const std::filesystem::path &path, bool expan
 struct sniff_result
 {
     std::optional<load_error> error;
-    bool expandable;
+    bool expandable{false};
 };
 
 // A record logged through an overload that carries no location names no document, which
 // leaves a consumer nothing to resolve; the loaded file is the only file it can be from.
-std::vector<captured_diagnostic> anchored(std::vector<captured_diagnostic> records,
-                                          const std::filesystem::path &path)
+std::vector<captured_diagnostic> anchored(std::vector<captured_diagnostic> records, const std::filesystem::path &path)
 {
     for(captured_diagnostic &record : records)
         if(record.loc.file.empty())
@@ -112,11 +97,10 @@ std::vector<captured_diagnostic> anchored(std::vector<captured_diagnostic> recor
     return records;
 }
 
-unexpected<load_error> make_error(source_location loc, std::string message, diagnostic_code code,
-                                  std::vector<captured_diagnostic> records)
+unexpected<load_error> make_error(source_location loc, std::string message, diagnostic_code code, std::vector<captured_diagnostic> records,
+                                  std::optional<operation_failure> cause = std::nullopt)
 {
-    return unexpected<load_error>(
-        load_error{ std::move(loc), std::move(message), code, std::move(records) });
+    return unexpected<load_error>(load_error{std::move(loc), std::move(message), code, std::move(records), cause});
 }
 
 // Reports an XML-parse failure or a non-<robot> root as a load_error rather than
@@ -126,57 +110,64 @@ unexpected<load_error> make_error(source_location loc, std::string message, diag
 sniff_result sniff_robot(std::string_view bytes, const std::filesystem::path &path)
 {
     pugi::xml_document probe;
-    const unsigned flags = pugi::parse_default | pugi::parse_comments | pugi::parse_ws_pcdata;
+    const unsigned flags                = pugi::parse_default | pugi::parse_comments | pugi::parse_ws_pcdata;
     const pugi::xml_parse_result parsed = probe.load_buffer(bytes.data(), bytes.size(), flags);
     if(!parsed)
-        return { load_error{ offset_location(bytes, parsed.offset, path),
-                             std::string("urdf parse error: ") + parsed.description(),
-                             diagnostic_code::xml_parse_error }, false };
+        return {load_error{offset_location(bytes, parsed.offset, path), std::string("urdf parse error: ") + parsed.description(), diagnostic_code::xml_parse_error}, false};
     const pugi::xml_node root = first_element(probe);
     if(std::string_view(root.name()) != "robot")
-        return { load_error{ node_location(root, bytes, path),
-                             "expected a <robot> root element, found <"
-                                 + std::string(root.name()) + ">",
-                             diagnostic_code::non_robot_root }, false };
-    return { std::nullopt, declares_xacro(root) };
+        return {load_error{node_location(root, bytes, path), "expected a <robot> root element, found <" + std::string(root.name()) + ">", diagnostic_code::non_robot_root}, false};
+    return {std::nullopt, declares_xacro(root)};
 }
 
-expected<load_result, load_error> assemble(world_recorder &recorder, capture_window &window,
-                                           const std::filesystem::path &path, completeness withheld)
+expected<load_result, load_error> assemble(world_recorder &recorder, capture_window &window, const std::filesystem::path &path, completeness withheld)
 {
     std::vector<captured_diagnostic> records = anchored(window.records(), path);
     if(window.errors() > 0)
     {
         const captured_diagnostic first = *window.first();
-        source_location loc = first.loc.file.empty() ? source_location{ path, 0, 0 } : first.loc;
-        return make_error(std::move(loc), first.message, first.code, std::move(records));
+        source_location loc             = first.loc.file.empty() ? source_location{path, 0, 0} : first.loc;
+        return make_error(std::move(loc), first.message, first.code, std::move(records), first.cause);
     }
     const completeness claims = claims_from(records) & ~withheld;
-    return load_result{ recorder.take_model(), std::move(records), claims };
+    return load_result{recorder.take_model(), std::move(records), claims};
 }
 
-}
-
-expected<load_result, load_error> drive_load(const std::filesystem::path &path,
-                                             const load_options &opts, source_stack &sources,
-                                             capture_window &window)
+class null_stage_probe final : public load_stage_probe
 {
-    const std::optional<std::string> bytes = read_file(path);
-    if(!bytes)
-        return make_error(source_location{ path, 0, 0 }, "cannot open input file",
-                          diagnostic_code::cannot_open, anchored(window.records(), path));
+public:
+    void entered(load_stage_point) override
+    {
+    }
+};
 
+}
+
+expected<load_result, load_error> drive_load(const std::filesystem::path &path, const load_options &opts, source_stack &sources, capture_window &window,
+                                             const text_reader_operations &operations, load_stage_probe &probe)
+{
+    expected<std::string, load_error> bytes = acquire_load_text(path, window, operations);
+    if(!bytes)
+        return unexpected<load_error>(std::move(bytes.error()));
+
+    probe.entered(load_stage_point::sniff);
     const sniff_result sniff = sniff_robot(*bytes, path);
     if(sniff.error)
-        return make_error(sniff.error->loc, sniff.error->message, sniff.error->code,
-                          anchored(window.records(), path));
+        return make_error(sniff.error->loc, sniff.error->message, sniff.error->code, anchored(window.records(), path));
 
     world_recorder recorder(window.log(), opts.topology);
     core_evaluator eval;
-    parse_context ctx{ sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials,
-                       opts.strict, path, completeness::none, opts.package_roots };
+    parse_context ctx{sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials, opts.strict, path, completeness::none, opts.package_roots};
+    probe.entered(load_stage_point::drive);
     drive(*bytes, path, sniff.expandable, opts, ctx, recorder, window);
+    probe.entered(load_stage_point::assemble);
     return assemble(recorder, window, path, ctx.withheld);
+}
+
+expected<load_result, load_error> drive_load(const std::filesystem::path &path, const load_options &opts, source_stack &sources, capture_window &window)
+{
+    null_stage_probe probe;
+    return drive_load(path, opts, sources, window, default_text_reader_operations(), probe);
 }
 
 }

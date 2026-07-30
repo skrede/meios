@@ -21,13 +21,18 @@ namespace meios::cli
 class deferred_error_sink final : public log_sink
 {
 public:
-    explicit deferred_error_sink(log_sink &inner) : m_inner(inner) {}
+    using log_sink::log;
+
+    explicit deferred_error_sink(log_sink &inner)
+            : m_inner(inner)
+    {
+    }
 
     void log(level lvl, const std::string &message) override
     {
         if(lvl == level::error)
         {
-            m_errors.push_back({ diagnostic_code::unspecified, source_location{}, message });
+            m_errors.push_back({diagnostic_code::unspecified, source_location{}, message});
             return;
         }
         m_inner.log(lvl, message);
@@ -37,7 +42,7 @@ public:
     {
         if(lvl == level::error)
         {
-            m_errors.push_back({ diagnostic_code::unspecified, location, message });
+            m_errors.push_back({diagnostic_code::unspecified, location, message});
             return;
         }
         m_inner.log(lvl, location, message);
@@ -47,7 +52,7 @@ public:
     {
         if(lvl == level::error)
         {
-            m_errors.push_back({ code, location, message });
+            m_errors.push_back({code, location, message});
             return;
         }
         m_inner.log(lvl, code, location, message);

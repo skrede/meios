@@ -17,7 +17,13 @@ namespace meios::cli
 class counting_log_sink final : public log_sink
 {
 public:
-    explicit counting_log_sink(log_sink &inner) : m_inner(inner), m_errors(0) {}
+    using log_sink::log;
+
+    explicit counting_log_sink(log_sink &inner)
+            : m_inner(inner)
+            , m_errors(0)
+    {
+    }
 
     void log(level lvl, const std::string &message) override
     {
