@@ -29,27 +29,41 @@ namespace meios
 class capturing_log_sink final : public log_sink
 {
 public:
-    explicit capturing_log_sink(log_sink &inner) : m_inner(inner), m_errors(), m_records() {}
+    explicit capturing_log_sink(log_sink &inner)
+            : m_inner(inner)
+            , m_errors()
+            , m_records()
+    {
+    }
 
     void log(level lvl, const std::string &message) override
     {
-        capture(lvl, { diagnostic_code::unspecified, source_location{}, message });
+        capture(lvl, {diagnostic_code::unspecified, source_location{}, message});
         m_inner.log(lvl, message);
     }
 
     void log(level lvl, const source_location &location, const std::string &message) override
     {
-        capture(lvl, { diagnostic_code::unspecified, location, message });
+        capture(lvl, {diagnostic_code::unspecified, location, message});
         m_inner.log(lvl, location, message);
     }
 
     void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
     {
-        capture(lvl, { code, location, message });
+        capture(lvl, {code, location, message});
         m_inner.log(lvl, code, location, message);
     }
 
-    std::size_t size() const { return m_records.size(); }
+    void log(level lvl, diagnostic_code code, const source_location &location, const operation_failure &cause, const std::string &message) override
+    {
+        capture(lvl, {code, location, message, cause});
+        m_inner.log(lvl, code, location, cause, message);
+    }
+
+    std::size_t size() const
+    {
+        return m_records.size();
+    }
 
     std::size_t errors(std::size_t mark = 0) const
     {
@@ -73,7 +87,7 @@ public:
     std::vector<captured_diagnostic> records(std::size_t mark = 0) const
     {
         const std::ptrdiff_t from = static_cast<std::ptrdiff_t>(std::min(mark, m_records.size()));
-        return std::vector<captured_diagnostic>(m_records.begin() + from, m_records.end());
+        return {m_records.begin() + from, m_records.end()};
     }
 
 private:
@@ -95,15 +109,31 @@ private:
 class capture_window
 {
 public:
-    explicit capture_window(capturing_log_sink &sink) : m_mark(sink.size()), m_sink(sink) {}
+    explicit capture_window(capturing_log_sink &sink)
+            : m_mark(sink.size())
+            , m_sink(sink)
+    {
+    }
 
-    log_sink &log() const noexcept { return m_sink; }
+    log_sink &log() const noexcept
+    {
+        return m_sink;
+    }
 
-    std::size_t errors() const { return m_sink.errors(m_mark); }
+    std::size_t errors() const
+    {
+        return m_sink.errors(m_mark);
+    }
 
-    std::optional<captured_diagnostic> first() const { return m_sink.first(m_mark); }
+    std::optional<captured_diagnostic> first() const
+    {
+        return m_sink.first(m_mark);
+    }
 
-    std::vector<captured_diagnostic> records() const { return m_sink.records(m_mark); }
+    std::vector<captured_diagnostic> records() const
+    {
+        return m_sink.records(m_mark);
+    }
 
 private:
     std::size_t m_mark;

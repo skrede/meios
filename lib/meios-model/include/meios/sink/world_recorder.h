@@ -25,7 +25,12 @@ namespace meios
 class world_recorder
 {
 public:
-    world_recorder(log_sink &log, topology_policy policy) : m_log(log), m_policy(policy), m_model() {}
+    world_recorder(log_sink &log, topology_policy policy)
+            : m_log(log)
+            , m_policy(policy)
+            , m_model()
+    {
+    }
 
     void on_robot(const robot_info &robot)
     {
@@ -55,12 +60,11 @@ public:
     void finish()
     {
         first_error_capture capture(m_log, m_first_failure);
-        const topology_result topo =
-            reconstruct_topology(m_model.links, m_model.joints, capture, m_policy);
-        const bool indexed = indexes_agree(capture);
-        m_model.topo = topo.topo;
-        m_ok = topo.ok && indexed;
-        m_model.kind = m_model.loops.empty() ? structure::tree : structure::closed_chain;
+        const topology_result topo = reconstruct_topology(m_model.links, m_model.joints, capture, m_policy);
+        const bool indexed         = indexes_agree(capture);
+        m_model.topo               = topo.topo;
+        m_ok                       = topo.ok && indexed;
+        m_model.kind               = m_model.loops.empty() ? structure::tree : structure::closed_chain;
     }
 
     bool ok() const
@@ -90,8 +94,13 @@ private:
     class first_error_capture final : public log_sink
     {
     public:
+        using log_sink::log;
+
         first_error_capture(log_sink &target, std::optional<source_location> &first)
-            : m_target(target), m_first(first) {}
+                : m_target(target)
+                , m_first(first)
+        {
+        }
 
         void log(level lvl, const std::string &message) override
         {
@@ -129,11 +138,9 @@ private:
     // so too, and no policy setting grades it.
     bool indexes_agree(log_sink &log)
     {
-        if(m_model.link_index.size() == m_model.links.size()
-           && m_model.joint_index.size() == m_model.joints.size())
+        if(m_model.link_index.size() == m_model.links.size() && m_model.joint_index.size() == m_model.joints.size())
             return true;
-        log.log(level::error, diagnostic_code::duplicate_name, source_location{},
-                "the model's name index and its records disagree on size");
+        log.log(level::error, diagnostic_code::duplicate_name, source_location{}, "the model's name index and its records disagree on size");
         return false;
     }
 };

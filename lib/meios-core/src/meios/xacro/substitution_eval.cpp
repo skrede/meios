@@ -24,9 +24,7 @@ namespace meios
 namespace detail
 {
 
-std::optional<std::string> core_text_evaluator::eval_to_text(std::string_view expr,
-                                                             const eval_scope &scope, log_sink &log,
-                                                             const source_location &at)
+std::optional<std::string> core_text_evaluator::eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log, const source_location &at)
 {
     core_evaluator evaluator;
     value result = evaluator.eval(expr, scope, log, at);
@@ -61,8 +59,7 @@ public:
         m_located.emplace_back(lvl, where, message);
     }
 
-    void log(level lvl, diagnostic_code code, const source_location &where,
-             const std::string &message) override
+    void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
     {
         m_coded.emplace_back(lvl, code, where, message);
     }
@@ -89,7 +86,13 @@ private:
 class relocating_sink final : public log_sink
 {
 public:
-    relocating_sink(log_sink &inner, const source_location &at) : m_inner(inner), m_at(at) {}
+    using log_sink::log;
+
+    relocating_sink(log_sink &inner, const source_location &at)
+            : m_inner(inner)
+            , m_at(at)
+    {
+    }
 
     void log(level lvl, const std::string &message) override
     {
@@ -104,8 +107,7 @@ public:
         m_inner.log(lvl, where, message);
     }
 
-    void log(level lvl, diagnostic_code code, const source_location &where,
-             const std::string &message) override
+    void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
     {
         m_inner.log(lvl, code, where, message);
     }
@@ -131,11 +133,11 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
     {
         relocating_sink relocate(sink, ctx.at);
         std::optional<std::string> out = ctx.backend->eval_to_text(expr, ctx.scope, relocate);
-        ctx.last_kind = out ? eval_failure_kind::none : ctx.backend->last_failure_kind();
+        ctx.last_kind                  = out ? eval_failure_kind::none : ctx.backend->last_failure_kind();
         return out;
     }
     std::optional<std::string> out = ctx.core.eval_to_text(expr, ctx.scope, sink, ctx.at);
-    ctx.last_kind = out ? eval_failure_kind::none : ctx.core.last_failure_kind();
+    ctx.last_kind                  = out ? eval_failure_kind::none : ctx.core.last_failure_kind();
     return out;
 }
 
@@ -146,7 +148,7 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
 // hard-fail, while an unsupported failure is left to expand_span to leave verbatim.
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
 {
-    std::string_view expr = trim(expression);
+    std::string_view expr             = trim(expression);
     std::optional<std::string> direct = string_property(ctx, expr);
     if(direct)
         return direct;
