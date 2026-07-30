@@ -7,6 +7,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <utility>
 #include <optional>
 
@@ -158,9 +159,9 @@ inline std::optional<text_read_failure> validate(HANDLE handle, bool final) noex
 inline expected<UNICODE_STRING, std::error_code> component_name(std::wstring &component) noexcept
 {
     const std::size_t bytes = component.size() * sizeof(wchar_t);
-    if(bytes > std::numeric_limits<USHORT>::max())
+    if(bytes > (std::numeric_limits<std::uint16_t>::max)())
         return unexpected<std::error_code>({static_cast<int>(ERROR_FILENAME_EXCED_RANGE), std::system_category()});
-    const auto length = static_cast<USHORT>(bytes);
+    const std::uint16_t length = static_cast<std::uint16_t>(bytes);
     return UNICODE_STRING{length, length, const_cast<PWSTR>(component.c_str())};
 }
 
