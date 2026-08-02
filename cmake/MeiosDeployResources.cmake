@@ -78,32 +78,19 @@ function(_meios_deploy_selection target name dir resources packages out)
     set(${out} "${packages}" PARENT_SCOPE)
 endfunction()
 
-# Driven by an OUTPUT rule keyed on the tree's contents rather than a POST_BUILD
-# command: POST_BUILD runs only when the target itself relinks, so editing a resource
-# without touching a source file would leave a stale tree deployed with no sign
-# anything was wrong. copy_directory_if_different keeps an unchanged tree from
-# restamping every file.
+# The rule runs on every build because copy_directory_if_different decides currency by comparing
+# content, and a modification-time comparison in front of it answers a different question than
+# whether the deployed tree is current. A POST_BUILD command stays rejected for the reason it always
+# was: it runs only when the target itself relinks, so editing a resource without touching a source
+# file would leave a stale tree deployed with no sign anything was wrong.
 function(_meios_deploy_command target slot label src dst out_rule)
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy")
-    file(GLOB_RECURSE _files CONFIGURE_DEPENDS "${src}/*")
-    # Keyed on $<CONFIG> because the destination is: under a multi-config generator each
-    # configuration has its own runtime directory, and one shared stamp would let the first
-    # configuration built mark the rest up to date and leave them without the tree. The
-    # configuration goes in the file name, not a directory, and the label is slugged for the
-    # same reason — `cmake -E touch` does not create parents, and a generator expression
-    # cannot be resolved at configure time to create them.
+    # A rule target name may not carry a separator, and a nested PACKAGES entry puts one in the label.
     string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _label_slot "${label}")
-    set(_stamp
-        "${CMAKE_CURRENT_BINARY_DIR}/meios_deploy/${target}.${slot}.${_label_slot}.$<CONFIG>.stamp")
-    add_custom_command(
-        OUTPUT  "${_stamp}"
+    set(_rule ${target}_deploy_${slot}_${_label_slot})
+    add_custom_target(${_rule}
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${src}" "${dst}"
-        COMMAND ${CMAKE_COMMAND} -E touch "${_stamp}"
-        DEPENDS ${_files}
         COMMENT "Deploying resource '${label}' to ${dst}"
         VERBATIM)
-    set(_rule ${target}_deploy_${slot}_${_label_slot})
-    add_custom_target(${_rule} DEPENDS "${_stamp}")
     add_dependencies(${target} ${_rule})
     set(${out_rule} "${_rule}" PARENT_SCOPE)
 endfunction()

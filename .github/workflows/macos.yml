@@ -113,6 +113,13 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
+      # The CMake harness cases turn on how finely the build tool compares file
+      # modification times, so the versions in play are recorded rather than assumed.
+      - name: Report build tool versions
+        run: |
+          make --version
+          cmake --version
+
       # MEIOS_BUILD_TOOLS compiles the meios CLI; MEIOS_BUILD_TESTS is required
       # for the if(TARGET meios_cli) unit tests to register (they skip silently
       # in every no-TOOLS build).

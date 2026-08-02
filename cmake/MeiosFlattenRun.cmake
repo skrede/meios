@@ -27,7 +27,8 @@ endif()
 # leftovers — one deletes the output it names, another keeps whatever landed there — so capturing
 # straight into the output would leave a truncated flattened document behind on the most common
 # developer generator. Nothing is captured off standard error, which is what carries the CLI's
-# typed diagnostic through to the build log.
+# typed diagnostic through to the build log. Publishing only a document that differs holds the
+# invariant that the output's modification time changes only when its bytes change.
 set(_tmp "${MEIOS_FLATTEN_OUT}.tmp")
 execute_process(
     COMMAND "${MEIOS_FLATTEN_CLI}" flatten ${MEIOS_FLATTEN_ARGS}
@@ -39,4 +40,13 @@ if(NOT _rc EQUAL 0)
         "MeiosFlattenRun: flatten exited ${_rc}; nothing was written.")
 endif()
 
-file(RENAME "${_tmp}" "${MEIOS_FLATTEN_OUT}")
+file(SHA256 "${_tmp}" _produced)
+set(_published "")
+if(EXISTS "${MEIOS_FLATTEN_OUT}")
+    file(SHA256 "${MEIOS_FLATTEN_OUT}" _published)
+endif()
+if(_produced STREQUAL _published)
+    file(REMOVE "${_tmp}")
+else()
+    file(RENAME "${_tmp}" "${MEIOS_FLATTEN_OUT}")
+endif()

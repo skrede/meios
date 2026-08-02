@@ -70,14 +70,11 @@ function(_meios_flatten_argv dir input args package_path eval out)
     set(${out} "${_argv}" PARENT_SCOPE)
 endfunction()
 
-# Keyed on the acquired tree rather than the deployed copy, and on the tree's contents rather than
-# the consumer's link step: the deployed path is written by another directory's command and carries
-# a generator expression, so it cannot be globbed at configure time, and a POST_BUILD command would
-# run only when the target relinks, leaving a stale document behind after an edit to a description.
-function(_meios_flatten_command target cli argv dir out_file stamp)
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/meios_flatten")
-    file(GLOB_RECURSE _files CONFIGURE_DEPENDS
-         "${dir}/*.urdf" "${dir}/*.xacro" "${dir}/*.xml" "${dir}/*.yaml")
+# The rule runs on every build because an edit to a description changes no source file: a POST_BUILD
+# command runs only when the target relinks and would leave a stale document behind, and a
+# modification-time comparison answers a different question than whether the document is current.
+# The repeated run stays cheap because the run script publishes only a document whose bytes differ.
+function(_meios_flatten_command target cli argv out_file rule)
     set(_run "${cli}")
     if(TARGET ${cli})
         set(_run "$<TARGET_FILE:${cli}>")
@@ -87,32 +84,31 @@ function(_meios_flatten_command target cli argv dir out_file stamp)
     # does not survive it either: it is evaluated before the split.
     string(REPLACE ";" "\;" _args "${argv}")
     get_property(_module_dir GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR)
-    add_custom_command(
-        OUTPUT  "${stamp}"
+    add_custom_target(${rule}
         COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${_run}" "-DMEIOS_FLATTEN_ARGS=${_args}"
                 "-DMEIOS_FLATTEN_OUT=${out_file}"
                 -P "${_module_dir}/MeiosFlattenRun.cmake"
-        COMMAND ${CMAKE_COMMAND} -E touch "${stamp}"
-        DEPENDS ${_files} "${_run}"
         COMMENT "Flattening ${out_file}"
         VERBATIM COMMAND_EXPAND_LISTS)
+    # An always-run target carries no file dependency, so what used to order the flatten after the
+    # binary it drives is now a target dependency. There is none to add when the caller supplied a
+    # path instead of a target.
+    if(TARGET ${cli})
+        add_dependencies(${rule} ${cli})
+    endif()
 endfunction()
 
 function(_meios_flatten_rule target resource input output args package_path cli eval out)
     _meios_flatten_input("${target}" "${resource}" "${input}" _dir)
     _meios_flatten_argv("${_dir}" "${input}" "${args}" "${package_path}" "${eval}" _argv)
+    # A rule's output may not carry a target-dependent expression, which is why the document is
+    # named through a command argument rather than declared as the rule's output.
     set(_file "$<TARGET_FILE_DIR:${target}>/${output}")
     string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _slug "${output}")
-    # A rule's output may not carry a target-dependent expression, so the rule produces a stamp and
-    # writes the document where the deployed tree lives. The stamp carries the configuration for the
-    # same reason the deployed tree's does: each configuration has its own runtime directory, and
-    # one shared stamp would let the first configuration built mark the rest up to date.
-    set(_stamp "${CMAKE_CURRENT_BINARY_DIR}/meios_flatten/${target}.${_slug}.$<CONFIG>.stamp")
-    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_dir}" "${_file}" "${_stamp}")
-    add_custom_target(${target}_flatten_${_slug} DEPENDS "${_stamp}")
-    # Ordering onto the deploy rule is a target dependency rather than a dependency on its stamp
-    # file, because a file dependency only connects two commands issued in one directory and flatten
-    # may be called from another.
+    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_file}" ${target}_flatten_${_slug})
+    # Ordering onto the deploy rule is a target dependency rather than a file dependency, because a
+    # file dependency only connects two commands issued in one directory and flatten may be called
+    # from another.
     get_property(_deploy GLOBAL PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${resource})
     if(_deploy)
         add_dependencies(${target}_flatten_${_slug} ${_deploy})
