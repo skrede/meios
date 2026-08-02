@@ -8,7 +8,6 @@
 #include <ios>
 #include <string>
 #include <fstream>
-#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -18,7 +17,7 @@ namespace meios
 {
 
 package_writer::package_writer(std::filesystem::path root, log_sink &log)
-    : m_root(std::move(root)), m_log(log)
+    : m_root(detail::absolute_base(root)), m_log(log)
 {}
 
 bool package_writer::copy_entry(const bundle_entry &entry, bool dry_run)

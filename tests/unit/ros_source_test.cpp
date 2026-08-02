@@ -116,6 +116,27 @@ TEST_CASE("a ROS2 ament prefix resolves package://arm/meshes and reports capabil
     REQUIRE(has_package(source.packages(), "arm"));
 }
 
+TEST_CASE("a relative ament prefix resolves a package share file", "[ros]")
+{
+    temp_tree tree;
+    make_ament_package(tree.root, "arm");
+
+    std::vector<entry> log_entries;
+    meios::log_sink_f log{ capture{ log_entries } };
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(tree.root.parent_path());
+    meios::ros_package_source source({}, { tree.root.filename() }, log);
+    const bool known = has_package(source.packages(), "arm");
+    const std::optional<meios::resolved_asset> asset = source.locate("arm", "meshes/x.stl");
+    std::filesystem::current_path(saved);
+
+    REQUIRE(known);
+    REQUIRE(asset.has_value());
+    REQUIRE(asset->path().is_absolute());
+    REQUIRE(std::filesystem::exists(asset->path()));
+}
+
 TEST_CASE("a relative that escapes the resolved share dir is rejected", "[ros]")
 {
     temp_tree tree;

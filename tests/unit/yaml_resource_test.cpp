@@ -173,6 +173,23 @@ TEST_CASE("a bare spec resolves against the document handed to the call", "[yaml
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("a bare relative document name still reaches a resource beside it", "[yaml][resource]")
+{
+    const std::filesystem::path root = seed_tree();
+    tally counts;
+    meios::log_sink_f sink{ std::ref(counts) };
+    probe under(sink, root, {});
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(root / "docs");
+    const std::optional<std::string> text = under.loader("cfg.yaml", "robot.xacro");
+    std::filesystem::current_path(saved);
+    std::filesystem::remove_all(root);
+
+    REQUIRE(text == std::string("from: docs"));
+    REQUIRE(counts.errors == 0);
+}
+
 TEST_CASE("a bare spec with no document resolves only inside a configured root", "[yaml][resource]")
 {
     const std::filesystem::path root = seed_tree();

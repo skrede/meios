@@ -37,8 +37,9 @@ std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &docu
     std::vector<std::filesystem::path> probes;
     probes.reserve(roots.size() + 1);
     if(!document.empty())
-        probes.push_back(document.parent_path());
-    probes.insert(probes.end(), roots.begin(), roots.end());
+        probes.push_back(absolute_base(document).parent_path());
+    for(const std::filesystem::path &root : roots)
+        probes.push_back(absolute_base(root));
     return probes;
 }
 

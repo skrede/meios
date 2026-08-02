@@ -23,6 +23,11 @@ namespace detail
 
 using contained_path_result = expected<std::optional<std::filesystem::path>, operation_failure>;
 
+// std::filesystem::absolute answers an empty input with "" and EINVAL on libstdc++ but with the
+// process working directory on libc++, so the empty case is decided here rather than delegated:
+// a root that names nothing keeps naming nothing.
+std::filesystem::path absolute_base(const std::filesystem::path &root);
+
 contained_path_result try_contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate);
 
 // Canonicalizes both and answers the canonicalized candidate only when it stays

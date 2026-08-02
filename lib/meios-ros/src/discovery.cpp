@@ -1,5 +1,7 @@
 #include "meios/ros/ros_package_source.h"
 
+#include "meios/io/directory_source.h"
+
 #include "meios/diagnostic/level.h"
 
 #include <pugixml.hpp>
@@ -150,9 +152,9 @@ std::map<std::string, std::filesystem::path> detail::discover_packages(
 {
     std::map<std::string, std::filesystem::path> bases;
     for(const std::filesystem::path &prefix : ament_prefixes)
-        read_ament_prefix(prefix, bases);
+        read_ament_prefix(absolute_base(prefix), bases);
     for(const std::filesystem::path &root : ros1_roots)
-        crawl_ros1_root(root, bases, log);
+        crawl_ros1_root(absolute_base(root), bases, log);
     return bases;
 }
 

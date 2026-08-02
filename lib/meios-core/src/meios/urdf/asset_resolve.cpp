@@ -17,7 +17,6 @@
 #include <algorithm>
 #include <filesystem>
 #include <string_view>
-#include <system_error>
 
 namespace meios::detail
 {
@@ -25,21 +24,19 @@ namespace meios::detail
 namespace
 {
 
-// A document named by a bare relative path has an empty parent, and an empty root contains
-// nothing, so the base is made absolute before anything is joined against or checked against
-// it; otherwise a relative asset false-refuses against the very directory it was written in.
+// The base is made absolute so a document named by a bare relative path does not false-refuse
+// the siblings it was written beside. A document with no path contributes an empty base, so a
+// byte-backed document's relative references probe only the configured roots.
 std::filesystem::path document_base(const parse_context &ctx)
 {
-    std::error_code ec;
-    const std::filesystem::path full = std::filesystem::absolute(ctx.document, ec);
-    return ec ? ctx.document.parent_path() : full.parent_path();
+    return absolute_base(ctx.document).parent_path();
 }
 
 std::optional<std::filesystem::path> first_container(const std::filesystem::path &candidate, const parse_context &ctx)
 {
     for(const std::filesystem::path &root : ctx.package_roots)
     {
-        if(const std::optional<std::filesystem::path> real = contained_under(root, candidate))
+        if(const std::optional<std::filesystem::path> real = contained_under(absolute_base(root), candidate))
             return real;
     }
     return contained_under(document_base(ctx), candidate);

@@ -56,6 +56,15 @@ bool is_absent(const std::error_code &error)
 
 }
 
+std::filesystem::path detail::absolute_base(const std::filesystem::path &root)
+{
+    if(root.empty())
+        return root;
+    std::error_code ec;
+    const std::filesystem::path full = std::filesystem::absolute(root, ec);
+    return ec ? root : full;
+}
+
 // A containment decision is only meaningful between two absolute paths: canonicalizing a
 // path with no existing prefix succeeds and leaves it relative, at which point the escape
 // test measures it against the process working directory rather than against a root.
@@ -67,16 +76,16 @@ std::optional<std::filesystem::path> detail::contained_under(const std::filesyst
 
 detail::contained_path_result detail::try_contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
+    if(!root.is_absolute() || !candidate.is_absolute())
+        return std::nullopt;
     std::error_code ec;
     const std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
     if(ec)
         return unexpected<operation_failure>({operation_kind::canonicalize, ec});
-    if(!base.is_absolute())
-        return std::nullopt;
     const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, ec);
     if(ec)
         return unexpected<operation_failure>({operation_kind::canonicalize, ec});
-    if(!real.is_absolute() || escapes_root(base, real))
+    if(escapes_root(base, real))
         return std::nullopt;
     return std::optional{real};
 }
@@ -94,7 +103,7 @@ std::optional<std::filesystem::path> detail::contained_candidate(const std::file
 }
 
 directory_source::directory_source(std::filesystem::path root, log_sink &log)
-        : m_root(std::move(root))
+        : m_root(detail::absolute_base(root))
         , m_log(log)
 {
 }

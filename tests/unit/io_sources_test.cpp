@@ -328,6 +328,42 @@ TEST_CASE("directory_source resolves an in-root file to a path", "[io][sources][
     std::filesystem::remove_all(root);
 }
 
+TEST_CASE("a relative source root resolves an in-root asset and still refuses an escape",
+          "[io][sources][dir]")
+{
+    const std::filesystem::path root = seed_root();
+    std::error_code ec;
+    const std::filesystem::path expected =
+        std::filesystem::weakly_canonical(root / "pkg" / "meshes" / "x.stl", ec);
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(root.parent_path());
+    meios::directory_source source{ root.filename(), seam };
+    const std::optional<meios::resolved_asset> hit = source.locate("pkg", "meshes/x.stl");
+    const meios::source_lookup_result typed = source.try_locate("pkg", "meshes/x.stl");
+    const std::optional<std::filesystem::path> named = source.path_of("pkg", "meshes/x.stl");
+    const bool escaped = source.locate("pkg", "../../etc/passwd").has_value();
+    const std::size_t refusals =
+        count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset);
+    std::filesystem::current_path(saved);
+    std::filesystem::remove_all(root);
+
+    REQUIRE_FALSE(ec);
+    REQUIRE(hit.has_value());
+    REQUIRE(hit->path() == expected);
+    REQUIRE(hit->source_root().has_value());
+    REQUIRE(hit->source_root()->is_absolute());
+    REQUIRE(typed.has_value());
+    REQUIRE(typed->has_value());
+    REQUIRE((*typed)->path() == expected);
+    REQUIRE(named == expected);
+    REQUIRE_FALSE(escaped);
+    REQUIRE(refusals == 1);
+}
+
 TEST_CASE("directory_source rejects a traversal escape with a loud diagnostic",
           "[io][sources][traversal]")
 {
@@ -377,6 +413,36 @@ TEST_CASE("directory_source rejects an escaping in-root symlink and never reads 
     REQUIRE(count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset) == 2);
 
     std::filesystem::remove_all(parent);
+}
+
+TEST_CASE("a relative bundle root resolves an in-root asset and still refuses an escape",
+          "[io][sources][bundle]")
+{
+    const std::filesystem::path root = seed_root();
+    std::error_code ec;
+    const std::filesystem::path expected =
+        std::filesystem::weakly_canonical(root / "pkg" / "meshes" / "x.stl", ec);
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(root.parent_path());
+    meios::bundle_source source{ root.filename(), seam };
+    const std::optional<meios::resolved_asset> hit = source.locate("pkg", "meshes/x.stl");
+    const std::optional<std::filesystem::path> named = source.path_of("pkg", "meshes/x.stl");
+    const bool escaped = source.locate("pkg", "../../etc/passwd").has_value();
+    const std::size_t refusals =
+        count_code(events, meios::level::error, meios::diagnostic_code::uncontained_asset);
+    std::filesystem::current_path(saved);
+    std::filesystem::remove_all(root);
+
+    REQUIRE_FALSE(ec);
+    REQUIRE(hit.has_value());
+    REQUIRE(hit->path() == expected);
+    REQUIRE(named == expected);
+    REQUIRE_FALSE(escaped);
+    REQUIRE(refusals == 1);
 }
 
 TEST_CASE("bundle_source resolves in-root and rejects escape like directory_source",

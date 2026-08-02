@@ -16,6 +16,9 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
+#include <optional>
+#include <algorithm>
 #include <filesystem>
 
 namespace
@@ -100,6 +103,72 @@ TEST_CASE("the asset terminal emits one structured record after native exhaustio
     REQUIRE(records.front().cause->operation == meios::operation_kind::canonicalize);
     REQUIRE(records.front().cause->native.value() == 23);
     REQUIRE(&records.front().cause->native.category() == &acquisition_test::lookup_error_category);
+}
+
+TEST_CASE("a document with no path contains nothing", "[io][lookup]")
+{
+    std::error_code error;
+    const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
+    REQUIRE_FALSE(error);
+    const auto root = meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    meios::scratch_dir tree{*root};
+    std::filesystem::create_directories(tree.path() / "meshes");
+    std::ofstream(tree.path() / "meshes" / "x.stl") << "mesh-bytes";
+
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::source_stack sources;
+    meios::core_evaluator eval;
+    meios::parse_context ctx{
+            sources, eval, log, meios::missing_asset::skip, meios::topology_policy::fail, meios::material_policy::warn, meios::strictness::fail, {}, meios::completeness::none, {}};
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(tree.path());
+    const std::optional<std::string> resolved = meios::detail::resolve_asset_uri("meshes/x.stl", ctx, {});
+    std::filesystem::current_path(saved);
+
+    REQUIRE_FALSE(resolved.has_value());
+    REQUIRE(records.size() == 1);
+    REQUIRE(records.front().code == meios::diagnostic_code::uncontained_asset);
+}
+
+TEST_CASE("a relative configured root still contains an in-root asset", "[io][lookup]")
+{
+    std::error_code error;
+    const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
+    REQUIRE_FALSE(error);
+    const auto root = meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    meios::scratch_dir tree{*root};
+    std::filesystem::create_directories(tree.path() / "pkg" / "meshes");
+    std::ofstream(tree.path() / "pkg" / "meshes" / "x.stl") << "mesh-bytes";
+    const std::filesystem::path mesh = std::filesystem::weakly_canonical(tree.path() / "pkg" / "meshes" / "x.stl", error);
+    REQUIRE_FALSE(error);
+
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::source_stack sources;
+    meios::core_evaluator eval;
+    meios::parse_context ctx{sources,
+                             eval,
+                             log,
+                             meios::missing_asset::skip,
+                             meios::topology_policy::fail,
+                             meios::material_policy::warn,
+                             meios::strictness::fail,
+                             {},
+                             meios::completeness::none,
+                             {tree.path().filename()}};
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(tree.path().parent_path());
+    const std::optional<std::string> resolved = meios::detail::resolve_asset_uri(mesh.string(), ctx, {});
+    std::filesystem::current_path(saved);
+
+    const bool errored = std::any_of(records.begin(), records.end(), [](const record &noted) { return noted.level == meios::level::error; });
+    REQUIRE(resolved == std::optional<std::string>{mesh.string()});
+    REQUIRE_FALSE(errored);
 }
 
 TEST_CASE("canonicalization failure remains distinct from containment rejection", "[io][lookup]")
