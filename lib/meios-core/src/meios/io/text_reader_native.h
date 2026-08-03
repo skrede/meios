@@ -114,10 +114,13 @@ inline native_file_result stream(fd_owner file) noexcept
 
 }
 
+// A caller-named top-level path has no root to escape, so this open follows a final symlink the
+// way the Windows CRT does; the fstat below still decides on the opened descriptor, never a name.
+// Root-relative opens keep O_NOFOLLOW, where a link can leave the authorized root.
 inline native_file_result native_open(const std::filesystem::path &path) noexcept
 {
     errno = 0;
-    native::fd_owner file{::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW)};
+    native::fd_owner file{::open(path.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC)};
     if(file.get() < 0)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
     return native::stream(std::move(file));

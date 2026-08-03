@@ -133,6 +133,26 @@ TEST_CASE("native ordinary failures retain the CRT error domain", "[text_reader]
     REQUIRE(result.error().cause.native.value() != 0);
 }
 
+TEST_CASE("an ordinary read follows a link to a regular file and still refuses other kinds", "[text_reader]")
+{
+    meios::scratch_dir tree = fresh_tree();
+    write_file(tree.path() / "real.txt", "through-link");
+    std::filesystem::create_directories(tree.path() / "sub");
+    require_link(tree.path() / "real.txt", tree.path() / "file-link", false);
+    require_link(tree.path() / "sub", tree.path() / "directory-link", true);
+
+    const meios::text_read_result linked = meios::read_text_file(tree.path() / "file-link");
+    REQUIRE(linked.has_value());
+    REQUIRE(*linked == "through-link");
+    REQUIRE_FALSE(meios::read_text_file(tree.path() / "directory-link").has_value());
+
+#if !defined(_WIN32)
+    REQUIRE(::mkfifo((tree.path() / "pipe").c_str(), 0600) == 0);
+    require_link(tree.path() / "pipe", tree.path() / "pipe-link", false);
+    REQUIRE_FALSE(meios::read_text_file(tree.path() / "pipe-link").has_value());
+#endif
+}
+
 TEST_CASE("contained reads reject links directories and special files", "[text_reader]")
 {
     meios::scratch_dir tree    = fresh_tree();
