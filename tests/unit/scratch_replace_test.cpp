@@ -1,5 +1,7 @@
 #include "scratch_source.h"
 
+#include <meios/diagnostic/claims.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -20,6 +22,8 @@ TEST_CASE("the entry-update vocabulary spells itself", "[io][scratch][replace]")
 {
     REQUIRE(meios::to_string(meios::update_behavior::reject) == "reject");
     REQUIRE(meios::to_string(meios::update_behavior::replace) == "replace");
+    REQUIRE(meios::to_string(meios::diagnostic_code::duplicate_asset_entry) == "duplicate_asset_entry");
+    REQUIRE(meios::cleared_by(meios::diagnostic_code::duplicate_asset_entry) == meios::completeness::none);
 }
 
 TEST_CASE("a duplicate key is refused and the first bytes keep resolving", "[io][scratch][replace]")
@@ -28,7 +32,8 @@ TEST_CASE("a duplicate key is refused and the first bytes keep resolving", "[io]
     held.source.add("pkg", "meshes/arm.dae", "first-bytes");
     held.source.add("pkg", "meshes/arm.dae", "second-bytes");
 
-    REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, false) == 1);
+    REQUIRE(refusals(held.events, meios::diagnostic_code::duplicate_asset_entry, false) == 1);
+    REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, false) == 0);
     REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "first-bytes");
 }
 
@@ -38,6 +43,7 @@ TEST_CASE("a source built to replace accepts the second offer", "[io][scratch][r
     held.source.add("pkg", "meshes/arm.dae", "first-bytes");
     held.source.add("pkg", "meshes/arm.dae", "second-bytes");
 
+    REQUIRE(refusals(held.events, meios::diagnostic_code::duplicate_asset_entry, false) == 0);
     REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, false) == 0);
     REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "second-bytes");
 }

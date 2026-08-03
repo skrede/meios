@@ -36,6 +36,10 @@ constexpr completeness cleared_by(diagnostic_code code) noexcept
         case diagnostic_code::malformed_asset_uri:       return completeness::deployment_complete;
         case diagnostic_code::lfs_pointer_asset:         return completeness::deployment_complete;
         case diagnostic_code::asset_write_failed:        return completeness::deployment_complete;
+        // A refused duplicate offer is a statement about the consuming application's own
+        // configuration rather than about the document: the source keeps serving the first bytes
+        // and every path it handed out still names that file, so nothing was left undeployed.
+        case diagnostic_code::duplicate_asset_entry:     return completeness::none;
         case diagnostic_code::unsupported_uri_scheme:    return completeness::deployment_complete;
         case diagnostic_code::unsupported_uri_authority: return completeness::deployment_complete;
         case diagnostic_code::uncontained_asset:         return completeness::deployment_complete;

@@ -52,10 +52,11 @@ public:
             report_setup(*failure);
     }
 
-    memory_source(memory_source &&) noexcept            = default;
-    memory_source &operator=(memory_source &&) noexcept = default;
-    memory_source(const memory_source &)                = delete;
-    memory_source &operator=(const memory_source &)     = delete;
+    // The move specification is deduced, not declared: two std::map moves a standard library may leave throwing would terminate under an unconditional noexcept.
+    memory_source(memory_source &&)                 = default;
+    memory_source &operator=(memory_source &&)      = default;
+    memory_source(const memory_source &)            = delete;
+    memory_source &operator=(const memory_source &) = delete;
 
     ~memory_source() = default;
 
@@ -157,7 +158,7 @@ private:
     {
         if(m_behavior == update_behavior::reject)
         {
-            refuse(diagnostic_code::asset_write_failed,
+            refuse(diagnostic_code::duplicate_asset_entry,
                    "refused a second entry for " + named(wanted) +
                            "; a byte-backed source holds its entries immutable unless it was built to replace them");
             return *this;

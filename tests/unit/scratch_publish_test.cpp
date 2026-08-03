@@ -121,6 +121,25 @@ TEST_CASE("a write that cannot reach its temporary is reported as a write", "[io
     REQUIRE(entry_count(target.parent_path()) == 1);
 }
 
+// The occupied path is the staging file, not the target: the publication opens a stream only on
+// the staging file and reaches the target through a rename, so occupying the target would fail the
+// rename instead and report publish.
+TEST_CASE("a stream that cannot open its staging path is reported as an open", "[io][scratch][publish]")
+{
+    const std::filesystem::path root   = fresh_dir("scratch-publish-open");
+    const std::filesystem::path target = root / "pkg" / "arm.dae";
+    std::error_code ec;
+    std::filesystem::create_directories(root / meios::detail::scratch_staging_dir / meios::detail::scratch_staging_file, ec);
+    REQUIRE_FALSE(ec);
+
+    const meios::detail::scratch_step_result result = meios::detail::publish_scratch_entry(root, target, "first-bytes");
+
+    REQUIRE_FALSE(result.has_value());
+    REQUIRE(result.error().operation == meios::operation_kind::open);
+    REQUIRE(result.error().native.value() != 0);
+    REQUIRE(static_cast<bool>(result.error().native.default_error_condition()));
+}
+
 // Whether a rename over a destination somebody still holds open succeeds is a platform fact this
 // project has measured on POSIX only, so the case asserts whichever branch the host takes and
 // records the native value it saw. No retry bound is derived from it here.

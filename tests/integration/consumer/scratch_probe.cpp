@@ -124,6 +124,21 @@ int run_cause(sink_probe &probe)
     return 0;
 }
 
+int check_served_asset(const std::optional<meios::resolved_asset> &hit)
+{
+    if(!hit || !hit->source_root())
+        return refuse("a resolution did not report the scratch root it was served from");
+    const std::filesystem::path &root = *hit->source_root();
+    if(!std::filesystem::exists(root) || !std::filesystem::is_directory(root))
+        return refuse("a resolution reported a scratch root that is not a directory");
+    if(!std::filesystem::is_regular_file(hit->path()))
+        return refuse("a resolution reported an asset path that is not a regular file");
+    const std::filesystem::path within = hit->path().lexically_relative(root);
+    if(within.empty() || *within.begin() == "..")
+        return refuse("a resolution reported an asset outside the scratch root it named");
+    return 0;
+}
+
 int run_teardown(sink_probe &probe)
 {
     std::filesystem::path root;
@@ -131,16 +146,23 @@ int run_teardown(sink_probe &probe)
         meios::memory_source source{probe.sink};
         source.add("pkg", "meshes/arm.dae", "first-bytes");
         const std::optional<meios::resolved_asset> hit = source.locate("pkg", "meshes/arm.dae");
-        if(!hit || !hit->source_root())
-            return refuse("a resolution did not report the scratch root it was served from");
+        if(const int rc = check_served_asset(hit))
+            return rc;
         root = *hit->source_root();
     }
-    if(std::filesystem::exists(root))
-        std::cout << "the scratch tree outlived its source, which a platform that will not remove"
-                  << " a file somebody holds open is documented to leave behind\n";
-    else
+    if(!std::filesystem::exists(root))
+    {
         std::cout << "the scratch tree went away with its source\n";
+        return 0;
+    }
+#if defined(_WIN32)
+    // remove_all stops at the first error, so a platform that will not delete a file somebody
+    // holds open leaves the tree behind rather than half-deleting it; the leak is reported.
+    std::cout << "the scratch tree outlived its source, which a platform that will not remove a file somebody holds open is documented to leave behind\n";
     return 0;
+#else
+    return refuse("the scratch tree outlived the source that owned it");
+#endif
 }
 
 }

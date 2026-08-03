@@ -86,26 +86,45 @@ public:
     }
 
     // Removal answers nothing because its own failure has no reporting site: the failure a
-    // caller is told about is the one that made the root unfit to serve from.
+    // caller is told about is the one that made the root unfit to serve from. This verb and
+    // write_bytes below are declared noexcept while calling operations the standard permits to
+    // throw when an allocation fails — remove_all's recursive traversal and an ofstream's buffer
+    // — so each turns that throw into a value rather than letting it terminate the process.
     void remove_tree(const std::filesystem::path &path) const noexcept override
     {
-        std::error_code ec;
-        std::filesystem::remove_all(path, ec);
+        try
+        {
+            std::error_code ec;
+            std::filesystem::remove_all(path, ec);
+        }
+        catch(const std::exception &)
+        {
+        }
     }
 
     // The close is checked rather than assumed: a buffered write reaches the file there, so a
-    // full disk surfaces on close and nowhere earlier.
+    // full disk surfaces on close and nowhere earlier. The two failures are spelled apart because
+    // a stream that never opened and a stream that failed while writing are different facts about
+    // the filesystem — an occupied path and a full disk — and telling a consumer which step failed
+    // is what the seam is for.
     scratch_step_result write_bytes(const std::filesystem::path &path, std::string_view bytes) const noexcept override
     {
-        errno = 0;
-        std::ofstream out(path, std::ios::binary | std::ios::out | std::ios::trunc);
-        if(!out.is_open())
-            return refuse(operation_kind::write, stream_error());
-        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-        out.close();
-        if(out.fail())
-            return refuse(operation_kind::write, stream_error());
-        return {};
+        try
+        {
+            errno = 0;
+            std::ofstream out(path, std::ios::binary | std::ios::out | std::ios::trunc);
+            if(!out.is_open())
+                return refuse(operation_kind::open, stream_error());
+            out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+            out.close();
+            if(out.fail())
+                return refuse(operation_kind::write, stream_error());
+            return {};
+        }
+        catch(const std::exception &)
+        {
+            return refuse(operation_kind::open, make_error_code(std::errc::not_enough_memory));
+        }
     }
 };
 

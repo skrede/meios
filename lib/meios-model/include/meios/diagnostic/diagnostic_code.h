@@ -28,6 +28,7 @@ enum class diagnostic_code
     malformed_asset_uri,
     lfs_pointer_asset,
     asset_write_failed,
+    duplicate_asset_entry,
     unsupported_uri_scheme,
     unsupported_uri_authority,
     uncontained_asset,
@@ -88,6 +89,7 @@ constexpr std::string_view to_string(diagnostic_code code) noexcept
         case diagnostic_code::malformed_asset_uri:       return "malformed_asset_uri";
         case diagnostic_code::lfs_pointer_asset:         return "lfs_pointer_asset";
         case diagnostic_code::asset_write_failed:        return "asset_write_failed";
+        case diagnostic_code::duplicate_asset_entry:     return "duplicate_asset_entry";
         case diagnostic_code::unsupported_uri_scheme:    return "unsupported_uri_scheme";
         case diagnostic_code::unsupported_uri_authority: return "unsupported_uri_authority";
         case diagnostic_code::uncontained_asset:         return "uncontained_asset";
