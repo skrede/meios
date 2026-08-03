@@ -91,12 +91,19 @@ private:
         return std::nullopt;
     }
 
+    // The parent is resolved once here rather than at each resolution: this root is reported
+    // verbatim beside paths that were themselves resolved, so the two are lexically related only if
+    // it is too. Resolved weakly rather than strictly, so a temporary directory that survives the
+    // status step still refuses at the creation step rather than at a third one.
     static expected<std::filesystem::path, operation_failure> open_root()
     {
         std::error_code ec;
-        const std::filesystem::path parent = std::filesystem::temp_directory_path(ec);
+        const std::filesystem::path named = std::filesystem::temp_directory_path(ec);
         if(ec)
             return unexpected<operation_failure>({operation_kind::status, ec});
+        const std::filesystem::path parent = std::filesystem::weakly_canonical(named, ec);
+        if(ec)
+            return unexpected<operation_failure>({operation_kind::canonicalize, ec});
         return create_scratch_root(parent);
     }
 };

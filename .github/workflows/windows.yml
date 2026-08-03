@@ -146,6 +146,22 @@ jobs:
           & ctest --output-on-failure --no-tests=error -R '^scratch_replace\.' -C Release --timeout 60
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The scratch denial and symlinked stems register only where symbolic links exist, so this
+      # job focuses neither: a step that discovered nothing would fail it by design.
+      - name: Focus scratch alias tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_alias\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_alias\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch alias tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_alias\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_alias\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
 

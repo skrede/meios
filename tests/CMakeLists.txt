@@ -238,6 +238,33 @@ if(EXISTS ${scratch_unusable_test_src})
         PROPERTIES ENVIRONMENT "${absent_temp_environment}")
 endif()
 
+# The link this stem needs is a build-tree artifact rather than a fixture, because the environment
+# it steers is process-wide and belongs to the registration. Creating a symbolic link needs a
+# privilege Windows does not grant by default, so the condition lives here: a stem registered
+# anyway would build a binary with no cases in it.
+set(scratch_symlinked_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scratch_symlinked_test.cpp)
+if(NOT WIN32 AND EXISTS ${scratch_symlinked_test_src})
+    set(symlinked_temp_target ${CMAKE_CURRENT_BINARY_DIR}/symlinked-temporary-directory-target)
+    set(symlinked_temp_link ${CMAKE_CURRENT_BINARY_DIR}/symlinked-temporary-directory)
+    file(MAKE_DIRECTORY ${symlinked_temp_target})
+    file(REMOVE ${symlinked_temp_link})
+    file(CREATE_LINK ${symlinked_temp_target} ${symlinked_temp_link} SYMBOLIC
+        RESULT symlinked_temp_result)
+    # A stem whose environment is a plain directory asserts nothing, so a link that could not be
+    # created skips the registration rather than registering cases that would pass vacuously.
+    if(symlinked_temp_result STREQUAL "0")
+        add_executable(scratch_symlinked_test ${scratch_symlinked_test_src})
+        target_link_libraries(scratch_symlinked_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+                Catch2::Catch2WithMain)
+        meios_enable_coverage(scratch_symlinked_test)
+        meios_warnings(scratch_symlinked_test)
+        catch_discover_tests(scratch_symlinked_test
+            TEST_PREFIX "scratch_symlinked."
+            PROPERTIES ENVIRONMENT "TMPDIR=${symlinked_temp_link}")
+    endif()
+endif()
+
 foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_strict)
     set(urdf_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${urdf_test_src})

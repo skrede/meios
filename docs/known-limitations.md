@@ -49,7 +49,11 @@ a platform rather than reading the narrowing call as a guarantee it cannot give 
 **The guard that refuses an entry offered into the publication staging directory folds ASCII case,
 and that fold has run on no case-folding filesystem.** The comparison folds because a differently-cased
 leading component names the same real directory where the filesystem folds case. Every run to date has
-been on a case-sensitive filesystem, so the fold is correct by construction and unmeasured.
+been on a case-sensitive filesystem, so the fold is correct by construction and unmeasured. A second
+guard, at publication rather than at the offer, refuses a target another entry's file already occupies
+by comparing the files themselves rather than the text that named them, so it is total against a
+differently-cased spelling wherever the filesystem folds case — but it, too, has run on no volume that
+folds.
 
 **Creation beneath a resolved temporary directory is not driven through a source.** What a source does
 when the system temporary directory itself does not exist is driven end to end — pointing the
@@ -59,17 +63,31 @@ directory resolves and the root creation beneath it fails, is driven against the
 directly — with an unusable parent, and with scripted candidate names and a scripted narrowing outcome
 behind the operations seam — but never with a source above it.
 
+**A byte-backed source resolves the system temporary directory to its real path once, when it creates
+its scratch area.** The root it reports and every asset path it derives are therefore the same kind of
+path, and a resolved asset lies under the root its own resolution names. Before that, the root was
+reported with whatever spelling the environment carried: where the system temporary directory is
+reached through a symbolic link, that spelling is not a prefix of the paths derived beneath it, so a
+consumer relating a resolved path to the root it was served from — the relation the reported root
+exists for — got the wrong answer and refused. That is measured rather than hypothetical: an installed
+consumer performing exactly that relation refused on both platforms whose temporary directory is
+reached through a link. The relationship is now driven by a case that points the temporary-directory
+environment at a symbolic link, so the shape is reproduced on any host rather than waited for.
+
 **What has been driven natively, and where, stated exactly.** The candidate-collision sweep, the
 occupancy discrimination and the setup-precedence cases have been run and have passed on Linux, on
 macOS and on Windows, with the two symlink-occupancy forms compiled out on the platform that has no
-symbolic links and nothing reported as skipped in their place. The installed consumer — a duplicate
-refusal, a replacement and rematerialization on one stable path, a cause-carrying publication failure,
-and the scratch teardown — has been built against an installed package and run directly on all three
-as well. **Those consumer runs, and the publication and replacement cases, were taken against an
-earlier revision of that code.** The publication primitive, the entry-offer guard, the diagnostic
-vocabulary and the consumer exercise have all changed since; the current publication and replacement
-code has been observed on Linux only. Read the three-platform result as covering the scratch-setup
-path, not the publication path.
+symbolic links and nothing reported as skipped in their place. The publication and replacement cases
+have been run and have passed on all three as well. The cause-carrying publication step genuinely
+differs by platform and each value is its own system's: Linux reports 20, "Not a directory"; macOS
+reports 17, "File exists"; Windows reports 183, "Cannot create a file when that file already exists."
+The installed consumer — a duplicate refusal, a replacement and rematerialization on one stable path,
+a cause-carrying publication failure, and the scratch teardown — has been built against an installed
+package and run directly on all three, and it is the run that refused on the two platforms whose
+temporary directory is reached through a symbolic link, on the containment relation described above
+and on nothing else. **The resolution that closes that refusal has been observed on this project's
+development platform only.** A green consumer run on the other two platforms at a revision carrying it
+is an observation that has not been made, and nothing here should be read as claiming it.
 
 **Whether a replacement over a destination somebody still holds open succeeds is a platform fact, and
 it is measured on POSIX only.** The case asserts whichever branch its host takes rather than assuming
@@ -78,6 +96,13 @@ reads the replacement. On the other two platforms the case runs and passes, but 
 is not retained: a passing case's output is not kept, and both branches pass. **No native value for
 the refusal has been recorded on any platform**, so the input a retry bound would need does not exist
 yet. No bound is derived from it, and none appears anywhere in the publication path.
+
+**A directory-backed source makes its configured root absolute but does not resolve it.** Where that
+root is reached through a symbolic link, the root such a source reports and the paths it derives are
+again not the same kind of path, so a consumer relating one to the other gets the same wrong answer
+the byte-backed source used to give. The fix shape is identical and it has not been applied there.
+Until it is, treat a directory-backed source's reported root as a spelling of where that source was
+configured rather than as a prefix a resolved path can be measured against.
 
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directory once, when it is resolved.

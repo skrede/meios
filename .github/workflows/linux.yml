@@ -146,6 +146,44 @@ jobs:
           echo "scratch_replace registered $registered test(s)"
           ctest -R '^scratch_replace\.' --output-on-failure --no-tests=error
 
+      - name: Focus scratch alias tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_alias\.'"
+          registered=$(ctest -N -R '^scratch_alias\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_alias registered no tests"
+            exit 1
+          fi
+          echo "scratch_alias registered $registered test(s)"
+          ctest -R '^scratch_alias\.' --output-on-failure --no-tests=error
+
+      # The next two stems register only where symbolic links exist, so the Windows build job
+      # carries no step for either: a step that discovered nothing would fail it by design.
+      - name: Focus scratch denial tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_denial\.'"
+          registered=$(ctest -N -R '^scratch_denial\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_denial registered no tests"
+            exit 1
+          fi
+          echo "scratch_denial registered $registered test(s)"
+          ctest -R '^scratch_denial\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch symlinked tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_symlinked\.'"
+          registered=$(ctest -N -R '^scratch_symlinked\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_symlinked registered no tests"
+            exit 1
+          fi
+          echo "scratch_symlinked registered $registered test(s)"
+          ctest -R '^scratch_symlinked\.' --output-on-failure --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 
