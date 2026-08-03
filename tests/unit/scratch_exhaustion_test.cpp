@@ -3,9 +3,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <new>
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 #include <fstream>
+#include <optional>
 #include <filesystem>
 #include <system_error>
 
@@ -64,6 +65,25 @@ std::size_t removing_allocations(const meios::detail::scratch_operations &operat
     const allocation_window window{ false };
     operations.remove_tree(path);
     return window_uses;
+}
+
+std::size_t stemming_allocations(const meios::detail::scratch_operations &operations)
+{
+    const allocation_window window{ false };
+    operations.stem();
+    return window_uses;
+}
+
+// The result is unwrapped here rather than assigned to a declared variable because the fallback
+// expected<T, E> has no default constructor, and this stem carries a value where the two step
+// verbs carry void.
+std::optional<meios::operation_failure> refused_stem(const meios::detail::scratch_operations &operations)
+{
+    const allocation_window window{ true };
+    const meios::detail::scratch_stem_result drawn = operations.stem();
+    if(drawn)
+        return std::nullopt;
+    return drawn.error();
 }
 
 }
@@ -142,4 +162,21 @@ TEST_CASE("a removal that cannot obtain memory returns rather than terminating",
     // fails before it unlinks anything, so an intact tree and a returning verb together mean the
     // arm answered rather than that no allocation was ever attempted.
     REQUIRE(std::filesystem::exists(root));
+}
+
+// What is driven here is the conversion, not the entropy failure that motivates it: the stem grows
+// a 38-character name past every small-string buffer on the supported matrix, so the allocation is
+// the reachable throw. random_device's own specified throw stays unproduced, and no host on this
+// matrix can produce it.
+TEST_CASE("a stem that cannot obtain memory is refused rather than terminating", "[io][scratch][exhaustion]")
+{
+    const meios::detail::scratch_operations &operations = meios::detail::default_scratch_operations();
+    if(stemming_allocations(operations) == 0)
+        SKIP("this standard library draws a scratch stem without obtaining memory");
+
+    const std::optional<meios::operation_failure> refused = refused_stem(operations);
+
+    REQUIRE(refused.has_value());
+    REQUIRE(refused->operation == meios::operation_kind::create);
+    REQUIRE(refused->native == std::errc::io_error);
 }
