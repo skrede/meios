@@ -78,6 +78,12 @@ private:
     // Publishing n entries costs a scan each, and that quadratic cost is accepted: a byte-backed
     // source holds the handful an application names, and the linear alternative — a second map
     // keyed by the materialized path — is the second identity whose drift this refuses.
+    // equivalent() reports every error as "not equivalent", and a recorded file that went away is
+    // an error — the very state rematerialization exists to serve. The lexical arm answers that
+    // case: candidates are canonicalized, so an aliasing target reaches the recorded spelling
+    // exactly, while two entries genuinely naming different files never do. A pair that is one
+    // file under two spellings a canonicalization keeps distinct, as a case-folding volume
+    // produces, stays unanswerable while the recorded file is absent.
     std::optional<operation_failure> held_by_other(const scratch_key &wanted, const std::filesystem::path &target) const
     {
         for(const std::pair<const scratch_key, std::filesystem::path> &recorded : m_paths)
@@ -85,7 +91,7 @@ private:
             if(recorded.first == wanted)
                 continue;
             std::error_code ec;
-            if(std::filesystem::equivalent(recorded.second, target, ec))
+            if(std::filesystem::equivalent(recorded.second, target, ec) || (ec && recorded.second == target))
                 return operation_failure{operation_kind::publish, std::make_error_code(std::errc::file_exists)};
         }
         return std::nullopt;

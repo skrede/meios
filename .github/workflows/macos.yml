@@ -232,7 +232,7 @@ jobs:
 
       # MEIOS_BUILD_PROPERTY_TESTS alone declares the RapidCheck fetch and the
       # xacro_eval_prop target (it does not need MEIOS_BUILD_TESTS). The property
-      # suite formats doubles, so it depends on 12-01's libc++ print_double fix.
+      # suite formats doubles, so it depends on the libc++ print_double fix.
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \

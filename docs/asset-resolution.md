@@ -203,7 +203,10 @@ spellings that name one file are one entry: the second is refused as a duplicate
 behavior, and published through the one entry where the source was built to replace. A publication
 that would reach a file another entry already holds is refused before anything is written, which
 closes the spellings — a differently-cased package on a volume that folds case, a link resolving
-onto an entry's directory — that no reading of the text alone can tell apart.
+onto an entry's directory — that no reading of the text alone can tell apart. It compares the files
+where both are present and the canonicalized paths where they are not, so the shape it still cannot
+see is a spelling a canonicalization keeps distinct whose entry's file was removed from outside the
+source; the [known limitations](known-limitations.md) record it.
 
 **An entry offered into the staging directory is refused when it is offered**, and the refusal names
 the package and the relative. The check reads the leading component of the normalized path the two

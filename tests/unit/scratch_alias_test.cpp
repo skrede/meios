@@ -226,4 +226,21 @@ TEST_CASE("a publication onto a file another entry already holds is refused", "[
     REQUIRE(cause->operation == meios::operation_kind::publish);
     REQUIRE(read_file(model) == "first-bytes");
 }
+
+// The file going away between the two publications is the state rematerialization exists for, and
+// it is the state the equivalence guard cannot measure: absence is reported as "not equivalent".
+TEST_CASE("a publication onto a vanished entry's file is refused rather than silently taken", "[io][scratch][alias]")
+{
+    probe held{meios::update_behavior::reject};
+    held.source.add("pkg", "meshes/arm.dae", "first-bytes");
+    const std::filesystem::path model = locate_path(held.source, "meshes/arm.dae");
+    std::filesystem::create_directory_symlink(model.parent_path(), scratch_root(held.source, "meshes/arm.dae") / "link");
+    std::filesystem::remove(model);
+
+    held.source.add("link", "arm.dae", "aliased-bytes");
+
+    REQUIRE_FALSE(held.source.locate("link", "arm.dae").has_value());
+    REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, true) == 1);
+    REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "first-bytes");
+}
 #endif
