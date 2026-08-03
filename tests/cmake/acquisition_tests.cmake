@@ -14,10 +14,20 @@ function(meios_add_acquisition_test stem)
     catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
 endfunction()
 
+# The thread sanitizer's runtime defines the global allocation functions itself and links them
+# strongly, so a stem that replaces them to fail an allocation on demand cannot link against it —
+# the address sanitizer's are weak and coexist. The registration carries the condition because the
+# collision is at link time, so a stem registered anyway would fail the build rather than the test.
+set(meios_allocation_injecting_stems scratch_exhaustion scratch_teardown)
+
 foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
                       load_acquisition yaml_acquisition scratch_setup scratch_publish
                       scratch_replace scratch_alias scratch_exhaustion scratch_case_fold
                       scratch_teardown)
+    if("${stem}" IN_LIST meios_allocation_injecting_stems AND CMAKE_CXX_FLAGS MATCHES "fsanitize=thread")
+        message(STATUS "meios: ${stem} is not registered under the thread sanitizer, which owns the allocation functions it replaces")
+        continue()
+    endif()
     meios_add_acquisition_test(${stem})
 endforeach()
 
