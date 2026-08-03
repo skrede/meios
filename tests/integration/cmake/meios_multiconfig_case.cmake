@@ -15,13 +15,16 @@ meios_harness_tarball_origin("${HARNESS_DIR}/origin/clean" "${WORK}/origin.tar.g
 # selected: a multi-config generator takes it per build, and setting one here would be ignored on
 # the way in and then mislead the reader.
 #
-# The build tool has to be overridden with the generator: the harness forwards the parent's, and a
-# parent driven by make would otherwise hand make to Ninja, which reports it as a Ninja too old to
-# use. Overriding the generator alone works only where the parent is already a Ninja tree.
+# Everything the harness forwards about the parent's generator has to be overridden with it, because
+# none of it describes the generator this case selects. The parent's build tool would hand make to
+# Ninja, which reports it as a Ninja too old to use; the parent's platform and toolset are Visual
+# Studio settings that Ninja Multi-Config refuses outright.
 set(GEN "Ninja Multi-Config")
 set(CONFIG "")
 find_program(_ninja NAMES ninja ninja-build samu)
 set(MAKE_PROGRAM "${_ninja}")
+set(GEN_PLATFORM "")
+set(GEN_TOOLSET "")
 meios_harness_configure("${FIXTURE}" "${WORK}/tree" "-DFX_URL=${_url};-DFX_HASH=SHA256=${_hash}" _rc)
 
 string(REPLACE "," ";" _configs "${CONFIGS}")
