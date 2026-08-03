@@ -35,6 +35,12 @@ if(_rc EQUAL 0 AND MUTATE)
     else()
         file(WRITE "${_acquired}/${MUTATE}" "${_mutation}\n")
     endif()
+    # An edit whose modification time is older than what was deployed is reachable from an archive
+    # extraction, a time-preserving copy, or a checkout of an older revision, and it is the case a
+    # rule deciding currency by modification time gets wrong while a content comparison gets right.
+    if(MUTATE_BACKDATE)
+        meios_harness_backdate("${_acquired}/${MUTATE}")
+    endif()
     meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
 endif()
 
@@ -44,6 +50,19 @@ if(_rc EQUAL 0 AND REQUIRE_INSTALLED)
 endif()
 
 set(_run "${WORK}/tree/run")
+
+# Back-dating between the two builds is what makes the assertion granularity-proof: two builds
+# landing in the same second would leave an equality check on the recorded time passing whatever
+# the rule republished.
+if(_rc EQUAL 0 AND REQUIRE_STABLE)
+    meios_harness_require_file("${_run}/${REQUIRE_STABLE}")
+    meios_harness_backdate("${_run}/${REQUIRE_STABLE}")
+    meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
+    if(_rc EQUAL 0)
+        meios_harness_require_year("${_run}/${REQUIRE_STABLE}" 2001)
+    endif()
+endif()
+
 if(_rc EQUAL 0)
     string(REPLACE "," ";" _present "${REQUIRE_PRESENT}")
     foreach(_rel IN LISTS _present)

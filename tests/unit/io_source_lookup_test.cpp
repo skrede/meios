@@ -171,6 +171,36 @@ TEST_CASE("a relative configured root still contains an in-root asset", "[io][lo
     REQUIRE_FALSE(errored);
 }
 
+TEST_CASE("a bare relative document reaches the sibling it was written beside", "[io][lookup]")
+{
+    std::error_code error;
+    const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
+    REQUIRE_FALSE(error);
+    const auto root = meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    meios::scratch_dir tree{*root};
+    std::filesystem::create_directories(tree.path() / "meshes");
+    std::ofstream(tree.path() / "meshes" / "x.stl") << "mesh-bytes";
+    const std::filesystem::path mesh = std::filesystem::weakly_canonical(tree.path() / "meshes" / "x.stl", error);
+    REQUIRE_FALSE(error);
+
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::source_stack sources;
+    meios::core_evaluator eval;
+    meios::parse_context ctx{
+            sources, eval, log, meios::missing_asset::skip, meios::topology_policy::fail, meios::material_policy::warn, meios::strictness::fail, "robot.urdf", meios::completeness::none,
+            {}};
+
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::filesystem::current_path(tree.path());
+    const std::optional<std::string> resolved = meios::detail::resolve_asset_uri("meshes/x.stl", ctx, {});
+    std::filesystem::current_path(saved);
+
+    REQUIRE(resolved == std::optional<std::string>{mesh.string()});
+    REQUIRE(records.empty());
+}
+
 TEST_CASE("canonicalization failure remains distinct from containment rejection", "[io][lookup]")
 {
     std::error_code error;

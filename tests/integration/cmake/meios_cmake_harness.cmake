@@ -74,6 +74,33 @@ function(meios_harness_failed_assertion text)
     message(FATAL_ERROR "MEIOS_HARNESS_ASSERT_FAILED ${text}")
 endfunction()
 
+# file(TOUCH) can only stamp the current time, so a modification time in the past has to come from
+# the host's own tool. The read-back is part of the operation: a tool that silently declined would
+# otherwise leave a case asserting nothing.
+function(meios_harness_backdate path)
+    if(CMAKE_HOST_WIN32)
+        execute_process(
+            COMMAND powershell -NoProfile -NonInteractive -Command
+                    "(Get-Item -LiteralPath '${path}').LastWriteTime = [datetime]'2001-01-01T12:00:00Z'"
+            RESULT_VARIABLE _rc)
+    else()
+        # -d with an explicit Z rather than -t, whose argument is read as local time and would land
+        # the instant in the previous year for a host east of UTC. GNU and BSD touch both take it.
+        execute_process(COMMAND touch -d 2001-01-01T12:00:00Z "${path}" RESULT_VARIABLE _rc)
+    endif()
+    if(NOT _rc EQUAL 0)
+        meios_harness_failed_assertion("could not back-date ${path}")
+    endif()
+    meios_harness_require_year("${path}" 2001)
+endfunction()
+
+function(meios_harness_require_year path year)
+    file(TIMESTAMP "${path}" _stamped "%Y" UTC)
+    if(NOT _stamped STREQUAL "${year}")
+        meios_harness_failed_assertion("${path} is stamped ${_stamped}, expected ${year}")
+    endif()
+endfunction()
+
 function(meios_harness_require_dir path)
     if(NOT IS_DIRECTORY "${path}")
         meios_harness_failed_assertion("expected a directory at ${path}")

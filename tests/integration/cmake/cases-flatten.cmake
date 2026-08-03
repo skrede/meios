@@ -50,6 +50,20 @@ meios_cmake_case(cmake_flatten_reruns_on_edit
     MUTATE_FROM mutations/robot.urdf.xacro
     REQUIRE_CONTAINS urdf/robot.urdf,meios_harness_mutated)
 
+# The rule runs on every build, so what keeps the published document stable is the run script
+# republishing only bytes that differ. The document is back-dated between the two builds rather than
+# compared for equality across them, because a recorded time is second-granular and two builds can
+# land in the same second.
+meios_cmake_case(cmake_flatten_publishes_only_a_changed_document
+    FIXTURE flatten
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   "${_cli}"
+            -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
+            -DFX_OUTPUT=urdf/robot.urdf
+    REQUIRE_STABLE urdf/robot.urdf
+    REQUIRE_CONTAINS urdf/robot.urdf,harness_arm)
+
 # Only the flatten rule is built, which is what makes the ordering observable at all: the document
 # lands inside the deployment root and the wrapper creates its own parent, so a rule not depending
 # on the deploy target would produce the document into an otherwise empty directory. Naming the rule

@@ -27,6 +27,18 @@ meios_cmake_case(cmake_deploy_reruns_on_edit
     MUTATE  pkg_a/package.xml
     REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated)
 
+# The sibling above only proves an edit stamped forward in time redeploys, which a rule comparing
+# modification times also gets right. Back-dating the edit is what separates the two: a stamped rule
+# sees an input older than its own stamp and skips, while a content comparison republishes.
+meios_cmake_case(cmake_deploy_reruns_on_backdated_edit
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models
+    MUTATE  pkg_a/package.xml
+    MUTATE_BACKDATE ON
+    REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated)
+
 # Every inter-word space is spelled as a character class because CMake re-wraps message(FATAL_ERROR)
 # text at roughly 78 columns, so a pattern copied verbatim out of the module does not match what the
 # case reads.
