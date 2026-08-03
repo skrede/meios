@@ -10,6 +10,7 @@
 #include "meios/io/source_lookup.h"
 #include "meios/io/package_source.h"
 #include "meios/io/resolved_asset.h"
+#include "meios/io/scratch_mirror.h"
 #include "meios/io/update_behavior.h"
 #include "meios/io/directory_source.h"
 

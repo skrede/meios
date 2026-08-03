@@ -56,17 +56,31 @@ private:
 namespace detail
 {
 
+// Every publication stages inside one directory of this name directly under the scratch root, a
+// sibling of the mirrored package directories rather than a child of any of them, so a staging
+// path can never be an entry's own materialized path. The file's name is fixed-length, so a
+// publication adds nothing to the entry's own path component.
+inline constexpr std::string_view scratch_staging_dir  = ".meios-staging";
+inline constexpr std::string_view scratch_staging_file = "incoming";
+
+// Answers whether the mirrored path a pair would take has scratch_staging_dir as its leading
+// component. The check is lexical and normalizing, so a relative that traverses into that
+// directory is refused by the same predicate as the direct spelling, and it is asked when the
+// entry is offered because an existence pre-check races an entry offered but not yet materialized.
+bool names_scratch_staging(std::string_view package, std::string_view relative);
+
 // Answers a fresh directory narrowed to its owner, or a refusal naming the step that failed
 // and carrying that step's own native code. A root that could not be narrowed is removed
 // rather than served from: a directory other local users can read is worse than no directory
 // at all.
 expected<std::filesystem::path, operation_failure> create_scratch_root(const std::filesystem::path &parent);
 
-// Writes the bytes to a temporary beside the target and renames it onto the target, so a
-// reader either sees the previous bytes or the new ones and never a partial file. A refusal
-// names the step that failed, carries that step's own native code, and leaves both the target
-// and the temporary as the last successful publication left them.
-expected<void, operation_failure> publish_scratch_entry(const std::filesystem::path &target, std::string_view bytes);
+// Writes the bytes to a fixed-name staging file in the staging directory beneath root and
+// renames it onto the target, so a reader either sees the previous bytes or the new ones and
+// never a partial file. A refusal names the step that failed, carries that step's own native
+// code, and leaves the target, every sibling, and the staging file as the last successful
+// publication left them.
+expected<void, operation_failure> publish_scratch_entry(const std::filesystem::path &root, const std::filesystem::path &target, std::string_view bytes);
 
 }
 

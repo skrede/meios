@@ -20,6 +20,13 @@ foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_
     meios_add_acquisition_test(${stem})
 endforeach()
 
+# Windows models directory permissions as a read-only attribute that denies nothing, so there is
+# no denial to drive there; the registration carries the condition rather than the source, because
+# a stem registered anyway would build a binary with no cases in it.
+if(NOT WIN32)
+    meios_add_acquisition_test(scratch_denial)
+endif()
+
 if(TARGET load_acquisition_test)
     target_compile_definitions(load_acquisition_test PRIVATE
         MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")

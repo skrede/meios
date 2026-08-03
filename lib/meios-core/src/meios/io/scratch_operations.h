@@ -46,7 +46,7 @@ protected:
 
 const scratch_operations &default_scratch_operations() noexcept;
 scratch_root_result create_scratch_root(const std::filesystem::path &parent, const scratch_operations &operations);
-scratch_step_result publish_scratch_entry(const std::filesystem::path &target, std::string_view bytes, const scratch_operations &operations);
+scratch_step_result publish_scratch_entry(const std::filesystem::path &root, const std::filesystem::path &target, std::string_view bytes, const scratch_operations &operations);
 
 }
 

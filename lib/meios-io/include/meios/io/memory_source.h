@@ -4,6 +4,7 @@
 #include "meios/io/scratch_dir.h"
 #include "meios/io/package_source.h"
 #include "meios/io/resolved_asset.h"
+#include "meios/io/scratch_mirror.h"
 #include "meios/io/update_behavior.h"
 #include "meios/io/directory_source.h"
 
@@ -19,7 +20,6 @@
 #include <filesystem>
 #include <functional>
 #include <string_view>
-#include <system_error>
 
 namespace meios
 {
@@ -34,33 +34,22 @@ namespace meios
 // document position for the load to anchor to. It declines the lookup whose relative half is
 // empty — the one asking where a package is — because it writes an entry only when that entry is
 // asked for by name, so the directory it named would be empty and every path beneath it would
-// name nothing; an entry offered under that empty relative is refused for the mirror reason.
+// name nothing; an entry offered under that empty relative is refused for the mirror reason. An
+// entry whose mirrored path would land in the directory the source stages publications in is
+// refused on the way in for the same reason: the offer names no file the source can serve.
 class memory_source
 {
-    using key = std::pair<std::string, std::string>;
+    using key = detail::scratch_key;
 
 public:
     explicit memory_source(log_sink &log, update_behavior behavior = update_behavior::reject)
-            : m_scratch()
-            , m_behavior(behavior)
+            : m_behavior(behavior)
+            , m_mirror()
             , m_entries()
             , m_log(log)
-            , m_paths()
     {
-        std::error_code ec;
-        const std::filesystem::path parent = std::filesystem::temp_directory_path(ec);
-        if(ec)
-        {
-            report_setup({operation_kind::status, ec});
-            return;
-        }
-        const expected<std::filesystem::path, operation_failure> root = detail::create_scratch_root(parent);
-        if(!root)
-        {
-            report_setup(root.error());
-            return;
-        }
-        m_scratch = scratch_dir{*root};
+        if(const std::optional<operation_failure> &failure = m_mirror.setup_failure())
+            report_setup(*failure);
     }
 
     memory_source(memory_source &&) noexcept            = default;
@@ -72,14 +61,8 @@ public:
 
     memory_source &add(std::string package, std::string relative, std::string bytes)
     {
-        if(relative.empty())
-        {
-            refuse(diagnostic_code::malformed_asset_uri,
-                   "refused an entry for package \"" + package +
-                           "\" offered under an empty relative path, which names the "
-                           "package directory rather than a file");
+        if(refused_unserveable(package, relative))
             return *this;
-        }
         const key wanted{std::move(package), std::move(relative)};
         const std::map<key, std::string>::iterator held = m_entries.find(wanted);
         if(held != m_entries.end())
@@ -101,17 +84,16 @@ public:
         const std::map<key, std::string>::const_iterator entry = m_entries.find(wanted);
         if(entry == m_entries.end())
             return std::nullopt;
-        if(const std::optional<std::filesystem::path> served = materialized(wanted))
-            return resolved_asset{*served, m_scratch.path(), request_path(package, relative)};
+        if(const std::optional<std::filesystem::path> served = m_mirror.materialized(wanted))
+            return resolved_asset{*served, m_mirror.root(), request_path(package, relative)};
         return write_entry(wanted, entry->second, package, relative);
     }
 
 private:
-    scratch_dir m_scratch;
     update_behavior m_behavior;
+    detail::scratch_mirror m_mirror;
     std::map<key, std::string> m_entries;
     std::reference_wrapper<log_sink> m_log;
-    std::map<key, std::filesystem::path> m_paths;
 
     void refuse(diagnostic_code code, const std::string &message)
     {
@@ -129,6 +111,26 @@ private:
                "could not create a scratch directory for a byte-backed source: " + cause.native.message());
     }
 
+    // Both refusals are the same judgment: the offer names no file the source can serve. The
+    // staging half is answered here rather than at the publication because the collision is made
+    // by the offer, and the file that would prove it does not exist until a later resolution.
+    bool refused_unserveable(const std::string &package, const std::string &relative)
+    {
+        if(relative.empty())
+            refuse(diagnostic_code::malformed_asset_uri,
+                   "refused an entry for package \"" + package +
+                           "\" offered under an empty relative path, which names the "
+                           "package directory rather than a file");
+        else if(detail::names_scratch_staging(package, relative))
+            refuse(diagnostic_code::malformed_asset_uri,
+                   "refused an entry for package \"" + package + "\" offered under \"" + relative +
+                           "\", which names the directory the source stages publications in rather "
+                           "than a file it can serve");
+        else
+            return false;
+        return true;
+    }
+
     static std::filesystem::path request_path(std::string_view package, std::string_view relative)
     {
         return std::filesystem::path(package) / std::filesystem::path(relative);
@@ -139,22 +141,9 @@ private:
         return '"' + wanted.first + '/' + wanted.second + '"';
     }
 
-    // A recorded path whose file went away outside the source is not a resolution: the entry is
-    // republished from the bytes still held, at that same path, on the next lookup.
-    std::optional<std::filesystem::path> materialized(const key &wanted) const
-    {
-        const std::map<key, std::filesystem::path>::const_iterator cached = m_paths.find(wanted);
-        if(cached == m_paths.end())
-            return std::nullopt;
-        std::error_code ec;
-        if(!std::filesystem::is_regular_file(cached->second, ec))
-            return std::nullopt;
-        return cached->second;
-    }
-
     bool publish_entry(const key &wanted, const std::filesystem::path &target, std::string_view bytes, const char *verb)
     {
-        const expected<void, operation_failure> published = detail::publish_scratch_entry(target, bytes);
+        const expected<void, operation_failure> published = m_mirror.publish(wanted, target, bytes);
         if(published)
             return true;
         refuse(diagnostic_code::asset_write_failed, published.error(),
@@ -173,7 +162,7 @@ private:
                            "; a byte-backed source holds its entries immutable unless it was built to replace them");
             return *this;
         }
-        const std::optional<std::filesystem::path> target = materialized(wanted);
+        const std::optional<std::filesystem::path> target = m_mirror.materialized(wanted);
         if(target && !publish_entry(wanted, *target, bytes, "replace"))
             return *this;
         held = std::move(bytes);
@@ -182,16 +171,15 @@ private:
 
     std::optional<resolved_asset> write_entry(const key &wanted, const std::string &bytes, std::string_view package, std::string_view relative)
     {
-        if(!m_scratch.valid())
+        if(!m_mirror.valid())
         {
             refuse(diagnostic_code::asset_write_failed, "no scratch directory; cannot serve " + named(wanted));
             return std::nullopt;
         }
-        const std::optional<std::filesystem::path> target = detail::contained_candidate(m_scratch.path(), package, relative, m_log.get());
+        const std::optional<std::filesystem::path> target = detail::contained_candidate(m_mirror.root(), package, relative, m_log.get());
         if(!target || !publish_entry(wanted, *target, bytes, "write"))
             return std::nullopt;
-        m_paths.insert_or_assign(wanted, *target);
-        return resolved_asset{*target, m_scratch.path(), request_path(package, relative)};
+        return resolved_asset{*target, m_mirror.root(), request_path(package, relative)};
     }
 };
 

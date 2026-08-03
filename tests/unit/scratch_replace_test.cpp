@@ -1,62 +1,18 @@
-#include "scratch_capture.h"
-
-#include <meios/io.h>
+#include "scratch_source.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <cstddef>
-#include <fstream>
-#include <optional>
-#include <iterator>
 #include <filesystem>
-#include <system_error>
 
 namespace
 {
 
-// The sink is consumed by the source, so declaration order here is construction order and the
-// length triangle yields to it.
-struct probe
-{
-    explicit probe(meios::update_behavior behavior)
-            : events()
-            , sink(scratch_test::capture{events})
-            , source(sink, behavior)
-    {
-    }
-
-    scratch_test::event_log events;
-    meios::log_sink_f<scratch_test::capture> sink;
-    meios::memory_source source;
-};
-
-std::string read_file(const std::filesystem::path &path)
-{
-    std::ifstream in(path, std::ios::binary);
-    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-}
-
-std::filesystem::path locate_path(meios::memory_source &source, const char *relative)
-{
-    const std::optional<meios::resolved_asset> hit = source.locate("pkg", relative);
-    REQUIRE(hit.has_value());
-    return hit->path();
-}
-
-std::size_t refusals(const scratch_test::event_log &events, bool with_cause)
-{
-    std::size_t total = 0;
-    for(const scratch_test::event &recorded : events)
-        if(recorded.lvl == meios::level::error && recorded.code == meios::diagnostic_code::asset_write_failed && recorded.cause.has_value() == with_cause)
-            ++total;
-    return total;
-}
-
-std::size_t entry_count(const std::filesystem::path &dir)
-{
-    return static_cast<std::size_t>(std::distance(std::filesystem::directory_iterator(dir), std::filesystem::directory_iterator{}));
-}
+using scratch_test::probe;
+using scratch_test::refusals;
+using scratch_test::read_file;
+using scratch_test::entry_count;
+using scratch_test::locate_path;
 
 }
 
@@ -72,7 +28,7 @@ TEST_CASE("a duplicate key is refused and the first bytes keep resolving", "[io]
     held.source.add("pkg", "meshes/arm.dae", "first-bytes");
     held.source.add("pkg", "meshes/arm.dae", "second-bytes");
 
-    REQUIRE(refusals(held.events, false) == 1);
+    REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, false) == 1);
     REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "first-bytes");
 }
 
@@ -82,7 +38,7 @@ TEST_CASE("a source built to replace accepts the second offer", "[io][scratch][r
     held.source.add("pkg", "meshes/arm.dae", "first-bytes");
     held.source.add("pkg", "meshes/arm.dae", "second-bytes");
 
-    REQUIRE(refusals(held.events, false) == 0);
+    REQUIRE(refusals(held.events, meios::diagnostic_code::asset_write_failed, false) == 0);
     REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "second-bytes");
 }
 
@@ -143,52 +99,61 @@ TEST_CASE("an entry deleted outside the source is rematerialized at the same pat
     REQUIRE(read_file(after) == "first-bytes");
 }
 
-#ifndef _WIN32
 namespace
 {
 
-void set_directory_mode(const std::filesystem::path &dir, std::filesystem::perms mode)
+void expect_own_file_after_replacement(probe &held, const std::filesystem::path &model, const std::filesystem::path &sibling)
 {
-    std::error_code ec;
-    std::filesystem::permissions(dir, mode, std::filesystem::perm_options::replace, ec);
-}
+    held.source.add("pkg", "meshes/arm.dae", "replaced-bytes");
 
-// Windows models directory permissions as a read-only attribute, which denies nothing, so the
-// case below is compiled out there rather than skipped. The denial is also a no-op for a
-// privileged process, which this reports so the case can warn off instead of passing silently.
-bool deny_writes(const std::filesystem::path &dir)
-{
-    set_directory_mode(dir, std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
-    const std::filesystem::path candidate = dir / "denial-probe";
-    std::ofstream out(candidate);
-    if(!out.is_open())
-        return true;
-    out.close();
-    std::error_code ec;
-    std::filesystem::remove(candidate, ec);
-    return false;
+    REQUIRE(model != sibling);
+    REQUIRE(std::filesystem::is_regular_file(model));
+    REQUIRE(std::filesystem::is_regular_file(sibling));
+    REQUIRE(read_file(model) == "replaced-bytes");
+    REQUIRE(read_file(sibling) == "sibling-bytes");
+    REQUIRE(entry_count(model.parent_path()) == 2);
 }
 
 }
 
-TEST_CASE("a replacement that cannot be written keeps the last successful write", "[io][scratch][replace]")
+TEST_CASE("an entry whose relative extends another entry's keeps its own file through a replacement", "[io][scratch][replace]")
 {
     probe held{meios::update_behavior::replace};
     held.source.add("pkg", "meshes/arm.dae", "first-bytes");
-    const std::filesystem::path located = locate_path(held.source, "meshes/arm.dae");
+    held.source.add("pkg", "meshes/arm.dae.meios-incoming", "sibling-bytes");
 
-    const bool denied = deny_writes(located.parent_path());
-    if(denied)
-        held.source.add("pkg", "meshes/arm.dae", "second-bytes");
-    set_directory_mode(located.parent_path(), std::filesystem::perms::owner_all);
-    if(!denied)
-    {
-        WARN("this process writes into a directory it holds no write permission on; assertion skipped");
-        return;
-    }
+    const std::filesystem::path model   = locate_path(held.source, "meshes/arm.dae");
+    const std::filesystem::path sibling = locate_path(held.source, "meshes/arm.dae.meios-incoming");
 
-    REQUIRE(refusals(held.events, true) == 1);
-    REQUIRE(read_file(located) == "first-bytes");
-    REQUIRE(read_file(locate_path(held.source, "meshes/arm.dae")) == "first-bytes");
+    expect_own_file_after_replacement(held, model, sibling);
 }
-#endif
+
+TEST_CASE("the extending pair keeps its files with the offer and resolution order reversed", "[io][scratch][replace]")
+{
+    probe held{meios::update_behavior::replace};
+    held.source.add("pkg", "meshes/arm.dae.meios-incoming", "sibling-bytes");
+    held.source.add("pkg", "meshes/arm.dae", "first-bytes");
+
+    const std::filesystem::path sibling = locate_path(held.source, "meshes/arm.dae.meios-incoming");
+    const std::filesystem::path model   = locate_path(held.source, "meshes/arm.dae");
+
+    expect_own_file_after_replacement(held, model, sibling);
+}
+
+TEST_CASE("an entry offered into the publication staging directory is refused", "[io][scratch][replace]")
+{
+    REQUIRE(meios::detail::scratch_staging_dir == ".meios-staging");
+    const std::string staging{meios::detail::scratch_staging_dir};
+    const std::string traversing = "../" + staging + '/' + std::string{meios::detail::scratch_staging_file};
+    const std::string neighbor   = "meshes/" + staging + "-notes";
+
+    probe held{meios::update_behavior::reject};
+    held.source.add(staging, std::string{meios::detail::scratch_staging_file}, "direct-bytes");
+    held.source.add("pkg", traversing, "traversing-bytes");
+    held.source.add("pkg", neighbor, "notes-bytes");
+
+    REQUIRE(refusals(held.events, meios::diagnostic_code::malformed_asset_uri, false) == 2);
+    REQUIRE_FALSE(held.source.locate(staging, meios::detail::scratch_staging_file).has_value());
+    REQUIRE_FALSE(held.source.locate("pkg", traversing).has_value());
+    REQUIRE(read_file(locate_path(held.source, neighbor.c_str())) == "notes-bytes");
+}
