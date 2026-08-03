@@ -1,8 +1,11 @@
 #ifndef HPP_GUARD_MEIOS_IO_SCRATCH_DIR_H
 #define HPP_GUARD_MEIOS_IO_SCRATCH_DIR_H
 
+#include "meios/expected.h"
+
+#include "meios/diagnostic/operation_failure.h"
+
 #include <utility>
-#include <optional>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -53,11 +56,11 @@ private:
 namespace detail
 {
 
-// Answers a fresh directory narrowed to its owner, or nothing with the reason left in ec.
-// A root that could not be narrowed is removed rather than served from: a directory other
-// local users can read is worse than no directory at all.
-std::optional<std::filesystem::path> create_scratch_root(const std::filesystem::path &parent,
-                                                         std::error_code &ec);
+// Answers a fresh directory narrowed to its owner, or a refusal naming the step that failed
+// and carrying that step's own native code. A root that could not be narrowed is removed
+// rather than served from: a directory other local users can read is worse than no directory
+// at all.
+expected<std::filesystem::path, operation_failure> create_scratch_root(const std::filesystem::path &parent);
 
 bool write_scratch_entry(const std::filesystem::path &path, std::string_view bytes);
 

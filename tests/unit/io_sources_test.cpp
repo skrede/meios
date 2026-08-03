@@ -259,18 +259,18 @@ TEST_CASE("a scratch root under a parent that cannot hold one is refused",
           "[io][sources][scratch]")
 {
     const std::filesystem::path parent = fresh_dir() / "absent";
-    std::error_code ec;
-    REQUIRE_FALSE(meios::detail::create_scratch_root(parent, ec).has_value());
-    REQUIRE(static_cast<bool>(ec));
+    REQUIRE_FALSE(meios::detail::create_scratch_root(parent).has_value());
 }
 
 TEST_CASE("a scratch root that failed permanently is not reported as a name collision",
           "[io][sources][scratch]")
 {
     const std::filesystem::path parent = fresh_dir() / "absent";
-    std::error_code ec;
-    REQUIRE_FALSE(meios::detail::create_scratch_root(parent, ec).has_value());
-    REQUIRE(ec.default_error_condition() != std::errc::file_exists);
+    const meios::expected<std::filesystem::path, meios::operation_failure> result =
+        meios::detail::create_scratch_root(parent);
+    REQUIRE_FALSE(result.has_value());
+    REQUIRE(result.error().operation == meios::operation_kind::create);
+    REQUIRE(result.error().native.default_error_condition() != std::errc::file_exists);
 }
 
 TEST_CASE("the scratch root is reachable by its owner alone", "[io][sources][scratch]")

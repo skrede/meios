@@ -110,6 +110,8 @@ TEST_CASE("operation names are stable presentation", "[operation_failure]")
     REQUIRE(meios::to_string(meios::operation_kind::open) == "open");
     REQUIRE(meios::to_string(meios::operation_kind::read) == "read");
     REQUIRE(meios::to_string(meios::operation_kind::close) == "close");
+    REQUIRE(meios::to_string(meios::operation_kind::create) == "create");
+    REQUIRE(meios::to_string(meios::operation_kind::permissions) == "permissions");
 }
 
 TEST_CASE("a status refusal retains its complete native cause", "[operation_failure]")

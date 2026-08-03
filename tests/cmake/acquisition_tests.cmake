@@ -15,7 +15,7 @@ function(meios_add_acquisition_test stem)
 endfunction()
 
 foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
-                      load_acquisition yaml_acquisition)
+                      load_acquisition yaml_acquisition scratch_setup)
     meios_add_acquisition_test(${stem})
 endforeach()
 

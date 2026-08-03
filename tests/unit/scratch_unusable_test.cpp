@@ -1,3 +1,5 @@
+#include "scratch_capture.h"
+
 #include <meios/urdf.h>
 #include <meios/io.h>
 #include <meios/model.h>
@@ -7,7 +9,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <vector>
 #include <cstddef>
 #include <optional>
 #include <filesystem>
@@ -20,35 +21,9 @@
 namespace
 {
 
-struct event
-{
-    meios::level           lvl;
-    meios::diagnostic_code code;
-    std::string            text;
-};
-
-using event_log = std::vector<event>;
-
-struct capture
-{
-    event_log &events;
-
-    void operator()(meios::level lvl, const std::string &message)
-    {
-        events.push_back({ lvl, meios::diagnostic_code::unspecified, message });
-    }
-
-    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
-    {
-        events.push_back({ lvl, meios::diagnostic_code::unspecified, message });
-    }
-
-    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
-                    const std::string &message)
-    {
-        events.push_back({ lvl, code, message });
-    }
-};
+using scratch_test::event;
+using scratch_test::event_log;
+using scratch_test::capture;
 
 std::size_t write_failures(const event_log &events)
 {
@@ -107,6 +82,19 @@ TEST_CASE("the reason a scratch directory could not be obtained reaches the diag
     const std::size_t reason = events.front().text.find("byte-backed source: ");
     REQUIRE(reason != std::string::npos);
     REQUIRE(events.front().text.size() > reason + std::string("byte-backed source: ").size());
+}
+
+TEST_CASE("the precondition that failed reaches the diagnostic as a structured cause",
+          "[io][scratch][unusable]")
+{
+    event_log events;
+    meios::log_sink_f log{ capture{ events } };
+    meios::log_sink &seam = log;
+
+    const meios::memory_source source{ seam };
+    REQUIRE(events.size() == 1);
+    REQUIRE(events.front().cause.has_value());
+    REQUIRE(events.front().cause->operation == meios::operation_kind::status);
 }
 
 TEST_CASE("a source that owns no scratch serves nothing", "[io][scratch][unusable]")

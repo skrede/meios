@@ -46,14 +46,19 @@ public:
             , m_scratch()
     {
         std::error_code ec;
-        const std::filesystem::path parent              = std::filesystem::temp_directory_path(ec);
-        const std::optional<std::filesystem::path> root = ec ? std::nullopt : detail::create_scratch_root(parent, ec);
-        if(root)
+        const std::filesystem::path parent = std::filesystem::temp_directory_path(ec);
+        if(ec)
         {
-            m_scratch = scratch_dir{*root};
+            report_setup({operation_kind::status, ec});
             return;
         }
-        m_log.get().log(level::error, diagnostic_code::asset_write_failed, source_location{}, "could not create a scratch directory for a byte-backed source: " + ec.message());
+        const expected<std::filesystem::path, operation_failure> root = detail::create_scratch_root(parent);
+        if(!root)
+        {
+            report_setup(root.error());
+            return;
+        }
+        m_scratch = scratch_dir{*root};
     }
 
     memory_source(memory_source &&) noexcept            = default;
@@ -101,6 +106,12 @@ private:
     std::map<key, std::string> m_entries;
     std::map<key, std::filesystem::path> m_paths;
     scratch_dir m_scratch;
+
+    void report_setup(const operation_failure &cause)
+    {
+        m_log.get().log(level::error, diagnostic_code::asset_write_failed, source_location{}, cause,
+                        "could not create a scratch directory for a byte-backed source: " + cause.native.message());
+    }
 
     static std::filesystem::path request_path(std::string_view package, std::string_view relative)
     {

@@ -220,16 +220,18 @@ Three residuals are real and are not smoothed over:
   temporary directory in that interval sees a directory with default permissions and an unpredictable
   name. It is that interval and nothing longer: a root whose permissions could not be narrowed at all
   is removed and refused rather than served from.
-- **One branch of a failing scratch root is driven by a test and one is not.** What a source does when
-  the temporary directory itself does not exist — the diagnostic it raises, carrying the system's
-  reason, and the refusal that follows at every missing-resource setting — is driven end to end, by
-  pointing the temporary-directory environment at a path that does not exist. The narrower branch,
-  where the temporary directory resolves and the root creation beneath it fails, is asserted against
-  the creation step directly with an unusable parent and is not driven through a source. Two branches
-  inside that creation step are reasoned rather than run at all: the retry that tells a name collision
-  apart from a permanent failure, which would take eight consecutive collisions on a 128-bit random
-  name to reach, and the removal of a root whose permissions could not be narrowed, which needs a host
-  on which narrowing fails.
+- **The branches inside the creation step are driven; what stays undriven is that step reached through
+  a source.** What a source does when the temporary directory itself does not exist — the diagnostic it
+  raises, carrying the system's reason, and the refusal that follows at every missing-resource setting —
+  is driven end to end, by pointing the temporary-directory environment at a path that does not exist.
+  The narrower branch, where the temporary directory resolves and the root creation beneath it fails, is
+  driven against the creation step directly rather than through a source. Inside that step both
+  branches run: an injectable operations seam scripts the candidate names and the narrowing outcome, so
+  the retry that tells a name collision apart from a permanent failure is exercised at both edges of its
+  bound — the last attempt below it takes a free name, the attempt at it exhausts — and a root whose
+  permissions could not be narrowed is observed to be gone from the filesystem afterwards. Four
+  occupancy forms are told apart at a candidate name: a directory, a regular file, a symlink to a
+  directory, and a dangling symlink.
 
 ### Where this diverges from the recommended asset lease
 

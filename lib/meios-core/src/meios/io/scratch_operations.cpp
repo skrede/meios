@@ -1,0 +1,95 @@
+#include "meios/io/scratch_operations.h"
+
+#include <random>
+#include <string>
+#include <exception>
+#include <filesystem>
+#include <system_error>
+
+namespace meios::detail
+{
+namespace
+{
+
+scratch_step_result refuse(operation_kind operation, std::error_code error)
+{
+    return unexpected<operation_failure>({operation, error});
+}
+
+// The 128 bits defend against a local user who can watch the parent and race a name into
+// place, not against chance: an unpredictable name is what makes the create a race the
+// attacker cannot win.
+std::string hex_stem()
+{
+    static const char digits[] = "0123456789abcdef";
+    std::random_device device;
+    std::string stem = "meios-";
+    for(int i = 0; i < 16; ++i)
+    {
+        const unsigned value = device() & 0xffu;
+        stem.push_back(digits[value >> 4]);
+        stem.push_back(digits[value & 0xfu]);
+    }
+    return stem;
+}
+
+class native_scratch_operations final : public scratch_operations
+{
+public:
+    // random_device's constructor and its call operator are both specified as throwing when
+    // entropy cannot be obtained, and only an implementation-defined type derived from
+    // exception is promised; turning that into a value is what keeps a byte-backed source's
+    // construction nonthrowing.
+    scratch_stem_result stem() const noexcept override
+    {
+        try
+        {
+            return hex_stem();
+        }
+        catch(const std::exception &)
+        {
+            return unexpected<operation_failure>({operation_kind::create, make_error_code(std::errc::io_error)});
+        }
+    }
+
+    // create_directory is specified as-if POSIX mkdir, which fails atomically when the path
+    // already exists and never follows a final symlink. It reports an occupied name in two
+    // spellings — false with no error, the standard's already-a-directory recovery, and false
+    // with file_exists — and both are answered here as file_exists so the policy above sees
+    // one collision, never a cleared code.
+    scratch_step_result create_exclusive(const std::filesystem::path &path) const noexcept override
+    {
+        std::error_code ec;
+        if(std::filesystem::create_directory(path, ec))
+            return {};
+        if(!ec || ec == std::errc::file_exists)
+            return refuse(operation_kind::create, make_error_code(std::errc::file_exists));
+        return refuse(operation_kind::create, ec);
+    }
+
+    scratch_step_result narrow_to_owner(const std::filesystem::path &path) const noexcept override
+    {
+        std::error_code ec;
+        std::filesystem::permissions(path, std::filesystem::perms::owner_all,
+                                     std::filesystem::perm_options::replace, ec);
+        return ec ? refuse(operation_kind::permissions, ec) : scratch_step_result{};
+    }
+
+    // Removal answers nothing because its own failure has no reporting site: the failure a
+    // caller is told about is the one that made the root unfit to serve from.
+    void remove_tree(const std::filesystem::path &path) const noexcept override
+    {
+        std::error_code ec;
+        std::filesystem::remove_all(path, ec);
+    }
+};
+
+}
+
+const scratch_operations &default_scratch_operations() noexcept
+{
+    static const native_scratch_operations operations;
+    return operations;
+}
+
+}

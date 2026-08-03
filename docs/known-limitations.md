@@ -40,12 +40,13 @@ process watching the system temporary directory during that interval sees a dire
 permissions. Nothing has been written into it yet. The window is the whole exposure: a root whose
 permissions could not be narrowed at all is removed and refused rather than served from.
 
-**One branch of a failing scratch root is driven by a test and one is not.** What a source does when
-the system temporary directory itself does not exist is driven end to end — pointing the
+**Creation beneath a resolved temporary directory is not driven through a source.** What a source does
+when the system temporary directory itself does not exist is driven end to end — pointing the
 temporary-directory environment at a path that does not exist is the steering, and what runs is the
-diagnostic the source raises and the refusal that follows. What remains undriven through a source is
-the narrower branch where the temporary directory resolves and the root creation beneath it fails;
-that failure is asserted against the creation helper directly, with an unusable parent.
+diagnostic the source raises and the refusal that follows. The narrower branch, where the temporary
+directory resolves and the root creation beneath it fails, is driven against the creation step
+directly — with an unusable parent, and with scripted candidate names and a scripted narrowing outcome
+behind the operations seam — but never with a source above it.
 
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directory once, when it is resolved.

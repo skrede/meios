@@ -40,7 +40,7 @@ meios::scratch_dir fresh_tree()
     std::error_code error;
     const std::filesystem::path parent = std::filesystem::temp_directory_path(error);
     REQUIRE_FALSE(error);
-    const std::optional<std::filesystem::path> root = meios::detail::create_scratch_root(parent, error);
+    const meios::expected<std::filesystem::path, meios::operation_failure> root = meios::detail::create_scratch_root(parent);
     REQUIRE(root.has_value());
     return meios::scratch_dir{*root};
 }
