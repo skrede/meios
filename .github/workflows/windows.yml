@@ -132,6 +132,25 @@ jobs:
           & ctest --output-on-failure --no-tests=error -R '^scratch_publish\.' -C Release --timeout 60
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Which branch a rename over a held-open destination takes is a native fact this project has
+      # measured on POSIX only. The case prints the branch it saw, and only a verbose run keeps that
+      # print when the case passes, so this step exists to retain the transcript rather than to check
+      # anything the step above does not already check.
+      - name: Record the held-open replacement branch
+        working-directory: build
+        shell: pwsh
+        run: |
+          $selector = 'held open'
+          Write-Host "ctest -N -R '$selector' -C Release"
+          $discovery = & ctest -N -R $selector -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No held-open replacement case discovered" }
+          Write-Host "ctest -V --no-tests=error -R '$selector' -C Release --timeout 60"
+          & ctest -V --no-tests=error -R $selector -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Focus scratch replace tests
         working-directory: build
         shell: pwsh

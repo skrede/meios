@@ -16,7 +16,7 @@ endfunction()
 
 foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
                       load_acquisition yaml_acquisition scratch_setup scratch_publish
-                      scratch_replace scratch_alias)
+                      scratch_replace scratch_alias scratch_exhaustion)
     meios_add_acquisition_test(${stem})
 endforeach()
 
