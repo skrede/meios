@@ -19,13 +19,6 @@ foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_
     meios_add_acquisition_test(${stem})
 endforeach()
 
-# The counting adapter is a header-only CLI sink over meios::model alone, so this stem
-# reads it out of the tool tree without the tool being built.
-if(TARGET operation_adapter_test)
-    target_include_directories(operation_adapter_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/tools/meios)
-endif()
-
 if(TARGET load_acquisition_test)
     target_compile_definitions(load_acquisition_test PRIVATE
         MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")

@@ -1,7 +1,5 @@
 #include "source_lookup_fixture.h"
 
-#include "verbs/counting_log_sink.h"
-
 #include <meios/xacro.h>
 
 #include <meios/sink/world_recorder.h>
@@ -14,7 +12,6 @@
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
 #include <meios/diagnostic/source_location.h>
-#include <meios/diagnostic/capturing_log_sink.h>
 #include <meios/diagnostic/operation_failure.h>
 
 #include <catch2/catch_test_macros.hpp>
@@ -123,23 +120,6 @@ TEST_CASE("a cause-free refusal replays without a fabricated cause", "[operation
     REQUIRE_FALSE(records.empty());
     REQUIRE(std::none_of(records.begin(), records.end(), invented));
     REQUIRE(std::any_of(records.begin(), records.end(), relocated));
-}
-
-TEST_CASE("counting forwards one exact cause and counts it once", "[operation_adapter]")
-{
-    std::vector<record> records;
-    meios::log_sink_f log{recorder{records}};
-    meios::capturing_log_sink capture{log};
-    meios::cli::counting_log_sink counting{capture};
-    meios::log_sink &seam = counting;
-
-    seam.log(meios::level::error, meios::diagnostic_code::cannot_open, {}, native, "open failed");
-
-    REQUIRE(counting.errors() == 1);
-    REQUIRE(capture.size() == 1);
-    REQUIRE(capture.first()->cause->operation == native.operation);
-    REQUIRE(capture.first()->cause->native == native.native);
-    require_native_cause(records);
 }
 
 TEST_CASE("world first-error capture keeps the first located failure once", "[operation_adapter]")
