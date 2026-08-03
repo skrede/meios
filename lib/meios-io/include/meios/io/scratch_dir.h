@@ -62,7 +62,11 @@ namespace detail
 // at all.
 expected<std::filesystem::path, operation_failure> create_scratch_root(const std::filesystem::path &parent);
 
-bool write_scratch_entry(const std::filesystem::path &path, std::string_view bytes);
+// Writes the bytes to a temporary beside the target and renames it onto the target, so a
+// reader either sees the previous bytes or the new ones and never a partial file. A refusal
+// names the step that failed, carries that step's own native code, and leaves both the target
+// and the temporary as the last successful publication left them.
+expected<void, operation_failure> publish_scratch_entry(const std::filesystem::path &target, std::string_view bytes);
 
 }
 

@@ -16,6 +16,8 @@ enum class operation_kind
     close,
     create,
     permissions,
+    write,
+    publish,
 };
 
 constexpr std::string_view to_string(operation_kind operation) noexcept
@@ -36,6 +38,10 @@ constexpr std::string_view to_string(operation_kind operation) noexcept
             return "create";
         case operation_kind::permissions:
             return "permissions";
+        case operation_kind::write:
+            return "write";
+        case operation_kind::publish:
+            return "publish";
     }
     return "unknown";
 }

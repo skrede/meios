@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <optional>
 #include <string_view>
 
 namespace consumer
@@ -48,12 +49,16 @@ struct diagnostic_record
     meios::level lvl;
     meios::diagnostic_code code;
     std::string message;
+
+    std::optional<meios::operation_failure> cause;
 };
 
 // A diagnostic sink living entirely in the consumer's tree: it lifts every library
 // diagnostic straight into the consumer's own diagnostic_record. The four-argument
 // overload is the one that carries the typed diagnostic_code across the install
-// boundary, so a code-bearing diagnostic lands with its code intact.
+// boundary, so a code-bearing diagnostic lands with its code intact; the five-argument
+// one carries the operation_failure behind a failure, and without it a library that
+// reported a structured cause would be indistinguishable here from one that did not.
 class diagnostic_lift
 {
 public:
@@ -61,27 +66,34 @@ public:
 
     void operator()(meios::level lvl, const std::string &message)
     {
-        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message });
+        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message, std::nullopt });
     }
 
     void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
     {
-        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message });
+        m_out.push_back({ lvl, meios::diagnostic_code::unspecified, message, std::nullopt });
     }
 
     void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
                     const std::string &message)
     {
-        m_out.push_back({ lvl, code, message });
+        m_out.push_back({ lvl, code, message, std::nullopt });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &,
+                    const meios::operation_failure &cause, const std::string &message)
+    {
+        m_out.push_back({ lvl, code, message, cause });
     }
 
 private:
     std::vector<diagnostic_record> &m_out;
 };
 
-// Defined in the second translation unit of this same project, so the facade exercise
-// runs under the one command the continuous-integration jobs already invoke.
+// Defined in the further translation units of this same project, so every exercise runs
+// under the one command the continuous-integration jobs already invoke.
 int run_facade();
+int run_memory_source();
 
 }
 

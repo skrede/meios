@@ -9,6 +9,7 @@
 
 #include <string>
 #include <filesystem>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -29,10 +30,12 @@ public:
     scratch_operations()          = default;
     virtual ~scratch_operations() = default;
 
-    virtual scratch_stem_result stem() const noexcept                                                  = 0;
-    virtual scratch_step_result create_exclusive(const std::filesystem::path &path) const noexcept     = 0;
-    virtual scratch_step_result narrow_to_owner(const std::filesystem::path &path) const noexcept      = 0;
-    virtual void remove_tree(const std::filesystem::path &path) const noexcept                         = 0;
+    virtual scratch_stem_result stem() const noexcept                                                                 = 0;
+    virtual scratch_step_result create_exclusive(const std::filesystem::path &path) const noexcept                    = 0;
+    virtual scratch_step_result narrow_to_owner(const std::filesystem::path &path) const noexcept                     = 0;
+    virtual void remove_tree(const std::filesystem::path &path) const noexcept                                        = 0;
+    virtual scratch_step_result write_bytes(const std::filesystem::path &path, std::string_view bytes) const noexcept = 0;
+    virtual scratch_step_result publish(const std::filesystem::path &from, const std::filesystem::path &to) const noexcept;
 
 protected:
     scratch_operations(const scratch_operations &)            = default;
@@ -43,6 +46,7 @@ protected:
 
 const scratch_operations &default_scratch_operations() noexcept;
 scratch_root_result create_scratch_root(const std::filesystem::path &parent, const scratch_operations &operations);
+scratch_step_result publish_scratch_entry(const std::filesystem::path &target, std::string_view bytes, const scratch_operations &operations);
 
 }
 

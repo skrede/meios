@@ -2,8 +2,11 @@
 
 #include <random>
 #include <string>
+#include <cerrno>
+#include <fstream>
 #include <exception>
 #include <filesystem>
+#include <string_view>
 #include <system_error>
 
 namespace meios::detail
@@ -14,6 +17,13 @@ namespace
 scratch_step_result refuse(operation_kind operation, std::error_code error)
 {
     return unexpected<operation_failure>({operation, error});
+}
+
+// A stream reports failure without a code, so errno is the only native cause on offer; an
+// implementation that leaves it unset would otherwise spell a failure as success.
+std::error_code stream_error()
+{
+    return errno != 0 ? std::error_code(errno, std::generic_category()) : make_error_code(std::errc::io_error);
 }
 
 // The 128 bits defend against a local user who can watch the parent and race a name into
@@ -82,8 +92,30 @@ public:
         std::error_code ec;
         std::filesystem::remove_all(path, ec);
     }
+
+    // The close is checked rather than assumed: a buffered write reaches the file there, so a
+    // full disk surfaces on close and nowhere earlier.
+    scratch_step_result write_bytes(const std::filesystem::path &path, std::string_view bytes) const noexcept override
+    {
+        errno = 0;
+        std::ofstream out(path, std::ios::binary | std::ios::out | std::ios::trunc);
+        if(!out.is_open())
+            return refuse(operation_kind::write, stream_error());
+        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+        out.close();
+        if(out.fail())
+            return refuse(operation_kind::write, stream_error());
+        return {};
+    }
 };
 
+}
+
+scratch_step_result scratch_operations::publish(const std::filesystem::path &from, const std::filesystem::path &to) const noexcept
+{
+    std::error_code ec;
+    std::filesystem::rename(from, to, ec);
+    return ec ? refuse(operation_kind::publish, ec) : scratch_step_result{};
 }
 
 const scratch_operations &default_scratch_operations() noexcept

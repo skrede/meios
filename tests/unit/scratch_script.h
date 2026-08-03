@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstddef>
 #include <filesystem>
+#include <string_view>
 #include <system_error>
 
 namespace scratch_test
@@ -34,7 +35,9 @@ struct scratch_script
             : cursor(0)
             , stem_error()
             , narrow_error()
+            , next_write_error()
             , next_create_error()
+            , next_publish_error()
             , stems()
             , calls()
     {
@@ -43,7 +46,9 @@ struct scratch_script
     std::size_t cursor;
     std::error_code stem_error;
     std::error_code narrow_error;
+    std::error_code next_write_error;
     std::error_code next_create_error;
+    std::error_code next_publish_error;
     std::vector<std::string> stems;
     std::vector<std::string> calls;
 };
@@ -97,8 +102,34 @@ public:
         meios::detail::default_scratch_operations().remove_tree(path);
     }
 
+    // Write and publish inject ahead of the real verb rather than behind it: a publication that
+    // reported failure must not have moved the temporary onto the target, which is the very
+    // property a rollback case exists to check.
+    meios::detail::scratch_step_result write_bytes(const std::filesystem::path &path, std::string_view bytes) const noexcept override
+    {
+        m_script.calls.emplace_back("write");
+        if(const std::error_code error = consume(m_script.next_write_error))
+            return meios::unexpected<meios::operation_failure>({meios::operation_kind::write, error});
+        return meios::detail::default_scratch_operations().write_bytes(path, bytes);
+    }
+
+    meios::detail::scratch_step_result publish(const std::filesystem::path &from, const std::filesystem::path &to) const noexcept override
+    {
+        m_script.calls.emplace_back("publish");
+        if(const std::error_code error = consume(m_script.next_publish_error))
+            return meios::unexpected<meios::operation_failure>({meios::operation_kind::publish, error});
+        return meios::detail::default_scratch_operations().publish(from, to);
+    }
+
 private:
     scratch_script &m_script;
+
+    static std::error_code consume(std::error_code &channel)
+    {
+        const std::error_code error = channel;
+        channel.clear();
+        return error;
+    }
 };
 
 }

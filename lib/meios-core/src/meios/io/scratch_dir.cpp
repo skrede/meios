@@ -1,10 +1,8 @@
 #include "meios/io/scratch_operations.h"
 
 #include <string>
-#include <fstream>
 #include <optional>
 #include <filesystem>
-#include <string_view>
 #include <system_error>
 
 namespace meios::detail
@@ -54,20 +52,6 @@ scratch_root_result create_scratch_root(const std::filesystem::path &parent, con
 scratch_root_result create_scratch_root(const std::filesystem::path &parent)
 {
     return create_scratch_root(parent, default_scratch_operations());
-}
-
-bool write_scratch_entry(const std::filesystem::path &path, std::string_view bytes)
-{
-    std::error_code ec;
-    std::filesystem::create_directories(path.parent_path(), ec);
-    if(ec)
-        return false;
-    std::ofstream out(path, std::ios::binary | std::ios::out | std::ios::trunc);
-    if(!out.is_open())
-        return false;
-    out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-    out.close();
-    return !out.fail();
 }
 
 }

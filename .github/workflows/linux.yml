@@ -107,6 +107,45 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      # ctest reports success when a -R filter selects nothing, so each scratch stem is
+      # asserted to register before it runs; a stem that quietly stopped registering would
+      # otherwise pass as a green filtered run.
+      - name: Focus scratch setup tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_setup\.'"
+          registered=$(ctest -N -R '^scratch_setup\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_setup registered no tests"
+            exit 1
+          fi
+          echo "scratch_setup registered $registered test(s)"
+          ctest -R '^scratch_setup\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch publish tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_publish\.'"
+          registered=$(ctest -N -R '^scratch_publish\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_publish registered no tests"
+            exit 1
+          fi
+          echo "scratch_publish registered $registered test(s)"
+          ctest -R '^scratch_publish\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch replace tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_replace\.'"
+          registered=$(ctest -N -R '^scratch_replace\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_replace registered no tests"
+            exit 1
+          fi
+          echo "scratch_replace registered $registered test(s)"
+          ctest -R '^scratch_replace\.' --output-on-failure --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 

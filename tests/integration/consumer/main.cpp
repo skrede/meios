@@ -124,5 +124,7 @@ int main()
         return rc;
     if(const int rc = consumer::run_facade())
         return rc;
+    if(const int rc = consumer::run_memory_source())
+        return rc;
     return 0;
 }

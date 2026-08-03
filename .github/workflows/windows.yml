@@ -104,6 +104,48 @@ jobs:
           & ctest --output-on-failure --no-tests=error -R '^load_acquisition\.' -C Release --timeout 60
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Focus scratch setup tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_setup\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_setup\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch setup tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_setup\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_setup\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch publish tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_publish\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_publish\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch publish tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_publish\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_publish\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch replace tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_replace\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_replace\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch replace tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_replace\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_replace\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
 
