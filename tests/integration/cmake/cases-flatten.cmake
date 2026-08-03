@@ -70,15 +70,22 @@ meios_cmake_case(cmake_flatten_orders_after_deploy
 # include fails to resolve. The vendored directory is named inner_dir rather than pkg_inner so that
 # joining the reference onto the entry cannot resolve it either — only the manifest read under the
 # added root can — and the expected link exists in no other package in the tree.
-meios_cmake_case(cmake_flatten_package_path_reaches_vendored_package
-    FIXTURE flatten
-    DRIVER  meios_build_case.cmake
-    ORIGIN  tarball
-    EXTRA   "${_cli}"
-            -DFX_INPUT=pkg_outer/urdf/nested.urdf.xacro
-            -DFX_OUTPUT=urdf/nested.urdf
-            -DFX_PACKAGE_PATH=pkg_outer/vendor
-    REQUIRE_CONTAINS urdf/nested.urdf,harness_vendored_link)
+#
+# That manifest read is what meios::ros carries, so the case registers only where the binary was
+# really built with it. The enrichment is on by default, so this excuses the case in a deliberately
+# minimal build rather than in an ordinary one.
+get_property(_cli_has_ros GLOBAL PROPERTY MEIOS_CLI_HAS_ROS)
+if(_cli_has_ros)
+    meios_cmake_case(cmake_flatten_package_path_reaches_vendored_package
+        FIXTURE flatten
+        DRIVER  meios_build_case.cmake
+        ORIGIN  tarball
+        EXTRA   "${_cli}"
+                -DFX_INPUT=pkg_outer/urdf/nested.urdf.xacro
+                -DFX_OUTPUT=urdf/nested.urdf
+                -DFX_PACKAGE_PATH=pkg_outer/vendor
+        REQUIRE_CONTAINS urdf/nested.urdf,harness_vendored_link)
+endif()
 
 # The one case that executes Python, so it registers only where the binary was really built with the
 # enrichment. What it injects is the value of the property the binary's own listfile recorded, not a

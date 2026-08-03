@@ -37,6 +37,9 @@ endforeach()
 if(TARGET meios_ros)
     target_link_libraries(meios_cli PRIVATE meios::ros)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_ROS)
+    # A global property for the same reason the python one is: the flatten call that reads it may be
+    # written in any directory, and a variable set here would reach only the parent.
+    set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_ROS TRUE)
 endif()
 
 # The Python evaluator backend links the same way an enrichment scanner does: only

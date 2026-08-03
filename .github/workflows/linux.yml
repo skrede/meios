@@ -88,6 +88,9 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
+      # meios::ros is the one enrichment that defaults on, so this job turns it off by
+      # hand: it is the leg that proves core builds and passes with no enrichment
+      # compiled in, and it is where coverage is measured.
       - name: Configure
         env:
           CC: ${{ matrix.cc }}
@@ -98,6 +101,7 @@ jobs:
             -DMEIOS_WERROR=ON \
             -DMEIOS_COVERAGE=ON \
             -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_BUILD_ROS=OFF \
             -DMEIOS_CMAKE_FETCH_DEPS=ON
 
       - name: Build
