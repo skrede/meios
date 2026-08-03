@@ -14,14 +14,37 @@ function(meios_add_acquisition_test stem)
     catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
 endfunction()
 
-foreach(stem IN ITEMS operation_failure text_reader io_source_lookup
+foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
                       load_acquisition yaml_acquisition)
     meios_add_acquisition_test(${stem})
 endforeach()
 
+# The counting adapter is a header-only CLI sink over meios::model alone, so this stem
+# reads it out of the tool tree without the tool being built.
+if(TARGET operation_adapter_test)
+    target_include_directories(operation_adapter_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/tools/meios)
+endif()
+
 if(TARGET load_acquisition_test)
     target_compile_definitions(load_acquisition_test PRIVATE
         MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+endif()
+
+# The CLI acquisition stem drives the verb bodies, so it takes the tool support lib the
+# other CLI stems take; its own prefix keeps it selectable apart from them.
+set(cli_acquisition_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/cli_acquisition_test.cpp)
+if(TARGET meios_cli AND EXISTS ${cli_acquisition_src})
+    add_executable(cli_acquisition_test ${cli_acquisition_src})
+    target_link_libraries(cli_acquisition_test
+        PRIVATE meios_cli meios::urdf meios::bundle meios::completion
+            Catch2::Catch2WithMain)
+    target_compile_definitions(cli_acquisition_test PRIVATE
+        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+    meios_enable_coverage(cli_acquisition_test)
+    meios_warnings(cli_acquisition_test)
+    catch_discover_tests(cli_acquisition_test TEST_PREFIX "cli_acquisition.")
 endif()
 
 if(TARGET yaml_acquisition_test AND TARGET meios_eval-python)

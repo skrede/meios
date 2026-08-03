@@ -4,6 +4,7 @@
 #include "meios/urdf/parse_context.h"
 
 #include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/operation_failure.h"
 
 #include <string>
 #include <optional>
@@ -17,22 +18,23 @@ namespace meios::detail
 // the filesystem through a source is put to this question exactly as the arms that reach it
 // through a root are. A directory, a device and a broken link are deliberately not told apart:
 // what a consumer asks is whether there is an asset there, and all three answer no.
-std::optional<std::string> asset_or_missing(const std::filesystem::path &real, parse_context &ctx,
-                                            const source_location &loc, const std::string &uri);
+std::optional<std::string> asset_or_missing(const std::filesystem::path &real, parse_context &ctx, const source_location &loc, const std::string &uri);
 
 // Grades an absent asset by the missing-asset policy, and records what a silenced diagnostic
 // would have withdrawn, so the claim answers for the document rather than for the log.
 void report_missing(parse_context &ctx, const source_location &loc, const std::string &uri);
 
-// The three below refuse at error level whatever the missing-asset policy says. Separate named
+// The four below refuse at error level whatever the missing-asset policy says. Separate named
 // functions rather than a flag on the policy-honoring one, so a call site reads as a refusal.
+// The first carries the native failure that ended the search, so a consumer reading the record
+// gets the operating system's own identity rather than the sentence built from it.
+std::optional<std::string> report_cause(parse_context &ctx, const source_location &loc, const std::string &uri, const operation_failure &cause);
+
 void report_unreachable(parse_context &ctx, const source_location &loc, const std::string &uri);
 
-void report_foreign_scheme(parse_context &ctx, const source_location &loc, const std::string &uri,
-                           std::string_view scheme);
+void report_foreign_scheme(parse_context &ctx, const source_location &loc, const std::string &uri, std::string_view scheme);
 
-void report_foreign_authority(parse_context &ctx, const source_location &loc,
-                              const std::string &uri, std::string_view authority);
+void report_foreign_authority(parse_context &ctx, const source_location &loc, const std::string &uri, std::string_view authority);
 
 }
 

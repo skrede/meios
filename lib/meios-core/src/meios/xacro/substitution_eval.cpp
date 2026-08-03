@@ -9,12 +9,11 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/operation_failure.h"
 
-#include <tuple>
 #include <string>
 #include <vector>
 #include <variant>
-#include <utility>
 #include <optional>
 #include <string_view>
 
@@ -46,38 +45,61 @@ namespace
 // genuine error is replayed loud, an unsupported-under-leniency failure is dropped.
 class capture_sink final : public log_sink
 {
+    // A record replays through the overload it arrived on: absence of a location or of a
+    // code is what the evaluator said, and inventing either on replay would put a position
+    // and a classification on a diagnostic that never carried one.
+    struct buffered
+    {
+        level lvl;
+        std::optional<diagnostic_code> code;
+        std::optional<source_location> where;
+        std::string message;
+        std::optional<operation_failure> cause;
+    };
+
 public:
     using log_sink::log;
 
     void log(level lvl, const std::string &message) override
     {
-        m_plain.emplace_back(lvl, message);
+        m_records.push_back({lvl, std::nullopt, std::nullopt, message, std::nullopt});
     }
 
     void log(level lvl, const source_location &where, const std::string &message) override
     {
-        m_located.emplace_back(lvl, where, message);
+        m_records.push_back({lvl, std::nullopt, where, message, std::nullopt});
     }
 
     void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
     {
-        m_coded.emplace_back(lvl, code, where, message);
+        m_records.push_back({lvl, code, where, message, std::nullopt});
+    }
+
+    void log(level lvl, diagnostic_code code, const source_location &where, const operation_failure &cause, const std::string &message) override
+    {
+        m_records.push_back({lvl, code, where, message, cause});
     }
 
     void replay(log_sink &sink) const
     {
-        for(const std::pair<level, std::string> &entry : m_plain)
-            sink.log(entry.first, entry.second);
-        for(const std::tuple<level, source_location, std::string> &entry : m_located)
-            sink.log(std::get<0>(entry), std::get<1>(entry), std::get<2>(entry));
-        for(const std::tuple<level, diagnostic_code, source_location, std::string> &entry : m_coded)
-            sink.log(std::get<0>(entry), std::get<1>(entry), std::get<2>(entry), std::get<3>(entry));
+        for(const buffered &entry : m_records)
+            replay_one(entry, sink);
     }
 
 private:
-    std::vector<std::pair<level, std::string>> m_plain;
-    std::vector<std::tuple<level, source_location, std::string>> m_located;
-    std::vector<std::tuple<level, diagnostic_code, source_location, std::string>> m_coded;
+    std::vector<buffered> m_records;
+
+    static void replay_one(const buffered &entry, log_sink &sink)
+    {
+        if(!entry.where)
+            sink.log(entry.lvl, entry.message);
+        else if(!entry.code)
+            sink.log(entry.lvl, *entry.where, entry.message);
+        else if(entry.cause)
+            sink.log(entry.lvl, *entry.code, *entry.where, *entry.cause, entry.message);
+        else
+            sink.log(entry.lvl, *entry.code, *entry.where, entry.message);
+    }
 };
 
 // Upgrades an unlocated, code-less error the injected backend emits to a typed, located
@@ -110,6 +132,11 @@ public:
     void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
     {
         m_inner.log(lvl, code, where, message);
+    }
+
+    void log(level lvl, diagnostic_code code, const source_location &where, const operation_failure &cause, const std::string &message) override
+    {
+        m_inner.log(lvl, code, where, cause, message);
     }
 
 private:

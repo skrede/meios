@@ -32,37 +32,54 @@ std::filesystem::path document_base(const parse_context &ctx)
     return absolute_base(ctx.document).parent_path();
 }
 
-std::optional<std::filesystem::path> first_container(const std::filesystem::path &candidate, const parse_context &ctx)
+// A root the filesystem could not traverse neither contains nor excludes the candidate: it
+// retains its failure for an exhausted search and yields to the next root, which discards it.
+bool contains(const std::filesystem::path &root, const std::filesystem::path &candidate, std::optional<std::filesystem::path> &real, std::optional<operation_failure> &retained)
 {
-    for(const std::filesystem::path &root : ctx.package_roots)
+    contained_path_result under = try_contained_under(root, candidate);
+    if(!under)
     {
-        if(const std::optional<std::filesystem::path> real = contained_under(absolute_base(root), candidate))
-            return real;
+        if(!retained)
+            retained = under.error();
+        return false;
     }
-    return contained_under(document_base(ctx), candidate);
+    real = std::move(*under);
+    return real.has_value();
+}
+
+contained_path_result first_container(const std::filesystem::path &candidate, const parse_context &ctx)
+{
+    std::optional<std::filesystem::path> real;
+    std::optional<operation_failure> retained;
+    for(const std::filesystem::path &root : ctx.package_roots)
+        if(contains(absolute_base(root), candidate, real, retained))
+            return real;
+    if(contains(document_base(ctx), candidate, real, retained))
+        return real;
+    if(retained)
+        return unexpected<operation_failure>(*retained);
+    return std::optional<std::filesystem::path>{};
 }
 
 // A path no root contains is unreachable and a path a root contains but the filesystem does
 // not hold as a regular file is absent; only the second is the missing-asset policy's business.
 std::optional<std::string> resolve_contained(const std::filesystem::path &candidate, parse_context &ctx, const source_location &loc, const std::string &uri)
 {
-    const std::optional<std::filesystem::path> real = first_container(candidate, ctx);
+    const contained_path_result real = first_container(candidate, ctx);
     if(!real)
+        return report_cause(ctx, loc, uri, real.error());
+    if(!*real)
     {
         report_unreachable(ctx, loc, uri);
         return std::nullopt;
     }
-    return asset_or_missing(*real, ctx, loc, uri);
+    return asset_or_missing(**real, ctx, loc, uri);
 }
 
 std::optional<std::string> package_result(const std::string &uri, source_lookup_result hit, parse_context &ctx, const source_location &loc)
 {
     if(!hit)
-    {
-        const operation_failure &cause = hit.error();
-        ctx.log.log(level::error, diagnostic_code::unresolved_asset, loc, cause, "cannot resolve asset '" + uri + "': " + cause.native.message());
-        return std::nullopt;
-    }
+        return report_cause(ctx, loc, uri, hit.error());
     if(!*hit)
     {
         report_missing(ctx, loc, uri);

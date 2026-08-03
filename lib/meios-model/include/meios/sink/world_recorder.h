@@ -15,6 +15,7 @@
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/topology_policy.h"
+#include "meios/diagnostic/operation_failure.h"
 
 #include <utility>
 #include <optional>
@@ -29,6 +30,8 @@ public:
             : m_log(log)
             , m_policy(policy)
             , m_model()
+            , m_ok(true)
+            , m_first_failure()
     {
     }
 
@@ -121,6 +124,13 @@ private:
             m_target.log(lvl, code, location, message);
         }
 
+        void log(level lvl, diagnostic_code code, const source_location &location, const operation_failure &cause, const std::string &message) override
+        {
+            if(lvl == level::error && !m_first)
+                m_first = location;
+            m_target.log(lvl, code, location, cause, message);
+        }
+
     private:
         log_sink &m_target;
         std::optional<source_location> &m_first;
@@ -129,7 +139,7 @@ private:
     log_sink &m_log;
     topology_policy m_policy;
     model<double> m_model;
-    bool m_ok = true;
+    bool m_ok;
     std::optional<source_location> m_first_failure;
 
     // A name map shorter than its record vector means two records shared a name. The load

@@ -1,6 +1,7 @@
 #ifndef HPP_GUARD_MEIOS_TEST_SOURCE_LOOKUP_FIXTURE_H
 #define HPP_GUARD_MEIOS_TEST_SOURCE_LOOKUP_FIXTURE_H
 
+#include <meios/io/scratch_dir.h>
 #include <meios/io/source_lookup.h>
 #include <meios/io/package_source.h>
 
@@ -9,10 +10,15 @@
 #include <meios/diagnostic/source_location.h>
 #include <meios/diagnostic/operation_failure.h>
 
+#include <catch2/catch_test_macros.hpp>
+
 #include <string>
 #include <vector>
+#include <fstream>
 #include <utility>
 #include <optional>
+#include <algorithm>
+#include <filesystem>
 #include <string_view>
 #include <system_error>
 
@@ -117,6 +123,44 @@ struct recorder
 
     std::vector<record> &records;
 };
+
+inline bool errored(const std::vector<record> &records)
+{
+    return std::any_of(records.begin(), records.end(), [](const record &noted) { return noted.level == meios::level::error; });
+}
+
+inline meios::scratch_dir make_tree()
+{
+    std::error_code error;
+    const std::filesystem::path parent              = std::filesystem::temp_directory_path(error);
+    const std::optional<std::filesystem::path> root = error ? std::nullopt : meios::detail::create_scratch_root(parent, error);
+    REQUIRE(root.has_value());
+    return meios::scratch_dir{*root};
+}
+
+inline void seed(const std::filesystem::path &file)
+{
+    std::filesystem::create_directories(file.parent_path());
+    std::ofstream(file) << "mesh-bytes";
+}
+
+inline std::filesystem::path real_path(const std::filesystem::path &candidate)
+{
+    std::error_code error;
+    const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, error);
+    REQUIRE_FALSE(error);
+    return real;
+}
+
+// A self-referential directory link: a real, deterministic object no supported platform can
+// canonicalize, so a native traversal failure is injected without a scripted seam.
+inline std::filesystem::path loop_root(const std::filesystem::path &under)
+{
+    std::error_code error;
+    std::filesystem::create_directory_symlink(under / "loop", under / "loop", error);
+    REQUIRE_FALSE(error);
+    return under / "loop";
+}
 
 }
 
