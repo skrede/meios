@@ -218,7 +218,7 @@ if(MEIOS_BUILD_SCAN_GLTF)
         set(MEIOS_SCAN_GLTF_INSTALLED TRUE PARENT_SCOPE)
     endif()
 endif()
-if(MEIOS_BUILD_ROS)
+if(MEIOS_ROS_PACKAGE_SUPPORT)
     meios_add_enrichment(ros
         LINK_PUBLIC meios::io
         LINK_PRIVATE pugixml::pugixml)

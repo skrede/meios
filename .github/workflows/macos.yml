@@ -242,7 +242,7 @@ jobs:
             -DMEIOS_BUILD_SCAN_STL=ON \
             -DMEIOS_BUILD_SCAN_GLTF=ON \
             -DMEIOS_BUILD_ARCHIVE_ZIP=ON \
-            -DMEIOS_BUILD_ROS=ON
+            -DMEIOS_ROS_PACKAGE_SUPPORT=ON
 
       - name: Build
         run: cmake --build build

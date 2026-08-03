@@ -22,11 +22,11 @@ option(MEIOS_BUILD_SCAN_OBJ "Build meios::scan-obj (dependency-free)" OFF)
 option(MEIOS_BUILD_SCAN_COLLADA "Build meios::scan-collada (pugixml)" OFF)
 option(MEIOS_BUILD_SCAN_STL "Build meios::scan-stl (dependency-free)" OFF)
 option(MEIOS_BUILD_SCAN_GLTF "Build meios::scan-gltf (nlohmann/json)" OFF)
-# On by default, alone among the enrichments: it carries no dependency core does not already have,
-# and package:// resolution without it succeeds only where a directory name happens to equal the
-# package name it declares. Turning it off gives up that resolution and the environment search
-# lists it reads.
-option(MEIOS_BUILD_ROS "Build meios::ros (pugixml)" ON)
+# Named for the layout it reads rather than for the module it builds, and on by default alone among
+# the enrichments: it carries no dependency core does not already have, and package:// resolution
+# without it succeeds only where a directory name happens to equal the package name it declares.
+# Turning it off gives up that resolution and the environment search lists it reads.
+option(MEIOS_ROS_PACKAGE_SUPPORT "Resolve package:// through ROS package manifests (pugixml)" ON)
 option(MEIOS_BUILD_ARCHIVE_ZIP "Build meios::archive-zip (miniz)" OFF)
 option(MEIOS_BUILD_EVAL_PYTHON "Build meios::eval-python (pybind11 + found Python3)" OFF)
 option(MEIOS_REQUIRE_EVAL_PYTHON "Turn a skipped meios::eval-python into a configure error" OFF)

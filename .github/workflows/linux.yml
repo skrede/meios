@@ -101,7 +101,7 @@ jobs:
             -DMEIOS_WERROR=ON \
             -DMEIOS_COVERAGE=ON \
             -DMEIOS_BUILD_TESTS=ON \
-            -DMEIOS_BUILD_ROS=OFF \
+            -DMEIOS_ROS_PACKAGE_SUPPORT=OFF \
             -DMEIOS_CMAKE_FETCH_DEPS=ON
 
       - name: Build
@@ -207,7 +207,7 @@ jobs:
             -DMEIOS_BUILD_SCAN_STL=ON \
             -DMEIOS_BUILD_SCAN_GLTF=ON \
             -DMEIOS_BUILD_ARCHIVE_ZIP=ON \
-            -DMEIOS_BUILD_ROS=ON
+            -DMEIOS_ROS_PACKAGE_SUPPORT=ON
 
       - name: Build
         run: cmake --build build
