@@ -84,15 +84,19 @@ function(_meios_flatten_command target cli argv out_file rule)
     # does not survive it either: it is evaluated before the split.
     string(REPLACE ";" "\;" _args "${argv}")
     get_property(_module_dir GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR)
+    # The binary is a dependency by path and not only by target name: a caller-supplied path may
+    # still name a binary this same build produces, and only the file-level edge orders the flatten
+    # after the rule writing it. A path naming a file nothing produces then fails as a build-graph
+    # error rather than as a flatten against a stale or absent binary.
     add_custom_target(${rule}
         COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${_run}" "-DMEIOS_FLATTEN_ARGS=${_args}"
                 "-DMEIOS_FLATTEN_OUT=${out_file}"
                 -P "${_module_dir}/MeiosFlattenRun.cmake"
+        DEPENDS "${_run}"
         COMMENT "Flattening ${out_file}"
         VERBATIM COMMAND_EXPAND_LISTS)
-    # An always-run target carries no file dependency, so what used to order the flatten after the
-    # binary it drives is now a target dependency. There is none to add when the caller supplied a
-    # path instead of a target.
+    # The target-level edge additionally orders against the binary's own post-build steps, which a
+    # dependency on its file alone does not reach.
     if(TARGET ${cli})
         add_dependencies(${rule} ${cli})
     endif()
