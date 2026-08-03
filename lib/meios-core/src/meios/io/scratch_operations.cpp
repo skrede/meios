@@ -4,7 +4,6 @@
 #include <string>
 #include <cerrno>
 #include <fstream>
-#include <exception>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -47,16 +46,18 @@ class native_scratch_operations final : public scratch_operations
 {
 public:
     // random_device's constructor and its call operator are both specified as throwing when
-    // entropy cannot be obtained, and only an implementation-defined type derived from
-    // exception is promised; turning that into a value is what keeps a byte-backed source's
-    // construction nonthrowing.
+    // entropy cannot be obtained, and the stem's own growth allocates; turning either into a
+    // value is what keeps a byte-backed source's construction nonthrowing. The handler is
+    // unrestricted because these verbs are noexcept and so have no propagation path at all: the
+    // allocator a throw arrives from is the consumer's to replace, and a type outside the
+    // exception hierarchy would otherwise terminate the process rather than refuse.
     scratch_stem_result stem() const noexcept override
     {
         try
         {
             return hex_stem();
         }
-        catch(const std::exception &)
+        catch(...)
         {
             return unexpected<operation_failure>({operation_kind::create, make_error_code(std::errc::io_error)});
         }
@@ -97,7 +98,7 @@ public:
             std::error_code ec;
             std::filesystem::remove_all(path, ec);
         }
-        catch(const std::exception &)
+        catch(...)
         {
         }
     }
@@ -121,7 +122,7 @@ public:
                 return refuse(operation_kind::write, stream_error());
             return {};
         }
-        catch(const std::exception &)
+        catch(...)
         {
             return refuse(operation_kind::open, make_error_code(std::errc::not_enough_memory));
         }
