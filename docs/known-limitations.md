@@ -40,6 +40,17 @@ process watching the system temporary directory during that interval sees a dire
 permissions. Nothing has been written into it yet. The window is the whole exposure: a root whose
 permissions could not be narrowed at all is removed and refused rather than served from.
 
+**Narrowing that root to its owner replaces permission bits, and not every platform decides access
+that way.** Where the real access decision is an access-control list, the call leaves that list
+untouched and narrows nothing, so the root's protection there rests on the per-user temporary
+directory it was created inside and on the unpredictable name. Treat those two as the exposure on such
+a platform rather than reading the narrowing call as a guarantee it cannot give everywhere.
+
+**The guard that refuses an entry offered into the publication staging directory folds ASCII case,
+and that fold has run on no case-folding filesystem.** The comparison folds because a differently-cased
+leading component names the same real directory where the filesystem folds case. Every run to date has
+been on a case-sensitive filesystem, so the fold is correct by construction and unmeasured.
+
 **Creation beneath a resolved temporary directory is not driven through a source.** What a source does
 when the system temporary directory itself does not exist is driven end to end — pointing the
 temporary-directory environment at a path that does not exist is the steering, and what runs is the
@@ -47,6 +58,26 @@ diagnostic the source raises and the refusal that follows. The narrower branch, 
 directory resolves and the root creation beneath it fails, is driven against the creation step
 directly — with an unusable parent, and with scripted candidate names and a scripted narrowing outcome
 behind the operations seam — but never with a source above it.
+
+**What has been driven natively, and where, stated exactly.** The candidate-collision sweep, the
+occupancy discrimination and the setup-precedence cases have been run and have passed on Linux, on
+macOS and on Windows, with the two symlink-occupancy forms compiled out on the platform that has no
+symbolic links and nothing reported as skipped in their place. The installed consumer — a duplicate
+refusal, a replacement and rematerialization on one stable path, a cause-carrying publication failure,
+and the scratch teardown — has been built against an installed package and run directly on all three
+as well. **Those consumer runs, and the publication and replacement cases, were taken against an
+earlier revision of that code.** The publication primitive, the entry-offer guard, the diagnostic
+vocabulary and the consumer exercise have all changed since; the current publication and replacement
+code has been observed on Linux only. Read the three-platform result as covering the scratch-setup
+path, not the publication path.
+
+**Whether a replacement over a destination somebody still holds open succeeds is a platform fact, and
+it is measured on POSIX only.** The case asserts whichever branch its host takes rather than assuming
+one; on Linux the rename succeeds, the pre-existing handle keeps reading the prior bytes and a reopen
+reads the replacement. On the other two platforms the case runs and passes, but which branch it took
+is not retained: a passing case's output is not kept, and both branches pass. **No native value for
+the refusal has been recorded on any platform**, so the input a retry bound would need does not exist
+yet. No bound is derived from it, and none appears anywhere in the publication path.
 
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directory once, when it is resolved.

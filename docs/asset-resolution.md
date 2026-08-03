@@ -187,6 +187,22 @@ construction and lets a sibling reference from inside the asset resolve. The scr
 when the source is destroyed. Keep the source stack alive for as long as you intend to read the paths
 it produced.
 
+**A publication stages in one place and renames from there.** The new bytes are written to a
+fixed-name staging file in a single staging directory directly under the scratch root — a sibling of
+the mirrored package directories, never a child of any of them — and that file is renamed onto the
+entry's path. Both ends stay inside the root, so the rename never crosses a filesystem; the mirrored
+directory holds one file per entry throughout, so a sibling reference still resolves by a plain
+relative join; and no staging path can be another entry's materialized path. The staging name is a
+fixed length rather than the entry's name plus a suffix, so an entry close to a filesystem's
+per-component length limit stays publishable. A publication that fails removes the staging file and
+nothing else.
+
+**An entry offered into the staging directory is refused when it is offered**, and the refusal names
+the package and the relative. The check reads the leading component of the normalized path the two
+halves compose, so a spelling that climbs into the staging directory is refused by the same rule as
+the direct one. It happens at the offer rather than at the publication because the collision is
+created by the offer, and the file that would prove it does not exist until a later lookup.
+
 **A source that could not obtain a scratch area serves nothing.** It says so once, at error level and
 carrying the system's own reason for the failure, and then declines every lookup with the same code
 rather than writing somewhere it did not intend to. A load through such a source is refused whatever
@@ -210,7 +226,7 @@ policy exactly as an absent one is — because a `<mesh>` or a `<texture>` asks 
 directory is not one. The two positions do not contradict each other: a source answers where a package
 is, and the asset layer never resolves a directory into an asset, whichever spelling named it.
 
-Three residuals are real and are not smoothed over:
+Four residuals are real and are not smoothed over:
 
 - **A platform that refuses to delete a file with an open handle leaks the scratch tree.** Removal
   stops at the first error rather than corrupting or partially deleting anything, so what is left
@@ -230,8 +246,17 @@ Three residuals are real and are not smoothed over:
   the retry that tells a name collision apart from a permanent failure is exercised at both edges of its
   bound — the last attempt below it takes a free name, the attempt at it exhausts — and a root whose
   permissions could not be narrowed is observed to be gone from the filesystem afterwards. Four
-  occupancy forms are told apart at a candidate name: a directory, a regular file, a symlink to a
-  directory, and a dangling symlink.
+  occupancy forms are told apart at a candidate name where the platform has symbolic links — a
+  directory, a regular file, a symlink to a directory, and a dangling symlink; where it does not, the
+  two symlink forms are compiled out rather than skipped and two occupancy forms are driven. The
+  step's cases number ten on Linux, ten on macOS and eight on Windows, all passing, and no case is
+  reported as skipped on any of the three.
+- **Narrowing the root to its owner replaces permission bits, and not every platform decides access
+  that way.** Where the system's real access decision is an access-control list, the call leaves that
+  list untouched and narrows nothing; the root's protection there rests instead on the per-user
+  temporary directory it was created inside, together with the unpredictable name. The refusal path is
+  the same everywhere: a root the step reports as unnarrowable is removed and refused rather than
+  served from.
 
 ### Where this diverges from the recommended asset lease
 
@@ -288,6 +313,12 @@ temporary directory it may not write. It is reported under `asset_write_failed` 
 refuses the load at every setting, and it is deliberately never routed through the missing-asset
 policy. Doing so would misattribute the fault to the description's author, and would let a lowered
 setting turn a full disk into a merely unresolved asset.
+
+**A refusal that is the offering program's own doing carries its own code.** `asset_write_failed` is
+for a filesystem failure. An entry offered a second time to a source built to reject the second offer
+says something about the program's configuration and nothing about the filesystem, so it is reported
+under `duplicate_asset_entry` instead, and the first bytes keep resolving. The split matters to
+anyone counting: a consumer tallying write failures is not handed a policy refusal in the same total.
 
 Several refusals are unconditional and belong to no policy. An empty reference, a `file://` authority
 naming a host, and a `file://` candidate that does not normalize to an absolute path are three, each
