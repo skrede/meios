@@ -343,7 +343,10 @@ that segment is empty — `package://<pkg>//` — the relative half is a bare se
 canonical root is below its filesystem root, joining that separator onto the package directory
 discards the directory instead of extending it and leaves a filesystem-root candidate outside the
 source root; what answers is the containment refusal described in [Containment](#containment),
-unchanged. The missing-asset policy still handles the unresolved lookup as usual, but the unsoftened
+unchanged. A source holding bytes answers that spelling earlier and never reaches containment with it:
+a relative half carrying a root replaces the package half rather than joining beneath it, so it names a
+file under no package, the offer is refused under `malformed_asset_uri`, and the lookup finds nothing.
+The missing-asset policy still handles the unresolved lookup as usual, but the unsoftened
 `uncontained_asset` remains at error level under every setting, so the load through such a source fails
 even at the silent one. This behavior is a known residual rather than a promise, which is why no rule
 below covers it and a case pins it instead. A `<mesh>` and a `<texture>` ask for a file, and a package

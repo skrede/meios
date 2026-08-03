@@ -79,10 +79,11 @@ bool names_scratch_staging(std::string_view package, std::string_view relative);
 scratch_key normalized_key(std::string_view package, std::string_view relative);
 
 // Answers whether the relative half names no file strictly beneath its own package directory —
-// empty once normalized, the package directory itself, or a path leading with a parent-directory
-// component. It reads the relative alone rather than the composition, because a relative that
-// climbs out of its package composes to an ordinary-looking path inside a different package's
-// directory, which a composition-based test cannot see.
+// empty once normalized, the package directory itself, a path leading with a parent-directory
+// component, or a path carrying a root, which replaces the package half instead of joining under
+// it. It reads the relative alone rather than the composition, because a relative that climbs out
+// of its package composes to an ordinary-looking path inside a different package's directory,
+// which a composition-based test cannot see.
 bool names_no_file_under_package(std::string_view package, std::string_view relative);
 
 // Answers a fresh directory narrowed to its owner, or a refusal naming the step that failed

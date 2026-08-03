@@ -175,6 +175,8 @@ private:
         return *this;
     }
 
+    // Placed by the key, reported by the authored halves: a candidate built from the text keeps a
+    // trailing separator through canonicalization and creates a directory where the file belongs.
     std::optional<resolved_asset> write_entry(const key &wanted, const std::string &bytes, std::string_view package, std::string_view relative)
     {
         if(!m_mirror.valid())
@@ -182,7 +184,7 @@ private:
             refuse(diagnostic_code::asset_write_failed, "no scratch directory; cannot serve " + named(wanted));
             return std::nullopt;
         }
-        const std::optional<std::filesystem::path> target = detail::contained_candidate(m_mirror.root(), package, relative, m_log.get());
+        const std::optional<std::filesystem::path> target = detail::contained_candidate(m_mirror.root(), wanted.first, wanted.second, m_log.get());
         if(!target || !publish_entry(wanted, *target, bytes, "write"))
             return std::nullopt;
         return resolved_asset{*target, m_mirror.root(), request_path(package, relative)};
