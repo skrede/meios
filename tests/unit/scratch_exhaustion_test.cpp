@@ -1,41 +1,20 @@
+#include "allocation_window.h"
+
 #include "meios/io/scratch_operations.h"
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <new>
 #include <cstddef>
-#include <cstdlib>
 #include <fstream>
 #include <optional>
 #include <filesystem>
 #include <system_error>
 
-// The seam's nonthrowing verbs are reached through a replaced global operator new, the only
-// portable way to make an allocation fail on demand. Catch2 and the standard library allocate
-// everywhere else, so the arming window must open and close around exactly one call.
-
 namespace
 {
 
-bool window_open        = false;
-bool window_throws      = false;
-std::size_t window_uses = 0;
-
-class allocation_window
-{
-public:
-    explicit allocation_window(bool throwing)
-    {
-        window_uses   = 0;
-        window_throws = throwing;
-        window_open   = true;
-    }
-
-    ~allocation_window() { window_open = false; }
-
-    allocation_window(const allocation_window &)            = delete;
-    allocation_window &operator=(const allocation_window &) = delete;
-};
+using scratch_test::window_uses;
+using scratch_test::allocation_window;
 
 std::filesystem::path fresh_dir(const char *name)
 {
@@ -86,45 +65,6 @@ std::optional<meios::operation_failure> refused_stem(const meios::detail::scratc
     return drawn.error();
 }
 
-}
-
-void *operator new(std::size_t size)
-{
-    if(window_open)
-    {
-        ++window_uses;
-        if(window_throws)
-            throw std::bad_alloc();
-    }
-    void *block = std::malloc(size != 0 ? size : 1);
-    if(block == nullptr)
-        throw std::bad_alloc();
-    return block;
-}
-
-void *operator new[](std::size_t size)
-{
-    return operator new(size);
-}
-
-void operator delete(void *block) noexcept
-{
-    std::free(block);
-}
-
-void operator delete[](void *block) noexcept
-{
-    std::free(block);
-}
-
-void operator delete(void *block, std::size_t) noexcept
-{
-    std::free(block);
-}
-
-void operator delete[](void *block, std::size_t) noexcept
-{
-    std::free(block);
 }
 
 TEST_CASE("a write whose stream cannot obtain memory is refused rather than terminating", "[io][scratch][exhaustion]")

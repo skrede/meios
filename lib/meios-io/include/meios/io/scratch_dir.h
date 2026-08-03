@@ -14,12 +14,13 @@
 namespace meios
 {
 
-// Owns a directory tree for its lifetime and removes it on destruction. The
-// error_code overload of remove_all is used so the destructor never throws, and a
-// swap-based move keeps the retiring tree alive on the moved-from owner so a
-// move-assignment target's prior tree is still removed exactly once. On Windows
-// remove_all fails while a handle to a contained file is open and stops at the first
-// error, so a consumer still reading a resolved asset when the owner dies leaks the
+// Owns a directory tree for its lifetime and removes it on destruction. The error_code overload
+// of remove_all answers a filesystem error as a value, but it is not noexcept — its recursive
+// traversal may still throw when an allocation fails — so the destructor catches as well, because
+// a destructor is noexcept and would otherwise terminate. A swap-based move keeps the retiring
+// tree alive on the moved-from owner so a move-assignment target's prior tree is still removed
+// exactly once. On Windows remove_all fails while a handle to a contained file is open and stops
+// at the first error, so a consumer still reading a resolved asset when the owner dies leaks the
 // tree rather than corrupting anything.
 class scratch_dir
 {
@@ -42,8 +43,14 @@ public:
     {
         if(m_path.empty())
             return;
-        std::error_code ec;
-        std::filesystem::remove_all(m_path, ec);
+        try
+        {
+            std::error_code ec;
+            std::filesystem::remove_all(m_path, ec);
+        }
+        catch(...)
+        {
+        }
     }
 
     const std::filesystem::path &path() const noexcept { return m_path; }
