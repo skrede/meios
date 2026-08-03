@@ -24,19 +24,19 @@
 namespace meios
 {
 
-// An in-memory package source keyed by (package, relative). It owns a scratch directory and
-// mirrors the requested relative path beneath it on first locate, so a path it hands back names a
-// real file for as long as the source lives — and names the same file throughout, because a
-// replacement publishes over the path a resolution already handed out rather than beside it.
+// An in-memory package source. It owns a scratch directory and mirrors the requested relative
+// path beneath it on first locate, so a path it hands back names a real file for as long as the
+// source lives — and names the same file throughout, because an entry is identified by the
+// mirrored file its two halves name rather than by the text they were spelled with, a replacement
+// publishes over the path a resolution already handed out rather than beside it, and a
+// publication that would reach a file another entry holds is refused before anything is written.
 // Entries are immutable unless the source was built with update_behavior::replace, which is
-// source-wide and fixed at construction. It never satisfies provides_path: it cannot answer
-// without writing, and its diagnostics carry an empty location because a source layer has no
-// document position for the load to anchor to. It declines the lookup whose relative half is
-// empty — the one asking where a package is — because it writes an entry only when that entry is
-// asked for by name, so the directory it named would be empty and every path beneath it would
-// name nothing; an entry offered under that empty relative is refused for the mirror reason. An
-// entry whose mirrored path would land in the directory the source stages publications in is
-// refused on the way in for the same reason: the offer names no file the source can serve.
+// source-wide and fixed at construction.
+// It never satisfies provides_path: it cannot answer without writing, and its diagnostics carry
+// an empty location because a source layer has no document position to anchor to. It declines the
+// lookup whose relative half is empty — the one asking where a package is — and refuses an offer
+// naming no file beneath its own package or landing where publications stage: neither names a
+// file it can serve.
 class memory_source
 {
     using key = detail::scratch_key;
@@ -64,7 +64,7 @@ public:
     {
         if(refused_unserveable(package, relative))
             return *this;
-        const key wanted{std::move(package), std::move(relative)};
+        const key wanted                                = detail::normalized_key(package, relative);
         const std::map<key, std::string>::iterator held = m_entries.find(wanted);
         if(held != m_entries.end())
             return update(wanted, held->second, std::move(bytes));
@@ -81,7 +81,7 @@ public:
     {
         if(relative.empty())
             return std::nullopt;
-        const key wanted{std::string(package), std::string(relative)};
+        const key wanted                                       = detail::normalized_key(package, relative);
         const std::map<key, std::string>::const_iterator entry = m_entries.find(wanted);
         if(entry == m_entries.end())
             return std::nullopt;
@@ -112,7 +112,7 @@ private:
                "could not create a scratch directory for a byte-backed source: " + cause.native.message());
     }
 
-    // Both refusals are the same judgment: the offer names no file the source can serve. The
+    // Every branch is the same judgment: the offer names no file the source can serve. The
     // staging half is answered here rather than at the publication because the collision is made
     // by the offer, and the file that would prove it does not exist until a later resolution.
     bool refused_unserveable(const std::string &package, const std::string &relative)
@@ -127,6 +127,10 @@ private:
                    "refused an entry for package \"" + package + "\" offered under \"" + relative +
                            "\", which names the directory the source stages publications in rather "
                            "than a file it can serve");
+        else if(detail::names_no_file_under_package(package, relative))
+            refuse(diagnostic_code::malformed_asset_uri,
+                   "refused an entry for package \"" + package + "\" offered under \"" + relative +
+                           "\", which names no file beneath that package");
         else
             return false;
         return true;
@@ -160,7 +164,8 @@ private:
         {
             refuse(diagnostic_code::duplicate_asset_entry,
                    "refused a second entry for " + named(wanted) +
-                           "; a byte-backed source holds its entries immutable unless it was built to replace them");
+                           "; a byte-backed source holds its entries immutable unless it was built to replace them, and "
+                           "judges an offer by the mirrored file it names rather than by the text it was spelled with");
             return *this;
         }
         const std::optional<std::filesystem::path> target = m_mirror.materialized(wanted);

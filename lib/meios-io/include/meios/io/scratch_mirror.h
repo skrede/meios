@@ -8,7 +8,6 @@
 #include "meios/diagnostic/operation_failure.h"
 
 #include <map>
-#include <string>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -17,8 +16,6 @@
 
 namespace meios::detail
 {
-
-using scratch_key = std::pair<std::string, std::string>;
 
 // Owns the tree for its lifetime and remembers the path each key materialized at, so a
 // replacement publishes over the path a resolution already handed out rather than beside it.
@@ -65,6 +62,8 @@ public:
 
     expected<void, operation_failure> publish(const scratch_key &wanted, const std::filesystem::path &target, std::string_view bytes)
     {
+        if(const std::optional<operation_failure> held = held_by_other(wanted, target))
+            return unexpected<operation_failure>(*held);
         const expected<void, operation_failure> published = publish_scratch_entry(m_dir.path(), target, bytes);
         if(published)
             m_paths.insert_or_assign(wanted, target);
@@ -75,6 +74,22 @@ private:
     scratch_dir m_dir;
     std::optional<operation_failure> m_setup;
     std::map<scratch_key, std::filesystem::path> m_paths;
+
+    // Publishing n entries costs a scan each, and that quadratic cost is accepted: a byte-backed
+    // source holds the handful an application names, and the linear alternative — a second map
+    // keyed by the materialized path — is the second identity whose drift this refuses.
+    std::optional<operation_failure> held_by_other(const scratch_key &wanted, const std::filesystem::path &target) const
+    {
+        for(const std::pair<const scratch_key, std::filesystem::path> &recorded : m_paths)
+        {
+            if(recorded.first == wanted)
+                continue;
+            std::error_code ec;
+            if(std::filesystem::equivalent(recorded.second, target, ec))
+                return operation_failure{operation_kind::publish, std::make_error_code(std::errc::file_exists)};
+        }
+        return std::nullopt;
+    }
 
     static expected<std::filesystem::path, operation_failure> open_root()
     {

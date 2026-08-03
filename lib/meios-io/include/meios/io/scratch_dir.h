@@ -5,6 +5,7 @@
 
 #include "meios/diagnostic/operation_failure.h"
 
+#include <string>
 #include <utility>
 #include <filesystem>
 #include <string_view>
@@ -56,6 +57,8 @@ private:
 namespace detail
 {
 
+using scratch_key = std::pair<std::string, std::string>;
+
 // Every publication stages inside one directory of this name directly under the scratch root, a
 // sibling of the mirrored package directories rather than a child of any of them, so a staging
 // path can never be an entry's own materialized path. The file's name is fixed-length, so a
@@ -68,6 +71,19 @@ inline constexpr std::string_view scratch_staging_file = "incoming";
 // directory is refused by the same predicate as the direct spelling, and it is asked when the
 // entry is offered because an existence pre-check races an entry offered but not yet materialized.
 bool names_scratch_staging(std::string_view package, std::string_view relative);
+
+// Answers which mirrored file a pair names, so two spellings of one file answer one key. The
+// halves are composed and normalized, then split again at the last component, which leaves an
+// already-normal pair unchanged and folds every aliasing spelling onto it. It is meaningful only
+// on a pair names_no_file_under_package answers false for.
+scratch_key normalized_key(std::string_view package, std::string_view relative);
+
+// Answers whether the relative half names no file strictly beneath its own package directory —
+// empty once normalized, the package directory itself, or a path leading with a parent-directory
+// component. It reads the relative alone rather than the composition, because a relative that
+// climbs out of its package composes to an ordinary-looking path inside a different package's
+// directory, which a composition-based test cannot see.
+bool names_no_file_under_package(std::string_view package, std::string_view relative);
 
 // Answers a fresh directory narrowed to its owner, or a refusal naming the step that failed
 // and carrying that step's own native code. A root that could not be narrowed is removed

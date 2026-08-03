@@ -67,6 +67,27 @@ bool names_scratch_staging(std::string_view package, std::string_view relative)
     return same_ascii_folded(leading, scratch_staging_dir);
 }
 
+// A trailing separator survives normalization as an empty final component, so the naive split
+// yields a pair naming a directory that does not exist while the spelling names an ordinary file;
+// folding it back is what makes that spelling one key with the plain one. The non-empty condition
+// is the loop's bound: an empty path is its own parent, so without it the fold never advances.
+scratch_key normalized_key(std::string_view package, std::string_view relative)
+{
+    std::filesystem::path mirrored = (std::filesystem::path(package) / std::filesystem::path(relative)).lexically_normal();
+    while(!mirrored.empty() && (mirrored.filename().empty() || mirrored.filename() == std::filesystem::path(".")))
+        mirrored = mirrored.parent_path();
+    return {mirrored.parent_path().generic_string(), mirrored.filename().generic_string()};
+}
+
+bool names_no_file_under_package(std::string_view, std::string_view relative)
+{
+    const std::filesystem::path named = std::filesystem::path(relative).lexically_normal();
+    if(named.empty())
+        return true;
+    const std::string leading = named.begin()->string();
+    return leading == "." || leading == "..";
+}
+
 // The target is never removed or truncated ahead of the rename: that would leave the path naming
 // nothing for a window, and a caller still holding the old bytes is the point.
 scratch_step_result publish_scratch_entry(const std::filesystem::path &root, const std::filesystem::path &target, std::string_view bytes, const scratch_operations &operations)

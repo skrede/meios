@@ -197,6 +197,14 @@ fixed length rather than the entry's name plus a suffix, so an entry close to a 
 per-component length limit stays publishable. A publication that fails removes the staging file and
 nothing else.
 
+**An entry is the file it names, not the text it was spelled with.** A source holding bytes decides
+which entry an offer is from its package and relative halves composed and normalized, so two
+spellings that name one file are one entry: the second is refused as a duplicate at the default
+behavior, and published through the one entry where the source was built to replace. A publication
+that would reach a file another entry already holds is refused before anything is written, which
+closes the spellings — a differently-cased package on a volume that folds case, a link resolving
+onto an entry's directory — that no reading of the text alone can tell apart.
+
 **An entry offered into the staging directory is refused when it is offered**, and the refusal names
 the package and the relative. The check reads the leading component of the normalized path the two
 halves compose, so a spelling that climbs into the staging directory is refused by the same rule as
