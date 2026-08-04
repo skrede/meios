@@ -2,8 +2,9 @@
 #define HPP_GUARD_MEIOS_UNIT_BUNDLE_CLOSURE_PROBE_H
 
 // A claim that a reference is never re-resolved needs a source that counts being asked rather
-// than one that only answers, and a closure whose parent and child share one package root — the
-// collision rule would otherwise refuse a child before the resolution under test is reached.
+// than one that only answers, two parents naming the one child so a second lookup is reachable
+// at all, and a closure whose parents and child share one package root — the collision rule
+// would otherwise refuse a child before the resolution under test is reached.
 
 #include "asset_read_probe.h"
 
@@ -89,14 +90,16 @@ struct child_scanner
 
 struct package_tree
 {
-    explicit package_tree(const std::filesystem::path &root) : parent(root / "ur5" / "meshes" / "base.obj"), child(root / "ur5" / "materials" / "wood.mtl")
+    explicit package_tree(const std::filesystem::path &root) : child(root / "ur5" / "materials" / "wood.mtl"), parent(root / "ur5" / "meshes" / "base.obj"), sibling(root / "ur5" / "meshes" / "tool.obj")
     {
         std::filesystem::create_directories(child.parent_path());
         write_file(parent, "");
+        write_file(sibling, "");
     }
 
-    std::filesystem::path parent;
     std::filesystem::path child;
+    std::filesystem::path parent;
+    std::filesystem::path sibling;
 };
 
 inline meios::scanner_registry closure_registry(int &dispatches)

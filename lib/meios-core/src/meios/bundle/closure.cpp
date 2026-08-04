@@ -25,6 +25,19 @@
 namespace meios::detail
 {
 
+namespace
+{
+
+std::optional<std::string> refuse_child(log_sink &log, const std::string &child,
+                                        const operation_failure &cause)
+{
+    log.log(level::error, diagnostic_code::cannot_open, source_location{}, cause,
+            "cannot " + std::string(to_string(cause.operation)) + " reference \"" + child + "\": " + cause.native.message());
+    return std::nullopt;
+}
+
+}
+
 std::string extension_of(const std::filesystem::path &source)
 {
     std::string ext = source.extension().string();
@@ -50,9 +63,9 @@ bool is_texture_extension(std::string ext)
 namespace meios
 {
 
-// A discovered child is resolved here, once, the first time it is seen: the typed lookup keeps a
-// native failure's terminal cause instead of collapsing it into absence, and the regular-file rule
-// is the same one the asset layer applies.
+// The typed lookup keeps a native failure's terminal cause instead of collapsing it into absence,
+// and so does the regular-file rule: an undeterminable status is a refusal with a reason, not a
+// missing file. The rule itself is the one the asset layer applies.
 std::optional<std::string> manifest_builder::resolve_child(const std::string &child)
 {
     const std::optional<detail::parsed_reference> parsed = detail::parse_reference(child, false, m_bundle_name);
@@ -60,13 +73,14 @@ std::optional<std::string> manifest_builder::resolve_child(const std::string &ch
         return std::nullopt;
     const source_lookup_result hit = m_sources.try_locate(parsed->pkg, parsed->rel, m_log);
     if(!hit)
-    {
-        m_log.log(level::error, diagnostic_code::cannot_open, source_location{}, hit.error(),
-                  "cannot " + std::string(to_string(hit.error().operation)) + " reference \"" + child + "\": " + hit.error().native.message());
+        return detail::refuse_child(m_log, child, hit.error());
+    if(!*hit)
         return std::nullopt;
-    }
     std::error_code failed;
-    if(!*hit || !std::filesystem::is_regular_file((*hit)->path(), failed))
+    const std::filesystem::file_status state = std::filesystem::status((*hit)->path(), failed);
+    if(failed)
+        return detail::refuse_child(m_log, child, operation_failure{ operation_kind::status, failed });
+    if(!std::filesystem::is_regular_file(state))
         return std::nullopt;
     return (*hit)->path().string();
 }
@@ -80,6 +94,11 @@ void manifest_builder::scan_entry(scanner_registry &registry, bundle_entry entry
     {
         const std::string child =
             detail::compose_child_reference(ref, entry.ref_package, entry.ref_dir);
+        // The downstream de-duplication is keyed on the resolved source, so it can only run once a
+        // child has already been resolved; holding the composed spelling here is what keeps a
+        // second parent naming one child from paying a second lookup and filing a second record.
+        if(!m_children.insert(child).second)
+            continue;
         const bool is_texture = detail::is_texture_extension(detail::extension_of(child));
         add_reference(reference_record{ child, resolve_child(child), is_texture });
     }

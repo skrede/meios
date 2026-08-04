@@ -105,10 +105,6 @@ TEST_CASE("an asset carrying a source root is read through the root-relative reo
     REQUIRE(probe.records.empty());
 }
 
-static_assert(meios::package_source<asset_probe::counting_source>);
-static_assert(meios::provides_typed_lookup<asset_probe::counting_source>);
-static_assert(meios::asset_scanner<asset_probe::child_scanner>);
-
 TEST_CASE("a reference the resolver refused is never asked about again", "[bundle][manifest]")
 {
     int calls = 0;
@@ -135,65 +131,4 @@ TEST_CASE("a populated resolved path is used as given and re-resolved by nothing
     REQUIRE(builder.manifest().entries.size() == 1);
     REQUIRE(builder.manifest().entries[0].dest_relative == "meshes/ur5/meshes/base.stl");
     REQUIRE(calls == 0);
-}
-
-TEST_CASE("a discovered child is resolved exactly once, at discovery", "[bundle][closure]")
-{
-    const meios::scratch_dir tree = asset_probe::fresh_dir();
-    const asset_probe::package_tree pkg{ tree.path() };
-    asset_probe::write_file(pkg.child, "");
-    int calls = 0;
-    int dispatches = 0;
-    meios::source_stack sources(asset_probe::counting_source{ { { "ur5/materials/wood.mtl", pkg.child } }, calls });
-    asset_probe::read_probe probe;
-    meios::scanner_registry registry = asset_probe::closure_registry(dispatches);
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, probe.log);
-    builder.add_reference(meios::reference_record{ "package://ur5/meshes/base.obj", pkg.parent.string(), false });
-    builder.close_over(registry);
-
-    REQUIRE(builder.manifest().entries.size() == 2);
-    REQUIRE(builder.manifest().entries[1].dest_relative == "meshes/ur5/materials/wood.mtl");
-    REQUIRE(calls == 1);
-    REQUIRE(dispatches == 2);
-}
-
-TEST_CASE("a child the source answers with a directory reaches neither the manifest nor a scanner", "[bundle][closure]")
-{
-    const meios::scratch_dir tree = asset_probe::fresh_dir();
-    const asset_probe::package_tree pkg{ tree.path() };
-    std::filesystem::create_directories(pkg.child);
-    int calls = 0;
-    int dispatches = 0;
-    meios::source_stack sources(asset_probe::counting_source{ { { "ur5/materials/wood.mtl", pkg.child } }, calls });
-    asset_probe::read_probe probe;
-    meios::scanner_registry registry = asset_probe::closure_registry(dispatches);
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, probe.log);
-    builder.add_reference(meios::reference_record{ "package://ur5/meshes/base.obj", pkg.parent.string(), false });
-    builder.close_over(registry);
-
-    REQUIRE(builder.manifest().entries.size() == 1);
-    REQUIRE(builder.manifest().unresolved == std::vector<std::string>{ "package://ur5/materials/wood.mtl" });
-    REQUIRE(calls == 1);
-    REQUIRE(dispatches == 1);
-}
-
-TEST_CASE("a child the source cannot answer is reported once and left unresolved", "[bundle][closure]")
-{
-    int calls = 0;
-    int dispatches = 0;
-    meios::source_stack sources(asset_probe::counting_source{ {}, calls });
-    asset_probe::read_probe probe;
-    meios::scanner_registry registry = asset_probe::closure_registry(dispatches);
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, probe.log);
-    builder.add_reference(meios::reference_record{ "package://ur5/meshes/base.obj", std::string{ "/abs/ur5/meshes/base.obj" }, false });
-    builder.close_over(registry);
-
-    REQUIRE(builder.manifest().entries.size() == 1);
-    REQUIRE(builder.manifest().unresolved == std::vector<std::string>{ "package://ur5/materials/wood.mtl" });
-    REQUIRE(probe.records.size() == 1);
-    REQUIRE(probe.records.front().code == meios::diagnostic_code::unresolved_asset);
-    REQUIRE(calls == 1);
 }

@@ -74,7 +74,8 @@ namespace meios
 manifest_builder::manifest_builder(std::string bundle_name, collision_options opts,
                                    source_stack &sources, log_sink &log)
     : m_log(log), m_status(emit_status::ok), m_opts(opts), m_sources(sources),
-      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_rewrites()
+      m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_children(), m_roots(),
+      m_rewrites()
 {}
 
 std::optional<std::filesystem::path> manifest_builder::locate_source(const reference_record &ref)

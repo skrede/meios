@@ -76,6 +76,7 @@ private:
     std::string m_bundle_name;
     asset_manifest m_manifest;
     std::unordered_set<std::string> m_seen;
+    std::unordered_set<std::string> m_children;
     std::map<std::string, std::string> m_roots;
     std::map<std::string, std::string> m_rewrites;
 
