@@ -14,6 +14,7 @@ namespace
 {
 
 using scratch_test::window_uses;
+using scratch_test::window_failure;
 using scratch_test::allocation_window;
 
 std::filesystem::path populated_tree(const char *name)
@@ -29,7 +30,7 @@ std::filesystem::path populated_tree(const char *name)
 
 std::size_t removing_allocations(const std::filesystem::path &path)
 {
-    const allocation_window window{ false };
+    const allocation_window window{ window_failure::none };
     meios::detail::default_scratch_operations().remove_tree(path);
     return window_uses;
 }
@@ -49,7 +50,7 @@ TEST_CASE("a scratch directory whose removal cannot obtain memory does not termi
     owner.emplace(root);
 
     {
-        const allocation_window window{ true };
+        const allocation_window window{ window_failure::exhaustion };
         owner.reset();
     }
 

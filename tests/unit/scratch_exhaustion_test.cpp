@@ -14,6 +14,7 @@ namespace
 {
 
 using scratch_test::window_uses;
+using scratch_test::window_failure;
 using scratch_test::allocation_window;
 
 std::filesystem::path fresh_dir(const char *name)
@@ -36,21 +37,21 @@ std::filesystem::path populated_tree(const char *name)
 
 std::size_t writing_allocations(const meios::detail::scratch_operations &operations, const std::filesystem::path &path)
 {
-    const allocation_window window{ false };
+    const allocation_window window{ window_failure::none };
     operations.write_bytes(path, "bytes");
     return window_uses;
 }
 
 std::size_t removing_allocations(const meios::detail::scratch_operations &operations, const std::filesystem::path &path)
 {
-    const allocation_window window{ false };
+    const allocation_window window{ window_failure::none };
     operations.remove_tree(path);
     return window_uses;
 }
 
 std::size_t stemming_allocations(const meios::detail::scratch_operations &operations)
 {
-    const allocation_window window{ false };
+    const allocation_window window{ window_failure::none };
     operations.stem();
     return window_uses;
 }
@@ -60,7 +61,7 @@ std::size_t stemming_allocations(const meios::detail::scratch_operations &operat
 // verbs carry void.
 std::optional<meios::operation_failure> refused_stem(const meios::detail::scratch_operations &operations)
 {
-    const allocation_window window{ true };
+    const allocation_window window{ window_failure::exhaustion };
     const meios::detail::scratch_stem_result drawn = operations.stem();
     if(drawn)
         return std::nullopt;
@@ -79,7 +80,7 @@ TEST_CASE("a write whose stream cannot obtain memory is refused rather than term
     const std::filesystem::path refused = root / "refused";
     meios::detail::scratch_step_result result;
     {
-        const allocation_window window{ true };
+        const allocation_window window{ window_failure::exhaustion };
         result = operations.write_bytes(refused, "bytes");
     }
 
@@ -96,7 +97,7 @@ TEST_CASE("a removal that cannot obtain memory returns rather than terminating",
 
     const std::filesystem::path root = populated_tree("scratch-exhaustion-remove");
     {
-        const allocation_window window{ true };
+        const allocation_window window{ window_failure::exhaustion };
         operations.remove_tree(root);
     }
 

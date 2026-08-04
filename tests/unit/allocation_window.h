@@ -14,18 +14,39 @@
 namespace scratch_test
 {
 
-inline bool window_open         = false;
-inline bool window_throws       = false;
-inline std::size_t window_uses  = 0;
+// [new.delete.single] requires a replacement operator new to return storage or throw bad_alloc, so
+// the foreign failure models a consumer allocator that is non-conforming rather than merely unlucky.
+enum class window_failure
+{
+    none,
+    exhaustion,
+    foreign
+};
+
+struct foreign_failure
+{
+};
+
+inline bool window_open              = false;
+inline window_failure window_failing = window_failure::none;
+inline std::size_t window_uses       = 0;
+
+inline void fail_when_armed()
+{
+    if(window_failing == window_failure::foreign)
+        throw foreign_failure{};
+    if(window_failing == window_failure::exhaustion)
+        throw std::bad_alloc();
+}
 
 class allocation_window
 {
 public:
-    explicit allocation_window(bool throwing)
+    explicit allocation_window(window_failure failure)
     {
-        window_uses   = 0;
-        window_throws = throwing;
-        window_open   = true;
+        window_uses    = 0;
+        window_failing = failure;
+        window_open    = true;
     }
 
     ~allocation_window() { window_open = false; }
@@ -43,8 +64,7 @@ void *operator new(std::size_t size)
     if(scratch_test::window_open)
     {
         ++scratch_test::window_uses;
-        if(scratch_test::window_throws)
-            throw std::bad_alloc();
+        scratch_test::fail_when_armed();
     }
     void *block = std::malloc(size != 0 ? size : 1);
     if(block == nullptr)
