@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <memory>
 #include <utility>
+#include <optional>
 #include <system_error>
 
 namespace meios::detail
@@ -20,6 +21,16 @@ text_read_failure failure(text_read_failure_kind kind, operation_kind operation,
 std::error_code crt_error() noexcept
 {
     return errno == 0 ? make_error_code(std::errc::io_error) : std::error_code{errno, std::generic_category()};
+}
+
+// An absent path is left to the open leg, which owns the native cause a caller reads for it.
+std::optional<text_read_failure> status_refusal(const text_status_result &state)
+{
+    if(!state)
+        return failure(text_read_failure_kind::status, operation_kind::status, state.error());
+    if(std::filesystem::exists(*state) && !std::filesystem::is_regular_file(*state))
+        return failure(text_read_failure_kind::non_regular, operation_kind::status, {});
+    return std::nullopt;
 }
 
 class native_text_file final : public text_file
@@ -87,11 +98,15 @@ text_open_result wrap(native_file_result opened)
 class native_text_reader_operations final : public text_reader_operations
 {
 public:
+    // Implementations disagree on whether an absent path also sets the error code, so the
+    // determinate not_found the standard names is answered as a status, never as a failure.
     text_status_result status(const std::filesystem::path &path) const noexcept override
     {
         std::error_code error;
         const std::filesystem::file_status result = std::filesystem::status(path, error);
-        return error ? text_status_result{unexpected<std::error_code>(error)} : text_status_result{result};
+        if(error && result.type() != std::filesystem::file_type::not_found)
+            return unexpected<std::error_code>(error);
+        return result;
     }
 
     text_file_result open(const std::filesystem::path &path) const noexcept override
@@ -107,8 +122,12 @@ public:
         return std::unique_ptr<text_file>(std::make_unique<native_text_file>(file));
     }
 
+    // The Windows CRT refuses a directory with EACCES at the open itself, indistinguishably from a
+    // denied file, so the kind is settled from the status before any descriptor is asked for.
     text_open_result open_checked(const std::filesystem::path &path) const noexcept override
     {
+        if(const std::optional<text_read_failure> refused = status_refusal(status(path)))
+            return unexpected<text_read_failure>(*refused);
         return wrap(native_open(path));
     }
 
@@ -122,11 +141,8 @@ public:
 
 text_open_result text_reader_operations::open_checked(const std::filesystem::path &path) const noexcept
 {
-    const text_status_result state = status(path);
-    if(!state)
-        return unexpected<text_read_failure>(failure(text_read_failure_kind::status, operation_kind::status, state.error()));
-    if(!std::filesystem::is_regular_file(*state))
-        return unexpected<text_read_failure>(failure(text_read_failure_kind::non_regular, operation_kind::status, {}));
+    if(const std::optional<text_read_failure> refused = status_refusal(status(path)))
+        return unexpected<text_read_failure>(*refused);
     text_file_result opened = open(path);
     if(!opened)
         return unexpected<text_read_failure>(failure(text_read_failure_kind::open, operation_kind::open, opened.error() ? opened.error() : make_error_code(std::errc::io_error)));

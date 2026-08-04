@@ -39,7 +39,9 @@ inline checked_handle_result open_component(const ntdll_api &api, HANDLE root, c
     if(!name)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, name.error()));
     const ACCESS_MASK access = (final ? FILE_READ_DATA : FILE_LIST_DIRECTORY | FILE_TRAVERSE) | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
-    handle_result opened     = nt_open(api, root, &*name, access, final ? FILE_NON_DIRECTORY_FILE : FILE_DIRECTORY_FILE);
+    // FILE_NON_DIRECTORY_FILE would turn a directory into a failed open; the last component is
+    // opened unrestricted so the checks below name its kind from the handle, as fstat does.
+    handle_result opened = nt_open(api, root, &*name, access, final ? 0UL : FILE_DIRECTORY_FILE);
     if(!opened)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, opened.error()));
     if(const std::optional<text_read_failure> invalid = validate(opened->get(), final))

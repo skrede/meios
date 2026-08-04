@@ -178,6 +178,18 @@ TEST_CASE("contained reads reject links directories and special files", "[text_r
 #endif
 }
 
+TEST_CASE("a contained directory is refused by kind on every platform", "[text_reader]")
+{
+    meios::scratch_dir tree = fresh_tree();
+    write_file(tree.path() / "inside" / "ok.txt", "inside");
+
+    const meios::text_read_result refused = meios::detail::read_text_file_under(tree.path(), "inside");
+
+    REQUIRE_FALSE(refused.has_value());
+    REQUIRE(refused.error().kind == meios::text_read_failure_kind::non_regular);
+    REQUIRE(refused.error().cause.operation == meios::operation_kind::status);
+}
+
 #if !defined(_WIN32)
 TEST_CASE("an opened file remains the read authority after path replacement", "[text_reader]")
 {
