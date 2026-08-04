@@ -401,7 +401,7 @@ foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure
     endif()
 endforeach()
 
-foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner)
+foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner bundle_checked_assets)
     set(bundle_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${bundle_test_src})
         add_executable(${stem}_test ${bundle_test_src})

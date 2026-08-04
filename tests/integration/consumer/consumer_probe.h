@@ -94,6 +94,7 @@ private:
 // under the one command the continuous-integration jobs already invoke.
 int run_facade();
 int run_memory_source();
+int run_asset_reads();
 
 }
 

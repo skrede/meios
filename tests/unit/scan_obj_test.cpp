@@ -1,3 +1,5 @@
+#include "asset_read_probe.h"
+
 #include <meios/scan/obj_scanner.h>
 
 #include <meios/bundle.h>
@@ -79,6 +81,20 @@ TEST_CASE("an asset written into a source's scratch is scanned via the shared re
     const inline_asset held{ "mtllib inline.mtl\n" };
 
     REQUIRE(scanner.scan(held.asset(), silent) == std::vector<std::string>{ "inline.mtl" });
+}
+
+TEST_CASE("a failed read is one coded record and stops before the parser", "[scan][obj]")
+{
+    meios::obj_scanner scanner;
+
+    asset_probe::drive_refusal(scanner, "obj");
+}
+
+TEST_CASE("an empty regular file still reaches the parser", "[scan][obj]")
+{
+    meios::obj_scanner scanner;
+
+    asset_probe::drive_empty(scanner, "obj", false);
 }
 
 TEST_CASE("registration wires both the obj and mtl extensions", "[scan][obj]")

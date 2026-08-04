@@ -7,6 +7,7 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <map>
@@ -20,7 +21,7 @@ namespace meios::detail
 {
 
 std::optional<parsed_reference> parse_reference(std::string_view original, bool is_texture,
-                                                std::string_view bundle_name, log_sink &log)
+                                                std::string_view bundle_name)
 {
     constexpr std::string_view prefix = "package://";
     std::string_view uri = original;
@@ -29,11 +30,7 @@ std::optional<parsed_reference> parse_reference(std::string_view original, bool 
     uri.remove_prefix(prefix.size());
     const std::size_t slash = uri.find('/');
     if(slash == std::string_view::npos)
-    {
-        log.log(level::error, source_location{ std::string(original), 0, 0 },
-                "malformed package:// reference '" + std::string(original) + "'");
         return std::nullopt;
-    }
     return parsed_reference{ std::string(uri.substr(0, slash)), std::string(uri.substr(slash + 1)),
                             is_texture };
 }
@@ -80,19 +77,11 @@ manifest_builder::manifest_builder(std::string bundle_name, collision_options op
       m_bundle_name(std::move(bundle_name)), m_manifest(), m_seen(), m_roots(), m_rewrites()
 {}
 
-std::optional<std::filesystem::path> manifest_builder::locate_source(const reference_record &ref,
-                                                                     const std::string &pkg,
-                                                                     const std::string &rel)
+std::optional<std::filesystem::path> manifest_builder::locate_source(const reference_record &ref)
 {
     if(ref.resolved_path)
         return std::filesystem::path(*ref.resolved_path);
-    const std::optional<resolved_asset> hit = m_sources.locate(pkg, rel, m_log);
-    if(!hit)
-    {
-        m_log.log(level::warn, "could not resolve reference '" + ref.original + "'");
-        return std::nullopt;
-    }
-    return hit->path();
+    return std::nullopt;
 }
 
 std::optional<std::string> manifest_builder::pkg_dir(const std::string &pkg,
@@ -132,15 +121,19 @@ void manifest_builder::record(bool is_texture, const std::string &pkg, const std
 void manifest_builder::add_reference(const reference_record &ref)
 {
     const std::optional<detail::parsed_reference> parsed =
-        detail::parse_reference(ref.original, ref.is_texture, m_bundle_name, m_log);
+        detail::parse_reference(ref.original, ref.is_texture, m_bundle_name);
     if(!parsed)
     {
+        m_log.log(level::error, source_location{ ref.original, 0, 0 },
+                  "malformed package:// reference '" + ref.original + "'");
         m_status = emit_status::malformed_reference;
         return;
     }
-    const std::optional<std::filesystem::path> source = locate_source(ref, parsed->pkg, parsed->rel);
+    const std::optional<std::filesystem::path> source = locate_source(ref);
     if(!source)
     {
+        m_log.log(level::warn, diagnostic_code::unresolved_asset, source_location{},
+                  "could not resolve reference '" + ref.original + "'");
         m_manifest.unresolved.push_back(ref.original);
         return;
     }

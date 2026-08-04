@@ -115,14 +115,6 @@ Whether a component that later consumes a resolved path re-checks what it handle
 own business, so do not read the containment rule as an end-to-end guarantee about every file that
 ends up somewhere.
 
-**The bundle writer can still reach a reference resolution refused.** When an asset did not resolve at
-load, the manifest builder falls back to a bare package lookup for it, and that lookup asks only
-whether something exists at the composed path — not whether it is a regular file. What it answers with
-becomes the entry's copy source, so a reference the resolver declined can reach the writer's copy step
-by that route. This belongs to the bundle write discipline rather than to the resolution boundary, and
-it is not closed here: resolution refusing a reference is a statement about that reference, not a
-guarantee that every later component independently re-asks.
-
 ## Diagnostics
 
 **A successful `load()` does not mean a clean load.** A value on the success arm tells you meios

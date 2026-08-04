@@ -10,8 +10,8 @@ find_package(meios CONFIG REQUIRED)
 #
 # Every source builds into the one executable rather than into further targets, so each
 # exercise runs under the single command the continuous-integration jobs invoke.
-add_executable(integration_test main.cpp facade.cpp scratch_probe.cpp)
-target_link_libraries(integration_test PRIVATE meios::urdf)
+add_executable(integration_test main.cpp facade.cpp scratch_probe.cpp asset_probe.cpp)
+target_link_libraries(integration_test PRIVATE meios::urdf meios::bundle)
 
 # The consumer derives the vendored fixture's location itself: the xacro is copied
 # beside the build tree and its path baked into a generated header, so the test never

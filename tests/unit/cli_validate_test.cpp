@@ -79,6 +79,22 @@ TEST_CASE("cli_validate: a malformed document is class 1")
     REQUIRE(run_validate_on(fixture("orphan_joint.urdf"), "", printed) == 1);
 }
 
+// A document that cannot be read at all is a document that cannot be loaded, which is what class
+// one already names; the read failure is reported through the same well-formedness channel.
+TEST_CASE("cli_validate: an unreadable document is class 1")
+{
+    std::string printed;
+    REQUIRE(run_validate_on(MEIOS_URDF_FIXTURE_DIR, "", printed) == 1);
+    REQUIRE(printed.find("malformed") != std::string::npos);
+}
+
+TEST_CASE("cli_validate: a document that does not exist is class 1")
+{
+    std::string printed;
+    REQUIRE(run_validate_on(fixture("no_such_document.urdf"), "", printed) == 1);
+    REQUIRE(printed.find("malformed") != std::string::npos);
+}
+
 TEST_CASE("cli_validate: a connectivity failure is class 2")
 {
     std::string printed;

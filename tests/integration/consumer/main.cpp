@@ -126,5 +126,7 @@ int main()
         return rc;
     if(const int rc = consumer::run_memory_source())
         return rc;
+    if(const int rc = consumer::run_asset_reads())
+        return rc;
     return 0;
 }

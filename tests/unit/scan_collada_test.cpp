@@ -1,3 +1,5 @@
+#include "asset_read_probe.h"
+
 #include <meios/scan/collada_scanner.h>
 
 #include <meios/bundle.h>
@@ -87,6 +89,20 @@ TEST_CASE("a malformed dae yields a diagnostic and an empty list", "[scan][colla
 
     REQUIRE(scanner.scan(held.asset(), log).empty());
     REQUIRE(log.errors > 0);
+}
+
+TEST_CASE("a failed read is one coded record and stops before the parser", "[scan][collada]")
+{
+    meios::collada_scanner scanner;
+
+    asset_probe::drive_refusal(scanner, "dae");
+}
+
+TEST_CASE("an empty regular file still reaches the parser", "[scan][collada]")
+{
+    meios::collada_scanner scanner;
+
+    asset_probe::drive_empty(scanner, "dae", true);
 }
 
 TEST_CASE("registration wires the dae extension", "[scan][collada]")

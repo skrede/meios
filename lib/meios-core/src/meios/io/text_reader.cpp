@@ -79,4 +79,9 @@ text_read_result read_text_file(const std::filesystem::path &path)
     return detail::read_text_file(path, detail::default_text_reader_operations());
 }
 
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative)
+{
+    return detail::read_text_file_under(root, relative, detail::default_text_reader_operations());
+}
+
 }

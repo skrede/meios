@@ -358,8 +358,47 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      # The scanner stems register only where their module option is on, so a stem that
+      # quietly stopped registering would pass here as a green filtered run. Each is
+      # asserted to have discovered tests before its result is trusted.
+      - name: Focus scan_obj tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_obj\.'"
+          registered=$(ctest -N -R '^scan_obj\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_obj registered no tests"
+            exit 1
+          fi
+          echo "scan_obj registered $registered test(s)"
+          ctest -R '^scan_obj\.' --output-on-failure --no-tests=error
+
+      - name: Focus scan_collada tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_collada\.'"
+          registered=$(ctest -N -R '^scan_collada\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_collada registered no tests"
+            exit 1
+          fi
+          echo "scan_collada registered $registered test(s)"
+          ctest -R '^scan_collada\.' --output-on-failure --no-tests=error
+
+      - name: Focus scan_gltf tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_gltf\.'"
+          registered=$(ctest -N -R '^scan_gltf\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_gltf registered no tests"
+            exit 1
+          fi
+          echo "scan_gltf registered $registered test(s)"
+          ctest -R '^scan_gltf\.' --output-on-failure --no-tests=error
+
       - name: Test
-        run: cd build && ctest --output-on-failure
+        run: cd build && ctest --output-on-failure --no-tests=error
 
   eval-python:
     runs-on: ubuntu-24.04

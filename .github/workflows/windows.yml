@@ -333,8 +333,53 @@ jobs:
           & ctest --output-on-failure --no-tests=error -R '^ros_source\.' -C Release --timeout 60
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The scanner stems register only where their module option is on, so a stem that
+      # quietly stopped registering would pass here as a green filtered run. Each is
+      # asserted to have discovered tests before its result is trusted.
+      - name: Focus scan_obj tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_obj\.' -C Release"
+          $discovery = & ctest -N -R '^scan_obj\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_obj tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_obj\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_obj\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scan_collada tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_collada\.' -C Release"
+          $discovery = & ctest -N -R '^scan_collada\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_collada tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_collada\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_collada\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scan_gltf tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_gltf\.' -C Release"
+          $discovery = & ctest -N -R '^scan_gltf\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_gltf tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_gltf\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_gltf\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
-        run: cd build && ctest -C Release --output-on-failure --timeout 60
+        run: cd build && ctest -C Release --output-on-failure --no-tests=error --timeout 60
 
   examples:
     runs-on: windows-2022

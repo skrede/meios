@@ -5,6 +5,7 @@
 #include "meios/bundle/asset_bytes.h"
 
 #include "meios/io/uri_decode.h"
+#include "meios/io/text_reader.h"
 #include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/level.h"
@@ -72,10 +73,12 @@ namespace meios
 // writer's contained_candidate guard, so this scanner must not pre-filter them.
 std::vector<std::string> gltf_scanner::scan(const resolved_asset &asset, log_sink &log)
 {
-    const std::string bytes = read_asset_text(asset, log);
-    if(!detail::looks_like_glb(bytes))
-        return detail::scan_gltf_json(bytes, log);
-    const std::optional<std::string> json = detail::extract_glb_json(bytes, log);
+    const text_read_result bytes = read_asset_text(asset, log);
+    if(!bytes)
+        return {};
+    if(!detail::looks_like_glb(*bytes))
+        return detail::scan_gltf_json(*bytes, log);
+    const std::optional<std::string> json = detail::extract_glb_json(*bytes, log);
     if(!json)
         return {};
     return detail::scan_gltf_json(*json, log);

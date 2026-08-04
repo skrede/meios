@@ -35,6 +35,7 @@ struct text_read_failure
 using text_read_result = expected<std::string, text_read_failure>;
 
 text_read_result read_text_file(const std::filesystem::path &path);
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative);
 
 }
 

@@ -2,6 +2,7 @@
 
 #include "meios/bundle/asset_bytes.h"
 
+#include "meios/io/text_reader.h"
 #include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/log_sink.h"
@@ -83,9 +84,11 @@ namespace meios
 
 std::vector<std::string> obj_scanner::scan(const resolved_asset &asset, log_sink &log)
 {
-    const std::string text = read_asset_text(asset, log);
+    const text_read_result text = read_asset_text(asset, log);
+    if(!text)
+        return {};
     std::vector<std::string> refs;
-    std::istringstream in(text);
+    std::istringstream in(*text);
     std::string line;
     while(std::getline(in, line))
         detail::collect_refs(line, refs);

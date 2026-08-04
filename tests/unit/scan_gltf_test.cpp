@@ -1,3 +1,5 @@
+#include "asset_read_probe.h"
+
 #include <meios/scan/gltf_scanner.h>
 
 #include <meios/bundle.h>
@@ -161,6 +163,20 @@ TEST_CASE("a declared length shorter than the actual byte count yields a diagnos
 
     REQUIRE(scanner.scan(held.asset(), log).empty());
     REQUIRE(log.errors > 0);
+}
+
+TEST_CASE("a failed read is one coded record and stops before the parser", "[scan][gltf]")
+{
+    meios::gltf_scanner scanner;
+
+    asset_probe::drive_refusal(scanner, "gltf");
+}
+
+TEST_CASE("an empty regular file still reaches the parser", "[scan][gltf]")
+{
+    meios::gltf_scanner scanner;
+
+    asset_probe::drive_empty(scanner, "gltf", true);
 }
 
 TEST_CASE("registration wires the gltf and glb extensions", "[scan][gltf]")
