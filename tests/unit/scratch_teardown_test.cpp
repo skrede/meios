@@ -54,6 +54,8 @@ TEST_CASE("a scratch directory whose removal cannot obtain memory does not termi
     }
 
     // A destructor is noexcept, so reaching this line at all is the assertion: an escaping throw
-    // would have terminated the process. The surviving tree says the throw really happened.
-    REQUIRE(std::filesystem::exists(root));
+    // would have terminated the process. Every use inside an armed window is followed by a throw,
+    // so a nonzero count says one was injected here rather than that the window never fired.
+    REQUIRE(window_uses > 0);
+    REQUIRE(std::filesystem::exists(root / "child"));
 }

@@ -100,10 +100,11 @@ TEST_CASE("a removal that cannot obtain memory returns rather than terminating",
         operations.remove_tree(root);
     }
 
-    // The surviving tree is what says the throw happened inside the removal: the recursive walk
-    // fails before it unlinks anything, so an intact tree and a returning verb together mean the
-    // arm answered rather than that no allocation was ever attempted.
-    REQUIRE(std::filesystem::exists(root));
+    // Every use inside an armed window is followed by a throw, so a nonzero count says one was
+    // injected into this removal; the intact child says the recursive walk failed before it
+    // unlinked anything.
+    REQUIRE(window_uses > 0);
+    REQUIRE(std::filesystem::exists(root / "child"));
 }
 
 // What is driven here is the conversion, not the entropy failure that motivates it: the stem grows
