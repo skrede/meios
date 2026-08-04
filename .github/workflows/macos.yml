@@ -114,6 +114,45 @@ jobs:
           echo "scratch_symlinked registered $registered test(s)"
           ctest -R '^scratch_symlinked\.' --output-on-failure --no-tests=error
 
+      # The next three replace the global allocation functions, so their registration is decided by
+      # a build-time predicate rather than by the source alone. A stem that predicate drops still
+      # leaves a green suite behind it, which is how a link failure survived a run once already.
+      - name: Focus scratch exhaustion tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_exhaustion\.'"
+          registered=$(ctest -N -R '^scratch_exhaustion\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_exhaustion registered no tests"
+            exit 1
+          fi
+          echo "scratch_exhaustion registered $registered test(s)"
+          ctest -R '^scratch_exhaustion\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch teardown tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_teardown\.'"
+          registered=$(ctest -N -R '^scratch_teardown\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_teardown registered no tests"
+            exit 1
+          fi
+          echo "scratch_teardown registered $registered test(s)"
+          ctest -R '^scratch_teardown\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch foreign tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_foreign\.'"
+          registered=$(ctest -N -R '^scratch_foreign\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_foreign registered no tests"
+            exit 1
+          fi
+          echo "scratch_foreign registered $registered test(s)"
+          ctest -R '^scratch_foreign\.' --output-on-failure --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 
