@@ -55,24 +55,35 @@ expected<std::filesystem::path, operation_failure> root_request(std::string_view
     return presentation.lexically_relative(base);
 }
 
-expected<std::optional<std::string>, operation_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, bool &rejected)
+// What the sweep over the probe roots determined, kept per verdict rather than as one flag: a
+// resource one root holds the place for and another excludes is missing, not escaping.
+struct sweep
+{
+    bool absent;
+    bool uncontained;
+};
+
+expected<std::optional<std::string>, operation_failure> nothing(bool &verdict)
+{
+    verdict = true;
+    return std::optional<std::string>{};
+}
+
+expected<std::optional<std::string>, operation_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, sweep &seen)
 {
     contained_path_result contained = try_contained_under(root, root / std::filesystem::path(spec));
     if(!contained)
         return unexpected<operation_failure>(contained.error());
     if(!*contained)
-    {
-        rejected = true;
-        return std::optional<std::string>{};
-    }
+        return nothing(seen.uncontained);
     std::error_code error;
     const std::filesystem::file_status status = std::filesystem::status(**contained, error);
     if(error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory)
-        return std::optional<std::string>{};
+        return nothing(seen.absent);
     if(error)
         return unexpected<operation_failure>({operation_kind::status, error});
     if(!std::filesystem::exists(status))
-        return std::optional<std::string>{};
+        return nothing(seen.absent);
     expected<std::filesystem::path, operation_failure> relative = root_request(spec, root, **contained);
     if(!relative)
         return unexpected<operation_failure>(relative.error());
@@ -87,25 +98,32 @@ void remember(const operation_failure &failure, std::optional<operation_failure>
         first = failure;
 }
 
+// A determined native cause outranks both verdicts; between the two, absence wins, because a root
+// that holds the place for the resource has answered the containment question the other one raised.
+void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<operation_failure> &first_failure, log_sink &log)
+{
+    if(first_failure)
+        report_failure(spec, *first_failure, log);
+    else if(seen.uncontained && !seen.absent)
+        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
+    else
+        log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "could not resolve resource \"" + std::string(spec) + '"');
+}
+
 std::optional<std::string> from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
                                             const text_reader_operations &operations)
 {
-    bool rejected = false;
+    sweep seen{false, false};
     std::optional<operation_failure> first_failure;
     for(const std::filesystem::path &root : probe_roots(document, roots))
     {
-        expected<std::optional<std::string>, operation_failure> result = try_root(spec, root, operations, rejected);
+        expected<std::optional<std::string>, operation_failure> result = try_root(spec, root, operations, seen);
         if(!result)
             remember(result.error(), first_failure);
         else if(*result)
             return std::move(**result);
     }
-    if(first_failure)
-        report_failure(spec, *first_failure, log);
-    else if(rejected)
-        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
-    else
-        log.log(level::error, "could not resolve resource \"" + std::string(spec) + '"');
+    report_exhausted(spec, seen, first_failure, log);
     return std::nullopt;
 }
 

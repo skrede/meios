@@ -81,8 +81,6 @@ inline pybind11::object fetch_and_parse(const pybind11::object &parse, yaml_cont
     if(text)
         return parse(pybind11::str(*text));
     ctx.rule = std::string(uncontained_rule);
-    ctx.log.log(level::error,
-                "yaml resource \"" + spec + "\" is not reachable inside a containment root");
     throw pybind11::value_error("unreachable yaml resource \"" + spec + '"');
 }
 

@@ -19,6 +19,7 @@ package_resolves.urdf	accept	-	package-uri-resolves	The one form that already re
 package_no_slash.urdf	refuse	malformed_asset_uri	package-uri-names-a-path	A package name with nothing after it names no asset, so there is no relative path to look up.
 package_empty_name.urdf	refuse	malformed_asset_uri	package-uri-names-a-package	Three separators and a name: the package half is empty, and a lookup composed from it collapses onto a root's own top level.
 package_no_relative.urdf	refuse	malformed_asset_uri	package-uri-carries-a-relative-half	A package name and a separator with nothing after it; the only row where the asset layer refuses the spelling a source rooted at a directory answers with a package directory.
+package_empty_segment.urdf	refuse	malformed_asset_uri	package-reference-empty-segment	A reference whose segment below the package name is empty carries no relative path to look up, so its shape is decided before any source, containment rule or missing-asset policy is consulted.
 package_unbacked.urdf	refuse	unresolved_asset	package-uri-backed-by-a-source	No configured root holds this package; the refusal is the missing-asset one, graded by policy, not a containment one.
 relative_resolves.urdf	accept	-	relative-path-against-document-base	The base is the top-level input document's directory, not the included document the mesh was written in.
 relative_climb_out.urdf	refuse	uncontained_asset	relative-path-contained	The climb is spelled through a real subdirectory, so only normalization catches it; a textual prefix test would not.

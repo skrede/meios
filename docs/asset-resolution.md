@@ -80,12 +80,17 @@ indistinguishable from a bare absolute path — one normalization rule, one cont
 outcome.
 
 Normalization is three steps, in order: strip the `file://` prefix; strip a single leading separator
-when the two characters after it are an alphabetic character and a colon; percent-decode the remainder.
+when the three characters after it are an alphabetic character, a colon and a further separator;
+percent-decode the remainder.
 
 The second step is RFC 8089 appendix E.2, which spells an authority-less DOS drive as `file:///c:/path`
 — the separator ahead of the drive letter belongs to the URI grammar and not to the path. meios
 recognizes it by the shape of the text and not by a platform macro, so the rule is the same everywhere.
-On a POSIX host `/opt/...` is untouched, because `/o` is not a drive letter followed by a colon.
+On a POSIX host `/opt/...` is untouched, because `/o` is not a drive letter followed by a colon. The
+separator after the colon is part of that shape, so a colon inside a path component is not read as a
+drive and a name such as `/x:data/mesh.stl` keeps its leading separator whichever way it is spelled.
+That name takes a classifier assertion on every platform and a fixture row on none, because it cannot
+be created on one of the three.
 
 **Three `file://` spellings are therefore recognized here, and the two drive spellings normalize to
 one and the same path.** Whether a spelling is then allowed to resolve is a different question, and it
@@ -336,24 +341,17 @@ naming a host, and a `file://` candidate that does not normalize to an absolute 
 described in its own section above. Two more are worth naming here, beside the policy they are not
 part of. **A `package://` URI must carry both
 halves at this layer** — a package name and a relative path beneath it — so the spelling that names a
-package and nothing after it, the spelling whose package name is empty, and the spelling that ends at
-the separator immediately after the package name are all malformed under `malformed_asset_uri`. That
-guard measures that one separator and no deeper one, and what a reference ending at a separator
+package and nothing after it, the spelling whose package name is empty, the spelling that ends at the
+separator immediately after the package name, and the spelling whose segment below that name is empty
+are all malformed under `malformed_asset_uri`. That guard measures the separator immediately after the
+package name and the character following it, and no deeper one; what a reference ending at a separator
 further down does depends on what precedes that separator. Where a directory below the package name
 is named, the reference carries a relative half, the lookup happens, and a directory it resolves to is
 graded absent by the policy above under `unresolved_asset` rather than being called malformed. Where
-that segment is empty — `package://<pkg>//` — the relative half is a bare separator. For a source whose
-canonical root is below its filesystem root, joining that separator onto the package directory
-discards the directory instead of extending it and leaves a filesystem-root candidate outside the
-source root; what answers is the containment refusal described in [Containment](#containment),
-unchanged. A source holding bytes answers that spelling earlier and never reaches containment with it:
-a relative half carrying a root replaces the package half rather than joining beneath it, so it names a
-file under no package, the offer is refused under `malformed_asset_uri`, and the lookup finds nothing.
-The missing-asset policy still handles the unresolved lookup as usual, but the unsoftened
-`uncontained_asset` remains at error level under every setting, so the load through such a source fails
-even at the silent one. This behavior is a known residual rather than a promise, which is why no rule
-below covers it and a case pins it instead. A `<mesh>` and a `<texture>` ask for a file, and a package
-directory is not one. At the source layer, the genuinely empty relative used by the bare
+that segment is empty — `package://<pkg>//` — the relative half opens with a separator and names no
+asset beneath the package, so the spelling is decided by shape at the grammar stage, before any source
+is asked, any containment decision is made or the missing-asset policy is consulted. A `<mesh>` and a
+`<texture>` ask for a file, and a package directory is not one. At the source layer, the genuinely empty relative used by the bare
 `$(find <pkg>)` substitution command is answered with the package directory by a directory-rooted
 source holding the package, while a source holding bytes declines it; that split is deliberate, and
 its halves are stated in [Ownership](#ownership) so none of them is met without the others. And a
@@ -384,6 +382,7 @@ authored URI, not a resolved path leaking into a document.
 | `<mesh>` | `package://<pkg>` with nothing after the package name | refuse | `malformed_asset_uri` | `rule:package-uri-names-a-path` |
 | `<mesh>` | `package:///<path>` whose package name is empty | refuse | `malformed_asset_uri` | `rule:package-uri-names-a-package` |
 | `<mesh>` | `package://<pkg>/` ending at the separator | refuse | `malformed_asset_uri` | `rule:package-uri-carries-a-relative-half` |
+| `<mesh>` | `package://<pkg>//` whose segment below the package name is empty | refuse | `malformed_asset_uri` | `rule:package-reference-empty-segment` |
 | `<mesh>` | `package://` naming a package no configured source holds | graded by the missing-asset policy | `unresolved_asset` | `rule:package-uri-backed-by-a-source` |
 | `<mesh>` | a `filename` attribute present and empty | refuse | `malformed_asset_uri` | `rule:empty-reference-refused` |
 | `<mesh>` | a relative path resolving under the input document's directory | accept | — | `rule:relative-path-against-document-base` |

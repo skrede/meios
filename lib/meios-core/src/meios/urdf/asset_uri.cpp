@@ -26,10 +26,11 @@ bool scheme_body(char c)
 
 // RFC 8089 appendix E.2 spells an authority-less DOS drive as file:///c:/path, so the
 // separator ahead of the drive letter belongs to the URI grammar and not to the path.
-// Recognizing it by shape rather than by platform keeps one rule on all three.
+// Recognizing it by shape rather than by platform keeps one rule on all three. The separator
+// after the colon is what tells a drive apart from a path component that merely contains one.
 std::string_view strip_drive_separator(std::string_view text)
 {
-    if(text.size() >= 3 && text[0] == '/' && text[2] == ':' && alphabetic(text[1]))
+    if(text.size() >= 4 && text[0] == '/' && text[2] == ':' && alphabetic(text[1]) && (text[3] == '/' || text[3] == '\\'))
         return text.substr(1);
     return text;
 }

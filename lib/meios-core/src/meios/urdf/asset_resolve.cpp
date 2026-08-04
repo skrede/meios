@@ -92,7 +92,7 @@ std::optional<std::string> resolve_package(const std::string &uri, parse_context
 {
     const std::string_view rest = std::string_view(uri).substr(std::string_view("package://").size());
     const std::size_t slash     = rest.find('/');
-    if(slash == std::string_view::npos || slash == 0 || slash + 1 == rest.size())
+    if(slash == std::string_view::npos || slash == 0 || slash + 1 == rest.size() || rest[slash + 1] == '/')
     {
         ctx.log.log(level::error, diagnostic_code::malformed_asset_uri, loc, "malformed package:// asset URI '" + uri + "'");
         return std::nullopt;

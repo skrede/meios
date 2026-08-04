@@ -15,6 +15,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <optional>
 #include <algorithm>
 #include <filesystem>
@@ -84,26 +85,26 @@ struct driven_load
     std::vector<uri::captured> raised;
 };
 
-// A source layer has no document position, so the containment refusal it raises carries an
-// empty location; uri::located requires a file and a line and would miss it for that reason
-// rather than for the reason under test.
-bool recorded(const std::vector<uri::captured> &diagnostics, meios::level lvl,
-              const std::string &code)
+// A source layer has no document position, so a refusal it raises carries an empty location, which
+// uri::located would miss for that reason rather than for the reason under test. An absent level
+// counts a code at every level, which is what an absence claim needs to say.
+std::size_t recorded(const std::vector<uri::captured> &diagnostics, const std::string &code,
+                     std::optional<meios::level> lvl = std::nullopt)
 {
-    return std::any_of(diagnostics.begin(), diagnostics.end(),
-                       [lvl, &code](const uri::captured &d) {
-                           return d.lvl == lvl && meios::to_string(d.code) == code;
-                       });
+    return static_cast<std::size_t>(
+        std::count_if(diagnostics.begin(), diagnostics.end(), [&code, lvl](const uri::captured &d) {
+            return meios::to_string(d.code) == code && (!lvl || d.lvl == *lvl);
+        }));
 }
 
-driven_load drive_empty_segment(meios::missing_asset setting)
+driven_load drive_empty_segment(std::string_view reference, meios::missing_asset setting)
 {
     const uri::sandbox tree;
     const std::filesystem::path document = tree.write_document(
         R"(<?xml version="1.0"?>)"
         R"(<robot name="empty_segment"><link name="base_link"><visual><geometry>)"
-        R"(<mesh filename="package://somepkg//"/>)"
-        R"(</geometry></visual></link></robot>)");
+        R"(<mesh filename=")" + std::string(reference)
+        + R"("/></geometry></visual></link></robot>)");
     meios::load_options opts;
     opts.on_missing = setting;
     opts.package_roots.push_back(tree.root());
@@ -137,6 +138,17 @@ TEST_CASE("uri classification", "[urdf][uri]")
           == asset_uri_form::foreign_scheme);
     CHECK_FALSE(meios::detail::scheme_of("3d://meshes/base.stl").has_value());
     CHECK(meios::detail::classify_asset_uri("3d://meshes/base.stl") == asset_uri_form::relative);
+
+    for(std::string_view spelling : { "file:///c:/arm/base.stl", "file://c:/arm/base.stl" })
+    {
+        INFO(spelling);
+        CHECK(meios::detail::file_uri_to_path(spelling) == "c:/arm/base.stl");
+    }
+    CHECK(meios::detail::file_uri_to_path(R"(file:///c:\arm\base.stl)") == R"(c:\arm\base.stl)");
+    CHECK(meios::detail::file_uri_to_path("file:///opt/arm/base.stl") == "/opt/arm/base.stl");
+    CHECK(meios::detail::file_uri_to_path("file:///x:data/mesh.stl") == "/x:data/mesh.stl");
+    CHECK(meios::detail::classify_asset_uri(meios::detail::file_uri_to_path("file:///x:data/mesh.stl"))
+          == meios::detail::classify_asset_uri("/x:data/mesh.stl"));
 }
 
 // The lenient drive spelling is a published accepted form whose load verdict differs by
@@ -149,6 +161,8 @@ TEST_CASE("uri file authority", "[urdf][uri]")
     CHECK(meios::detail::file_authority("file:///opt/arm/meshes/base.stl").empty());
     CHECK(meios::detail::file_authority("file://host/share/base.stl") == "host");
     CHECK(meios::detail::file_authority("file://localhost/opt/arm/base.stl") == "localhost");
+    CHECK(meios::detail::file_authority("file://cd/x") == "cd");
+    CHECK(meios::detail::file_authority("file://C|/x") == "C|");
 
     const uri::sandbox tree;
     const std::filesystem::path document = tree.write_document(
@@ -312,27 +326,25 @@ TEST_CASE("uri rows absolute inside a registered root", "[urdf][uri]")
     CHECK(uri::resolved_mesh_path(result.robot).has_value());
 }
 
-// A published rule is a promise, and what this holds is a residual: a reference whose segment
-// below the package name is empty composes a candidate that escapes the source root, so it is
-// refused for containment rather than for the shape a reader would predict, at every setting.
-// A row would contract that; a case pins it beside the prose disclosing it and goes red the day
-// it is withdrawn.
-TEST_CASE("uri package empty segment below the name", "[urdf][uri]")
+// The two absent codes are the ones a lookup and a containment decision would have produced, and
+// the missing-asset policy grades one of them, so their absence at every setting is what shows the
+// shape was decided before any of the three was consulted.
+TEST_CASE("uri package empty segment refused by shape", "[urdf][uri]")
 {
     constexpr meios::missing_asset settings[] = { meios::missing_asset::skip,
                                                   meios::missing_asset::warn,
                                                   meios::missing_asset::fail };
-    for(meios::missing_asset setting : settings)
+    for(std::string_view reference : { "package://somepkg//",
+                                       "package://somepkg//meshes/base.stl" })
     {
-        INFO("missing-asset setting " << static_cast<int>(setting));
-        const driven_load run = drive_empty_segment(setting);
-        const bool graded_error = setting == meios::missing_asset::fail;
-        const bool graded_warn = setting == meios::missing_asset::warn;
-        CHECK_FALSE(run.succeeded);
-        CHECK(recorded(run.raised, meios::level::error, "uncontained_asset"));
-        CHECK(uri::located(run.raised, meios::level::error, "unresolved_asset") == graded_error);
-        CHECK(uri::located(run.raised, meios::level::warn, "unresolved_asset") == graded_warn);
-        CHECK(recorded(run.raised, meios::level::error, "unresolved_asset") == graded_error);
-        CHECK(recorded(run.raised, meios::level::warn, "unresolved_asset") == graded_warn);
+        for(meios::missing_asset setting : settings)
+        {
+            INFO(reference << " at missing-asset setting " << static_cast<int>(setting));
+            const driven_load run = drive_empty_segment(reference, setting);
+            CHECK_FALSE(run.succeeded);
+            CHECK(recorded(run.raised, "malformed_asset_uri", meios::level::error) > 0);
+            CHECK(recorded(run.raised, "uncontained_asset") == 0);
+            CHECK(recorded(run.raised, "unresolved_asset") == 0);
+        }
     }
 }

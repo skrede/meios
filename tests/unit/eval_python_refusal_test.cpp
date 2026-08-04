@@ -1,17 +1,22 @@
+#include "meios/urdf/yaml_resource.h"
+
 #include <meios/eval/python_evaluator.h>
 
 #include <meios/xacro.h>
 #include <meios/io/source_stack.h>
 
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/capturing_log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <utility>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -84,8 +89,9 @@ verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
     return { declined, std::move(counts.messages) };
 }
 
-// A resource refusal reports twice — the fetch names the spec, the classifier names the rule
-// — so a fragment is looked for across the whole record rather than in the first line.
+// The acquisition layer states the terminal cause and names the resolved spec; the expression layer
+// states only that the expression was refused and under which rule. A fragment may land in either,
+// so it is looked for across every record rather than in the first one.
 bool names(const verdict &got, std::string_view fragment)
 {
     for(const std::string &message : got.messages)
@@ -158,6 +164,39 @@ std::string span_document(std::string_view inner)
 bool leaves(const outcome &result, std::string_view span)
 {
     return result.document.find(span) != std::string::npos;
+}
+
+// The refusal is driven through the evaluator with the real acquisition loader installed, because
+// a record emitted above the loader is invisible to anything that calls the loader itself.
+struct counted_refusal
+{
+    bool refused;
+    std::vector<meios::captured_diagnostic> records;
+};
+
+counted_refusal count_refusal(std::string_view expr, meios::eval_scope &scope,
+                              meios::capturing_log_sink &capture)
+{
+    meios::python_evaluator evaluator;
+    const bool declined = !evaluator.eval_to_text(expr, scope, capture)
+        && evaluator.last_failure_kind() == meios::eval_failure_kind::refused;
+    return { declined, capture.records() };
+}
+
+std::size_t coded(const std::vector<meios::captured_diagnostic> &records, meios::diagnostic_code code)
+{
+    return static_cast<std::size_t>(
+        std::count_if(records.begin(), records.end(),
+                      [code](const meios::captured_diagnostic &d) { return d.code == code; }));
+}
+
+std::size_t mentioning(const std::vector<meios::captured_diagnostic> &records,
+                       std::string_view fragment)
+{
+    return static_cast<std::size_t>(
+        std::count_if(records.begin(), records.end(), [fragment](const meios::captured_diagnostic &d) {
+            return d.message.find(fragment) != std::string::npos;
+        }));
 }
 
 }
@@ -403,4 +442,43 @@ TEST_CASE("the allowlisted names a description actually uses still evaluate", "[
         REQUIRE(got);
         REQUIRE(*got == c.second);
     }
+}
+
+TEST_CASE("one refused yaml acquisition produces one record carrying the cause", "[eval_python]")
+{
+    meios::log_sink silent;
+    meios::capturing_log_sink capture{ silent };
+    meios::source_stack sources;
+    const std::vector<std::filesystem::path> roots{ std::filesystem::temp_directory_path() };
+    meios::eval_scope scope;
+    scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, capture));
+
+    const counted_refusal got =
+        count_refusal("load_yaml('../escaped-limits.yaml')", scope, capture);
+
+    for(const meios::captured_diagnostic &record : got.records)
+        UNSCOPED_INFO(meios::to_string(record.code) << " | " << record.message);
+    CHECK(got.refused);
+    CHECK(got.records.size() == 2);
+    CHECK(coded(got.records, meios::diagnostic_code::uncontained_asset) == 1);
+    CHECK(mentioning(got.records, "uncontained-yaml-path") == 1);
+}
+
+TEST_CASE("a spec named through a variable is still named by the surviving record", "[eval_python]")
+{
+    meios::log_sink silent;
+    meios::capturing_log_sink capture{ silent };
+    meios::source_stack sources;
+    const std::vector<std::filesystem::path> roots{ std::filesystem::temp_directory_path() };
+    meios::eval_scope scope;
+    scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, capture));
+    scope.set("limits_file", meios::binding{ std::string("../escaped-limits.yaml") });
+
+    const counted_refusal got = count_refusal("xacro.load_yaml(limits_file)", scope, capture);
+
+    for(const meios::captured_diagnostic &record : got.records)
+        UNSCOPED_INFO(meios::to_string(record.code) << " | " << record.message);
+    CHECK(got.refused);
+    CHECK(mentioning(got.records, "escaped-limits.yaml") >= 1);
+    CHECK(coded(got.records, meios::diagnostic_code::uncontained_asset) == 1);
 }

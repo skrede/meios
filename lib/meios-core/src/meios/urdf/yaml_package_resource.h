@@ -35,11 +35,18 @@ inline bool matches(std::string_view spec)
     return spec.starts_with(package_prefix) || spec.starts_with(find_prefix);
 }
 
+inline bool separator(char c)
+{
+    return c == '/' || c == '\\';
+}
+
+// Both splitters refuse what the asset grammar refuses: no divider, an empty package half, an
+// empty relative half, and a relative half opening on a further separator.
 inline std::optional<package_ref> package_split(std::string_view spec)
 {
     spec.remove_prefix(package_prefix.size());
     const std::size_t slash = spec.find('/');
-    if(slash == std::string_view::npos)
+    if(slash == std::string_view::npos || slash == 0 || slash + 1 == spec.size() || spec[slash + 1] == '/')
         return std::nullopt;
     return package_ref{std::string(spec.substr(0, slash)), std::string(spec.substr(slash + 1))};
 }
@@ -48,10 +55,10 @@ inline std::optional<package_ref> find_split(std::string_view spec)
 {
     spec.remove_prefix(find_prefix.size());
     const std::size_t close = spec.find(')');
-    if(close == std::string_view::npos)
+    if(close == std::string_view::npos || close == 0)
         return std::nullopt;
     const std::string_view rest = spec.substr(close + 1);
-    if(rest.empty() || (rest.front() != '/' && rest.front() != '\\'))
+    if(rest.size() < 2 || !separator(rest.front()) || separator(rest[1]))
         return std::nullopt;
     return package_ref{std::string(spec.substr(0, close)), std::string(rest.substr(1))};
 }
@@ -80,7 +87,7 @@ inline std::optional<resolved_asset> locate(std::string_view spec, const package
     }
     if(!*hit)
     {
-        log.log(level::error, "could not resolve resource \"" + std::string(spec) + '"');
+        log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "could not resolve resource \"" + std::string(spec) + '"');
         return std::nullopt;
     }
     return std::move(**hit);
@@ -98,7 +105,7 @@ inline std::optional<std::string> fetch(std::string_view spec, source_stack &sou
     const std::optional<package_ref> ref = spec.starts_with(package_prefix) ? package_split(spec) : find_split(spec);
     if(!ref)
     {
-        log.log(level::error, "malformed package resource spec \"" + std::string(spec) + '"');
+        log.log(level::error, diagnostic_code::malformed_asset_uri, source_location{}, "malformed package resource spec \"" + std::string(spec) + '"');
         return std::nullopt;
     }
     const std::optional<resolved_asset> hit = locate(spec, *ref, sources, log);

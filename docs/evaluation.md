@@ -186,11 +186,14 @@ no fallback read anywhere.
 
 Three spec forms are accepted:
 
-| Form | Resolution |
-|------|------------|
-| `package://<pkg>/<rel>` | `source_stack::locate`, the same resolution a mesh or an include takes |
-| `$(find <pkg>)/<rel>` | identical — both spellings split to the same package/relative pair and take one `locate` call |
-| anything else | probed against the calling document's directory, then against each configured containment root |
+| Form | Resolution | Refused by shape |
+|------|------------|------------------|
+| `package://<pkg>/<rel>` | `source_stack::locate`, the same resolution a mesh or an include takes | an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
+| `$(find <pkg>)/<rel>` | identical — both spellings split to the same package/relative pair and take one `locate` call | the same three under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
+| anything else | probed against the calling document's directory, then against each configured containment root | — |
+
+A spelling refused by shape is decided before the source stack is asked, so no lookup, no containment
+decision and no filesystem call runs for it — the same order the asset grammar keeps.
 
 Containment is judged on the **resolved candidate**, never on the authored spelling. An absolute path
 that canonicalizes inside a root is accepted; one that does not is refused under

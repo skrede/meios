@@ -187,8 +187,8 @@ endif()
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
         xacro_eval xacro_structural xacro_subst xacro_budget xacro_arg
-        xacro_unsupported xacro_corpus forward_scan yaml_resource
-        io_concept io_source_stack io_sources)
+        xacro_unsupported xacro_corpus forward_scan yaml_resource yaml_grammar
+        yaml_verdict io_concept io_source_stack io_sources)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
@@ -202,7 +202,8 @@ foreach(stem IN ITEMS
         # The forward-scan helper and the yaml resolver are compiled core-private symbols,
         # so these stems alone reach into meios-core/src; only forward-scan's helper takes
         # pugixml handles, so only it links pugixml directly.
-        if(stem STREQUAL "forward_scan" OR stem STREQUAL "yaml_resource")
+        if(stem STREQUAL "forward_scan" OR stem STREQUAL "yaml_resource"
+                OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
                 ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
         endif()
@@ -619,6 +620,10 @@ if(TARGET meios_eval-python)
         target_link_libraries(eval_python_refusal_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
                 Catch2::Catch2WithMain)
+        # The cardinality cases install the real YAML acquisition loader, which is a compiled
+        # core-private symbol; a fake in its place could not observe the record it emits.
+        target_include_directories(eval_python_refusal_test PRIVATE
+            ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
         target_compile_definitions(eval_python_refusal_test PRIVATE
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         meios_enable_coverage(eval_python_refusal_test)
