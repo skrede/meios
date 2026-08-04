@@ -22,6 +22,7 @@ std::filesystem::path fresh_dir(const char *name)
     std::error_code ec;
     std::filesystem::remove_all(path, ec);
     std::filesystem::create_directories(path, ec);
+    REQUIRE(std::filesystem::is_directory(path));
     return path;
 }
 
@@ -29,6 +30,7 @@ std::filesystem::path populated_tree(const char *name)
 {
     const std::filesystem::path root = fresh_dir(name);
     std::ofstream(root / "child", std::ios::binary) << "bytes";
+    REQUIRE(std::filesystem::exists(root / "child"));
     return root;
 }
 

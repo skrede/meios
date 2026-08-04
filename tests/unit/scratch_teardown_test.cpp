@@ -23,6 +23,7 @@ std::filesystem::path populated_tree(const char *name)
     std::filesystem::remove_all(root, ec);
     std::filesystem::create_directories(root, ec);
     std::ofstream(root / "child", std::ios::binary) << "bytes";
+    REQUIRE(std::filesystem::exists(root / "child"));
     return root;
 }
 
