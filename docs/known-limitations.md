@@ -56,8 +56,9 @@ a recorded file removed from outside the source cannot be compared as a file, an
 absence reads as difference. The path comparison answers an aliasing spelling a canonicalization
 collapses onto the recorded one. It does not answer a spelling that a canonicalization keeps distinct
 while the recorded file is absent — a differently-cased package on a volume that folds case is that
-shape — so that combination is the one the guard still cannot see, and it has run on no volume that
-folds either.
+shape — so that combination is the one the guard still cannot see. The guard itself has since run
+where case folds, on APFS and on NTFS, and refuses the differently-cased package there while the
+recorded file is present. It is the absence, not the folding, that remains unexercised.
 
 **Creation beneath a resolved temporary directory is not driven through a source.** What a source does
 when the system temporary directory itself does not exist is driven end to end — pointing the

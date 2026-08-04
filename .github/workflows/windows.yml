@@ -181,6 +181,67 @@ jobs:
           & ctest --output-on-failure --no-tests=error -R '^scratch_alias\.' -C Release --timeout 60
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The first three replace the global allocation functions and the fourth carries a
+      # volume-sensitive guard, so all four have a registration decided by something other than the
+      # source. A stem that condition drops leaves a green suite behind it.
+      - name: Focus scratch exhaustion tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_exhaustion\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_exhaustion\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch exhaustion tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_exhaustion\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_exhaustion\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch teardown tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_teardown\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_teardown\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch teardown tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_teardown\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_teardown\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch foreign tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_foreign\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_foreign\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch foreign tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_foreign\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_foreign\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Verbose rather than --output-on-failure: this stem's whole value is that its guard fired on a
+      # volume that folds, and a passing case's transcript is the only place that is visible.
+      - name: Focus scratch case-folding tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_case_fold\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_case_fold\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch case-folding tests discovered" }
+          Write-Host "ctest -V --no-tests=error -R '^scratch_case_fold\.' -C Release --timeout 60"
+          & ctest -V --no-tests=error -R '^scratch_case_fold\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
 

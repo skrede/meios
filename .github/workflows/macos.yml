@@ -153,6 +153,20 @@ jobs:
           echo "scratch_foreign registered $registered test(s)"
           ctest -R '^scratch_foreign\.' --output-on-failure --no-tests=error
 
+      # Verbose rather than --output-on-failure: this stem's whole value is that its guard fired on a
+      # volume that folds, and a passing case's transcript is the only place that is visible.
+      - name: Focus scratch case-folding tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_case_fold\.'"
+          registered=$(ctest -N -R '^scratch_case_fold\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_case_fold registered no tests"
+            exit 1
+          fi
+          echo "scratch_case_fold registered $registered test(s)"
+          ctest -V -R '^scratch_case_fold\.' --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 

@@ -223,6 +223,21 @@ jobs:
           echo "scratch_foreign registered $registered test(s)"
           ctest -R '^scratch_foreign\.' --output-on-failure --no-tests=error
 
+      # Verbose rather than --output-on-failure: this stem decides at runtime whether its volume
+      # folds, and here it is expected to skip. The transcript is the only place that reads as a
+      # deliberate skip rather than as a stem that quietly stopped registering.
+      - name: Focus scratch case-folding tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_case_fold\.'"
+          registered=$(ctest -N -R '^scratch_case_fold\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_case_fold registered no tests"
+            exit 1
+          fi
+          echo "scratch_case_fold registered $registered test(s)"
+          ctest -V -R '^scratch_case_fold\.' --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 
