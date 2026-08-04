@@ -64,6 +64,21 @@ jobs:
           echo "scratch_publish registered $registered test(s)"
           ctest -R '^scratch_publish\.' --output-on-failure --no-tests=error
 
+      # Which branch this case takes is decided by the platform, so a run that only reports failures
+      # records nothing about which one it took. Verbose, so the branch is in the transcript.
+      - name: Record the held-open replacement branch
+        run: |
+          cd build
+          selector='held open'
+          echo "ctest -N -R '$selector'"
+          registered=$(ctest -N -R "$selector" | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "no held-open replacement case discovered"
+            exit 1
+          fi
+          echo "held-open replacement discovered $registered case(s)"
+          ctest -V -R "$selector" --no-tests=error
+
       - name: Focus scratch replace tests
         run: |
           cd build
