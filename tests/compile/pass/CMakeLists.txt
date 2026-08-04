@@ -13,3 +13,11 @@ foreach(source IN LISTS compile_pass_sources)
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
             --target ${stem} --config $<CONFIG>)
 endforeach()
+
+# The name collision this stem pins is with the core-private reader declarations, so it is the
+# one unit here that has to see lib/meios-core/src.
+if(TARGET bundle_reader_call_is_qualified)
+    target_link_libraries(bundle_reader_call_is_qualified PRIVATE meios::bundle)
+    target_include_directories(bundle_reader_call_is_qualified PRIVATE
+        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+endif()

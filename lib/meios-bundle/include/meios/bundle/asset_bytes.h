@@ -17,20 +17,13 @@ namespace meios
 namespace detail
 {
 
+// meios::detail also declares two-argument readers of both these names, so an unqualified call
+// here would resolve to whichever declaration a translation unit happened to see first.
 inline text_read_result read_asset_bytes(const resolved_asset &asset)
 {
     if(asset.source_root() && asset.source_relative())
-        return read_text_file_under(*asset.source_root(), *asset.source_relative());
-    return read_text_file(asset.path());
-}
-
-// A refusal by kind carries no native code, so naming the classification is what keeps the
-// message from reporting a failure whose stated reason is that nothing went wrong.
-inline std::string read_failure_reason(const text_read_failure &failure)
-{
-    if(failure.kind == text_read_failure_kind::non_regular)
-        return "not a regular file";
-    return std::string(to_string(failure.cause.operation)) + " failed: " + failure.cause.native.message();
+        return meios::read_text_file_under(*asset.source_root(), *asset.source_relative());
+    return meios::read_text_file(asset.path());
 }
 
 inline void report_asset_read_failure(const resolved_asset &asset, const text_read_failure &failure, log_sink &log)

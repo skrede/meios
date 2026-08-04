@@ -26,10 +26,9 @@ namespace meios::detail
 namespace
 {
 
-void report_failure(std::string_view subject, const operation_failure &cause, log_sink &log)
+void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
 {
-    log.log(level::error, diagnostic_code::cannot_open, source_location{}, cause,
-            "cannot " + std::string(to_string(cause.operation)) + " resource \"" + std::string(subject) + "\": " + cause.native.message());
+    log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
 }
 
 std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots)
@@ -43,11 +42,11 @@ std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &docu
     return probes;
 }
 
-expected<std::filesystem::path, operation_failure> root_request(std::string_view spec, const std::filesystem::path &root, const std::filesystem::path &presentation)
+// The confined reader refuses a relative request carrying "..", so the request is derived from the
+// contained candidate rather than from the authored spelling: a traversal that stays inside the
+// root is an ordinary spelling, and the candidate is canonical and therefore free of "..".
+expected<std::filesystem::path, operation_failure> root_request(const std::filesystem::path &root, const std::filesystem::path &presentation)
 {
-    const std::filesystem::path requested{spec};
-    if(requested.is_relative())
-        return requested;
     std::error_code error;
     const std::filesystem::path base = std::filesystem::weakly_canonical(root, error);
     if(error)
@@ -63,17 +62,17 @@ struct sweep
     bool uncontained;
 };
 
-expected<std::optional<std::string>, operation_failure> nothing(bool &verdict)
+expected<std::optional<std::string>, text_read_failure> nothing(bool &verdict)
 {
     verdict = true;
     return std::optional<std::string>{};
 }
 
-expected<std::optional<std::string>, operation_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, sweep &seen)
+expected<std::optional<std::string>, text_read_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, sweep &seen)
 {
     contained_path_result contained = try_contained_under(root, root / std::filesystem::path(spec));
     if(!contained)
-        return unexpected<operation_failure>(contained.error());
+        return unexpected<text_read_failure>({text_read_failure_kind::status, contained.error()});
     if(!*contained)
         return nothing(seen.uncontained);
     std::error_code error;
@@ -81,18 +80,18 @@ expected<std::optional<std::string>, operation_failure> try_root(std::string_vie
     if(error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory)
         return nothing(seen.absent);
     if(error)
-        return unexpected<operation_failure>({operation_kind::status, error});
+        return unexpected<text_read_failure>({text_read_failure_kind::status, {operation_kind::status, error}});
     if(!std::filesystem::exists(status))
         return nothing(seen.absent);
-    expected<std::filesystem::path, operation_failure> relative = root_request(spec, root, **contained);
+    expected<std::filesystem::path, operation_failure> relative = root_request(root, **contained);
     if(!relative)
-        return unexpected<operation_failure>(relative.error());
+        return unexpected<text_read_failure>({text_read_failure_kind::status, relative.error()});
     text_read_result text = read_text_file_under(root, *relative, operations);
-    return text ? expected<std::optional<std::string>, operation_failure>{std::optional{std::move(*text)}}
-                : expected<std::optional<std::string>, operation_failure>{unexpected<operation_failure>(text.error().cause)};
+    return text ? expected<std::optional<std::string>, text_read_failure>{std::optional{std::move(*text)}}
+                : expected<std::optional<std::string>, text_read_failure>{unexpected<text_read_failure>(text.error())};
 }
 
-void remember(const operation_failure &failure, std::optional<operation_failure> &first)
+void remember(const text_read_failure &failure, std::optional<text_read_failure> &first)
 {
     if(!first)
         first = failure;
@@ -100,7 +99,7 @@ void remember(const operation_failure &failure, std::optional<operation_failure>
 
 // A determined native cause outranks both verdicts; between the two, absence wins, because a root
 // that holds the place for the resource has answered the containment question the other one raised.
-void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<operation_failure> &first_failure, log_sink &log)
+void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, log_sink &log)
 {
     if(first_failure)
         report_failure(spec, *first_failure, log);
@@ -114,10 +113,10 @@ std::optional<std::string> from_containment(std::string_view spec, const std::fi
                                             const text_reader_operations &operations)
 {
     sweep seen{false, false};
-    std::optional<operation_failure> first_failure;
+    std::optional<text_read_failure> first_failure;
     for(const std::filesystem::path &root : probe_roots(document, roots))
     {
-        expected<std::optional<std::string>, operation_failure> result = try_root(spec, root, operations, seen);
+        expected<std::optional<std::string>, text_read_failure> result = try_root(spec, root, operations, seen);
         if(!result)
             remember(result.error(), first_failure);
         else if(*result)

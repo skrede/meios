@@ -69,11 +69,16 @@ inline void report_failure(std::string_view subject, const operation_failure &ca
             "cannot " + std::string(to_string(cause.operation)) + " resource \"" + std::string(subject) + "\": " + cause.native.message());
 }
 
+inline void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
+{
+    log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
+}
+
 inline std::optional<std::string> consume(text_read_result text, std::string_view subject, log_sink &log)
 {
     if(text)
         return std::move(*text);
-    report_failure(subject, text.error().cause, log);
+    report_failure(subject, text.error(), log);
     return std::nullopt;
 }
 
