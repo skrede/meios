@@ -18,13 +18,25 @@ endfunction()
 # strongly, so a stem that replaces them to fail an allocation on demand cannot link against it —
 # the address sanitizer's are weak and coexist. The registration carries the condition because the
 # collision is at link time, so a stem registered anyway would fail the build rather than the test.
+# The sanitizer list is matched whole rather than at its first element, because thread is an
+# ordinary non-leading member of it, and the per-config and directory-level flags carry the same
+# request as the global ones.
 set(meios_allocation_injecting_stems scratch_exhaustion scratch_teardown)
+
+string(TOUPPER "${CMAKE_BUILD_TYPE}" meios_build_type)
+get_directory_property(meios_directory_options COMPILE_OPTIONS)
+set(meios_sanitizer_request
+    "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${meios_build_type}} ${meios_directory_options}")
+set(meios_thread_sanitized OFF)
+if(meios_sanitizer_request MATCHES "fsanitize=[A-Za-z0-9,_-]*thread")
+    set(meios_thread_sanitized ON)
+endif()
 
 foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
                       load_acquisition yaml_acquisition scratch_setup scratch_publish
                       scratch_replace scratch_alias scratch_exhaustion scratch_case_fold
                       scratch_teardown)
-    if("${stem}" IN_LIST meios_allocation_injecting_stems AND CMAKE_CXX_FLAGS MATCHES "fsanitize=thread")
+    if("${stem}" IN_LIST meios_allocation_injecting_stems AND meios_thread_sanitized)
         message(STATUS "meios: ${stem} is not registered under the thread sanitizer, which owns the allocation functions it replaces")
         continue()
     endif()
