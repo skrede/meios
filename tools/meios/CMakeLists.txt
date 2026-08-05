@@ -15,7 +15,7 @@ target_include_directories(meios_cli PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # loader's own resolver rather than carrying a second parser. That resolver is deliberately
 # not installed public API, so the tool reaches it through core's private source root the way
 # a test stem does, instead of the vocabulary being published to external consumers.
-target_include_directories(meios_cli PRIVATE ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+target_include_directories(meios_cli PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
 target_link_libraries(meios_cli
     PUBLIC meios::urdf meios::bundle meios::completion
     PRIVATE CLI11::CLI11)

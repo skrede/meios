@@ -68,7 +68,7 @@ set(MEIOS_CORPUS_KNOWN_GOOD
 # line — the fixed (code, file, line) the always-on tier pins.
 meios_declare_resource(
     NAME corpus_faulty
-    SOURCE_DIR "${CMAKE_SOURCE_DIR}/tests/fixtures/urdf/corpus_faulty"
+    SOURCE_DIR "${meios_SOURCE_DIR}/tests/fixtures/urdf/corpus_faulty"
     OUT_DIR MEIOS_CORPUS_FAULTY_DIR)
 
 set(MEIOS_CORPUS_FAULTY "${MEIOS_CORPUS_FAULTY_DIR}/faulty.urdf")

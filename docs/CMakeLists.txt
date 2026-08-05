@@ -16,9 +16,9 @@
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-set(_doc_snippet_extractor ${CMAKE_SOURCE_DIR}/tools/extract_doc_snippets.py)
+set(_doc_snippet_extractor ${meios_SOURCE_DIR}/tools/extract_doc_snippets.py)
 set(_doc_snippet_gen_dir ${CMAKE_CURRENT_BINARY_DIR}/doc_snippets)
-set(_doc_snippet_readme ${CMAKE_SOURCE_DIR}/README.md)
+set(_doc_snippet_readme ${meios_SOURCE_DIR}/README.md)
 
 # Regenerate the snippets at configure time over exactly the README and docs/, so
 # stray repo markdown is never dragged in. A malformed sentinel makes the

@@ -26,7 +26,7 @@ function(meios_add_acquisition_test stem)
     endif()
     add_executable(${stem}_test ${test_src})
     target_include_directories(${stem}_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
     target_link_libraries(${stem}_test PRIVATE
         meios::core meios::model meios::io meios::urdf meios::xacro
         Catch2::Catch2WithMain)

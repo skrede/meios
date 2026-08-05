@@ -70,7 +70,7 @@ endforeach()
 # configure-time license check unconditionally and resolves the fetch OUT_DIRs when
 # MEIOS_FETCH_CORPUS is ON; the test target registers only then, so a default
 # configure neither hits the network nor requires the corpus dirs.
-include(${CMAKE_SOURCE_DIR}/cmake/corpus.cmake)
+include(${meios_SOURCE_DIR}/cmake/corpus.cmake)
 set(urdf_corpus_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_corpus_test.cpp)
 if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
     add_executable(urdf_corpus_test ${urdf_corpus_src})
@@ -207,7 +207,7 @@ foreach(stem IN ITEMS
         if(stem STREQUAL "forward_scan" OR stem STREQUAL "yaml_resource"
                 OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
-                ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+                ${meios_SOURCE_DIR}/lib/meios-core/src)
         endif()
         if(stem STREQUAL "forward_scan")
             target_link_libraries(${stem}_test PRIVATE pugixml::pugixml)
@@ -311,8 +311,8 @@ endforeach()
 # header takes its node handles from.
 if(TARGET urdf_inertia_test)
     target_include_directories(urdf_inertia_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src/meios/urdf)
+        ${meios_SOURCE_DIR}/lib/meios-core/src
+        ${meios_SOURCE_DIR}/lib/meios-core/src/meios/urdf)
     target_link_libraries(urdf_inertia_test PRIVATE pugixml::pugixml)
 endif()
 
@@ -340,7 +340,7 @@ endforeach()
 # table only, and no other target has any use for the documentation directory.
 if(TARGET profile_drift_test)
     target_compile_definitions(profile_drift_test PRIVATE
-        MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
+        MEIOS_DOCS_DIR="${meios_SOURCE_DIR}/docs")
 endif()
 
 # The uri stems are driven by tests/golden/urdf/uri.cases, so they take the same pair of
@@ -365,14 +365,14 @@ endforeach()
 # the profile one.
 if(TARGET uri_drift_test)
     target_compile_definitions(uri_drift_test PRIVATE
-        MEIOS_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs")
+        MEIOS_DOCS_DIR="${meios_SOURCE_DIR}/docs")
 endif()
 
 # The uri classifier is a compiled core-private symbol reached through a module-private
 # header, so this stem alone reaches into meios-core/src.
 if(TARGET uri_cases_test)
     target_include_directories(uri_cases_test PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
 endif()
 
 # The frame reference is data a consumer diffs against rather than a fixture the library
@@ -487,7 +487,7 @@ if(TARGET meios_cli)
     # never open.
     if(TARGET cmake_eval_vocabulary_test)
         target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
-            MEIOS_CMAKE_MODULE_DIR="${CMAKE_SOURCE_DIR}/cmake")
+            MEIOS_CMAKE_MODULE_DIR="${meios_SOURCE_DIR}/cmake")
         if(TARGET meios)
             target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
                 MEIOS_CLI_BINARY="$<TARGET_FILE:meios>")
@@ -639,7 +639,7 @@ if(TARGET meios_eval-python)
         # The cardinality cases install the real YAML acquisition loader, which is a compiled
         # core-private symbol; a fake in its place could not observe the record it emits.
         target_include_directories(eval_python_refusal_test PRIVATE
-            ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+            ${meios_SOURCE_DIR}/lib/meios-core/src)
         target_compile_definitions(eval_python_refusal_test PRIVATE
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         meios_enable_coverage(eval_python_refusal_test)
@@ -658,7 +658,7 @@ if(TARGET meios_eval-python)
         # The acquisition cardinality cases install the real YAML loader, a compiled
         # core-private symbol; a fake in its place could not observe the record it emits.
         target_include_directories(eval_python_yaml_test PRIVATE
-            ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+            ${meios_SOURCE_DIR}/lib/meios-core/src)
         target_compile_definitions(eval_python_yaml_test PRIVATE
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         meios_enable_coverage(eval_python_yaml_test)

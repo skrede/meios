@@ -19,5 +19,5 @@ endforeach()
 if(TARGET bundle_reader_call_is_qualified)
     target_link_libraries(bundle_reader_call_is_qualified PRIVATE meios::bundle)
     target_include_directories(bundle_reader_call_is_qualified PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
 endif()

@@ -17,7 +17,7 @@ function(meios_cmake_case name)
         -DHARNESS_DIR=${CMAKE_CURRENT_SOURCE_DIR}
         -DWORK=${CMAKE_CURRENT_BINARY_DIR}/work/${name}
         -DCACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/cache/${name}
-        -DMODULE_DIR=${CMAKE_SOURCE_DIR}/cmake
+        -DMODULE_DIR=${meios_SOURCE_DIR}/cmake
         -DGEN=${CMAKE_GENERATOR}
         -DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
         -DGEN_PLATFORM=${CMAKE_GENERATOR_PLATFORM}
