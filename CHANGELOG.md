@@ -36,6 +36,18 @@ changes onwards to a stable `v1.0.0` release.
 
 ### Changed
 
+- **Breaking.** Expanding or substituting a xacro document directly now hands back either the
+  finished result or a typed diagnostic, never a success flag beside a half-built document. On the
+  way out you get the expanded document — or the substituted text — and nothing else, or a
+  diagnostic naming the `file:line` that failed, the code for what failed there, and the underlying
+  system cause where the failure came from one. That diagnostic is reported once through the sink
+  you supplied and handed to you as the failure arm, so there is nothing to log twice and nothing to
+  reconstruct from message text; warnings and every other non-fatal diagnostic keep travelling the
+  sink as before. An expression left alone by a permissive evaluation policy is still a success with
+  the span untouched. A failed `<xacro:include>` read also now names what went wrong — a missing
+  file, a directory where a file was expected, a read that failed part-way — and the operating
+  system's own reason for it, instead of reporting only that something could not be read. Callers
+  branch on the result; `docs/evaluation.md` states the contract in full.
 - **Breaking.** A description that says something meios cannot read is now refused instead of
   quietly completed. A two- or four-component offset, an unparseable or non-finite number, a missing
   mass or inertia component, a misspelled or absent joint type, an unrecognized geometry shape, a

@@ -251,6 +251,45 @@ What you accept by choosing it: every expression in every description you load �
 in by an include, from a package you did not write — runs with your process's authority. Choose it for
 descriptions you would be willing to run as a script.
 
+## What an expansion hands back
+
+Expansion is a result, never a flag beside a document. `meios::expand` returns either an `expansion`
+carrying the expanded document and nothing else, or an `expansion_error` carrying the failing
+location, a `diagnostic_code`, a message and — where a refused system operation caused it — that
+operation's native cause. A terminal failure is reported exactly once through the sink you supplied
+and returned on the error arm, so you neither log it again nor risk seeing it twice. Warnings, the
+environment-read note and every other nonterminal diagnostic keep travelling that same sink,
+unaffected. A span the active policy declines to resolve is a **success** whose span is left
+verbatim; [What refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which
+failures are terminal at all. `meios::substitute` publishes the same two arms over the same record.
+
+<!-- meios:snippet name=expansion-result tu -->
+```cpp
+#include <meios/io.h>
+#include <meios/xacro.h>
+
+#include <iostream>
+
+int main()
+{
+    meios::source_stack sources{};
+    meios::eval_scope scope;
+    meios::log_sink log;
+
+    const meios::expected<meios::expansion, meios::expansion_error> expanded =
+        meios::expand("<robot name=\"r\"/>", scope, sources, "robot.urdf.xacro",
+                      meios::expansion_limits{}, log);
+    if (!expanded)
+    {
+        const meios::expansion_error &err = expanded.error();
+        std::cout << meios::to_string(err.loc) << " (" << meios::to_string(err.code) << ") "
+                  << err.message << '\n';
+        return 1;
+    }
+    std::cout << expanded->document.size() << " bytes\n";
+}
+```
+
 ## Explicit non-goals
 
 **Resource exhaustion is outside this boundary.** `${10**10**10}` and `${[0]*10**12}` are refused by
