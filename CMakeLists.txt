@@ -9,7 +9,13 @@ include(FetchContent)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildflags.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/installed_modules.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeclareResource.cmake)
+
+# Derived and cross-checked whether or not this build installs anything: a module the wiring
+# reaches by nothing is a defect in the wiring, and a build that never installs would otherwise
+# be the one that never notices.
+meios_installed_cmake_modules(${CMAKE_CURRENT_SOURCE_DIR}/cmake _meios_cmake_modules)
 
 option(MEIOS_BUILD_TESTS "Build unit and compile tests" OFF)
 option(MEIOS_BUILD_EXAMPLES "Build examples" OFF)
@@ -97,19 +103,7 @@ if(MEIOS_INSTALL)
     install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/meiosConfigVersion.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeclareResource.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceCache.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourcePaths.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceLfs.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceArgs.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceGit.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceArchive.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosResourceRegistry.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosDeployResources.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosPruneResources.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenArgs.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenResource.cmake
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenRun.cmake
+        ${_meios_cmake_modules}
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
 elseif(NOT _meios_install_requested)
     if(PROJECT_IS_TOP_LEVEL)

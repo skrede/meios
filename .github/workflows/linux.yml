@@ -422,9 +422,11 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
-      # eval-python forces install off (its pybind11-embed link edge cannot be
-      # re-resolved from an installed tree), so it never joins an install-consumer
-      # leg. This job exercises only build+test, never install.
+      # eval-python withholds itself from the installed export, because its
+      # pybind11-embed link edge cannot be re-resolved from an installed tree.
+      # Every other module and the command-line tool still install, and this job is
+      # the only place in the matrix where that behavior is guaranteed to run, so it
+      # carries the install-consumer leg for it below.
       #
       # MEIOS_BUILD_TOOLS is on here and nowhere else alongside the enrichment:
       # the build-time flatten that really executes Python needs the CLI and the
@@ -477,6 +479,35 @@ jobs:
           fi
           echo "cmake_flatten_eval_python_live registered $registered test(s)"
           ctest -R cmake_flatten_eval_python_live --output-on-failure --no-tests=error
+
+      # A separate tree from build-py, which forces every dependency down the fetch
+      # path: a fetched pugixml that declines to install belongs to no export set and
+      # turns meios's install off, so the leg that has to install finds pugixml
+      # instead. The capability flag is what this leg exists to observe -- it is
+      # reachable as TRUE only in an installed package, and only where the tool and
+      # the backend are built together.
+      - name: Install with the backend built and assert what the prefix carries
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build-py-install -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_BUILD_TOOLS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=OFF \
+            -DMEIOS_BUILD_EVAL_PYTHON=ON \
+            -DMEIOS_REQUIRE_EVAL_PYTHON=ON
+          cmake --build build-py-install
+          cmake --install build-py-install --prefix "${{ github.workspace }}/install-py"
+          prefix="${{ github.workspace }}/install-py"
+          test -x "$prefix/bin/meios"
+          grep -q 'MEIOS_CLI_HAS_EVAL_PYTHON TRUE' "$prefix/lib/cmake/meios/meiosConfig.cmake"
+          for withheld in lib/libmeios_eval-python.a include/meios/eval; do
+            if [ -e "$prefix/$withheld" ]; then
+              echo "the withheld module left $withheld in the prefix"
+              exit 1
+            fi
+          done
 
       # Python absent: the eval-python target must be skipped and the always-on
       # core-evaluator eval_policy tests must stay green.

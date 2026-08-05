@@ -16,6 +16,13 @@ outside it with a `file:line` diagnostic naming the rule that refused it. Its si
 `meios::unrestricted_python_evaluator` evaluates whatever CPython evaluates; it has its own section
 near the end.
 
+The enrichment embeds that interpreter, and an embedded interpreter binds a binary to one of them.
+Everything that links it — including the command-line tool, which an install prefix carries — is
+compiled against a single CPython minor version and loads that version's runtime and no other, so a
+binary built here does not run on a machine carrying a different one. There is no negotiation at
+startup and no fallback to the core evaluator: the failure is at load, before any description is
+read. Build against the interpreter you have.
+
 ## What evaluates
 
 - Arithmetic, comparison and boolean operators over numbers and strings, including `**`, `//` and the

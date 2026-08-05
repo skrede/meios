@@ -45,4 +45,26 @@ if(_rc EQUAL 0)
     endif()
 endif()
 
+# Prefix-relative, unlike the build driver's, because what an installed package records about
+# itself is a file in the prefix and is readable nowhere else.
+if(_rc EQUAL 0 AND REQUIRE_CONTAINS)
+    string(REPLACE "," ";" _pair "${REQUIRE_CONTAINS}")
+    list(GET _pair 0 _rel)
+    list(GET _pair 1 _needle)
+    meios_harness_require_file("${_prefix}/${_rel}")
+    file(READ "${_prefix}/${_rel}" _text)
+    if(NOT _text MATCHES "${_needle}")
+        meios_harness_failed_assertion("${_rel} does not carry '${_needle}'")
+    endif()
+endif()
+
+# What a prefix carries is a file listing; what it hands a consumer is a find_package. Only a
+# second configure against the staged prefix can judge the second, so a case that has something to
+# say about it names the project to point at that prefix.
+if(_rc EQUAL 0 AND CONSUMER)
+    set(_consumer_args "-DCMAKE_PREFIX_PATH=${_prefix}" ${CONSUMER_EXTRA})
+    meios_harness_configure("${HARNESS_DIR}/fixtures/${CONSUMER}" "${WORK}/consumer"
+        "${_consumer_args}" _rc)
+endif()
+
 meios_harness_sentinel(${_rc})

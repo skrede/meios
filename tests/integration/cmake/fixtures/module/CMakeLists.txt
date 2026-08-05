@@ -2,10 +2,26 @@ cmake_minimum_required(VERSION 3.28)
 
 # NONE is deliberate: acquisition, containment, claims and refusal all complete before generation
 # and need no toolchain, which removes the whole compiler-passthrough surface and keeps a case well
-# under a second.
-project(meios_cmake_fixture NONE)
+# under a second. The one path that reaches an installed package instead enables the language that
+# package's own targets carry.
+if(FX_FIND_PACKAGE)
+    project(meios_cmake_fixture LANGUAGES CXX)
+else()
+    project(meios_cmake_fixture NONE)
+endif()
 
-include(MeiosDeclareResource)
+# Two ways in, and which one a case takes is what that case asserts: the module path reaches the
+# working tree's modules, while find_package reaches the copies an install prefix carries and
+# refuses a component the installed export does not.
+if(FX_FIND_PACKAGE)
+    set(_components "")
+    if(FX_COMPONENTS)
+        set(_components COMPONENTS ${FX_COMPONENTS})
+    endif()
+    find_package(meios CONFIG REQUIRED ${_components})
+else()
+    include(MeiosDeclareResource)
+endif()
 
 set(_args NAME "${FX_NAME}")
 foreach(_keyword IN ITEMS URL HASH GIT_REPOSITORY GIT_TAG SOURCE_DIR SUBDIR)
