@@ -186,7 +186,8 @@ endif()
 # moment its source drops in, with no further CMake edit. meios::model is linked
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
-        xacro_eval xacro_scope xacro_structural xacro_include_read xacro_subst xacro_subst_command
+        xacro_eval xacro_scope xacro_structural xacro_macro_params xacro_include_read xacro_subst
+        xacro_subst_command
         xacro_budget xacro_arg xacro_unsupported xacro_corpus forward_scan
         yaml_resource yaml_grammar yaml_verdict io_concept io_source_stack io_sources)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)

@@ -22,45 +22,6 @@ namespace meios::detail
 namespace
 {
 
-void parse_param(std::string_view token, macro_def &def)
-{
-    if(token.rfind("**", 0) == 0)
-    {
-        def.block_params.emplace_back(token.substr(2));
-        def.block_children.push_back(true);
-    }
-    else if(token.front() == '*')
-    {
-        def.block_params.emplace_back(token.substr(1));
-        def.block_children.push_back(false);
-    }
-    else if(std::size_t colon = token.find(":="); colon != std::string_view::npos)
-    {
-        def.params.emplace_back(token.substr(0, colon));
-        def.defaults.emplace_back(std::string(token.substr(colon + 2)));
-    }
-    else
-    {
-        def.params.emplace_back(token);
-        def.defaults.emplace_back(std::nullopt);
-    }
-}
-
-void parse_params(std::string_view spec, macro_def &def)
-{
-    for(std::size_t i = 0; i < spec.size();)
-    {
-        std::size_t space = spec.find_first_of(" \t\n\r", i);
-        std::string_view token =
-            spec.substr(i, space == std::string_view::npos ? space : space - i);
-        if(!token.empty())
-            parse_param(token, def);
-        if(space == std::string_view::npos)
-            break;
-        i = space + 1;
-    }
-}
-
 bool bind_literal(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
                   std::string_view raw, const std::filesystem::path &document)
 {

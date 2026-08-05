@@ -39,6 +39,8 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 
+void parse_params(std::string_view spec, macro_def &def);
+
 void define_macro(expand_ctx &ctx, pugi::xml_node in);
 bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                        pugi::xml_node out, const std::filesystem::path &document);
