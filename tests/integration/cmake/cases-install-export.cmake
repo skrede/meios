@@ -4,6 +4,10 @@
 #
 # Every pattern here spells its inter-word spaces as a whitespace character class for the reason
 # given at the head of cases-refusal.cmake.
+#
+# Each case configures, compiles and installs meios from scratch and then configures a consumer
+# against the staged prefix, which is four tree operations behind one time limit, so each raises
+# that limit explicitly.
 
 set(_export_tree "-DFX_MEIOS_SOURCE_DIR=${meios_SOURCE_DIR}")
 

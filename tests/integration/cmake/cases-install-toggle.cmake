@@ -37,7 +37,8 @@ meios_cmake_case(cmake_subproject_install_declined
 # that installs nothing belongs to no export set: without it this case would pass on a host that
 # has a discoverable pugixml and fail on one that does not -- and it is a consumer setting that
 # option, which is exactly the choice meios stopped taking on the consumer's behalf.
-# This is the one case that compiles meios, so its time limit is raised explicitly.
+# A case that compiles and installs meios from scratch needs more than the shared time limit, so
+# this one raises it explicitly.
 meios_cmake_case(cmake_subproject_install_optin
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake
@@ -62,7 +63,9 @@ meios_cmake_case(cmake_subproject_install_optin_too_late
 
 # The suppression this replaces tested one dependency's source directory, so an enrichment whose
 # dependency is not the XML parser was a generate-time export failure with no message and no test.
-# The fetch path is forced so which dependencies are acquired does not depend on the host.
+# The fetch path is forced so which dependencies are acquired does not depend on the host, which
+# also puts an acquisition on the critical path where the other declined-install cases have none,
+# and that is what the raised time limit covers.
 meios_cmake_case(cmake_install_reason_fetched_dependency
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake

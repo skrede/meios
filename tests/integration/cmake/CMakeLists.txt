@@ -54,6 +54,16 @@ function(meios_cmake_case name)
     # which every case that does neither must not be made to wait for.
     set_tests_properties(${name} PROPERTIES LABELS meios-cmake TIMEOUT ${ARG_TIMEOUT})
 
+    # A case that adds meios as a subdirectory and names a build target compiles meios from scratch,
+    # and two of those at once cost twice the peak memory and CPU of one. Both facts are already
+    # stated on every case, so the property is derived from them rather than hand-applied to a list
+    # that would go stale. RESOURCE_LOCK rather than RUN_SERIAL: the lock excludes these cases from
+    # each other while the several hundred fast cases keep running in parallel, where RUN_SERIAL
+    # would stop the whole suite for each one.
+    if(ARG_FIXTURE STREQUAL "subproject" AND ARG_BUILD_TARGET)
+        set_tests_properties(${name} PROPERTIES RESOURCE_LOCK meios-subproject-compile)
+    endif()
+
     # A refusal binds two properties rather than one. The pass regex alone would accept a run in
     # which the module never refused and the text arrived from somewhere else, so the sentinel the
     # driver prints when the sub-configure succeeded is bound as a failure regex to close that.
