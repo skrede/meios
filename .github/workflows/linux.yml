@@ -461,7 +461,7 @@ jobs:
             exit 1
           fi
           echo "eval_python_abuse registered $registered test(s)"
-          ctest -R eval_python_abuse --output-on-failure
+          ctest -R eval_python_abuse --output-on-failure --no-tests=error
 
       # The build-time flatten that really runs Python registers only where the
       # CLI carries the backend, so it is asserted present for the same reason:

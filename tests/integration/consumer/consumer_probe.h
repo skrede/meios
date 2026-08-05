@@ -95,6 +95,7 @@ private:
 int run_facade();
 int run_memory_source();
 int run_asset_reads();
+int run_expansions();
 
 }
 

@@ -128,5 +128,7 @@ int main()
         return rc;
     if(const int rc = consumer::run_asset_reads())
         return rc;
+    if(const int rc = consumer::run_expansions())
+        return rc;
     return 0;
 }
