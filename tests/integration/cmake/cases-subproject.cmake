@@ -66,3 +66,12 @@ meios_cmake_case(cmake_subproject_examples
     EXTRA   ${_meios_tree} -DMEIOS_BUILD_EXAMPLES=ON
     BUILD_TARGET meios_subproject_consumer
     TIMEOUT 1800)
+
+# A consumer declares its own targets on one side of the add_subdirectory or the other, and nothing
+# in the suite varied that. Configure-only and deliberately without a build target: what is compared
+# is what meios configured, and naming a target would buy a second compile of an unchanged object
+# set at the cost of enrolling the case in the subproject compile lock.
+meios_cmake_case(cmake_subproject_declaration_order
+    FIXTURE subproject
+    DRIVER  meios_subproject_order_case.cmake
+    EXTRA   ${_meios_tree} -DMEIOS_BUILD_TOOLS=ON)

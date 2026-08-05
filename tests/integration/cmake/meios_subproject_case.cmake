@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-include("${CMAKE_CURRENT_LIST_DIR}/meios_cmake_harness.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/meios_cmake_content.cmake")
 
 meios_harness_reset()
 
@@ -48,13 +48,21 @@ endif()
 # Prefix-relative, unlike the build driver's, because what an installed package records about
 # itself is a file in the prefix and is readable nowhere else.
 if(_rc EQUAL 0 AND REQUIRE_CONTAINS)
-    string(REPLACE "," ";" _pair "${REQUIRE_CONTAINS}")
-    list(GET _pair 0 _rel)
-    list(GET _pair 1 _needle)
-    meios_harness_require_file("${_prefix}/${_rel}")
-    file(READ "${_prefix}/${_rel}" _text)
-    if(NOT _text MATCHES "${_needle}")
-        meios_harness_failed_assertion("${_rel} does not carry '${_needle}'")
+    meios_harness_require_contains("${_prefix}" "${REQUIRE_CONTAINS}")
+endif()
+if(_rc EQUAL 0 AND REQUIRE_PREFIX_LACKS)
+    meios_harness_require_lacks("${_prefix}" "${REQUIRE_PREFIX_LACKS}")
+endif()
+
+# A refusal the package config prints for any unresolvable dependency says nothing about
+# components. The control asks the same prefix for no component at all and must succeed, so a
+# prefix a consumer cannot find at all reddens the case rather than satisfying its refusal.
+if(_rc EQUAL 0 AND CONSUMER_CONTROL)
+    set(_control_args "-DCMAKE_PREFIX_PATH=${_prefix}" ${CONSUMER_CONTROL})
+    meios_harness_configure("${HARNESS_DIR}/fixtures/${CONSUMER}" "${WORK}/control"
+        "${_control_args}" _control_rc)
+    if(NOT _control_rc EQUAL 0)
+        meios_harness_failed_assertion("the staged prefix refused a request naming no component")
     endif()
 endif()
 
@@ -65,6 +73,13 @@ if(_rc EQUAL 0 AND CONSUMER)
     set(_consumer_args "-DCMAKE_PREFIX_PATH=${_prefix}" ${CONSUMER_EXTRA})
     meios_harness_configure("${HARNESS_DIR}/fixtures/${CONSUMER}" "${WORK}/consumer"
         "${_consumer_args}" _rc)
+endif()
+
+# Build-tree-relative rather than prefix-relative, unlike the assertions above: what a configure
+# wrote into the cache is a fact about the tree, and a decision the consumer's listfile owns leaves
+# no trace there at all.
+if(_rc EQUAL 0 AND REQUIRE_TREE_LACKS)
+    meios_harness_require_lacks("${WORK}/tree" "${REQUIRE_TREE_LACKS}")
 endif()
 
 meios_harness_sentinel(${_rc})

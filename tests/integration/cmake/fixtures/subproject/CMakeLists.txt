@@ -7,15 +7,20 @@ project(meios_cmake_subproject LANGUAGES CXX)
 
 # Two inputs rather than one plus a position flag: which side of the add_subdirectory a consumer's
 # setting lands on is the thing under test, so both sites have to be visible at once.
-if(NOT FX_PARENT_INSTALL STREQUAL "")
+if(DEFINED FX_PARENT_INSTALL AND NOT FX_PARENT_INSTALL STREQUAL "")
     set(MEIOS_INSTALL ${FX_PARENT_INSTALL})
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/configuration_dump.cmake")
+if(FX_ORDER STREQUAL "early")
+    fx_declare_consumer_interface()
 endif()
 
 # FetchContent_MakeAvailable ends in add_subdirectory, so the semantics are identical, and the
 # working tree rather than a committed revision is what a run before a push has to validate.
 add_subdirectory("${FX_MEIOS_SOURCE_DIR}" meios-build)
 
-if(NOT FX_PARENT_INSTALL_LATE STREQUAL "")
+if(DEFINED FX_PARENT_INSTALL_LATE AND NOT FX_PARENT_INSTALL_LATE STREQUAL "")
     set(MEIOS_INSTALL ${FX_PARENT_INSTALL_LATE})
 endif()
 
@@ -37,6 +42,13 @@ foreach(_target IN ITEMS meios_cli meios_core)
         endif()
     endforeach()
 endforeach()
+
+if(FX_ORDER STREQUAL "late")
+    fx_declare_consumer_interface()
+endif()
+if(FX_CONFIG_DUMP)
+    fx_write_configuration("${FX_CONFIG_DUMP}")
+endif()
 
 add_executable(meios_subproject_consumer consumer.cpp)
 target_link_libraries(meios_subproject_consumer PRIVATE meios::urdf)

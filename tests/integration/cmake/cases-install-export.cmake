@@ -36,6 +36,12 @@ set(_export_component_request -DFX_FIND_PACKAGE=ON -DFX_COMPONENTS=eval-python -
 list(APPEND _export_component_request
     -DFX_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/origin/clean)
 
+# The same request with the component clause removed. It is what makes the refusal above
+# discriminating: an unresolvable find_dependency(pugixml) prints that same sentence and would fail
+# both requests, so the case only stands when the componentless one succeeds against the same prefix.
+set(_export_control -DFX_FIND_PACKAGE=ON -DFX_NAME=demo)
+list(APPEND _export_control -DFX_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/origin/clean)
+
 # Built and withheld. The command-line tool links the backend privately onto a support library
 # that is in no export set, so the tool still installs and carries the capability the config
 # records; the backend's own archive and headers are absent together.
@@ -53,6 +59,7 @@ if(TARGET meios_eval-python)
         REQUIRE_CONTAINS "${_export_cmakedir}/meiosConfig.cmake,MEIOS_CLI_HAS_EVAL_PYTHON[ \t\r\n]+TRUE"
         CONSUMER module
         CONSUMER_EXTRA ${_export_component_request}
+        CONSUMER_CONTROL ${_export_control}
         REFUSES "${_export_refusal}")
 endif()
 
@@ -67,6 +74,7 @@ meios_cmake_case(cmake_install_backend_absent
     TIMEOUT 1800
     CONSUMER module
     CONSUMER_EXTRA ${_export_component_request}
+    CONSUMER_CONTROL ${_export_control}
     REFUSES "${_export_refusal}")
 
 # The path-containment check is a traversal control, and its absence from a prefix is invisible to

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
+include_guard(GLOBAL)
+
 function(meios_harness_reset)
     file(REMOVE_RECURSE "${WORK}")
     file(REMOVE_RECURSE "${CACHE_DIR}")
