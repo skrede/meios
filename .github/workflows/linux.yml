@@ -480,6 +480,25 @@ jobs:
           echo "cmake_flatten_eval_python_live registered $registered test(s)"
           ctest -R cmake_flatten_eval_python_live --output-on-failure --no-tests=error
 
+      # ctest exits 0 when a -R filter selects nothing, and the case that proves
+      # the backend is withheld from the installed export registers only where the
+      # backend target exists, which is this tree and nowhere else in the matrix.
+      # It is the one case here that can stop registering without turning anything
+      # red. Unlike the two assertions above, no filtered run follows: the
+      # unfiltered test step already ran it, and it configures, compiles and
+      # installs meios twice behind a 1800-second limit, so a second run would
+      # double the job's longest step to prove what has already been proven.
+      # Registration is the one thing the unfiltered run cannot show.
+      - name: Assert the withheld-backend install case registered (Python found)
+        run: |
+          cd build-py
+          registered=$(ctest -N -R cmake_install_withholds_backend | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "cmake_install_withholds_backend registered no tests"
+            exit 1
+          fi
+          echo "cmake_install_withholds_backend registered $registered test(s)"
+
       # A separate tree from build-py, which forces every dependency down the fetch
       # path: a fetched pugixml that declines to install belongs to no export set and
       # turns meios's install off, so the leg that has to install finds pugixml
