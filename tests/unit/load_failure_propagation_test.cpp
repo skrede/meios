@@ -1,4 +1,5 @@
 #include "load_failure_fixture.h"
+#include "load_propagation_fixture.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -95,6 +96,71 @@ TEST_CASE("eval_policy::warn keeps the specific evaluator code on a genuine erro
     // code must survive the boundary replay rather than degrade to unspecified.
     REQUIRE_FALSE(result.has_value());
     REQUIRE(result.error().code == meios::diagnostic_code::undefined_property);
+}
+
+TEST_CASE("a terminally failing expansion refuses the load with the code expansion itself returns",
+          "[urdf][load_failure]")
+{
+    const std::filesystem::path document = fixture("undefined_property.xacro");
+    meios::load_options opts;
+    opts.eval = meios::eval_policy::fail;
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(document, opts);
+
+    meios::log_sink silent;
+    const meios::expected<meios::expansion, meios::expansion_error> expanded =
+        expand_directly(document, {}, silent);
+
+    // A refused load carries no load_result at all, so there is no model to be empty: the
+    // absence is structural rather than a zero-link robot a consumer could act on.
+    REQUIRE_FALSE(expanded.has_value());
+    REQUIRE_FALSE(loaded.has_value());
+    REQUIRE(loaded.error().code == expanded.error().code);
+    REQUIRE(loaded.error().loc.line == expanded.error().loc.line);
+}
+
+TEST_CASE("a load and a direct expansion expose the same terminal cause for an unreadable include",
+          "[urdf][load_failure]")
+{
+    const std::filesystem::path root = fresh_tree();
+    std::filesystem::create_directories(root / "inc.xacro");
+    std::ofstream(root / "robot.xacro")
+        << R"(<robot name="r" xmlns:xacro="http://www.ros.org/wiki/xacro">)"
+        << R"(<xacro:include filename="inc.xacro"/></robot>)";
+
+    meios::load_options opts;
+    opts.package_roots = { root };
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(root / "robot.xacro", opts);
+
+    meios::log_sink silent;
+    const meios::expected<meios::expansion, meios::expansion_error> expanded =
+        expand_directly(root / "robot.xacro", { root }, silent);
+    std::filesystem::remove_all(root);
+
+    REQUIRE_FALSE(expanded.has_value());
+    REQUIRE_FALSE(loaded.has_value());
+    REQUIRE(loaded.error().code == expanded.error().code);
+    REQUIRE(loaded.error().cause.has_value());
+    REQUIRE(expanded.error().cause.has_value());
+    REQUIRE(loaded.error().cause->operation == expanded.error().cause->operation);
+    REQUIRE(loaded.error().cause->native == expanded.error().cause->native);
+}
+
+TEST_CASE("one terminal expansion failure reaches the sink exactly once through a whole load",
+          "[urdf][load_failure]")
+{
+    meios::log_sink silent;
+    meios::capturing_log_sink capture(silent);
+    meios::source_stack sources;
+
+    meios::load_options opts;
+    opts.eval = meios::eval_policy::fail;
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture("undefined_property.xacro"), opts, sources, capture);
+
+    REQUIRE_FALSE(loaded.has_value());
+    REQUIRE(capture.errors() == 1);
 }
 
 TEST_CASE("a failed xacro load records no xml_parse_error cascade after the primary",

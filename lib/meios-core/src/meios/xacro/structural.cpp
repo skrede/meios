@@ -34,39 +34,56 @@ void seed_document(detail::expand_ctx &ctx, std::string_view source,
     detail::seed_declared_args(ctx.scope, doc);
 }
 
+unexpected<expansion_error> refuse(const detail::expand_ctx &ctx,
+                                   const std::filesystem::path &document)
+{
+    return unexpected<expansion_error>(detail::terminal_of(ctx, document));
+}
+
+unexpected<expansion_error> refuse_parse(detail::expand_ctx &ctx, std::string_view source,
+                                         const std::filesystem::path &document,
+                                         const pugi::xml_parse_result &parsed)
+{
+    const source_location at = detail::offset_location(source, parsed.offset, document);
+    const std::string message = std::string("xacro parse error: ") + parsed.description();
+    detail::record_terminal(ctx, at, diagnostic_code::xacro_parse_error, message);
+    ctx.log.log(level::error, diagnostic_code::xacro_parse_error, at, message);
+    return refuse(ctx, document);
+}
+
 }
 
 // pugixml's default parse flags never load a DTD or resolve external entities, so
 // an XXE / entity-expansion payload has no effect; keep it at parse_default.
-expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
-                 const std::filesystem::path &document, const expansion_limits &limits,
-                 eval_policy policy, const std::shared_ptr<evaluator_handle> &backend,
-                 log_sink &log)
+expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
+                                            source_stack &sources,
+                                            const std::filesystem::path &document,
+                                            const expansion_limits &limits, eval_policy policy,
+                                            const std::shared_ptr<evaluator_handle> &backend,
+                                            log_sink &log)
 {
     detail::expand_ctx ctx(scope, sources, limits, policy, backend, log);
     pugi::xml_document &doc = ctx.park();
     pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
     if(!parsed)
-    {
-        const source_location at = detail::offset_location(source, parsed.offset, document);
-        const std::string message = std::string("xacro parse error: ") + parsed.description();
-        detail::record_terminal(ctx, at, diagnostic_code::xacro_parse_error, message);
-        log.log(level::error, diagnostic_code::xacro_parse_error, at, message);
-        return expansion{ false, {} };
-    }
+        return refuse_parse(ctx, source, document, parsed);
     seed_document(ctx, source, document, doc);
     pugi::xml_document result;
     for(pugi::xml_node child : doc.children())
         if(!detail::process_node(ctx, child, result, document))
-            return expansion{ false, {} };
+            return refuse(ctx, document);
+    if(!ctx.ok)
+        return refuse(ctx, document);
     std::ostringstream out;
     result.save(out, "", pugi::format_raw);
-    return expansion{ ctx.ok, out.str() };
+    const expansion expanded{ out.str() };
+    return expanded;
 }
 
-expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
-                 const std::filesystem::path &document, const expansion_limits &limits,
-                 log_sink &log)
+expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
+                                            source_stack &sources,
+                                            const std::filesystem::path &document,
+                                            const expansion_limits &limits, log_sink &log)
 {
     return expand(source, scope, sources, document, limits, eval_policy::fail, {}, log);
 }

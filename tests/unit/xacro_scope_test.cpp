@@ -20,6 +20,7 @@
 namespace
 {
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
 
 // Records "<document>|<spec>" for every request, so a case observes which document the
 // scope hands the loader without the scope exposing an accessor for it.
@@ -153,13 +154,13 @@ TEST_CASE("the active document follows the include stack through an expansion", 
     scope.install_text_loader(recorder(seen));
     const std::shared_ptr<meios::evaluator_handle> backend =
         std::make_shared<meios::evaluator_handle>(loading_backend{});
-    const meios::expansion out = meios::expand(source, scope, sources, top,
+    const expansion_result out = meios::expand(source, scope, sources, top,
                                                meios::expansion_limits{},
                                                meios::eval_policy::fail, backend, sink);
 
     std::filesystem::remove_all(root);
 
-    REQUIRE(out.ok);
+    REQUIRE(out.has_value());
     REQUIRE(seen.size() == 3);
     REQUIRE(seen[0] == top.generic_string() + "|outer");
     REQUIRE(seen[1] == leaf.generic_string() + "|inner");

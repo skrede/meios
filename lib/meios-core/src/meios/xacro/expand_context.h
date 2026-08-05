@@ -5,6 +5,7 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
 
+#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/expansion_error.h"
@@ -61,6 +62,35 @@ using saved_binding = std::pair<std::string, std::optional<binding>>;
 // invocation exits so a scoped write does not leak past its owning frame.
 using prop_frame = std::vector<std::pair<std::string, std::optional<binding>>>;
 
+// Forwards every record unchanged and keeps the first coded, located error as a
+// structured cause. A layer beneath expansion names the specific failure — an undefined
+// name, an unresolvable package, a rejected asset — while the walk above it knows only
+// the structural site it stopped at, so the first such record is the cause worth
+// returning. A message-only error carries neither code nor position and is not one.
+class terminal_latch final : public log_sink
+{
+public:
+    using log_sink::log;
+
+    explicit terminal_latch(log_sink &inner);
+
+    void log(level lvl, const std::string &message) override;
+    void log(level lvl, const source_location &where, const std::string &message) override;
+    void log(level lvl, diagnostic_code code, const source_location &where,
+             const std::string &message) override;
+    void log(level lvl, diagnostic_code code, const source_location &where,
+             const operation_failure &cause, const std::string &message) override;
+
+    const std::optional<expansion_error> &first() const { return m_first; }
+
+private:
+    log_sink &m_inner;
+    std::optional<expansion_error> m_first;
+
+    void latch(level lvl, const source_location &where, diagnostic_code code,
+               const std::string &message, std::optional<operation_failure> cause);
+};
+
 // Threads the whole expansion: name scope, package sources, both budget counters,
 // the macro table, the include cycle stack, the active block bindings, and the stack
 // of per-invocation property frames. Parsed include documents are parked in owned so
@@ -73,6 +103,7 @@ struct expand_ctx
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
+    terminal_latch observer;
     log_sink &log;
     eval_policy mode;
     std::shared_ptr<evaluator_handle> backend;
@@ -106,6 +137,10 @@ bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
 
 void record_terminal(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
                      const std::string &message);
+
+// The cause a terminal failure reports: the first coded error any layer emitted, falling
+// back to the site the walk recorded and, failing both, to the document itself.
+expansion_error terminal_of(const expand_ctx &ctx, const std::filesystem::path &document);
 
 source_location locate(const expand_ctx &ctx, pugi::xml_node in);
 

@@ -13,7 +13,9 @@
 namespace
 {
 
-meios::expansion expand_over(const char *source, meios::source_stack &sources,
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
+expansion_result expand_over(const char *source, meios::source_stack &sources,
                              const std::filesystem::path &document, meios::log_sink &log)
 {
     meios::eval_scope scope;
@@ -37,10 +39,10 @@ TEST_CASE("an xacro:include naming a directory refuses with the non-regular clas
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"inc.xacro\"/></robot>";
-    const meios::expansion out =
+    const expansion_result out =
         expand_over(top, sources, held.tree.path() / "top.xacro", log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::unresolved_include) == 1);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_parse_error) == 0);
     REQUIRE(xacro_probe::errors(records) == 1);
@@ -68,10 +70,10 @@ TEST_CASE("an absent xacro:include target classifies apart from a directory one"
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"absent.xacro\"/></robot>";
-    const meios::expansion out =
+    const expansion_result out =
         expand_over(top, sources, held.tree.path() / "top.xacro", log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::unresolved_include) == 1);
 
     // The source layer refuses an absent target before any read, so the second classification
@@ -95,10 +97,10 @@ TEST_CASE("an empty regular xacro:include is read and still reaches the parser",
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"inc.xacro\"/></robot>";
-    const meios::expansion out =
+    const expansion_result out =
         expand_over(top, sources, held.tree.path() / "top.xacro", log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::unresolved_include) == 0);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_parse_error) == 1);
 }

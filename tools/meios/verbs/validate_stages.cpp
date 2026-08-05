@@ -76,8 +76,9 @@ bool xacro_expands(std::string_view bytes, const std::filesystem::path &path,
 {
     eval_scope scope;
     source_stack sources = build_sources(roots, sink);
-    const expansion expanded = expand(bytes, scope, sources, path, expansion_limits{}, sink);
-    return expanded.ok;
+    const expected<expansion, expansion_error> expanded =
+        expand(bytes, scope, sources, path, expansion_limits{}, sink);
+    return expanded.has_value();
 }
 
 void add(validation_report &report, int code, std::string klass, std::vector<std::string> messages)

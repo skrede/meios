@@ -14,12 +14,49 @@
 namespace meios::detail
 {
 
+terminal_latch::terminal_latch(log_sink &inner)
+    : m_inner(inner), m_first()
+{
+}
+
+void terminal_latch::log(level lvl, const std::string &message)
+{
+    m_inner.log(lvl, message);
+}
+
+void terminal_latch::log(level lvl, const source_location &where, const std::string &message)
+{
+    m_inner.log(lvl, where, message);
+}
+
+void terminal_latch::log(level lvl, diagnostic_code code, const source_location &where,
+                         const std::string &message)
+{
+    latch(lvl, where, code, message, std::nullopt);
+    m_inner.log(lvl, code, where, message);
+}
+
+void terminal_latch::log(level lvl, diagnostic_code code, const source_location &where,
+                         const operation_failure &cause, const std::string &message)
+{
+    latch(lvl, where, code, message, cause);
+    m_inner.log(lvl, code, where, cause, message);
+}
+
+void terminal_latch::latch(level lvl, const source_location &where, diagnostic_code code,
+                           const std::string &message, std::optional<operation_failure> cause)
+{
+    if(lvl != level::error || m_first)
+        return;
+    m_first = expansion_error{ where, message, code, std::move(cause) };
+}
+
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
                        eval_policy policy, const std::shared_ptr<evaluator_handle> &inject,
                        log_sink &lg)
-    : scope(s), sources(src), limits(lim), log(lg), mode(policy), backend(inject), counters(),
-      macros(), blocks(), include_stack(), owned(), owned_text(), origins(), prop_frames(),
-      param_saves(), terminal(), ok(true)
+    : scope(s), sources(src), limits(lim), observer(lg), log(observer), mode(policy),
+      backend(inject), counters(), macros(), blocks(), include_stack(), owned(), owned_text(),
+      origins(), prop_frames(), param_saves(), terminal(), ok(true)
 {
 }
 
@@ -28,6 +65,16 @@ void record_terminal(expand_ctx &ctx, const source_location &loc, diagnostic_cod
 {
     if(!ctx.terminal)
         ctx.terminal = expansion_error{ loc, message, code, std::nullopt };
+}
+
+expansion_error terminal_of(const expand_ctx &ctx, const std::filesystem::path &document)
+{
+    if(ctx.observer.first())
+        return *ctx.observer.first();
+    if(ctx.terminal)
+        return *ctx.terminal;
+    return expansion_error{ source_location{ document, 0, 0 }, "xacro expansion failed",
+                            diagnostic_code::xacro_structural_error, std::nullopt };
 }
 
 bool expand_ctx::charge_work(pugi::xml_node in)

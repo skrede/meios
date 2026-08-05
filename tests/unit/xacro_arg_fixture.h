@@ -46,7 +46,9 @@ struct recorder
     }
 };
 
-meios::expansion run(std::string_view source, recorder &log)
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
+expansion_result run(std::string_view source, recorder &log)
 {
     meios::source_stack sources;
     meios::eval_scope scope;
@@ -57,10 +59,10 @@ meios::expansion run(std::string_view source, recorder &log)
 std::string flattened(std::string_view source)
 {
     recorder log;
-    const meios::expansion out = run(source, log);
-    REQUIRE(out.ok);
+    const expansion_result out = run(source, log);
+    REQUIRE(out.has_value());
     REQUIRE(log.errors == 0);
-    return meios::canonical_xml(out.document);
+    return meios::canonical_xml(out->document);
 }
 
 }

@@ -16,7 +16,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size
     meios::log_sink silent;
     meios::source_stack sources;
     meios::eval_scope scope;
-    meios::expansion result =
+    meios::expected<meios::expansion, meios::expansion_error> result =
         meios::expand(source, scope, sources, "fuzz.xacro", meios::expansion_limits{}, silent);
     (void)result;
     return 0;

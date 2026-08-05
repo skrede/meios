@@ -96,11 +96,11 @@ TEST_CASE("an uncontained yaml spec refuses through expand and leaks no file con
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome refused =
         run(span_document("${load_yaml('/etc/passwd')}"), meios::eval_policy::skip, handle);
-    REQUIRE_FALSE(refused.ok);
+    REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.errors >= 1);
     REQUIRE(says(refused, "uncontained-yaml-path"));
-    REQUIRE_FALSE(leaves(refused, "root:"));
-    REQUIRE_FALSE(leaves(refused, "${load_yaml"));
+    REQUIRE(refused.expanded.error().message.find("root:") == std::string::npos);
+    REQUIRE(refused.expanded.error().message.find("${load_yaml") == std::string::npos);
 }
 
 TEST_CASE("every unit tag the reference implementation registers constructs", "[eval_python]")

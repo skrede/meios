@@ -118,6 +118,20 @@ TEST_CASE("cli_validate: an unsupported xacro feature is class 4")
     REQUIRE(run_validate_on(fixture("unsupported_xacro.xacro"), "", printed) == 4);
 }
 
+// Asserting the class alone would pass while the message list silently emptied, so both
+// halves are claimed: the class decision comes from the returned result, and the messages
+// come from the one emission the expansion entry point makes.
+TEST_CASE("cli_validate: a failed expansion reports its class with the messages intact")
+{
+    const cli::validation_report report =
+        cli::classify(fixture("unsupported_xacro.xacro"), {});
+
+    REQUIRE(report.findings.size() == 1);
+    REQUIRE(report.findings.front().code == 4);
+    REQUIRE(report.findings.front().klass == "unsupported-feature");
+    REQUIRE_FALSE(report.findings.front().messages.empty());
+}
+
 // The rule the classes obey is a property of the report rather than of any one document, and
 // no document produces two classes now that the library owns every rule the verb once had.
 TEST_CASE("cli_validate: the most-severe class wins and the report lists the rest")

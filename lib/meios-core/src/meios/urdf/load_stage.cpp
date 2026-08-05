@@ -20,6 +20,7 @@
 #include "meios/xacro/text_resource_loader.h"
 
 #include "meios/diagnostic/claims.h"
+#include "meios/diagnostic/expansion_error.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/capturing_log_sink.h"
@@ -60,25 +61,22 @@ void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string
         scope.set(arg.first, classify(arg.second));
 }
 
-void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable, const load_options &opts, parse_context &ctx, world_recorder &recorder, capture_window &window)
+std::optional<expansion_error> drive(std::string_view bytes, const std::filesystem::path &path, bool expandable, const load_options &opts, parse_context &ctx, world_recorder &recorder)
 {
     basic_parser<urdf_reader> parser(ctx);
     if(!expandable)
     {
         parser.parse(bytes, recorder);
-        return;
+        return std::nullopt;
     }
     eval_scope scope;
     seed_caller_args(scope, opts.args);
     scope.install_text_loader(make_yaml_text_loader(ctx.sources, opts.package_roots, ctx.log));
-    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{}, opts.eval, opts.backend, ctx.log);
-    // A failed expansion yields an empty document; parsing it would append a
-    // misleading secondary "no document element" error after the real root cause
-    // already relayed. Skip the parse only when expand reported that root cause;
-    // a quiet failure still parses and fails loudly.
-    if(!expanded.ok && window.errors() > 0)
-        return;
-    parser.parse(expanded.document, recorder);
+    const expected<expansion, expansion_error> expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{}, opts.eval, opts.backend, ctx.log);
+    if(!expanded)
+        return expanded.error();
+    parser.parse(expanded->document, recorder);
+    return std::nullopt;
 }
 
 struct sniff_result
@@ -165,8 +163,10 @@ expected<load_result, load_error> drive_load(const std::filesystem::path &path, 
     core_evaluator eval;
     parse_context ctx{sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials, opts.strict, path, completeness::none, opts.package_roots};
     probe.entered(load_stage_point::drive);
-    drive(*bytes, path, sniff.expandable, opts, ctx, recorder, window);
+    const std::optional<expansion_error> refused = drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
     probe.entered(load_stage_point::assemble);
+    if(refused)
+        return make_error(refused->loc, refused->message, refused->code, anchored(window.records(), path), refused->cause);
     return assemble(recorder, window, path, ctx.withheld);
 }
 

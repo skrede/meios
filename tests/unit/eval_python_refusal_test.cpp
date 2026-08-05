@@ -2,6 +2,19 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+namespace
+{
+
+// Only a resolved expansion has a document; asking whether a span survived a refused one
+// is asking a question the error arm cannot answer, so the query says so loudly.
+bool leaves(const outcome &result, std::string_view span)
+{
+    REQUIRE(result.expanded);
+    return result.expanded->document.find(span) != std::string::npos;
+}
+
+}
+
 TEST_CASE("a refusal is still reported under the most lenient policy", "[eval_python]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
@@ -99,9 +112,9 @@ TEST_CASE("the second substitution entry point refuses the same reach", "[eval_p
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome refused =
         run(span_document("$(eval __import__(\"os\"))"), meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
+    REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.errors >= 1);
-    REQUIRE_FALSE(leaves(refused, "$(eval __import__"));
+    REQUIRE(refused.expanded.error().message.find("$(eval __import__") == std::string::npos);
 }
 
 TEST_CASE("a refusal diagnostic names the expression, the rule and a real position",
@@ -121,7 +134,7 @@ TEST_CASE("a withheld capability reports the allowlist rule through expand", "[e
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome refused =
         run(span_document("${open('/etc/passwd')}"), meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
+    REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(says(refused, "non-allowlisted-builtin"));
 }
 
@@ -130,10 +143,10 @@ TEST_CASE("the formatting traversal vector reports its rule and leaks nothing", 
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome refused = run(span_document("${'{0.__globals__}'.format(load_yaml)}"),
                                 meios::eval_policy::fail, handle);
-    REQUIRE_FALSE(refused.ok);
+    REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(says(refused, "format-traversal"));
-    REQUIRE_FALSE(leaves(refused, "parse_yaml"));
-    REQUIRE_FALSE(leaves(refused, "allowed_builtins"));
+    REQUIRE(refused.expanded.error().message.find("parse_yaml") == std::string::npos);
+    REQUIRE(refused.expanded.error().message.find("allowed_builtins") == std::string::npos);
 }
 
 TEST_CASE("a dunder inside a string literal still reaches the expanded document", "[eval_python]")
@@ -141,7 +154,7 @@ TEST_CASE("a dunder inside a string literal still reaches the expanded document"
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${'a literal containing __import__'}"),
                                  meios::eval_policy::fail, handle);
-    REQUIRE(resolved.ok);
+    REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>a literal containing __import__</l>"));
 }
 

@@ -55,10 +55,11 @@ struct tally
     }
 };
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
 struct outcome
 {
-    bool ok;
-    std::string document;
+    expansion_result expanded;
     int errors;
 };
 
@@ -89,9 +90,9 @@ outcome run(std::string_view source, meios::eval_policy policy,
     if(yaml)
         install_yaml(scope, std::move(*yaml));
     meios::source_stack sources;
-    meios::expansion out = meios::expand(source, scope, sources, "robot.xacro",
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ out.ok, std::move(out.document), counts.errors };
+    return outcome{ std::move(out), counts.errors };
 }
 
 constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xacro\">";
@@ -101,9 +102,12 @@ std::string span_document(std::string_view inner)
     return std::string(header) + "<l>" + std::string(inner) + "</l></robot>";
 }
 
+// Only a resolved expansion has a document; asking whether a span survived a refused one
+// is asking a question the error arm cannot answer, so the query says so loudly.
 bool leaves(const outcome &result, std::string_view span)
 {
-    return result.document.find(span) != std::string::npos;
+    REQUIRE(result.expanded);
+    return result.expanded->document.find(span) != std::string::npos;
 }
 
 }

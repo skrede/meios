@@ -102,10 +102,11 @@ inline meios::eval_scope seeded()
     return scope;
 }
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
 struct outcome
 {
-    bool ok;
-    std::string document;
+    expansion_result expanded;
     std::vector<std::string> messages;
 };
 
@@ -117,9 +118,9 @@ inline outcome expand_with_python(std::string_view source, meios::eval_policy po
     seed(scope);
     meios::source_stack sources;
     const auto backend = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    meios::expansion out = meios::expand(source, scope, sources, "robot.xacro",
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ out.ok, std::move(out.document), std::move(counts.messages) };
+    return outcome{ std::move(out), std::move(counts.messages) };
 }
 
 inline std::string span_document(const std::string &span)

@@ -18,9 +18,9 @@ namespace
 void refuses_through_expansion(const std::string &span, meios::eval_policy policy)
 {
     const abuse::outcome refused = abuse::expand_with_python(abuse::span_document(span), policy);
-    REQUIRE_FALSE(refused.ok);
+    REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.messages.size() >= 1);
-    REQUIRE(refused.document.find(span) == std::string::npos);
+    REQUIRE(refused.expanded.error().message.find(span) == std::string::npos);
 }
 
 }
@@ -75,8 +75,8 @@ TEST_CASE("a lone identifier bound to a string is answered before the evaluator 
 {
     const abuse::outcome resolved =
         abuse::expand_with_python(abuse::span_document("${format}"), meios::eval_policy::fail);
-    REQUIRE(resolved.ok);
-    REQUIRE(resolved.document.find("<l>stl</l>") != std::string::npos);
+    REQUIRE(resolved.expanded.has_value());
+    REQUIRE(resolved.expanded->document.find("<l>stl</l>") != std::string::npos);
     REQUIRE(resolved.messages.empty());
 }
 

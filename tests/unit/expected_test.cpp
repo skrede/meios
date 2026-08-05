@@ -1,10 +1,14 @@
 #include <meios/expected.h>
 
+#include <meios/xacro/structural.h>
+
+#include <meios/diagnostic/expansion_error.h>
 #include <meios/diagnostic/operation_failure.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <system_error>
 
@@ -55,6 +59,33 @@ TEST_CASE("expected<void, E> default-constructs as a value and carries an error"
     meios::expected<void, int> bad{meios::unexpected<int>{3}};
     REQUIRE_FALSE(bad.has_value());
     REQUIRE(bad.error() == 3);
+}
+
+// A converting constructor plus parenthesized aggregate initialization can make a bare
+// return mean different things on the two branches of the vocabulary, so the expansion
+// contract is exercised on whichever branch this translation unit was built against.
+TEST_CASE("an expansion success arm carries the expanded document and nothing else", "[model][expected]")
+{
+    const meios::expansion produced{std::string("<robot/>")};
+    const meios::expected<meios::expansion, meios::expansion_error> arm{produced};
+
+    REQUIRE(arm.has_value());
+    REQUIRE(arm->document == "<robot/>");
+}
+
+TEST_CASE("an expansion error arm carries the location, the code and the native cause", "[model][expected]")
+{
+    const meios::operation_failure cause{meios::operation_kind::open, make_error_code(std::errc::no_such_file_or_directory)};
+    const meios::expansion_error refused{meios::source_location{"robot.xacro", 7, 3}, "include did not resolve",
+                                         meios::diagnostic_code::unresolved_include, cause};
+    const meios::expected<meios::expansion, meios::expansion_error> arm{meios::unexpected<meios::expansion_error>{refused}};
+
+    REQUIRE_FALSE(arm.has_value());
+    REQUIRE(arm.error().loc.line == 7);
+    REQUIRE(arm.error().loc.column == 3);
+    REQUIRE(arm.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(arm.error().cause->operation == meios::operation_kind::open);
+    REQUIRE(arm.error().cause->native == cause.native);
 }
 
 TEST_CASE("expected<void, operation_failure> keeps the operation and the native code", "[model][expected]")

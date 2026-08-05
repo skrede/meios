@@ -106,13 +106,14 @@ bool names(const verdict &got, std::string_view fragment)
 }
 
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
 struct outcome
 {
-    bool ok;
     int errors;
     int line;
     std::string file;
-    std::string document;
+    expansion_result expanded;
     std::vector<std::string> messages;
 };
 
@@ -123,10 +124,10 @@ outcome run(std::string_view source, meios::eval_policy policy,
     meios::log_sink_f sink{ std::ref(counts) };
     meios::eval_scope scope;
     meios::source_stack sources;
-    meios::expansion out = meios::expand(source, scope, sources, "robot.xacro",
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ out.ok,      counts.errors,           counts.line,
-                    counts.file, std::move(out.document), std::move(counts.messages) };
+    return outcome{ counts.errors, counts.line, counts.file, std::move(out),
+                    std::move(counts.messages) };
 }
 
 bool says(const outcome &result, std::string_view fragment)
@@ -144,11 +145,6 @@ constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xa
 std::string span_document(std::string_view inner)
 {
     return std::string(header) + "<l>" + std::string(inner) + "</l></robot>";
-}
-
-bool leaves(const outcome &result, std::string_view span)
-{
-    return result.document.find(span) != std::string::npos;
 }
 
 }

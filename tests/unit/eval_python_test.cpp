@@ -82,7 +82,7 @@ TEST_CASE("a comprehension evaluates with full python parity", "[eval_python]")
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${[i*i for i in range(4)]}"),
                                  meios::eval_policy::fail, handle);
-    REQUIRE(resolved.ok);
+    REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>[0, 1, 4, 9]</l>"));
 }
 
@@ -115,7 +115,7 @@ TEST_CASE("an injected python backend resolves a document construct", "[eval_pyt
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${[i*i for i in range(3)]}"),
                                  meios::eval_policy::fail, handle);
-    REQUIRE(resolved.ok);
+    REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "[0, 1, 4]"));
 }
 
@@ -123,7 +123,7 @@ TEST_CASE("a non-python construct resolves identically with the backend injected
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${1+1}"), meios::eval_policy::fail, handle);
-    REQUIRE(resolved.ok);
+    REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>2</l>"));
 }
 
@@ -131,9 +131,9 @@ TEST_CASE("a python runtime throw hard-fails even under skip", "[eval_python]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome raised = run(span_document("${1/0}"), meios::eval_policy::skip, handle);
-    REQUIRE_FALSE(raised.ok);
+    REQUIRE_FALSE(raised.expanded.has_value());
     REQUIRE(raised.errors >= 1);
-    REQUIRE_FALSE(leaves(raised, "${1/0}"));
+    REQUIRE(raised.expanded.error().message.find("${1/0}") == std::string::npos);
 }
 
 TEST_CASE("xacro.load_yaml resolves a mapping through the SimpleNamespace shim", "[eval_python]")
@@ -170,8 +170,8 @@ TEST_CASE("an import-reaching expression is refused under every evaluation polic
     {
         INFO("policy " << static_cast<int>(policy));
         const outcome refused = run(span_document("${__import__('os').getcwd()}"), policy, handle);
-        REQUIRE_FALSE(refused.ok);
+        REQUIRE_FALSE(refused.expanded.has_value());
         REQUIRE(refused.errors >= 1);
-        REQUIRE_FALSE(leaves(refused, "${__import__"));
+        REQUIRE(refused.expanded.error().message.find("${__import__") == std::string::npos);
     }
 }

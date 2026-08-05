@@ -17,6 +17,8 @@
 namespace
 {
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
 const char *fanout_doc()
 {
     return "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
@@ -33,10 +35,10 @@ TEST_CASE("a shallow-but-wide macro fan-out trips the output-node budget", "[xac
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{ 1'000'000, 4 }, log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
@@ -47,10 +49,10 @@ TEST_CASE("a low work ceiling halts expansion with a resource diagnostic", "[xac
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{ 3, 1'000'000 }, log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
@@ -61,10 +63,10 @@ TEST_CASE("a generous budget lets an ordinary document expand", "[xacro][budget]
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, log);
 
-    REQUIRE(out.ok);
+    REQUIRE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 0);
 }
 
@@ -85,10 +87,10 @@ TEST_CASE("a mutual xacro:include chain is caught by the cycle guard", "[xacro][
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"$(find pkg)/a.xacro\"/></robot>";
-    meios::expansion out =
+    const expansion_result out =
         meios::expand(top, scope, sources, "top.xacro", meios::expansion_limits{}, log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_structural_error) == 1);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 0);
 }
@@ -104,10 +106,10 @@ TEST_CASE("an xacro:include escaping the source root is rejected loudly", "[xacr
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"$(find pkg)/../secret.xacro\"/></robot>";
-    meios::expansion out =
+    const expansion_result out =
         meios::expand(top, scope, sources, "top.xacro", meios::expansion_limits{}, log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_structural_error) == 1);
 }
 
@@ -125,10 +127,10 @@ TEST_CASE("two independent budget-exhausting constructs still report exactly one
                         "<xacro:macro name=\"trio\"><link/><link/><link/></xacro:macro>"
                         "<a><xacro:trio/><xacro:trio/></a>"
                         "<b><xacro:trio/><xacro:trio/></b></robot>";
-    meios::expansion out = meios::expand(twice, scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(twice, scope, sources, "robot.xacro",
                                          meios::expansion_limits{ 1'000'000, 4 }, log);
 
-    REQUIRE_FALSE(out.ok);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::errors(records) == 1);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }

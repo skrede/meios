@@ -31,19 +31,21 @@ std::string read_file(const std::filesystem::path &path)
     return buffer.str();
 }
 
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
 std::string expand_case(const std::filesystem::path &dir, meios::log_sink &log)
 {
     meios::directory_source fixture{ dir, log };
     meios::source_stack sources{ std::move(fixture) };
     meios::eval_scope scope;
     std::string source = read_file(dir / "input.xacro");
-    meios::expansion out = meios::expand(source, scope, sources, dir / "input.xacro",
-                                         meios::expansion_limits{}, log);
-    REQUIRE(out.ok);
-    return meios::canonical_xml(out.document);
+    const expansion_result out = meios::expand(source, scope, sources, dir / "input.xacro",
+                                               meios::expansion_limits{}, log);
+    REQUIRE(out.has_value());
+    return meios::canonical_xml(out->document);
 }
 
-meios::expansion expand_source(const std::string &source, meios::log_sink &log)
+expansion_result expand_source(const std::string &source, meios::log_sink &log)
 {
     meios::source_stack sources{};
     meios::eval_scope scope;
@@ -150,7 +152,7 @@ const char *include_at_top =
     "<xacro:include filename=\"$(find pkg)/inc.xacro\"/>"
     "<link name=\"x${p}\"/></robot>";
 
-meios::expansion expand_with_include(const char *source, meios::log_sink &log)
+expansion_result expand_with_include(const char *source, meios::log_sink &log)
 {
     meios::memory_source parts{ log };
     parts.add("pkg", "inc.xacro", include_property_fixture);
