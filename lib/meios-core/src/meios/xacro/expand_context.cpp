@@ -67,6 +67,12 @@ void record_terminal(expand_ctx &ctx, const source_location &loc, diagnostic_cod
         ctx.terminal = expansion_error{ loc, message, code, std::nullopt };
 }
 
+void record_terminal(expand_ctx &ctx, const expansion_error &cause)
+{
+    if(!ctx.terminal)
+        ctx.terminal = cause;
+}
+
 expansion_error terminal_of(const expand_ctx &ctx, const std::filesystem::path &document)
 {
     if(ctx.observer.first())

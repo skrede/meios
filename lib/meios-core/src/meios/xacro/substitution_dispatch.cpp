@@ -10,6 +10,9 @@
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/expansion_error.h"
+
+#include "meios/expected.h"
 
 #include <string>
 #include <cstdlib>
@@ -38,6 +41,7 @@ std::pair<std::string_view, std::string_view> split_first(std::string_view text)
 std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std::string &message)
 {
     ctx.log.log(level::error, code, ctx.at, message);
+    record_terminal(ctx, code, message);
     return std::nullopt;
 }
 
@@ -75,11 +79,15 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
         return binding_str(*bound);
     if(!parts.second.empty())
     {
-        substitution resolved = substitute(parts.second, ctx.scope, ctx.sources, ctx.document,
-                                           ctx.mode, ctx.backend, ctx.log, ctx.at);
-        if(!resolved.ok)
+        const expected<substitution, expansion_error> resolved =
+            substitute(parts.second, ctx.scope, ctx.sources, ctx.document, ctx.mode, ctx.backend,
+                       ctx.log, ctx.at);
+        if(!resolved)
+        {
+            record_terminal(ctx, resolved.error());
             return std::nullopt;
-        return resolved.text;
+        }
+        return resolved->text;
     }
     return fail(ctx, diagnostic_code::unresolved_arg,
                 "$(arg " + std::string(parts.first) + ") is unset and has no default");

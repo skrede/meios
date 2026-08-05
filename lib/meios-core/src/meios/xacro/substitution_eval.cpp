@@ -1,3 +1,4 @@
+#include "substitution_sinks.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
@@ -5,14 +6,10 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_handle.h"
 
-#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
-#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
-#include "meios/diagnostic/operation_failure.h"
 
 #include <string>
-#include <vector>
 #include <variant>
 #include <optional>
 #include <string_view>
@@ -40,109 +37,6 @@ static_assert(text_evaluator<core_text_evaluator>);
 
 namespace
 {
-
-// Buffers an evaluator's diagnostics so the policy layer can decide their fate: a
-// genuine error is replayed loud, an unsupported-under-leniency failure is dropped.
-class capture_sink final : public log_sink
-{
-    // A record replays through the overload it arrived on: absence of a location or of a
-    // code is what the evaluator said, and inventing either on replay would put a position
-    // and a classification on a diagnostic that never carried one.
-    struct buffered
-    {
-        level lvl;
-        std::optional<diagnostic_code> code;
-        std::optional<source_location> where;
-        std::string message;
-        std::optional<operation_failure> cause;
-    };
-
-public:
-    using log_sink::log;
-
-    void log(level lvl, const std::string &message) override
-    {
-        m_records.push_back({lvl, std::nullopt, std::nullopt, message, std::nullopt});
-    }
-
-    void log(level lvl, const source_location &where, const std::string &message) override
-    {
-        m_records.push_back({lvl, std::nullopt, where, message, std::nullopt});
-    }
-
-    void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
-    {
-        m_records.push_back({lvl, code, where, message, std::nullopt});
-    }
-
-    void log(level lvl, diagnostic_code code, const source_location &where, const operation_failure &cause, const std::string &message) override
-    {
-        m_records.push_back({lvl, code, where, message, cause});
-    }
-
-    void replay(log_sink &sink) const
-    {
-        for(const buffered &entry : m_records)
-            replay_one(entry, sink);
-    }
-
-private:
-    std::vector<buffered> m_records;
-
-    static void replay_one(const buffered &entry, log_sink &sink)
-    {
-        if(!entry.where)
-            sink.log(entry.lvl, entry.message);
-        else if(!entry.code)
-            sink.log(entry.lvl, *entry.where, entry.message);
-        else if(entry.cause)
-            sink.log(entry.lvl, *entry.code, *entry.where, *entry.cause, entry.message);
-        else
-            sink.log(entry.lvl, *entry.code, *entry.where, entry.message);
-    }
-};
-
-// Upgrades an unlocated, code-less error the injected backend emits to a typed, located
-// record anchored at the hosting node, so a diagnostic escaping a message-only evaluator
-// still leaves the layer with a code and a real position.
-class relocating_sink final : public log_sink
-{
-public:
-    using log_sink::log;
-
-    relocating_sink(log_sink &inner, const source_location &at)
-            : m_inner(inner)
-            , m_at(at)
-    {
-    }
-
-    void log(level lvl, const std::string &message) override
-    {
-        if(lvl == level::error)
-            m_inner.log(lvl, diagnostic_code::expression_error, m_at, message);
-        else
-            m_inner.log(lvl, message);
-    }
-
-    void log(level lvl, const source_location &where, const std::string &message) override
-    {
-        m_inner.log(lvl, where, message);
-    }
-
-    void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
-    {
-        m_inner.log(lvl, code, where, message);
-    }
-
-    void log(level lvl, diagnostic_code code, const source_location &where, const operation_failure &cause, const std::string &message) override
-    {
-        m_inner.log(lvl, code, where, cause, message);
-    }
-
-private:
-    log_sink &m_inner;
-    source_location m_at;
-};
 
 std::optional<std::string> string_property(subst_ctx &ctx, std::string_view name)
 {
@@ -173,20 +67,23 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
 // fail runs the backend loud against the real sink. Under warn/skip the backend's
 // diagnostics are captured: a genuine error and a refusal are replayed and still
 // hard-fail, while an unsupported failure is left to expand_span to leave verbatim.
+// Either way the loud path runs through the latch, so a terminal evaluation failure
+// carries the code the evaluator itself reported.
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
 {
     std::string_view expr             = trim(expression);
     std::optional<std::string> direct = string_property(ctx, expr);
     if(direct)
         return direct;
+    latching_sink loud(ctx);
     if(ctx.mode == eval_policy::fail)
-        return run_backend(ctx, expr, ctx.log);
+        return run_backend(ctx, expr, loud);
     capture_sink buffer;
     std::optional<std::string> out = run_backend(ctx, expr, buffer);
     if(out)
         return out;
     if(ctx.last_kind == eval_failure_kind::error || ctx.last_kind == eval_failure_kind::refused)
-        buffer.replay(ctx.log);
+        buffer.replay(loud);
     return std::nullopt;
 }
 

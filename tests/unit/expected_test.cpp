@@ -1,6 +1,7 @@
 #include <meios/expected.h>
 
 #include <meios/xacro/structural.h>
+#include <meios/xacro/substitution.h>
 
 #include <meios/diagnostic/expansion_error.h>
 #include <meios/diagnostic/operation_failure.h>
@@ -10,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <optional>
 #include <system_error>
 
 TEST_CASE("a value-carrying expected reports success and yields the value", "[model][expected]")
@@ -86,6 +88,28 @@ TEST_CASE("an expansion error arm carries the location, the code and the native 
     REQUIRE(arm.error().code == meios::diagnostic_code::unresolved_include);
     REQUIRE(arm.error().cause->operation == meios::operation_kind::open);
     REQUIRE(arm.error().cause->native == cause.native);
+}
+
+TEST_CASE("a substitution success arm carries the substituted text and nothing else", "[model][expected]")
+{
+    const meios::substitution produced{std::string("arm_link")};
+    const meios::expected<meios::substitution, meios::expansion_error> arm{produced};
+
+    REQUIRE(arm.has_value());
+    REQUIRE(arm->text == "arm_link");
+}
+
+TEST_CASE("a substitution error arm carries the same terminal record expansion returns", "[model][expected]")
+{
+    const meios::expansion_error refused{meios::source_location{"robot.xacro", 4, 11}, "$(find x) did not resolve",
+                                         meios::diagnostic_code::unresolved_find, std::nullopt};
+    const meios::expected<meios::substitution, meios::expansion_error> arm{meios::unexpected<meios::expansion_error>{refused}};
+
+    REQUIRE_FALSE(arm.has_value());
+    REQUIRE(arm.error().loc.line == 4);
+    REQUIRE(arm.error().loc.column == 11);
+    REQUIRE(arm.error().code == meios::diagnostic_code::unresolved_find);
+    REQUIRE_FALSE(arm.error().cause.has_value());
 }
 
 TEST_CASE("expected<void, operation_failure> keeps the operation and the native code", "[model][expected]")

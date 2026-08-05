@@ -3,11 +3,16 @@
 
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/substitution.h"
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_handle.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/expansion_error.h"
+#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
+
+#include "meios/expected.h"
 
 #include <pugixml.hpp>
 
@@ -24,7 +29,6 @@ namespace meios
 
 class source_stack;
 class evaluator_handle;
-struct substitution;
 
 namespace detail
 {
@@ -71,7 +75,8 @@ struct subst_ctx
               const std::filesystem::path &doc, eval_policy policy,
               const std::shared_ptr<evaluator_handle> &inject, const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), core(), document(doc), at(anchor),
-          node_anchor(anchor), mode(policy), backend(inject), last_kind(eval_failure_kind::none)
+          node_anchor(anchor), mode(policy), backend(inject), last_kind(eval_failure_kind::none),
+          terminal()
     {
     }
 
@@ -93,6 +98,9 @@ struct subst_ctx
     eval_policy mode;
     std::shared_ptr<evaluator_handle> backend;
     eval_failure_kind last_kind;
+    // The first terminal failure, kept so one refusal reports one structured cause; a
+    // later refusal neither replaces it nor emits a second error-level diagnostic.
+    std::optional<expansion_error> terminal;
     // Optional forward-scan refinement inputs, empty for the public substitute() path:
     // the hosting element, its raw document text, and the attribute's DOM index.
     pugi::xml_node host{};
@@ -100,19 +108,37 @@ struct subst_ctx
     std::optional<std::size_t> attr_index{};
 };
 
+inline void record_terminal(subst_ctx &ctx, const expansion_error &cause)
+{
+    if(!ctx.terminal)
+        ctx.terminal = cause;
+}
+
+inline void record_terminal(subst_ctx &ctx, diagnostic_code code, const std::string &message)
+{
+    record_terminal(ctx, expansion_error{ ctx.at, message, code, std::nullopt });
+}
+
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression);
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
 
+// The scanner and the span machinery are mutually recursive: a command span resolves
+// its own inner text before dispatching, so `base` accumulates the enclosing span's
+// offset and a nested token still maps back to its real column.
+bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base);
+
+bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
+                 std::size_t &cursor, std::size_t base);
+
 // Internal substitute that carries the forward-scan refinement inputs so an
 // attribute-hosted failing token's column can refine the node anchor. The public
 // substitute() overloads keep the node anchor and do not widen for this.
-substitution substitute_refined(std::string_view raw, const eval_scope &scope,
-                                source_stack &sources, const std::filesystem::path &document,
-                                eval_policy policy,
-                                const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
-                                const source_location &at, pugi::xml_node host,
-                                std::string_view host_text, std::optional<std::size_t> attr_index);
+expected<substitution, expansion_error> substitute_refined(
+    std::string_view raw, const eval_scope &scope, source_stack &sources,
+    const std::filesystem::path &document, eval_policy policy,
+    const std::shared_ptr<evaluator_handle> &backend, log_sink &log, const source_location &at,
+    pugi::xml_node host, std::string_view host_text, std::optional<std::size_t> attr_index);
 
 }
 

@@ -24,24 +24,28 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
 
     SECTION("$(find) resolves a package directory to a filesystem path")
     {
-        meios::substitution out = meios::substitute("$(find pkg)/x.stl", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
+        const substitution_result out =
+            meios::substitute("$(find pkg)/x.stl", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
     SECTION("$(find ${pkg}) resolves the inner expression before dispatch")
     {
         scope.set("pkgname", meios::binding{ std::string("pkg") });
-        meios::substitution out =
+        const substitution_result out =
             meios::substitute("$(find ${pkgname})/x.stl", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == std::filesystem::weakly_canonical(root / "pkg").string() + "/x.stl");
     }
 
     SECTION("$(find) on a byte-backed layer loud-fails rather than naming a directory")
     {
-        meios::substitution out = meios::substitute("$(find bytespkg)", scope, sources, document, log);
-        REQUIRE_FALSE(out.ok);
+        const substitution_result out =
+            meios::substitute("$(find bytespkg)", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_find);
+        REQUIRE(locates_a_file(out));
         REQUIRE(any_contains(records, "did not resolve"));
     }
 
@@ -55,70 +59,108 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         meios::directory_source holder{ root, log };
         meios::source_stack stacked{ std::move(overlay), std::move(holder) };
 
-        meios::substitution out =
+        const substitution_result out =
             meios::substitute("$(find shadowed)/meshes/base.stl", scope, stacked, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(std::filesystem::exists(out.text));
+        REQUIRE(out.has_value());
+        REQUIRE(std::filesystem::exists(out->text));
     }
 
     SECTION("an unresolved $(find) loud-fails")
     {
-        meios::substitution out = meios::substitute("$(find missing)", scope, sources, document, log);
-        REQUIRE_FALSE(out.ok);
+        const substitution_result out =
+            meios::substitute("$(find missing)", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_find);
+        REQUIRE(locates_a_file(out));
         REQUIRE(any_contains(records, "did not resolve"));
     }
 
     SECTION("$(arg) returns the bound value")
     {
-        meios::substitution out = meios::substitute("$(arg width)", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == "0.3");
+        const substitution_result out =
+            meios::substitute("$(arg width)", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "0.3");
     }
 
     SECTION("$(arg name default) falls back to the default when unset")
     {
-        meios::substitution out = meios::substitute("$(arg height 0.5)", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == "0.5");
+        const substitution_result out =
+            meios::substitute("$(arg height 0.5)", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "0.5");
     }
 
     SECTION("$(arg name default) with a bound name never evaluates an unresolvable default")
     {
         scope.set("mesh_pkg", meios::binding{ std::string("pkg") });
-        meios::substitution out =
+        const substitution_result out =
             meios::substitute("$(arg mesh_pkg $(find absent_pkg))", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == "pkg");
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "pkg");
         REQUIRE_FALSE(any_contains(records, "did not resolve"));
     }
 
     SECTION("an unset $(arg) with no default loud-fails")
     {
-        meios::substitution out = meios::substitute("$(arg height)", scope, sources, document, log);
-        REQUIRE_FALSE(out.ok);
+        const substitution_result out =
+            meios::substitute("$(arg height)", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
+        REQUIRE(locates_a_file(out));
         REQUIRE(any_contains(records, "unset and has no default"));
+    }
+
+    SECTION("a nested default whose inner locate fails carries the inner refusal outward")
+    {
+        const substitution_result out = meios::substitute("$(arg height $(find absent))", scope,
+                                                          sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_find);
+        REQUIRE(locates_a_file(out));
     }
 
     SECTION("$(eval) routes the remainder to the expression evaluator")
     {
-        meios::substitution out = meios::substitute("$(eval 1 + 2)", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == "3");
+        const substitution_result out =
+            meios::substitute("$(eval 1 + 2)", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "3");
     }
 
     SECTION("$(dirname) resolves the current document directory")
     {
-        meios::substitution out = meios::substitute("$(dirname)/mesh", scope, sources, document, log);
-        REQUIRE(out.ok);
-        REQUIRE(out.text == document.parent_path().string() + "/mesh");
+        const substitution_result out =
+            meios::substitute("$(dirname)/mesh", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == document.parent_path().string() + "/mesh");
     }
 
     SECTION("an unknown command loud-fails")
     {
-        meios::substitution out = meios::substitute("$(bogus x)", scope, sources, document, log);
-        REQUIRE_FALSE(out.ok);
+        const substitution_result out =
+            meios::substitute("$(bogus x)", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unknown_substitution);
+        REQUIRE(locates_a_file(out));
         REQUIRE(any_contains(records, "unknown substitution command"));
     }
 
     std::filesystem::remove_all(root);
+}
+
+TEST_CASE("an input carrying two refusals reports exactly one error-level record",
+          "[xacro][subst][cmd]")
+{
+    std::vector<std::pair<meios::level, std::string>> records;
+    meios::log_sink_f log{ captured_log{ records } };
+    meios::source_stack sources;
+    meios::eval_scope scope;
+    std::filesystem::path document{ "robot.xacro" };
+
+    const substitution_result out =
+        meios::substitute("$(bogus a) and $(other b)", scope, sources, document, log);
+
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(records_at(records, meios::level::error) == 1);
 }

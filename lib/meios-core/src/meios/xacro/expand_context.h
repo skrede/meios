@@ -138,6 +138,10 @@ bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
 void record_terminal(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
                      const std::string &message);
 
+// A cause a lower contract already composed — a substitution's own terminal — reaches
+// the walk's record whole, so the two report the same code and the same location.
+void record_terminal(expand_ctx &ctx, const expansion_error &cause);
+
 // The cause a terminal failure reports: the first coded error any layer emitted, falling
 // back to the site the walk recorded and, failing both, to the document itself.
 expansion_error terminal_of(const expand_ctx &ctx, const std::filesystem::path &document);

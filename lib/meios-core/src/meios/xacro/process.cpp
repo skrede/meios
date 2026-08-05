@@ -69,17 +69,16 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     // A structural conditional cannot be left half-expanded, so its test is always
     // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
     const source_location at = locate(ctx, in);
-    substitution result = substitute(in.attribute("value").value(), ctx.scope, ctx.sources,
-                                     document, eval_policy::fail, ctx.backend, ctx.log, at);
-    if(!result.ok)
+    const expected<substitution, expansion_error> result =
+        substitute(in.attribute("value").value(), ctx.scope, ctx.sources, document,
+                   eval_policy::fail, ctx.backend, ctx.log, at);
+    if(!result)
     {
-        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
-                        "conditional test did not resolve: "
-                            + std::string(in.attribute("value").value()));
+        record_terminal(ctx, result.error());
         ctx.ok = false;
         return false;
     }
-    bool truth = condition_true(ctx, result.text, at);
+    bool truth = condition_true(ctx, result->text, at);
     if(!ctx.ok)
         return false;
     bool wants_true = std::string_view(in.name()) == "xacro:if";
@@ -128,19 +127,19 @@ std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view
     const source_location at = locate(ctx, in);
     const std::string_view host_text =
         ctx.origins.empty() ? std::string_view{} : ctx.origins.back().text;
-    substitution result =
+    const expected<substitution, expansion_error> result =
         attr_index ? substitute_refined(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
                                         ctx.log, at, in, host_text, attr_index)
                    : substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
                                 ctx.log, at);
-    ok = result.ok;
+    ok = result.has_value();
     if(!ok)
     {
-        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
-                        "substitution did not resolve: " + std::string(raw));
+        record_terminal(ctx, result.error());
         ctx.ok = false;
+        return {};
     }
-    return result.text;
+    return result->text;
 }
 
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,

@@ -2,16 +2,16 @@
 
 #include "meios/xacro/substitution.h"
 
-#include "meios/detail/text_location.h"
-
-#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
-#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/expansion_error.h"
 #include "meios/diagnostic/source_location.h"
+
+#include "meios/expected.h"
 
 #include <memory>
 #include <string>
 #include <cstddef>
+#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -22,123 +22,22 @@ namespace meios
 namespace
 {
 
-// Upgrades ctx.at's column to the failing token at `decoded_offset` into the attribute
-// value, when the refinement inputs are present; line and file stay the node anchor's.
-// The forward-scan self-check degrades to the value-start or node-anchor column, so a
-// column ctx.at carries is always one the scan confirmed.
-void refine_span_column(detail::subst_ctx &ctx, std::size_t decoded_offset)
+// A scan that failed without recording a cause is a refusal site that never wrote
+// one; the unspecified code and the empty location are what names it, rather than a
+// plausible-looking record synthesized here.
+unexpected<expansion_error> refuse(const detail::subst_ctx &ctx)
 {
-    if(!ctx.attr_index || !ctx.host)
-        return;
-    ctx.at.column = detail::refine_attr_column(ctx.host_text, ctx.host, *ctx.attr_index,
-                                               decoded_offset, ctx.node_anchor).column;
+    if(ctx.terminal)
+        return unexpected<expansion_error>(*ctx.terminal);
+    return unexpected<expansion_error>(expansion_error{});
 }
 
-std::size_t find_close(std::string_view raw, std::size_t opener, char open_ch, char close_ch)
-{
-    int depth = 1;
-    for(std::size_t k = opener + 1; k < raw.size(); ++k)
-    {
-        if(raw[k] == open_ch)
-            ++depth;
-        else if(raw[k] == close_ch && --depth == 0)
-            return k;
-    }
-    return std::string_view::npos;
 }
 
-bool fail_unterminated(detail::subst_ctx &ctx, char opener, std::size_t at)
+namespace detail
 {
-    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at,
-        std::string("unterminated $") + opener + " substitution span at offset "
-            + std::to_string(at));
-    return false;
-}
 
-// Under warn/skip a construct the core cannot evaluate is left verbatim in the
-// output — never fabricated, never blanked — so the resolved text visibly carries
-// the unevaluated expression. A genuine error still fails; a conditional is resolved
-// with fail policy elsewhere, so leniency reaches text/attribute spans only.
-bool leave_verbatim(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
-                    std::size_t close, std::string &out, std::size_t &cursor)
-{
-    if(ctx.last_kind != eval_failure_kind::unsupported
-       || (ctx.mode != eval_policy::warn && ctx.mode != eval_policy::skip))
-        return false;
-    if(ctx.mode == eval_policy::warn)
-        ctx.log.log(level::warn, diagnostic_code::unsupported_expression, ctx.at,
-            "left an unsupported substitution verbatim at offset " + std::to_string(dollar)
-                + " in " + ctx.document.string());
-    out.append(raw.substr(dollar, close - dollar + 1));
-    cursor = close + 1;
-    return true;
-}
-
-bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base);
-
-std::string_view leading_command(std::string_view inner)
-{
-    std::size_t start = inner.find_first_not_of(" \t");
-    if(start == std::string_view::npos)
-        return {};
-    std::size_t end = inner.find_first_of(" \t", start);
-    return inner.substr(start, end - start);
-}
-
-// A `$(...)` command first resolves any `${}`/`$()` in its inner text, so
-// `$(find ${pkg})` dispatches the resolved package name; a `${...}` expression is
-// handed to the evaluator whole. `$(arg name default)` is the exception: its inner
-// is dispatched unscanned so the `default` is evaluated lazily by `cmd_arg` only on
-// the unset branch — a pre-scan would eagerly evaluate a default the bound arg never
-// uses, failing on an unresolvable fallback. A failed inner scan yields nullopt so
-// the caller's verbatim/leniency handling governs the outcome rather than a mis-dispatch.
-// `span_offset` is the failing span's `$` byte as an offset into the whole decoded
-// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps
-// back to the real column. After a nested scan clobbers ctx.at, the outer command's
-// dispatch is re-anchored to its own span before it can emit.
-std::optional<std::string> resolve_span(detail::subst_ctx &ctx, char opener, std::string_view inner,
-                                        std::size_t span_offset)
-{
-    if(opener == '{')
-    {
-        ctx.last_kind = eval_failure_kind::none;
-        return detail::eval_expr(ctx, inner);
-    }
-    if(leading_command(inner) == "arg")
-    {
-        ctx.last_kind = eval_failure_kind::none;
-        return detail::dispatch(ctx, inner);
-    }
-    std::string resolved;
-    if(!scan(ctx, inner, resolved, span_offset + 2))
-        return std::nullopt;
-    refine_span_column(ctx, span_offset);
-    ctx.last_kind = eval_failure_kind::none;
-    return detail::dispatch(ctx, resolved);
-}
-
-bool expand_span(detail::subst_ctx &ctx, std::string_view raw, std::size_t dollar,
-                 std::string &out, std::size_t &cursor, std::size_t base)
-{
-    const std::size_t span_offset = base + dollar;
-    refine_span_column(ctx, span_offset);
-    char opener = raw[dollar + 1];
-    char closer = opener == '{' ? '}' : ')';
-    std::size_t close = find_close(raw, dollar + 1, opener, closer);
-    if(close == std::string_view::npos)
-        return fail_unterminated(ctx, opener, dollar);
-    std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
-    std::optional<std::string> result = resolve_span(ctx, opener, inner, span_offset);
-    if(result)
-    {
-        out.append(*result);
-        cursor = close + 1;
-        return true;
-    }
-    return leave_verbatim(ctx, raw, dollar, close, out, cursor);
-}
-
-bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base)
+bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base)
 {
     std::size_t cursor = 0;
     while(cursor < raw.size())
@@ -161,50 +60,55 @@ bool scan(detail::subst_ctx &ctx, std::string_view raw, std::string &out, std::s
     return true;
 }
 
-}
-
-substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
-                        const std::filesystem::path &document, eval_policy policy,
-                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
-                        const source_location &at)
-{
-    detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
-    std::string out;
-    bool ok = scan(ctx, raw, out, 0);
-    return substitution{ ok, std::move(out) };
-}
-
-namespace detail
-{
-
-substitution substitute_refined(std::string_view raw, const eval_scope &scope,
-                                source_stack &sources, const std::filesystem::path &document,
-                                eval_policy policy,
-                                const std::shared_ptr<evaluator_handle> &backend, log_sink &log,
-                                const source_location &at, pugi::xml_node host,
-                                std::string_view host_text, std::optional<std::size_t> attr_index)
+expected<substitution, expansion_error> substitute_refined(
+    std::string_view raw, const eval_scope &scope, source_stack &sources,
+    const std::filesystem::path &document, eval_policy policy,
+    const std::shared_ptr<evaluator_handle> &backend, log_sink &log, const source_location &at,
+    pugi::xml_node host, std::string_view host_text, std::optional<std::size_t> attr_index)
 {
     subst_ctx ctx(log, sources, scope, document, policy, backend, at);
     ctx.host = host;
     ctx.host_text = host_text;
     ctx.attr_index = attr_index;
     std::string out;
-    bool ok = scan(ctx, raw, out, 0);
-    return substitution{ ok, std::move(out) };
+    if(!scan(ctx, raw, out, 0))
+        return refuse(ctx);
+    const substitution resolved{ std::move(out) };
+    return resolved;
 }
 
 }
 
-substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
-                        const std::filesystem::path &document, eval_policy policy,
-                        const std::shared_ptr<evaluator_handle> &backend, log_sink &log)
+expected<substitution, expansion_error> substitute(std::string_view raw, const eval_scope &scope,
+                                                   source_stack &sources,
+                                                   const std::filesystem::path &document,
+                                                   eval_policy policy,
+                                                   const std::shared_ptr<evaluator_handle> &backend,
+                                                   log_sink &log, const source_location &at)
+{
+    detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
+    std::string out;
+    if(!detail::scan(ctx, raw, out, 0))
+        return refuse(ctx);
+    const substitution resolved{ std::move(out) };
+    return resolved;
+}
+
+expected<substitution, expansion_error> substitute(std::string_view raw, const eval_scope &scope,
+                                                   source_stack &sources,
+                                                   const std::filesystem::path &document,
+                                                   eval_policy policy,
+                                                   const std::shared_ptr<evaluator_handle> &backend,
+                                                   log_sink &log)
 {
     return substitute(raw, scope, sources, document, policy, backend, log,
                       source_location{ document, 0, 0 });
 }
 
-substitution substitute(std::string_view raw, const eval_scope &scope, source_stack &sources,
-                        const std::filesystem::path &document, log_sink &log)
+expected<substitution, expansion_error> substitute(std::string_view raw, const eval_scope &scope,
+                                                   source_stack &sources,
+                                                   const std::filesystem::path &document,
+                                                   log_sink &log)
 {
     return substitute(raw, scope, sources, document, eval_policy::fail, {}, log);
 }
