@@ -476,7 +476,7 @@ jobs:
             exit 1
           fi
           echo "cmake_flatten_eval_python_live registered $registered test(s)"
-          ctest -R cmake_flatten_eval_python_live --output-on-failure
+          ctest -R cmake_flatten_eval_python_live --output-on-failure --no-tests=error
 
       # Python absent: the eval-python target must be skipped and the always-on
       # core-evaluator eval_policy tests must stay green.
@@ -689,10 +689,18 @@ jobs:
             exit 1
           fi
           echo "urdf_corpus registered $registered test(s)"
-          ctest -R urdf_corpus -V
+          ctest -R urdf_corpus -V --no-tests=error
 
       # Byte-identical flatten check against the committed baseline, over the same
       # always-on pinned known-good description. Blocking, so any drift in flatten
       # output turns the PR red.
       - name: Test flatten byte identity
-        run: cd build && ctest -R flatten_instrument --output-on-failure
+        run: |
+          cd build
+          registered=$(ctest -N -R flatten_instrument | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "flatten_instrument registered no tests"
+            exit 1
+          fi
+          echo "flatten_instrument registered $registered test(s)"
+          ctest -R flatten_instrument --output-on-failure --no-tests=error

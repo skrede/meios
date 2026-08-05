@@ -54,7 +54,16 @@ jobs:
 
       # -V so the loaded/skipped document count reaches the log: an evaluator that
       # failed to build would otherwise leave this leg silently covering less than
-      # its name claims.
+      # its name claims. The selection is asserted non-empty first, because a filter
+      # that matches nothing reports the same success as a run that covered the corpus.
       - name: Test
         continue-on-error: true
-        run: cd build && ctest -R urdf_corpus -V
+        run: |
+          cd build
+          registered=$(ctest -N -R urdf_corpus | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "urdf_corpus registered no tests"
+            exit 1
+          fi
+          echo "urdf_corpus registered $registered test(s)"
+          ctest -R urdf_corpus -V --no-tests=error

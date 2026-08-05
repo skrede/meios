@@ -10,6 +10,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <vector>
+#include <algorithm>
+#include <filesystem>
+#include <system_error>
+
 namespace
 {
 
@@ -23,11 +28,6 @@ expansion_result expand_over(const char *source, meios::source_stack &sources,
 }
 
 }
-
-#include <vector>
-#include <algorithm>
-#include <filesystem>
-#include <system_error>
 
 TEST_CASE("an xacro:include naming a directory refuses with the non-regular classification",
           "[xacro][structural][include][read]")
