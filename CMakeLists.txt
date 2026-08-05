@@ -31,14 +31,11 @@ option(MEIOS_BUILD_ARCHIVE_ZIP "Build meios::archive-zip (miniz)" OFF)
 option(MEIOS_BUILD_EVAL_PYTHON "Build meios::eval-python (pybind11 + found Python3)" OFF)
 option(MEIOS_REQUIRE_EVAL_PYTHON "Turn a skipped meios::eval-python into a configure error" OFF)
 option(MEIOS_BUILD_TOOLS "Build the meios CLI" OFF)
-
-# Install is gated off only for a backend whose link edge cannot be re-resolved by
-# the config package (pybind11-embed); extend the condition as such backends land.
-if(NOT MEIOS_BUILD_EVAL_PYTHON)
-    set(MEIOS_ENABLE_INSTALL ON)
-else()
-    set(MEIOS_ENABLE_INSTALL OFF)
-endif()
+# On standalone and off as a subproject, so a consumer's install carries only what the consumer
+# asked for. A parent that sets the variable before adding meios overrides this default with no
+# cache entry and no ceremony, which this file's own minimum-version floor guarantees whatever
+# floor the consumer declares.
+option(MEIOS_INSTALL "Install meios into the install prefix" ${PROJECT_IS_TOP_LEVEL})
 
 # Config-package gate flags; lib/ flips each to TRUE via PARENT_SCOPE when the
 # module that carries the dependency is built.
@@ -56,6 +53,11 @@ else()
     set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE ALWAYS)
 endif()
 
+# Recorded before lib/, which turns the toggle off when a fetched dependency declines to install
+# and names that dependency itself when it does; the reasons printed below are the ones nothing
+# else has stated.
+set(_meios_install_requested ${MEIOS_INSTALL})
+
 add_subdirectory(lib)
 
 # Configured before the block below, which substitutes the config file's variables at
@@ -72,7 +74,13 @@ endif()
 
 # Emitted after lib/ so the export sees every module that joined meiosTargets, and
 # the config file is substituted last so the PARENT_SCOPE gate flags are final.
-if(MEIOS_ENABLE_INSTALL)
+#
+# Every branch below says out loud which way the decision went. On the parent opt-in path the
+# toggle never reaches the cache, so a consumer who goes looking there finds nothing whichever
+# way it went, and these lines are the only signal either way.
+if(MEIOS_INSTALL)
+    message(STATUS
+        "meios: installing meios and its CMake resource modules into the install prefix.")
     set(MEIOS_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/meios)
     install(EXPORT meiosTargets
         FILE meiosTargets.cmake
@@ -103,6 +111,19 @@ if(MEIOS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenResource.cmake
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/MeiosFlattenRun.cmake
         DESTINATION ${MEIOS_INSTALL_CMAKEDIR})
+elseif(NOT _meios_install_requested)
+    if(PROJECT_IS_TOP_LEVEL)
+        message(STATUS
+            "meios: not installing, because MEIOS_INSTALL is off. Nothing meios builds reaches "
+            "your prefix, including meios's CMake resource modules. Turn MEIOS_INSTALL on to "
+            "install it.")
+    else()
+        message(STATUS
+            "meios: not installing, because meios was added as a subproject and MEIOS_INSTALL is "
+            "not on. Nothing meios builds reaches your prefix, including meios's CMake resource "
+            "modules. Set MEIOS_INSTALL before the add_subdirectory that adds meios; setting it "
+            "afterwards is too late.")
+    endif()
 endif()
 
 # Reaches lib/'s build-tree meios::* targets, so it must follow add_subdirectory(lib);

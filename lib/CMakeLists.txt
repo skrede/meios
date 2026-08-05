@@ -55,7 +55,7 @@ function(meios_add_module name)
         add_library(${alias} ALIAS ${target})
     endforeach()
 
-    if(MEIOS_ENABLE_INSTALL)
+    if(MEIOS_INSTALL)
         install(TARGETS ${target}
             EXPORT meiosTargets
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -67,14 +67,36 @@ function(meios_add_module name)
     endif()
 endfunction()
 
+# One recorded fact per acquired dependency, in a global property rather than a scoped variable
+# because the decision that reads them back is taken in a directory that ran none of these sites.
+function(_meios_record_dependency_install name option source_dir)
+    set(_fetched FALSE)
+    set(_installs FALSE)
+    if(source_dir)
+        set(_fetched TRUE)
+    endif()
+    if(${option})
+        set(_installs TRUE)
+    endif()
+    set_property(GLOBAL APPEND PROPERTY MEIOS_DEPENDENCY_INSTALL_FACTS
+        "${name}|${option}|${_fetched}|${_installs}")
+endfunction()
+
 # Each dependency is declared once with FIND_PACKAGE_ARGS, so a single declaration
 # expresses both acquisition paths (the top-level FETCHCONTENT_TRY_FIND_PACKAGE_MODE
 # picks which one). A found pugixml keeps meios::core's exported target an imported
 # reference; a fetched (non-imported) pugixml cannot join install(EXPORT) on the
-# $<LINK_ONLY:> edge, which is why the fetched case disables install below.
+# $<LINK_ONLY:> edge, which is why a fetched dependency that declines to install
+# itself disables meios's own install below.
 # GLOBAL: pugixml is the one dependency linked from outside this directory.
 set(PUGIXML_BUILD_TESTS OFF)
-set(PUGIXML_INSTALL OFF)
+# pugixml installs itself by default and meios declines on the consumer's behalf, so a fetched
+# dependency is not deployed into a prefix nobody asked to receive it. A consumer that does want
+# it says so before adding meios, which is also what makes meios's own export legal when pugixml
+# was fetched rather than found.
+if(NOT DEFINED PUGIXML_INSTALL)
+    set(PUGIXML_INSTALL OFF)
+endif()
 FetchContent_Declare(
     pugixml
     GIT_REPOSITORY https://github.com/zeux/pugixml.git
@@ -83,17 +105,7 @@ FetchContent_Declare(
     FIND_PACKAGE_ARGS 1.16 NAMES pugixml GLOBAL
 )
 FetchContent_MakeAvailable(pugixml)
-
-# A fetched pugixml is a real, non-imported target outside meiosTargets, so the
-# exported meios::core cannot resolve its private link edge from an installed tree.
-# Installing meios therefore requires a discoverable (find_package-able) pugixml.
-if(pugixml_SOURCE_DIR)
-    message(STATUS
-        "meios: pugixml was fetched; disabling install "
-        "(the installed package requires a find_package-able pugixml >= 1.16).")
-    set(MEIOS_ENABLE_INSTALL OFF)
-    set(MEIOS_ENABLE_INSTALL OFF PARENT_SCOPE)
-endif()
+_meios_record_dependency_install(pugixml PUGIXML_INSTALL "${pugixml_SOURCE_DIR}")
 
 # Opt-in enrichment backends: pinned to immutable refs now so every dependency is
 # recorded as FetchContent-able, but only made available when their target builds.
@@ -121,12 +133,45 @@ FetchContent_Declare(
 if(MEIOS_BUILD_SCAN_GLTF)
     set(JSON_BuildTests OFF)
     FetchContent_MakeAvailable(nlohmann_json)
+    _meios_record_dependency_install(nlohmann_json JSON_Install "${nlohmann_json_SOURCE_DIR}")
 endif()
 if(MEIOS_BUILD_ARCHIVE_ZIP)
     FetchContent_MakeAvailable(miniz)
+    _meios_record_dependency_install(miniz INSTALL_PROJECT "${miniz_SOURCE_DIR}")
 endif()
 if(MEIOS_BUILD_EVAL_PYTHON)
     FetchContent_MakeAvailable(pybind11)
+    _meios_record_dependency_install(pybind11 PYBIND11_INSTALL "${pybind11_SOURCE_DIR}")
+endif()
+
+# Read once here, the last point at which the decision can still reach the module helper. A fetched
+# dependency that does not install itself is a real, non-imported target belonging to no export
+# set, so meios's own export would fail to generate around it.
+set(_meios_declining "")
+if(MEIOS_INSTALL)
+    get_property(_meios_facts GLOBAL PROPERTY MEIOS_DEPENDENCY_INSTALL_FACTS)
+    foreach(_fact IN LISTS _meios_facts)
+        string(REPLACE "|" ";" _field "${_fact}")
+        list(GET _field 0 _name)
+        list(GET _field 1 _option)
+        list(GET _field 2 _fetched)
+        list(GET _field 3 _installs)
+        if(_fetched AND NOT _installs)
+            list(APPEND _meios_declining "${_name} (turn ${_option} on)")
+        endif()
+    endforeach()
+endif()
+if(_meios_declining)
+    string(REPLACE ";" ", " _meios_declining "${_meios_declining}")
+    message(STATUS
+        "meios: not installing, because a fetched dependency declines to install itself and so "
+        "belongs to no export set: ${_meios_declining}. Nothing meios builds reaches your prefix, "
+        "including meios's CMake resource modules. Supply a discoverable version of it instead, "
+        "or turn the named option on before adding meios.")
+    # Under a consumer this reaches meios's own directory scope and stops there; a variable of the
+    # same name in the consumer's scope is untouched, which is what it should be.
+    set(MEIOS_INSTALL OFF)
+    set(MEIOS_INSTALL OFF PARENT_SCOPE)
 endif()
 
 # core: the compiled engine. pugixml is linked PRIVATE and is reachable only from
@@ -149,7 +194,7 @@ configure_file(
     @ONLY)
 target_include_directories(meios_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/meios-core/include>)
-if(MEIOS_ENABLE_INSTALL)
+if(MEIOS_INSTALL)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/version.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/meios)
 endif()

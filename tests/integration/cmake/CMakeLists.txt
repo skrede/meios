@@ -1,13 +1,16 @@
 function(meios_cmake_case name)
     set(one_value    FIXTURE DRIVER ORIGIN REFUSES MATCHES BUILD_TARGET COMPONENT CONFIGS
-                     MUTATE MUTATE_FROM MUTATE_BACKDATE
+                     MUTATE MUTATE_FROM MUTATE_BACKDATE TIMEOUT INSTALL
                      REQUIRE_PRESENT REQUIRE_ABSENT REQUIRE_CONTAINS REQUIRE_INSTALLED
-                     REQUIRE_STABLE)
+                     REQUIRE_STABLE REQUIRE_PREFIX_EMPTY REQUIRE_PREFIX_ABSENT)
     set(multi_value  EXTRA SECOND_CONFIGURE)
     cmake_parse_arguments(ARG "" "${one_value}" "${multi_value}" ${ARGN})
 
     if(NOT ARG_DRIVER)
         set(ARG_DRIVER meios_cmake_case.cmake)
+    endif()
+    if(NOT ARG_TIMEOUT)
+        set(ARG_TIMEOUT 300)
     endif()
 
     # The work and cache directories are named after the case, which is what makes `ctest -j` safe
@@ -30,10 +33,13 @@ function(meios_cmake_case name)
         -DMUTATE=${ARG_MUTATE}
         -DMUTATE_FROM=${ARG_MUTATE_FROM}
         -DMUTATE_BACKDATE=${ARG_MUTATE_BACKDATE}
+        -DINSTALL=${ARG_INSTALL}
         -DREQUIRE_STABLE=${ARG_REQUIRE_STABLE}
         -DREQUIRE_PRESENT=${ARG_REQUIRE_PRESENT}
         -DREQUIRE_ABSENT=${ARG_REQUIRE_ABSENT}
         -DREQUIRE_INSTALLED=${ARG_REQUIRE_INSTALLED}
+        -DREQUIRE_PREFIX_EMPTY=${ARG_REQUIRE_PREFIX_EMPTY}
+        "-DREQUIRE_PREFIX_ABSENT=${ARG_REQUIRE_PREFIX_ABSENT}"
         "-DREQUIRE_CONTAINS=${ARG_REQUIRE_CONTAINS}"
         "-DEXTRA=${ARG_EXTRA}"
         "-DSECOND_CONFIGURE=${ARG_SECOND_CONFIGURE}"
@@ -41,8 +47,10 @@ function(meios_cmake_case name)
 
     # TIMEOUT is not optional: ctest applies its --timeout default to every case that lacks the
     # property, the Windows jobs run it at 60 seconds, and a sub-configure plus a build exceeds
-    # that while being perfectly healthy.
-    set_tests_properties(${name} PROPERTIES LABELS meios-cmake TIMEOUT 300)
+    # that while being perfectly healthy. It is a defaulted keyword rather than a constant because
+    # a case that configures and builds meios from scratch needs more than the shared default,
+    # which every case that does neither must not be made to wait for.
+    set_tests_properties(${name} PROPERTIES LABELS meios-cmake TIMEOUT ${ARG_TIMEOUT})
 
     # A refusal binds two properties rather than one. The pass regex alone would accept a run in
     # which the module never refused and the text arrived from somewhere else, so the sentinel the

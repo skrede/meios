@@ -119,6 +119,16 @@ function(meios_harness_require_absent path)
     endif()
 endfunction()
 
+# A prefix that was never created counts as empty, because an install that generated no rules never
+# creates one. The glob is recursive and matches files only, so a prefix carrying nothing but empty
+# directories is still judged on what it would hand a consumer.
+function(meios_harness_require_prefix_empty prefix)
+    file(GLOB_RECURSE _found "${prefix}/*")
+    if(_found)
+        meios_harness_failed_assertion("expected an empty prefix at ${prefix}, found ${_found}")
+    endif()
+endfunction()
+
 # Both sentinels are single whitespace-free tokens because CMake re-wraps message text at roughly
 # 78 columns and breaks only at whitespace, so a token with no space in it survives wrapping intact
 # and the regex a case binds to it stays exact.

@@ -61,6 +61,6 @@ target_link_libraries(meios PRIVATE meios_cli)
 set_target_properties(meios PROPERTIES OUTPUT_NAME meios EXPORT_NAME cli)
 add_executable(meios::cli ALIAS meios)
 
-if(MEIOS_ENABLE_INSTALL)
+if(MEIOS_INSTALL)
     install(TARGETS meios EXPORT meiosTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

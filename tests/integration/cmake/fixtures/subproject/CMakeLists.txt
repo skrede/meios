@@ -5,9 +5,19 @@ cmake_minimum_required(VERSION 3.28)
 # it retargets PROJECT_SOURCE_DIR, so meios's own listfiles have to name their own project variable.
 project(meios_cmake_subproject LANGUAGES CXX)
 
+# Two inputs rather than one plus a position flag: which side of the add_subdirectory a consumer's
+# setting lands on is the thing under test, so both sites have to be visible at once.
+if(NOT FX_PARENT_INSTALL STREQUAL "")
+    set(MEIOS_INSTALL ${FX_PARENT_INSTALL})
+endif()
+
 # FetchContent_MakeAvailable ends in add_subdirectory, so the semantics are identical, and the
 # working tree rather than a committed revision is what a run before a push has to validate.
 add_subdirectory("${FX_MEIOS_SOURCE_DIR}" meios-build)
+
+if(NOT FX_PARENT_INSTALL_LATE STREQUAL "")
+    set(MEIOS_INSTALL ${FX_PARENT_INSTALL_LATE})
+endif()
 
 # An include root that does not exist is a green configure and a doomed compile, and building the
 # core archive plus a fetched CLI11 inside every case is not affordable, so the roots are read back
