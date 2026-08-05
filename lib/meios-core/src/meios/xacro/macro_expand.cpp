@@ -1,6 +1,7 @@
 #include "structural_detail.h"
 
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/structural.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
 

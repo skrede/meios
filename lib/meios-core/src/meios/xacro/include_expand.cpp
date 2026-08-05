@@ -1,5 +1,6 @@
 #include "structural_detail.h"
 
+#include "meios/io/text_reader.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
@@ -15,8 +16,6 @@
 #include <string>
 #include <vector>
 #include <cstddef>
-#include <fstream>
-#include <sstream>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -81,14 +80,39 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     return out;
 }
 
-std::optional<std::string> read_asset(const resolved_asset &hit)
+// meios::detail also declares two-argument readers of both these names, so an unqualified call
+// here would resolve to whichever declaration this translation unit happened to see first.
+text_read_result read_include(const resolved_asset &hit)
 {
-    std::ifstream file(hit.path(), std::ios::binary);
-    if(!file)
-        return std::nullopt;
-    std::ostringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    if(hit.source_root() && hit.source_relative())
+        return meios::read_text_file_under(*hit.source_root(), *hit.source_relative());
+    return meios::read_text_file(hit.path());
+}
+
+// The cycle identity is a package-relative spelling canonicalized against the process
+// directory, not a location: two spellings of one include must collapse onto one key.
+std::filesystem::path include_key(const std::string &package, const std::string &normalized)
+{
+    std::filesystem::path joined = std::filesystem::path(package) / normalized;
+    std::error_code canon_ec;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(joined, canon_ec);
+    return canon_ec ? joined : canonical;
+}
+
+bool reenters(const expand_ctx &ctx, const std::filesystem::path &key)
+{
+    for(const std::filesystem::path &seen : ctx.include_stack)
+        if(seen == key)
+            return true;
+    return false;
+}
+
+bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key,
+                    const text_read_failure &failure)
+{
+    return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, failure.cause,
+                "xacro:include could not read \"" + key.string() + "\": "
+                    + read_failure_reason(failure));
 }
 
 // The active document tracks the include stack, because a relative resource spec belongs
@@ -112,10 +136,9 @@ bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked
 bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit,
             const std::filesystem::path &key, pugi::xml_node out)
 {
-    std::optional<std::string> text = read_asset(hit);
+    text_read_result text = read_include(hit);
     if(!text)
-        return fail(ctx, in, diagnostic_code::unresolved_include,
-                    "xacro:include could not read \"" + key.string() + '"');
+        return refuse_include(ctx, in, key, text.error());
     // load_buffer copies into the document, but macro bodies defined in this include
     // keep string_views onto the source text, so it must outlive this call; park it in
     // owned_text alongside the parked document rather than in this local.
@@ -147,14 +170,10 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "xacro:include target \"" + relative + "\" escapes the source root");
-    std::filesystem::path joined = std::filesystem::path(target.package) / normalized;
-    std::error_code canon_ec;
-    std::filesystem::path canonical_key = std::filesystem::weakly_canonical(joined, canon_ec);
-    std::filesystem::path key = canon_ec ? joined : canonical_key;
-    for(const std::filesystem::path &seen : ctx.include_stack)
-        if(seen == key)
-            return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                        "xacro:include cycle detected re-entering \"" + key.string() + '"');
+    const std::filesystem::path key = include_key(target.package, normalized);
+    if(reenters(ctx, key))
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:include cycle detected re-entering \"" + key.string() + '"');
     std::optional<resolved_asset> hit = ctx.sources.locate(target.package, normalized, ctx.log);
     if(!hit)
         return fail(ctx, in, diagnostic_code::unresolved_include,

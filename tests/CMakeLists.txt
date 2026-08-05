@@ -186,16 +186,17 @@ endif()
 # moment its source drops in, with no further CMake edit. meios::model is linked
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
-        xacro_eval xacro_structural xacro_subst xacro_budget xacro_arg
-        xacro_unsupported xacro_corpus forward_scan yaml_resource yaml_grammar
-        yaml_verdict io_concept io_source_stack io_sources)
+        xacro_eval xacro_scope xacro_structural xacro_include_read xacro_subst xacro_subst_command
+        xacro_budget xacro_arg xacro_unsupported xacro_corpus forward_scan
+        yaml_resource yaml_grammar yaml_verdict io_concept io_source_stack io_sources)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
         target_link_libraries(${stem}_test
             PRIVATE meios::core meios::model meios::xacro meios::io
                 Catch2::Catch2WithMain)
-        if(stem STREQUAL "xacro_corpus" OR stem STREQUAL "xacro_structural")
+        if(stem STREQUAL "xacro_corpus" OR stem STREQUAL "xacro_structural"
+                OR stem STREQUAL "xacro_include_read")
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         endif()
@@ -386,7 +387,8 @@ if(EXISTS ${frames_test_src})
     catch_discover_tests(urdf_frames_test TEST_PREFIX "urdf_frames.")
 endif()
 
-foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation)
+foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation
+        load_policy_refusal load_report)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})
         add_executable(${stem}_test ${load_test_src})
@@ -597,7 +599,7 @@ if(EXISTS ${eval_policy_src})
         MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
     meios_enable_coverage(eval_policy_test)
     meios_warnings(eval_policy_test)
-    catch_discover_tests(eval_policy_test)
+    catch_discover_tests(eval_policy_test TEST_PREFIX "eval_policy.")
 endif()
 
 if(TARGET meios_eval-python)
@@ -611,7 +613,20 @@ if(TARGET meios_eval-python)
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         meios_enable_coverage(eval_python_test)
         meios_warnings(eval_python_test)
-        catch_discover_tests(eval_python_test)
+        catch_discover_tests(eval_python_test TEST_PREFIX "eval_python.")
+    endif()
+
+    set(eval_python_container_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_container_test.cpp)
+    if(EXISTS ${eval_python_container_src})
+        add_executable(eval_python_container_test ${eval_python_container_src})
+        target_link_libraries(eval_python_container_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                Catch2::Catch2WithMain)
+        target_compile_definitions(eval_python_container_test PRIVATE
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(eval_python_container_test)
+        meios_warnings(eval_python_container_test)
+        catch_discover_tests(eval_python_container_test TEST_PREFIX "eval_python_container.")
     endif()
 
     set(eval_python_refusal_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_refusal_test.cpp)
@@ -631,6 +646,23 @@ if(TARGET meios_eval-python)
         # Catch2 registers a case under its prose name, so the stem is only selectable by
         # regex once it prefixes them.
         catch_discover_tests(eval_python_refusal_test TEST_PREFIX "eval_python_refusal.")
+    endif()
+
+    set(eval_python_yaml_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_yaml_test.cpp)
+    if(EXISTS ${eval_python_yaml_src})
+        add_executable(eval_python_yaml_test ${eval_python_yaml_src})
+        target_link_libraries(eval_python_yaml_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                Catch2::Catch2WithMain)
+        # The acquisition cardinality cases install the real YAML loader, a compiled
+        # core-private symbol; a fake in its place could not observe the record it emits.
+        target_include_directories(eval_python_yaml_test PRIVATE
+            ${CMAKE_SOURCE_DIR}/lib/meios-core/src)
+        target_compile_definitions(eval_python_yaml_test PRIVATE
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(eval_python_yaml_test)
+        meios_warnings(eval_python_yaml_test)
+        catch_discover_tests(eval_python_yaml_test TEST_PREFIX "eval_python_yaml.")
     endif()
 
     set(eval_python_unrestricted_src

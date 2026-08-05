@@ -34,53 +34,6 @@ bool is_true(const value &v)
     return std::get<double>(v) != 0.0;
 }
 
-std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name)
-{
-    std::size_t idx = 0;
-    for(pugi::xml_attribute a : in.attributes())
-    {
-        if(std::string_view(a.name()) == name)
-            return idx;
-        ++idx;
-    }
-    return std::nullopt;
-}
-
-bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
-{
-    bool ok = true;
-    std::string value_text = substitute_attr(ctx, in, in.attribute("value").value(), document, ok,
-                                             attr_dom_index(in, "value"));
-    if(!ok)
-        return false;
-    std::string_view name = in.attribute("name").value();
-    record_scoped(ctx, in.attribute("scope").value(), name);
-    ctx.scope.set(name, classify(value_text));
-    return true;
-}
-
-// A declared default seeds the scope only when the name is still unbound, so a
-// caller override or an earlier binding wins; the declaration itself emits nothing.
-// The default is resolved through substitution first, so a nested
-// $(find)/$(arg)/${} default becomes real text rather than a raw literal.
-bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
-{
-    std::string_view name = in.attribute("name").value();
-    if(name.empty())
-        return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "<xacro:arg> requires a name attribute");
-    pugi::xml_attribute fallback = in.attribute("default");
-    if(!fallback || ctx.scope.contains(name))
-        return true;
-    bool ok = true;
-    std::string resolved = substitute_attr(ctx, in, fallback.value(), document, ok,
-                                           attr_dom_index(in, "default"));
-    if(!ok)
-        return false;
-    ctx.scope.set(name, classify(resolved));
-    return true;
-}
-
 std::string lowered(std::string_view text)
 {
     std::string out;
@@ -102,7 +55,11 @@ bool condition_true(expand_ctx &ctx, const std::string &text, const source_locat
     core_evaluator evaluator;
     value result = evaluator.eval(text, ctx.scope, ctx.log, at);
     if(evaluator.failed())
+    {
+        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
+                        "conditional test did not evaluate: " + text);
         ctx.ok = false;
+    }
     return is_true(result);
 }
 
@@ -116,6 +73,9 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                                      document, eval_policy::fail, ctx.backend, ctx.log, at);
     if(!result.ok)
     {
+        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
+                        "conditional test did not resolve: "
+                            + std::string(in.attribute("value").value()));
         ctx.ok = false;
         return false;
     }
@@ -175,7 +135,11 @@ std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view
                                 ctx.log, at);
     ok = result.ok;
     if(!ok)
+    {
+        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
+                        "substitution did not resolve: " + std::string(raw));
         ctx.ok = false;
+    }
     return result.text;
 }
 
