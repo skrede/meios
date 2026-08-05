@@ -14,6 +14,8 @@ foreach(source IN LISTS compile_fail_sources)
     add_library(${stem} OBJECT EXCLUDE_FROM_ALL ${source})
     target_link_libraries(${stem} PRIVATE
         meios::core meios::model meios::xacro meios::io meios::completion)
+    # The top of the build tree is the only directory holding a generated build system; the
+    # target and configuration arguments are what narrow the build down to this one probe.
     add_test(NAME compile_fail_${stem}
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
             --target ${stem} --config $<CONFIG>)

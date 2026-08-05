@@ -434,7 +434,7 @@ foreach(stem IN ITEMS urdf_load_sources)
     endif()
 endforeach()
 
-foreach(stem IN ITEMS arg_scan)
+foreach(stem IN ITEMS arg_scan cmake_listfile_scope)
     set(arg_scan_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${arg_scan_src})
         add_executable(${stem}_test ${arg_scan_src})
@@ -445,6 +445,11 @@ foreach(stem IN ITEMS arg_scan)
         catch_discover_tests(${stem}_test)
     endif()
 endforeach()
+
+if(TARGET cmake_listfile_scope_test)
+    target_compile_definitions(cmake_listfile_scope_test PRIVATE
+        MEIOS_REPOSITORY_ROOT="${meios_SOURCE_DIR}")
+endif()
 
 foreach(stem IN ITEMS completion_emit)
     set(completion_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)

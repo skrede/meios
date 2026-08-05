@@ -106,7 +106,9 @@ if(MEIOS_CORPUS_EXPRESSION_DOCUMENTS)
         OUT_DIR MEIOS_CORPUS_UR_DIR)  # ur_description 4.3.1
 
     # The resolver's containment guard rejects a package root reached through a
-    # symlink, so the tree is copied under the name the description resolves it by.
+    # symlink, so the tree is copied under the name the description resolves it by. The copy is
+    # scratch belonging to whichever build tree is running, which is why it is anchored at the top
+    # of the build rather than under meios's own binary directory.
     set(MEIOS_CORPUS_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/_meios_corpus_packages")
     file(COPY "${MEIOS_CORPUS_UR_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description")
 

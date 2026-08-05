@@ -5,6 +5,9 @@ set(MEIOS_RESOURCE_CACHE_DIR "" CACHE PATH
 set(MEIOS_RESOURCE_TLS_CAINFO "" CACHE FILEPATH
     "CA bundle forwarded to file(DOWNLOAD) as TLS_CAINFO where CMake ships without a trust store.")
 
+# One cache per build tree is the unit the claim and prune lifecycle rests on, so the root is
+# anchored at the top of the build: every meios resource declared anywhere in a tree — meios's own
+# or a consumer's, at whatever depth — shares that one cache and one owner key.
 # A build tree lists what it needs, rather than each tree listing who needs it. The direction is
 # what makes collection possible: a claim file is rewritten from scratch by every configure, so
 # renaming a resource or deleting its declaration drops the old entry the next time the project
