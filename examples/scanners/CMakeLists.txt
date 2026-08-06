@@ -1,0 +1,6 @@
+if(TARGET meios_scan-obj)
+    add_executable(mesh_scan mesh_scan.cpp)
+    target_link_libraries(mesh_scan PRIVATE meios::urdf meios::scan-obj)
+    meios_warnings(mesh_scan)
+    add_test(NAME example_mesh_scan COMMAND mesh_scan)
+endif()

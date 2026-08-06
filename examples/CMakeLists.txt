@@ -2,36 +2,27 @@
 # a generated header, so an example never reaches into the source tree nor needs a
 # path define injected at build time.
 
-add_executable(load_robot load_robot.cpp)
-target_link_libraries(load_robot PRIVATE meios::core meios::model meios::urdf)
-
-add_executable(xacro_overrides xacro_overrides.cpp)
-target_link_libraries(xacro_overrides PRIVATE meios::core meios::model meios::urdf)
-
 configure_file(robot.urdf.xacro ${CMAKE_CURRENT_BINARY_DIR}/robot.urdf.xacro COPYONLY)
 configure_file(arg_robot.urdf.xacro ${CMAKE_CURRENT_BINARY_DIR}/arg_robot.urdf.xacro COPYONLY)
 set(MEIOS_EXAMPLE_ROBOT "${CMAKE_CURRENT_BINARY_DIR}/robot.urdf.xacro")
 set(MEIOS_EXAMPLE_ARG_ROBOT "${CMAKE_CURRENT_BINARY_DIR}/arg_robot.urdf.xacro")
 configure_file(example_paths.h.in ${CMAKE_CURRENT_BINARY_DIR}/example_paths.h @ONLY)
 
-target_include_directories(load_robot PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(xacro_overrides PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+# A group reads the generated header through this absolute path. Climbing to it from a child's
+# own binary directory would bind the group to where the dispatcher happens to sit.
+set(MEIOS_EXAMPLE_GENERATED_INCLUDE ${CMAKE_CURRENT_BINARY_DIR})
 
-meios_warnings(load_robot)
-meios_warnings(xacro_overrides)
-
-add_test(NAME example_load_robot COMMAND load_robot)
-add_test(NAME example_xacro_overrides COMMAND xacro_overrides)
-
-# Enrichment examples are gated on the enrichment TARGET, not its option: an option
-# can be ON with no materialized target (an empty source glob, or a missing optional
+# Every group listfile gates an enrichment example on the enrichment TARGET, not its option: an
+# option can be ON with no materialized target (an empty source glob, or a missing optional
 # dependency), so a target guard keeps an all-enrichments-OFF configure green.
-if(TARGET meios_scan-obj)
-    add_executable(mesh_scan mesh_scan.cpp)
-    target_link_libraries(mesh_scan PRIVATE meios::urdf meios::scan-obj)
-    meios_warnings(mesh_scan)
-    add_test(NAME example_mesh_scan COMMAND mesh_scan)
-endif()
+add_subdirectory(loading)
+add_subdirectory(scanners)
+
+add_executable(xacro_overrides xacro_overrides.cpp)
+target_link_libraries(xacro_overrides PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(xacro_overrides PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(xacro_overrides)
+add_test(NAME example_xacro_overrides COMMAND xacro_overrides)
 
 if(TARGET meios_ros)
     add_executable(ros_resolve ros_resolve.cpp)

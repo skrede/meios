@@ -60,7 +60,7 @@ target_include_directories(meios_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-bundle/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-completion/include)
 
-if(MEIOS_BUILD_SCAN_OBJ)
+if(MEIOS_SCAN_OBJ_SUPPORT)
     meios_add_enrichment(scan-obj LINK_PUBLIC meios::bundle meios::io)
 endif()
 if(MEIOS_BUILD_SCAN_STL)

@@ -1,0 +1,5 @@
+add_executable(load_robot load_robot.cpp)
+target_link_libraries(load_robot PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(load_robot PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(load_robot)
+add_test(NAME example_load_robot COMMAND load_robot)

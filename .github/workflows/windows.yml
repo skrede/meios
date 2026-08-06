@@ -309,15 +309,32 @@ jobs:
             -DMEIOS_BUILD_TESTS=ON `
             -DMEIOS_CMAKE_FETCH_DEPS=ON `
             -DMEIOS_WERROR=ON `
-            -DMEIOS_BUILD_SCAN_OBJ=ON `
+            -DMEIOS_SCAN_OBJ_SUPPORT=ON `
             -DMEIOS_BUILD_SCAN_COLLADA=ON `
             -DMEIOS_BUILD_SCAN_STL=ON `
             -DMEIOS_BUILD_SCAN_GLTF=ON `
             -DMEIOS_BUILD_ARCHIVE_ZIP=ON `
+            -DMEIOS_BUILD_EXAMPLES=ON `
             -DMEIOS_ROS_PACKAGE_SUPPORT=ON
 
       - name: Build
         run: cmake --build build --config Release
+
+      # This is the only cell that compiles the enrichment-gated examples at all, and a -R filter
+      # selecting nothing exits 0, so the corpus is asserted to register before it runs.
+      - name: Run examples
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^example_' -C Release"
+          $discovery = & ctest -N -R '^example_' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No examples discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Focus ROS source tests
         working-directory: build
@@ -408,6 +425,22 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      # A -R filter selecting nothing exits 0, so the corpus is asserted to register before it
+      # runs; here that proves the ungated examples survive an all-enrichments-OFF configure.
+      - name: Run examples
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^example_' -C Release"
+          $discovery = & ctest -N -R '^example_' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No examples discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   docs:
     runs-on: windows-2022
