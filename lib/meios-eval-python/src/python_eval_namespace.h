@@ -75,11 +75,12 @@ inline std::string refusal_rule(const pybind11::dict &priv, std::string_view exp
 
 // The refusal is recorded in evaluation-local state before the throw, so the outer handler
 // classifies it without inspecting the raised exception's text.
-inline pybind11::object fetch_and_parse(const pybind11::object &parse, yaml_context &ctx, const std::string &spec)
+inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind11::object &parse,
+                                        yaml_context &ctx, const std::string &spec)
 {
     const std::optional<std::string> text = ctx.scope.load_text(spec);
     if(text)
-        return parse(pybind11::str(*text));
+        return wrap_yaml(priv, parse(pybind11::str(*text)));
     ctx.rule = std::string(uncontained_rule);
     throw pybind11::value_error("unreachable yaml resource \"" + spec + '"');
 }
@@ -90,7 +91,8 @@ inline pybind11::object fetch_and_parse(const pybind11::object &parse, yaml_cont
 inline pybind11::object yaml_helper(const pybind11::dict &priv, yaml_context &ctx)
 {
     pybind11::object parse = priv["parse_yaml"];
-    return pybind11::cpp_function([parse, &ctx](const std::string &spec) { return fetch_and_parse(parse, ctx, spec); });
+    return pybind11::cpp_function(
+        [priv, parse, &ctx](const std::string &spec) { return fetch_and_parse(priv, parse, ctx, spec); });
 }
 
 // These two are the whole axis of variation between the evaluators: everything else an
@@ -112,13 +114,14 @@ inline pybind11::dict user_globals(const pybind11::dict &priv, yaml_context &ctx
     return globals;
 }
 
-inline void seed_scope(pybind11::dict &globals, std::string_view expr, const eval_scope &scope)
+inline void seed_scope(const pybind11::dict &priv, pybind11::dict &globals, std::string_view expr,
+                       const eval_scope &scope)
 {
     for(const std::string &name : identifiers(expr))
     {
         std::optional<binding> bound = scope.lookup(name);
         if(bound)
-            globals[pybind11::str(name)] = to_py_object(*bound);
+            globals[pybind11::str(name)] = to_py_object(priv, *bound);
     }
 }
 

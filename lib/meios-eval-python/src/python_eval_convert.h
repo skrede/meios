@@ -8,17 +8,41 @@
 #include <pybind11/embed.h>
 
 #include <string>
+#include <utility>
 #include <variant>
+#include <algorithm>
 
 namespace meios::detail
 {
 
+inline bool delimits_container(char c)
+{
+    return std::find(container_markers.begin(), container_markers.end(), c) != container_markers.end();
+}
+
+inline pybind11::object wrap_yaml(const pybind11::dict &priv, pybind11::object plain)
+{
+    if(pybind11::isinstance<pybind11::dict>(plain))
+        return priv["_YamlDict"](std::move(plain));
+    if(pybind11::isinstance<pybind11::list>(plain))
+        return priv["_YamlList"](std::move(plain));
+    return plain;
+}
+
+inline bool is_yaml_wrapper(const pybind11::dict &priv, const pybind11::object &obj)
+{
+    const pybind11::object mapping  = priv["_YamlDict"];
+    const pybind11::object sequence = priv["_YamlList"];
+    return pybind11::isinstance(obj, mapping) || pybind11::isinstance(obj, sequence);
+}
+
 // Only a marker-wrapped string is re-parsed with ast.literal_eval and rebound to its real
 // container; any other string is returned verbatim, so a literal-shaped author value like
-// "[1, 2]" stays a string, matching xacro's _eval_literal.
-inline pybind11::object rehydrate(const std::string &text)
+// "[1, 2]" stays a string, matching xacro's _eval_literal. Which marker delimited the text is
+// what selects a wrapped reconstruction over a plain one.
+inline pybind11::object rehydrate(const pybind11::dict &priv, const std::string &text)
 {
-    if(text.size() < 2 || text.front() != container_marker || text.back() != container_marker)
+    if(text.size() < 2 || text.front() != text.back() || !delimits_container(text.front()))
         return pybind11::str(text);
     const std::string inner = text.substr(1, text.size() - 2);
     try
@@ -26,7 +50,7 @@ inline pybind11::object rehydrate(const std::string &text)
         pybind11::object parsed = pybind11::module_::import("ast").attr("literal_eval")(inner);
         if(pybind11::isinstance<pybind11::dict>(parsed) || pybind11::isinstance<pybind11::list>(parsed)
             || pybind11::isinstance<pybind11::tuple>(parsed))
-            return parsed;
+            return text.front() == yaml_container_marker ? wrap_yaml(priv, parsed) : parsed;
     }
     catch(pybind11::error_already_set &)
     {
@@ -34,10 +58,10 @@ inline pybind11::object rehydrate(const std::string &text)
     return pybind11::str(inner);
 }
 
-inline pybind11::object to_py_object(const binding &bound)
+inline pybind11::object to_py_object(const pybind11::dict &priv, const binding &bound)
 {
     if(std::holds_alternative<std::string>(bound))
-        return rehydrate(std::get<std::string>(bound));
+        return rehydrate(priv, std::get<std::string>(bound));
     const value &v = std::get<value>(bound);
     if(std::holds_alternative<bool>(v))
         return pybind11::bool_(std::get<bool>(v));
@@ -49,9 +73,11 @@ inline pybind11::object to_py_object(const binding &bound)
 // bool/float route back through the core evaluator's to_python_str so the two paths render
 // identically (True/False, .0-append); str returns verbatim; int renders via Python's own
 // str() to preserve arbitrary-precision results (${2**64}) that overflow long long, bool
-// preceding int because Python bool subtypes int. A list/dict/tuple is delimited with the
-// container_marker so rehydrate can round-trip it across a xacro:property boundary.
-inline std::string format_result(const pybind11::object &result)
+// preceding int because Python bool subtypes int. A list/dict/tuple is delimited with a marker
+// so rehydrate can round-trip it across a xacro:property boundary. The yaml-wrapper test must
+// precede the plain one: PyDict_Check and PyList_Check match subclasses, so the plain branch
+// would otherwise stamp every wrapper with the plain marker and provenance would die there.
+inline std::string format_result(const pybind11::dict &priv, const pybind11::object &result)
 {
     if(pybind11::isinstance<pybind11::str>(result))
         return result.cast<std::string>();
@@ -59,9 +85,11 @@ inline std::string format_result(const pybind11::object &result)
         return to_python_str(value{ result.cast<bool>() });
     if(pybind11::isinstance<pybind11::float_>(result))
         return to_python_str(value{ result.cast<double>() });
+    if(is_yaml_wrapper(priv, result))
+        return yaml_container_marker + pybind11::str(result).cast<std::string>() + yaml_container_marker;
     if(pybind11::isinstance<pybind11::list>(result) || pybind11::isinstance<pybind11::dict>(result)
         || pybind11::isinstance<pybind11::tuple>(result))
-        return container_marker + pybind11::str(result).cast<std::string>() + container_marker;
+        return plain_container_marker + pybind11::str(result).cast<std::string>() + plain_container_marker;
     return pybind11::str(result).cast<std::string>();
 }
 

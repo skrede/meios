@@ -116,7 +116,8 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 
 std::string strip_container_marker(std::string text)
 {
-    text.erase(std::remove(text.begin(), text.end(), container_marker), text.end());
+    for(char marker : container_markers)
+        text.erase(std::remove(text.begin(), text.end(), marker), text.end());
     return text;
 }
 

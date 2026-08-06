@@ -24,8 +24,8 @@ inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr
                                const pybind11::object &builtins)
 {
     pybind11::dict globals = user_globals(priv, ctx, builtins);
-    seed_scope(globals, expr, ctx.scope);
-    return format_result(pybind11::eval(std::string(expr), globals));
+    seed_scope(priv, globals, expr, ctx.scope);
+    return format_result(priv, pybind11::eval(std::string(expr), globals));
 }
 
 inline std::optional<std::string> report(eval_failure_kind &kind, eval_failure_kind which, log_sink &log,

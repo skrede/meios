@@ -34,6 +34,7 @@ struct tally
 {
     int errors{ 0 };
     std::string last;
+    std::string every;
 
     void operator()(meios::level lvl, const std::string &message)
     {
@@ -41,6 +42,7 @@ struct tally
             return;
         ++errors;
         last = message;
+        every += message + '\n';
     }
 
     void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
@@ -48,10 +50,12 @@ struct tally
         (*this)(lvl, message);
     }
 
-    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
+    // A coded, located diagnostic is recorded in the shape the command line renders, so a case
+    // can pin the position and the typed code alongside the text without a second channel.
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &at,
                     const std::string &message)
     {
-        (*this)(lvl, message);
+        (*this)(lvl, meios::to_string(at) + ": (" + std::string(meios::to_string(code)) + ") " + message);
     }
 };
 
@@ -61,6 +65,7 @@ struct outcome
 {
     expansion_result expanded;
     int errors;
+    std::string reported;
 };
 
 struct fixed_text final : meios::text_resource_loader::fetcher
@@ -92,7 +97,7 @@ outcome run(std::string_view source, meios::eval_policy policy,
     meios::source_stack sources;
     expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ std::move(out), counts.errors };
+    return outcome{ std::move(out), counts.errors, std::move(counts.every) };
 }
 
 constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xacro\">";
