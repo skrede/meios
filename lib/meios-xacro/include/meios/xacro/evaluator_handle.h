@@ -19,6 +19,11 @@ namespace meios
 
 // The value variant cannot carry strings, so an alternate backend is injected at
 // the string level: it renders an expression to text and reports why it declined.
+// The sink handed to eval_to_text relocates: an error or warning emitted through the
+// message-only log(level, message) overload is retyped as expression_error and anchored at
+// the node being expanded, because a backend emitting through it supplies neither. A
+// diagnostic that is not about the expression must therefore be emitted through an overload
+// carrying its own code and location.
 template <typename E>
 concept text_evaluator = requires(E &backend, std::string_view expr,
                                   const eval_scope &scope, log_sink &log)
