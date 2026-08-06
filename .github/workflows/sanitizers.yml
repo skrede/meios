@@ -146,7 +146,9 @@ jobs:
       # libFuzzer reads recursively. -max_total_time=60 bounds the mutation budget,
       # but only -timeout=25 bounds a SINGLE input: without it one pathological unit
       # runs to libFuzzer's 1200s default and blows the whole leg's wall-clock. Both
-      # are required for the run to be genuinely bounded.
+      # are required for the run to be genuinely bounded. structural_fuzz takes a
+      # second read-only directory as well: a dedicated corpus of documents forging
+      # the container marker, which no fixture would ever contain.
       - name: Fuzz each harness (advisory, 60s each)
         run: |
           find_bin() { find build -type f -name "$1" -perm -u+x | head -n1; }
@@ -155,4 +157,4 @@ jobs:
           "$(find_bin evaluator_fuzz)"     work/evaluator     tests/fuzz/corpus/evaluator -max_total_time=60 -timeout=25
           "$(find_bin urdf_reader_fuzz)"   work/urdf_reader   tests/fixtures/urdf         -max_total_time=60 -timeout=25
           "$(find_bin bundle_writer_fuzz)" work/bundle_writer tests/fixtures/urdf         -max_total_time=60 -timeout=25
-          "$(find_bin structural_fuzz)"    work/structural    tests/fixtures/urdf         -max_total_time=60 -timeout=25
+          "$(find_bin structural_fuzz)"    work/structural    tests/fixtures/urdf tests/fuzz/corpus/structural -max_total_time=60 -timeout=25

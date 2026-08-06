@@ -26,7 +26,8 @@ bool bind_literal(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
                   std::string_view raw, const std::filesystem::path &document)
 {
     bool ok = true;
-    std::string bound = substitute_attr(ctx, call, raw, document, ok);
+    const std::string authored = strip_authored_markers(std::string(raw));
+    std::string bound = substitute_attr(ctx, call, authored, document, ok);
     if(!ok)
         return false;
     ctx.scope.set(name, classify(bound));

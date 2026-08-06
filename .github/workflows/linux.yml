@@ -465,6 +465,20 @@ jobs:
           echo "eval_python_abuse registered $registered test(s)"
           ctest -R eval_python_abuse --output-on-failure --no-tests=error
 
+      # A filtered run that selects nothing reports success, so the stem proving a
+      # hand-written control character cannot forge evaluator provenance asserts its
+      # own registration first; otherwise it could stop building and stay green.
+      - name: Assert the forged-marker suite ran (Python found)
+        run: |
+          cd build-py
+          registered=$(ctest -N -R '^eval_python_marker_input\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "eval_python_marker_input registered no tests"
+            exit 1
+          fi
+          echo "eval_python_marker_input registered $registered test(s)"
+          ctest -R '^eval_python_marker_input\.' --output-on-failure --no-tests=error
+
       # The build-time flatten that really runs Python registers only where the
       # CLI carries the backend, so it is asserted present for the same reason:
       # a case that quietly stopped registering would pass as a green filtered

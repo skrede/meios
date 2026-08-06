@@ -58,6 +58,12 @@ namespace detail
 // an integer or a real, otherwise keeps it as a string.
 binding classify(std::string_view text);
 
+// Only the evaluator may mint a container marker, so a marker present in text an author wrote is a
+// forgery and is erased before that text can become a binding. Apply this to raw authored text
+// only, never to a substitution result: that result legitimately carries the markers the evaluator
+// minted, and erasing them there would break the container round-trip.
+std::string strip_authored_markers(std::string text);
+
 }
 
 }

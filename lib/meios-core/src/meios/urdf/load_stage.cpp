@@ -58,7 +58,7 @@ bool declares_xacro(pugi::xml_node root)
 void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string> &args)
 {
     for(const std::pair<const std::string, std::string> &arg : args)
-        scope.set(arg.first, classify(arg.second));
+        scope.set(arg.first, classify(strip_authored_markers(arg.second)));
 }
 
 std::optional<expansion_error> drive(std::string_view bytes, const std::filesystem::path &path, bool expandable, const load_options &opts, parse_context &ctx, world_recorder &recorder)

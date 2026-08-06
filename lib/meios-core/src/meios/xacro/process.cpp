@@ -2,6 +2,7 @@
 #include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
+#include "meios/xacro/structural.h"
 #include "meios/xacro/substitution.h"
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/container_marker.h"
@@ -115,6 +116,13 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 }
 
 std::string strip_container_marker(std::string text)
+{
+    for(char marker : container_markers)
+        text.erase(std::remove(text.begin(), text.end(), marker), text.end());
+    return text;
+}
+
+std::string strip_authored_markers(std::string text)
 {
     for(char marker : container_markers)
         text.erase(std::remove(text.begin(), text.end(), marker), text.end());
