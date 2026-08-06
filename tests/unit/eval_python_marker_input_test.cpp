@@ -1,5 +1,7 @@
 #include "eval_python_fixture.h"
 
+#include "../marker_spelling.h"
+
 #include <meios/urdf.h>
 #include <meios/model.h>
 
@@ -22,14 +24,11 @@ std::string marked(char marker, std::string_view inner)
     return std::string(1, marker) + std::string(inner) + marker;
 }
 
-// pugixml resolves a numeric character reference while it parses, so this spelling reaches the
-// binding seam as the very byte the raw spelling does; writing the byte here instead would put a
-// control character in the source file.
-std::string reference_marked(char marker, std::string_view inner)
+// This spelling reaches the binding seam as the very byte the raw spelling does; writing the byte
+// here instead would put a control character in the source file.
+std::string reference_marked(char one, std::string_view inner)
 {
-    constexpr std::string_view digits = "0123456789abcdef";
-    const unsigned code = static_cast<unsigned char>(marker);
-    const std::string escape = std::string("&#x") + digits[code >> 4] + digits[code & 0xFu] + ';';
+    const std::string escape = marker::as_referenced(one);
     return escape + std::string(inner) + escape;
 }
 
@@ -48,11 +47,7 @@ std::string property_document(std::string_view value, std::string_view expressio
 void carries_no_marker(const outcome &result)
 {
     REQUIRE(result.expanded);
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(result.expanded->document.find(marker) == std::string::npos);
-    }
+    marker::absent_from(result.expanded->document);
 }
 
 }

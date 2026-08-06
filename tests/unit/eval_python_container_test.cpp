@@ -1,6 +1,6 @@
 #include "eval_python_fixture.h"
 
-#include <meios/xacro/container_marker.h>
+#include "../marker_spelling.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -204,11 +204,7 @@ TEST_CASE("a container emitted whole into element text carries no control-char m
     const outcome resolved = run(span_document("${[1, 2, 3]}"), meios::eval_policy::fail, handle);
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>[1, 2, 3]</l>"));
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(resolved.expanded->document.find(marker) == std::string::npos);
-    }
+    marker::absent_from(resolved.expanded->document);
 }
 
 TEST_CASE("a yaml-sourced mapping emitted whole into element text carries no control-char marker",
@@ -222,11 +218,7 @@ TEST_CASE("a yaml-sourced mapping emitted whole into element text carries no con
                                  "shoulder:\n  max: 42\n");
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>{'shoulder': {'max': 42}}</l>"));
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(resolved.expanded->document.find(marker) == std::string::npos);
-    }
+    marker::absent_from(resolved.expanded->document);
 }
 
 TEST_CASE("a yaml-sourced mapping emitted whole into an attribute value carries no control-char marker",
@@ -240,11 +232,7 @@ TEST_CASE("a yaml-sourced mapping emitted whole into an attribute value carries 
                                  "shoulder:\n  max: 42\n");
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "tag=\"{'shoulder': {'max': 42}}\""));
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(resolved.expanded->document.find(marker) == std::string::npos);
-    }
+    marker::absent_from(resolved.expanded->document);
 }
 
 TEST_CASE("a container emitted whole into an attribute value carries no control-char marker",
@@ -255,28 +243,24 @@ TEST_CASE("a container emitted whole into an attribute value carries no control-
     const outcome resolved = run(document, meios::eval_policy::fail, handle);
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "tag=\"[1, 2, 3]\""));
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(resolved.expanded->document.find(marker) == std::string::npos);
-    }
+    marker::absent_from(resolved.expanded->document);
 }
 
+// The subscript alone renders a scalar the marker could never ride out on, so the round-tripped
+// list is also emitted whole; its span is matched without the delimiters around it, leaving an
+// unstripped marker for the absence check rather than the span to report.
 TEST_CASE("a list crossing a xacro:property boundary re-hydrates without leaking the marker",
           "[eval_python]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string document = std::string(header)
         + "<xacro:property name=\"row\" value=\"${[10, 20, 30]}\"/>"
-        + "<l>${row[1]}</l></robot>";
+        + "<l tag=\"${row}\">${row[1]}</l></robot>";
     const outcome resolved = run(document, meios::eval_policy::fail, handle);
     REQUIRE(resolved.expanded.has_value());
-    REQUIRE(leaves(resolved, "<l>20</l>"));
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO("marker byte " << static_cast<int>(marker));
-        CHECK(resolved.expanded->document.find(marker) == std::string::npos);
-    }
+    REQUIRE(leaves(resolved, ">20</l>"));
+    REQUIRE(leaves(resolved, "[10, 20, 30]"));
+    marker::absent_from(resolved.expanded->document);
 }
 
 TEST_CASE("a set is refused rather than emitted as a container it is not", "[eval_python]")

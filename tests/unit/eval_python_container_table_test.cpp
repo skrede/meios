@@ -1,7 +1,7 @@
 #include "container_probe.h"
 #include "container_table.h"
 
-#include <meios/xacro/container_marker.h>
+#include "../marker_spelling.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -29,16 +29,6 @@ std::optional<std::string> dotted_twin(const std::string &expr)
     if(open == std::string::npos || expr.size() < open + 5 || expr.substr(expr.size() - 2) != "']")
         return std::nullopt;
     return expr.substr(0, open) + '.' + expr.substr(open + 2, expr.size() - open - 4);
-}
-
-bool carries_marker(const std::string &subject)
-{
-    for(char marker : meios::detail::container_markers)
-    {
-        if(subject.find(marker) != std::string::npos)
-            return true;
-    }
-    return false;
 }
 
 }
@@ -109,11 +99,11 @@ TEST_CASE("the forged rows still carry a marker and still refuse", "[eval_python
     int forged = 0;
     for(const container::row &r : container::load_rows())
     {
-        if(!carries_marker(r.subject))
+        if(!marker::forged_in(r.subject))
             continue;
         INFO(r.expr);
         REQUIRE(r.verdict == "refuse");
         ++forged;
     }
-    REQUIRE(forged >= 2);
+    REQUIRE(forged >= 3);
 }

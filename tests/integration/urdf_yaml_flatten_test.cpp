@@ -1,12 +1,12 @@
 #include "meios/urdf/yaml_resource.h"
 
+#include "../marker_spelling.h"
+
 #include <meios/eval/python_evaluator.h>
 
 #include <meios/urdf.h>
 #include <meios/model.h>
 #include <meios/xacro.h>
-
-#include <meios/xacro/container_marker.h>
 
 #include <meios/io/source_stack.h>
 #include <meios/io/memory_source.h>
@@ -191,16 +191,6 @@ flattened flatten_to_text(const std::filesystem::path &path)
     return { book.errors, out->document };
 }
 
-// The serializer hands a control character to the document as a two-digit decimal reference
-// rather than as itself, so a marker surviving the strip reaches the emitted text spelled
-// "&#01;" and never as its own byte. Both spellings are the leak.
-std::string as_written(char marker)
-{
-    const int code = static_cast<int>(marker);
-    return std::string{ "&#" } + static_cast<char>('0' + code / 10)
-        + static_cast<char>('0' + code % 10) + ';';
-}
-
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
 // The smoke cases drive real published descriptions, which are far too large to vendor. A
 // developer points MEIOS_SMOKE_CORPUS_DIR at a local checkout to make them live; with no
@@ -289,7 +279,7 @@ TEST_CASE("the flattened arm carries the dotted reads", "[urdf][yaml][flatten]")
 // carry a container across each seam the strip guards, one marker at each: a yaml-sourced
 // mapping into an attribute value, a plain list into element text. The two span assertions match
 // each container's body without the delimiters around it, so an unstripped marker leaves them
-// passing and the loop below is what reports it.
+// passing and the absence check is what reports it.
 TEST_CASE("a description emitting containers whole carries no container marker",
           "[urdf][yaml][flatten]")
 {
@@ -299,13 +289,7 @@ TEST_CASE("a description emitting containers whole carries no container marker",
     REQUIRE(flat.errors == 0);
     REQUIRE(flat.document->find("{'upper': 1.5}") != std::string::npos);
     REQUIRE(flat.document->find("[1, 2]") != std::string::npos);
-
-    for(char marker : meios::detail::container_markers)
-    {
-        INFO(static_cast<int>(marker));
-        CHECK(flat.document->find(marker) == std::string::npos);
-        CHECK(flat.document->find(as_written(marker)) == std::string::npos);
-    }
+    marker::absent_from(*flat.document);
 }
 
 TEST_CASE("a package-qualified yaml spec resolves through the source stack",
