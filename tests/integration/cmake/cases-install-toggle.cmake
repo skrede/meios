@@ -55,10 +55,13 @@ meios_cmake_case(cmake_subproject_install_optin
 # passes nothing, which is the only shape in which the claim is checkable. CMP0077 is what makes it
 # true: option() honors the consumer's normal variable and writes no cache entry over it, so the
 # decision stays the consumer listfile's to change and no first configure freezes it.
+# PUGIXML_INSTALL is turned on for the reason the opt-in above states, and only that option is
+# passed: it writes no MEIOS_INSTALL cache entry, so it leaves the claim under test alone.
 meios_cmake_case(cmake_subproject_install_optin_uncached
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake
     EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=on -DMEIOS_ROS_PACKAGE_SUPPORT=OFF
+            -DPUGIXML_INSTALL=ON
     REQUIRE_TREE_LACKS "CMakeCache.txt,(^|\n)MEIOS_INSTALL:"
     MATCHES "installing[ \t\r\n]+meios[ \t\r\n]+and[ \t\r\n]+its[ \t\r\n]+CMake")
 
