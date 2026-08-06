@@ -3,8 +3,9 @@
 A xacro description carries executable expressions, and this page is the contract for what meios will
 and will not run when it evaluates them. It is the one place that owns the boundary: the supported
 subset, the literal rules that refuse everything else, where those rules diverge from the
-compatibility target, how the resource helper resolves a file, the unrestricted backend and what
-choosing it means, and the two things this boundary explicitly does not do.
+compatibility target, how the resource helper resolves a file, what a loaded configuration is reachable
+by, the unrestricted backend and what choosing it means, and the two things this boundary explicitly
+does not do.
 
 The built-in **core evaluator** is always present, needs nothing outside the C++ standard library, and
 evaluates a fixed numeric and boolean grammar. It cannot reach the filesystem, the network or the
@@ -33,7 +34,9 @@ read. Build against the interpreter you have.
 - List, dict and set comprehensions, generator expressions, and lambdas.
 - String operations — concatenation, slicing, `join`, `split`, the case and strip methods — with the
   single exception of the two formatting methods named in the next section.
-- Subscripting and indexing, including into a mapping returned by the resource helper.
+- Subscripting and indexing, including into a mapping returned by the resource helper — which also
+  answers the dotted spelling, under the rules in
+  [Reading a loaded configuration](#reading-a-loaded-configuration).
 - Interpolated (f-) strings, with format specs and the `!s` conversion.
 - `load_yaml` / `xacro.load_yaml`, under the rules in [The resource helper](#the-resource-helper).
 - Every property, argument and macro parameter the description itself has bound.
@@ -153,20 +156,38 @@ withholds both, along with `getattr`, `dir`, `globals`, `locals`, `open`, `eval`
 `input` and `__import__`. The reference also applies its double-underscore test to a compiled code
 object's name table, which a nested code object escapes; the tree walk does not.
 
+**Louder on the same accept set.** A missing key fails on both sides, and under the dotted and the
+subscript spelling alike, so nothing a description can write moves from working to broken or the other
+way; the divergence is in what the failure says. The reference raises a bare `KeyError` naming the key.
+meios names the key *and* the keys the mapping does have, at the `file:line` that read it, bounded to
+six names with a count of the rest so a wide configuration cannot turn a diagnostic into a dump.
+Against a configuration nested three mappings deep, which mapping and which keys is the whole question
+a bare key error leaves unanswered, and answering it costs no parity.
+
+**Closed at the value-to-text seam.** A result that cannot be written into a flattened document is a
+loud typed failure naming its Python type, rather than whatever the interpreter's string conversion
+would have produced. The permitted set is closed — a string, a bool, an int, a float, a list, a dict, a
+tuple, and a null — so `${config.items}`, `${config.values()}`, `${set([1, 2])}`, `${zip(a, b)}`,
+`${enumerate(a)}`, `${range(3)}` and an uncalled mathematics name such as `${sqrt}` all fail where they
+previously produced text. In three of those — a bound mapping method, a zip and an enumerate — that
+text was a live heap address, written into a file the author would then commit and diff and different
+on every run. The refusal names the type and never the value, so a diagnostic cannot leak the
+configuration it declined to render. The null is admitted rather than refused: it serializes as the
+text `None` the reference produces and carries a warning at its position, because a configuration key
+written with no value after it is ordinary and refusing it would break a description that works today.
+
 **Omissions that can bite.** `map` and `filter` are exposed by the reference and are not among the
 twenty names above. `${list(map(...))}` does appear in real descriptions, so that is the omission most
 likely to be met in practice. Any such name produces a loud `non-allowlisted-builtin` refusal, which
 makes it a decision: a name a real description needs gets added to the allowlist deliberately, and is
 never passed through silently.
 
-**Parity gaps that predate this restriction.** Dotted access into a loaded configuration is not
-supported — the reference wraps loaded yaml so `${cfg.wheel.radius}` works, meios returns plain
-mappings, so `${cfg['wheel']['radius']}` is the spelling. The mathematics names carry the same shape of
-gap: the reference spreads them into a `math` namespace beside the bare ones, so `${math.pi}` works
-there, while meios binds only the bare names and the dotted spelling raises a `NameError` rather than a
-refusal. The reference's argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`,
-`xacro.message` / `warning` / `error` / `fatal`) are not exposed at all. A unit-tagged yaml value is
-read as a literal here, where the reference evaluates it as an expression.
+**Parity gaps that predate this restriction.** The mathematics names are spread into a `math` namespace
+beside the bare ones by the reference, so `${math.pi}` works there, while meios binds only the bare
+names and the dotted spelling raises a `NameError` rather than a refusal. The reference's argument,
+tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning` / `error` /
+`fatal`) are not exposed at all. A unit-tagged yaml value is read as a literal here, where the reference
+evaluates it as an expression.
 
 ## What this is not
 
@@ -235,6 +256,60 @@ case, or which arrives in short form, therefore compares unequal to that root an
 though it genuinely sits inside it. This fails closed — it is over-refusal, not a bypass — but it is a
 real functional limit on one of the three supported platforms, and it is the first thing to suspect
 behind an unexplained `uncontained-yaml-path` there.
+
+## Reading a loaded configuration
+
+A mapping or a sequence that came back from `load_yaml` answers both spellings, so
+`${config['limits']['shoulder']}` and `${config.limits.shoulder}` read the same value. Reachability by
+dot is a property of where a container came from and not of its shape: the helper grants it, and
+nothing else does.
+
+**What carries it.** Anything reached from a helper result — by subscript, by dot, by index, by
+iterating it or by slicing it — is itself reachable the same way. A property binds text, so a container
+crossing a `xacro:property` boundary is carried across as text and restored on the other side; the
+third property out reads exactly as the first does, and there is no hop limit to exceed.
+
+```xml
+<xacro:property name="config" value="${load_yaml('arm.yaml')}"/>
+<xacro:property name="limits" value="${config['limits']}"/>
+
+<joint name="shoulder">
+  <limit lower="${limits.shoulder.lower}" upper="${limits['shoulder']['upper']}"/>
+</joint>
+```
+
+**What does not carry it.** A container an author wrote literally in a value is text and stays text. A
+mapping an expression constructs is a new, plain mapping, so rebuilding one loses what reaching into
+one preserves. And a mapping method's result is not wrapped either, deliberately: `get`, `items`,
+`keys` and `values` are C-level methods that bypass the hook doing the wrapping, so the compatibility
+target leaves their results plain too, and accepting a spelling the target rejects is the one
+divergence direction a consumer cannot notice.
+
+| Form | Dotted access | Why |
+|------|---------------|-----|
+| `config.limits.shoulder.max`, straight off `load_yaml` | yes | The helper's result carries its origin, and so does every mapping and sequence reached from it, across any number of property boundaries |
+| `config['joints'][0].name`, a mapping inside a sequence | yes | A sequence answers no dotted read of its own, but indexing, iterating and slicing one hand back elements that do |
+| `${p.a}`, where `p` was authored as `value="{'a': 1}"` | no | An author-written value is text; wrapping it would run a description the compatibility target rejects |
+| `dict(config['limits']).shoulder`, a rebuilt container | no | A constructor returns a new, plain mapping — as does a container the evaluator itself minted, such as `${dict(a=1)}` bound to a property |
+| `config.get('limits').shoulder`, a mapping method's result | no | The mapping methods bypass the hook that wraps, so the target leaves their results plain too |
+| `config.items`, where the configuration has a key named `items` | no | Normal attribute lookup finds the method first, so the key is shadowed under a dot exactly as it is on the target; `config['items']` reads the value |
+
+**A missing key fails under either spelling.** Subscript and dot are one operation here, so
+`${config.nope}` and `${config['nope']}` produce the same diagnostic, naming the key, the keys the
+mapping does have and the position that read it. Neither expands to an empty string.
+
+**A control character an author writes is erased.** A container crosses a property boundary inside a
+text encoding delimited by control characters the XML 1.0 charset clause forbids outright, so one can
+never appear in a legitimate document. An author who writes one anyway — as a raw byte, or as the
+character reference spelling of the same code point — gains nothing by it: the character is
+erased from authored text before that text becomes a property value, an argument default, a macro
+parameter or a caller-supplied argument. The reachability a yaml load grants therefore cannot be forged
+from a description, and the same erase runs at the output seams, so no flattened document carries one
+either.
+
+The identifier rule runs in front of a wrapped container like any other expression:
+`${config.limits.__class__}` is refused under `dunder-identifier` before evaluation, so nothing here
+opens a road [the refusal rules](#what-refuses-and-by-which-rule) do not already close.
 
 ## The unrestricted evaluator
 
