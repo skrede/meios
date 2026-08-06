@@ -5,12 +5,16 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/container_marker.h"
 
+#include "meios/diagnostic/level.h"
+#include "meios/diagnostic/log_sink.h"
+
 #include <pybind11/embed.h>
 
 #include <string>
 #include <utility>
 #include <variant>
 #include <algorithm>
+#include <stdexcept>
 
 namespace meios::detail
 {
@@ -77,8 +81,18 @@ inline pybind11::object to_py_object(const pybind11::dict &priv, const binding &
 // so rehydrate can round-trip it across a xacro:property boundary. The yaml-wrapper test must
 // precede the plain one: PyDict_Check and PyList_Check match subclasses, so the plain branch
 // would otherwise stamp every wrapper with the plain marker and provenance would die there.
-inline std::string format_result(const pybind11::dict &priv, const pybind11::object &result)
+// The chain is exhaustive and anything past its end is refused by type name: the tail used to
+// render whatever str() produced, which wrote live heap addresses and whole loaded
+// configurations into documents consumers commit, share and diff. A null is the one member
+// admitted rather than refused, because a yaml key written with no value parses to one and the
+// compatibility target flattens it as the text None.
+inline std::string format_result(const pybind11::dict &priv, log_sink &log, const pybind11::object &result)
 {
+    if(result.is_none())
+    {
+        log.log(level::warn, "the expression result is null; it serializes as the text None");
+        return "None";
+    }
     if(pybind11::isinstance<pybind11::str>(result))
         return result.cast<std::string>();
     if(pybind11::isinstance<pybind11::bool_>(result))
@@ -90,7 +104,10 @@ inline std::string format_result(const pybind11::dict &priv, const pybind11::obj
     if(pybind11::isinstance<pybind11::list>(result) || pybind11::isinstance<pybind11::dict>(result)
         || pybind11::isinstance<pybind11::tuple>(result))
         return plain_container_marker + pybind11::str(result).cast<std::string>() + plain_container_marker;
-    return pybind11::str(result).cast<std::string>();
+    if(pybind11::isinstance<pybind11::int_>(result))
+        return pybind11::str(result).cast<std::string>();
+    throw std::runtime_error("a " + pybind11::type::handle_of(result).attr("__name__").cast<std::string>()
+        + " is not a serializable expression result");
 }
 
 }

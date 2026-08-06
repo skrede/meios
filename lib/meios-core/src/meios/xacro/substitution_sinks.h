@@ -62,6 +62,15 @@ public:
             replay_one(entry, sink);
     }
 
+    void replay_warnings(log_sink &sink) const
+    {
+        for(const buffered &entry : m_records)
+        {
+            if(entry.lvl == level::warn)
+                replay_one(entry, sink);
+        }
+    }
+
 private:
     std::vector<buffered> m_records;
 
@@ -78,9 +87,14 @@ private:
     }
 };
 
-// Upgrades an unlocated, code-less error the injected backend emits to a typed, located
-// record anchored at the hosting node, so a diagnostic escaping a message-only evaluator
-// still leaves the layer with a code and a real position.
+// Upgrades an unlocated, code-less error or warning the injected backend emits to a typed,
+// located record anchored at the hosting node, so a diagnostic escaping a message-only
+// evaluator still leaves the layer with a code and a real position.
+// The message-only overload asserts the code rather than receiving one, because a backend
+// emitting through it has none to give: every unlocated code-less backend warn on this path is
+// therefore typed as an expression error. That is right for every warn the path carries today,
+// so a backend warn that is not about an expression must arrive through the overload carrying
+// its own code rather than relying on this one.
 class relocating_sink final : public log_sink
 {
 public:
@@ -94,7 +108,7 @@ public:
 
     void log(level lvl, const std::string &message) override
     {
-        if(lvl == level::error)
+        if(lvl == level::error || lvl == level::warn)
             m_inner.log(lvl, diagnostic_code::expression_error, m_at, message);
         else
             m_inner.log(lvl, message);

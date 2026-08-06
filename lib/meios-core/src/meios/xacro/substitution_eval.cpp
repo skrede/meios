@@ -68,7 +68,9 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
 // diagnostics are captured: a genuine error and a refusal are replayed and still
 // hard-fail, while an unsupported failure is left to expand_span to leave verbatim.
 // Either way the loud path runs through the latch, so a terminal evaluation failure
-// carries the code the evaluator itself reported.
+// carries the code the evaluator itself reported. A warning about a value that did resolve
+// survives a lenient policy, unlike a failure diagnostic: the value reached output, so what
+// was said about it must reach the author too.
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
 {
     std::string_view expr             = trim(expression);
@@ -81,7 +83,10 @@ std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression
     capture_sink buffer;
     std::optional<std::string> out = run_backend(ctx, expr, buffer);
     if(out)
+    {
+        buffer.replay_warnings(loud);
         return out;
+    }
     if(ctx.last_kind == eval_failure_kind::error || ctx.last_kind == eval_failure_kind::refused)
         buffer.replay(loud);
     return std::nullopt;
