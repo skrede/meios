@@ -1,3 +1,14 @@
+add_executable(flatten_description flatten_description.cpp)
+target_link_libraries(flatten_description PRIVATE meios::urdf meios::bundle)
+target_include_directories(flatten_description PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(flatten_description)
+add_test(NAME example_flatten_description COMMAND flatten_description)
+
+add_executable(bundle_folder bundle_folder.cpp)
+target_link_libraries(bundle_folder PRIVATE meios::urdf meios::bundle)
+meios_warnings(bundle_folder)
+add_test(NAME example_bundle_folder COMMAND bundle_folder)
+
 if(TARGET meios_archive-zip)
     add_executable(archive_bundle archive_bundle.cpp)
     target_link_libraries(archive_bundle PRIVATE meios::urdf meios::archive-zip)
