@@ -217,6 +217,49 @@ meios computed while reading rather than something you reconstruct afterwards.
 
 More programs to read: [`examples/`](examples/).
 
+## Continuous integration
+
+[![Sanitizers](https://github.com/skrede/meios/actions/workflows/sanitizers.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/sanitizers.yml)
+[![Clang-Tidy](https://github.com/skrede/meios/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/clang-tidy.yml)
+[![Canary](https://github.com/skrede/meios/actions/workflows/canary.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/canary.yml)
+[![Nightly](https://github.com/skrede/meios/actions/workflows/nightly.yml/badge.svg)](https://github.com/skrede/meios/actions/workflows/nightly.yml)
+
+Every push runs the three platform workflows in the header. Each one is a fan-out of jobs rather than
+a single build, and the integration-shaped ones are the point: meios is *installed* and then consumed
+from that install tree, on all three platforms, by a project that lives outside its build.
+
+| What is proven | Job | Linux | macOS | Windows |
+|---|---|:--:|:--:|:--:|
+| Compiles and tests | `build` — GCC 14 and Clang 18 / AppleClang / MSVC | ● | ● | ● |
+| **Installs, then a separate project consumes it** — `find_package` against the install prefix, built and run | `install-test` | ● | ● | ● |
+| **An installed program finds its deployed description** — the resource consumer is installed and the installed binary is run | `install-test` | ● | ● | ● |
+| Enrichment targets build and pass together | `enrichments` | ● | ● | ● |
+| The example programs build and run | `examples` | ● | ● | ● |
+| **Every C++ block in this README and in `docs/` is extracted and compiled** | `docs` | ● | ● | ● |
+| The CLI builds and its unit tests pass | `tools` | ● | ● | ● |
+| Generative properties of the xacro evaluator | `property-tests` (RapidCheck) | ● | ● | ● |
+| An optional dependency is absent as well as present | `eval-python` — Python found *and* absent | ● | | |
+| A pinned known-good and known-faulty document pair | `corpus` | ● | | |
+| Header-guard uniqueness and format | `header-guards` | ● | | |
+| No header over the size ceiling unless registered | `file-size` | ● | | |
+| Line coverage, uploaded to Codecov | `build` → gcovr | ● | | |
+
+Consuming from a *subproject* or `FetchContent` acquisition is covered too, by the CMake integration
+suite that runs inside the platform workflows: install opt-in versus decline, export-set legality
+when a dependency was fetched rather than found, the installed module manifest, resource deployment
+and pruning, and the configure-time refusals — each an end-to-end sub-configure of a real consumer
+tree.
+
+Four workflows are deliberately **advisory** — they report without blocking a merge, and promotion to
+a required gate would be a visible decision rather than a silent one:
+
+| Workflow | What it watches | Why advisory |
+|---|---|---|
+| Sanitizers | asan/ubsan and tsan, with a step asserting the library object really carries the instrumentation; plus four fuzz harnesses, existence checked, run 60s each | findings are triaged, not merge-blocking |
+| Clang-Tidy | first-party `lib/` translation units | the check itself says so, in its own job output |
+| Canary | newest-toolchain drift, `gcc:latest`, warnings-as-errors forced off | a benign new-compiler diagnostic must not red-light the pipeline |
+| Nightly | corpus breadth over expression-valued documents from a third-party host | fetches an upstream every run, so it can fail for reasons that are not meios |
+
 ## Documentation
 
 Start at the [documentation hub](docs/README.md), which routes you to a tier — `load()` a description
