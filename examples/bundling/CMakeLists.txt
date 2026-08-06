@@ -1,0 +1,6 @@
+if(TARGET meios_archive-zip)
+    add_executable(archive_bundle archive_bundle.cpp)
+    target_link_libraries(archive_bundle PRIVATE meios::urdf meios::archive-zip)
+    meios_warnings(archive_bundle)
+    add_test(NAME example_archive_bundle COMMAND archive_bundle)
+endif()

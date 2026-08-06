@@ -12,32 +12,6 @@ configure_file(example_paths.h.in ${CMAKE_CURRENT_BINARY_DIR}/example_paths.h @O
 # own binary directory would bind the group to where the dispatcher happens to sit.
 set(MEIOS_EXAMPLE_GENERATED_INCLUDE ${CMAKE_CURRENT_BINARY_DIR})
 
-# Every group listfile gates an enrichment example on the enrichment TARGET, not its option: an
-# option can be ON with no materialized target (an empty source glob, or a missing optional
-# dependency), so a target guard keeps an all-enrichments-OFF configure green.
-add_subdirectory(loading)
-add_subdirectory(scanners)
-
-add_executable(xacro_overrides xacro_overrides.cpp)
-target_link_libraries(xacro_overrides PRIVATE meios::core meios::model meios::urdf)
-target_include_directories(xacro_overrides PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
-meios_warnings(xacro_overrides)
-add_test(NAME example_xacro_overrides COMMAND xacro_overrides)
-
-if(TARGET meios_ros-package)
-    add_executable(ros_resolve ros_resolve.cpp)
-    target_link_libraries(ros_resolve PRIVATE meios::urdf meios::ros-package)
-    meios_warnings(ros_resolve)
-    add_test(NAME example_ros_resolve COMMAND ros_resolve)
-endif()
-
-if(TARGET meios_archive-zip)
-    add_executable(archive_bundle archive_bundle.cpp)
-    target_link_libraries(archive_bundle PRIVATE meios::urdf meios::archive-zip)
-    meios_warnings(archive_bundle)
-    add_test(NAME example_archive_bundle COMMAND archive_bundle)
-endif()
-
 # Acquisition is declared here only because examples/ is the whole project; the split exists so a
 # consumer can declare in its top-level listfile and deploy in the subdirectory owning the target.
 #
@@ -60,13 +34,12 @@ if(MEIOS_EXAMPLE_FETCH_NETWORK)
     list(APPEND MEIOS_EXAMPLE_RESOURCES example_kuka)
 endif()
 
-add_executable(deploy_resources deploy_resources.cpp)
-target_link_libraries(deploy_resources PRIVATE meios::core meios::model meios::urdf)
-meios_warnings(deploy_resources)
-# No install form here on purpose: the examples are never install(TARGETS)-ed, so installing their
-# resources would put description data in the install tree with no program to read it. A consumer
-# that installs its executable wants INSTALL_RUNTIME_RELATIVE alongside this call.
-meios_target_deploy_resources(deploy_resources
-    RESOURCES ${MEIOS_EXAMPLE_RESOURCES}
-    SUBDIR    urdf)
-add_test(NAME example_deploy_resources COMMAND deploy_resources)
+# Every group listfile gates an enrichment example on the enrichment TARGET, not its option: an
+# option can be ON with no materialized target (an empty source glob, or a missing optional
+# dependency), so a target guard keeps an all-enrichments-OFF configure green.
+add_subdirectory(bundling)
+add_subdirectory(diagnostics)
+add_subdirectory(loading)
+add_subdirectory(resources)
+add_subdirectory(scanners)
+add_subdirectory(sources)

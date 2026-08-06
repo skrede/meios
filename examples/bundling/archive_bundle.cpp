@@ -25,5 +25,9 @@ int main()
 
     std::error_code ec;
     std::filesystem::remove(archive_path, ec);
+
+    if(result.status != meios::emit_status::ok)
+        return 1;
+
     return 0;
 }

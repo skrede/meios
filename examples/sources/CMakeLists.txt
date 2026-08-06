@@ -1,0 +1,6 @@
+if(TARGET meios_ros-package)
+    add_executable(ros_resolve ros_resolve.cpp)
+    target_link_libraries(ros_resolve PRIVATE meios::urdf meios::ros-package)
+    meios_warnings(ros_resolve)
+    add_test(NAME example_ros_resolve COMMAND ros_resolve)
+endif()

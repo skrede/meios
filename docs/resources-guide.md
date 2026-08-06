@@ -513,9 +513,9 @@ them any record that anything was missing.
 
 Two, covering the two halves of the story:
 
-- **`examples/deploy_resources.cpp`** with `examples/CMakeLists.txt` — build-tree deployment,
-  declared both offline via `SOURCE_DIR` and, under `MEIOS_EXAMPLE_FETCH_NETWORK`, from a pinned
-  archive. Both land in one runtime directory, which is what the plural `RESOURCES` argument is for.
+- **`examples/resources/deploy_resources.cpp`**, declared in `examples/CMakeLists.txt` and deployed
+  in `examples/resources/CMakeLists.txt` — build-tree deployment, declared both offline via
+  `SOURCE_DIR` and, under `MEIOS_EXAMPLE_FETCH_NETWORK`, from a pinned archive. Both land in one runtime directory, which is what the plural `RESOURCES` argument is for.
   Built as part of the meios build with `MEIOS_BUILD_EXAMPLES=ON`.
 
 - **`examples/install_consumer/`** — a standalone project that configures against an *installed*
