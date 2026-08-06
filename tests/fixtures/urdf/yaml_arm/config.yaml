@@ -5,3 +5,14 @@ joints:
     upper: 1.5
     effort: 100.0
     velocity: 2.0
+  elbow:
+    height: 0.4
+    lower: -2.0
+    upper: 2.5
+    effort: 60.0
+    velocity: 3.5
+segments:
+  - name: upper_arm
+    length: 0.31
+  - name: forearm
+    length: 0.27

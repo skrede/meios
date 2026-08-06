@@ -127,6 +127,11 @@ if(TARGET meios_eval-python)
         target_link_libraries(urdf_yaml_flatten_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::eval-python
                 Catch2::Catch2WithMain)
+        # The marker case flattens to text through the same expansion the load path drives,
+        # which needs the real YAML acquisition loader, a compiled core-private symbol; a
+        # fake in its place would resolve the configuration by rules of its own.
+        target_include_directories(urdf_yaml_flatten_test PRIVATE
+            ${meios_SOURCE_DIR}/lib/meios-core/src)
         target_compile_definitions(urdf_yaml_flatten_test PRIVATE
             MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
         # Real published descriptions are too large to vendor; point this at a local

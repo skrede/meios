@@ -6,6 +6,7 @@
 
   <link name="base_link"/>
   <link name="shoulder_link"/>
+  <link name="elbow_link"/>
 
   <joint name="shoulder_joint" type="revolute">
     <parent link="base_link"/>
@@ -14,5 +15,14 @@
     <axis xyz="0 0 1"/>
     <limit lower="${shoulder['lower']}" upper="${shoulder['upper']}"
            effort="${shoulder['effort']}" velocity="${shoulder['velocity']}"/>
+  </joint>
+
+  <joint name="elbow_joint" type="revolute">
+    <parent link="shoulder_link"/>
+    <child link="elbow_link"/>
+    <origin xyz="${config['segments'][1].length} 0 ${joints.elbow.height}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${joints.elbow.lower}" upper="${joints.elbow.upper}"
+           effort="${joints.elbow.effort}" velocity="${joints.elbow.velocity}"/>
   </joint>
 </robot>
