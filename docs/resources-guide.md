@@ -427,7 +427,7 @@ and the python backend says outright what asking for it means:
 That is the whole disclosure, and it is informative rather than a gate — you opened the door by
 writing the backend into your own listfile. What is a gate is the other direction: asking for
 `python` in a build whose binary does not carry the evaluation enrichment is a configure error
-naming `MEIOS_BUILD_EVAL_PYTHON`, never a quiet substitution of the core evaluator. A backend name
+naming `MEIOS_EVAL_PYTHON_SUPPORT`, never a quiet substitution of the core evaluator. A backend name
 that is neither of the two is refused with the accepted values listed.
 
 The command-line tool is not as strict about that last one. See

@@ -104,7 +104,7 @@ function(_meios_flatten_eval target eval out)
             message(FATAL_ERROR
                 "meios_target_flatten_resource(${target}): EVAL python needs a meios binary "
                 "built with the python evaluator, and this one is not. Configure with "
-                "MEIOS_BUILD_EVAL_PYTHON=ON, or pass EVAL ${_default}.")
+                "MEIOS_EVAL_PYTHON_SUPPORT=ON, or pass EVAL ${_default}.")
         endif()
     endif()
     set(${out} "${eval}" PARENT_SCOPE)

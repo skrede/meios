@@ -22,7 +22,7 @@ meios_cmake_case(cmake_flatten_eval_python_refusal
     FIXTURE flatten
     ORIGIN  tarball
     EXTRA   "${_cli}" ${_declare} -DFX_EVAL=python -DMEIOS_CLI_HAS_EVAL_PYTHON=FALSE
-    REFUSES "Configure[ \t\r\n]+with[ \t\r\n]+MEIOS_BUILD_EVAL_PYTHON=ON")
+    REFUSES "Configure[ \t\r\n]+with[ \t\r\n]+MEIOS_EVAL_PYTHON_SUPPORT=ON")
 
 meios_cmake_case(cmake_flatten_eval_python_statement
     FIXTURE flatten

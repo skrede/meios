@@ -83,7 +83,7 @@ meios_cmake_case(cmake_subproject_install_optin_too_late
 meios_cmake_case(cmake_install_reason_fetched_dependency
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake
-    EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=ON -DMEIOS_BUILD_ARCHIVE_ZIP=ON
+    EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=ON -DMEIOS_ARCHIVE_ZIP_SUPPORT=ON
             -DMEIOS_CMAKE_FETCH_DEPS=ON
     INSTALL ON
     TIMEOUT 900

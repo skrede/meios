@@ -65,12 +65,12 @@ FetchContent_Declare(
     SYSTEM
     FIND_PACKAGE_ARGS NAMES pybind11 GLOBAL
 )
-if(MEIOS_BUILD_SCAN_GLTF)
+if(MEIOS_SCAN_GLTF_SUPPORT)
     set(JSON_BuildTests OFF)
     FetchContent_MakeAvailable(nlohmann_json)
     _meios_record_dependency_install(nlohmann_json JSON_Install "${nlohmann_json_SOURCE_DIR}")
 endif()
-if(MEIOS_BUILD_ARCHIVE_ZIP)
+if(MEIOS_ARCHIVE_ZIP_SUPPORT)
     FetchContent_MakeAvailable(miniz)
     # A found miniz arrives namespaced from its own config package and the fetched project
     # declares no alias at all, so one spelling serves both paths. Without it a link site is
@@ -84,7 +84,7 @@ endif()
 # No install fact is recorded for the interpreter binding: the module that links it withholds
 # itself from the export, so nothing in the export set reaches it and recording it would degrade
 # every other module's install because of one module's link edge.
-if(MEIOS_BUILD_EVAL_PYTHON)
+if(MEIOS_EVAL_PYTHON_SUPPORT)
     FetchContent_MakeAvailable(pybind11)
 endif()
 

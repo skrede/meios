@@ -63,15 +63,15 @@ target_include_directories(meios_core PRIVATE
 if(MEIOS_SCAN_OBJ_SUPPORT)
     meios_add_enrichment(scan-obj LINK_PUBLIC meios::bundle meios::io)
 endif()
-if(MEIOS_BUILD_SCAN_STL)
+if(MEIOS_SCAN_STL_SUPPORT)
     meios_add_enrichment(scan-stl LINK_PUBLIC meios::bundle meios::io)
 endif()
-if(MEIOS_BUILD_SCAN_COLLADA)
+if(MEIOS_SCAN_COLLADA_SUPPORT)
     meios_add_enrichment(scan-collada
         LINK_PUBLIC meios::bundle meios::io
         LINK_PRIVATE pugixml::pugixml)
 endif()
-if(MEIOS_BUILD_SCAN_GLTF)
+if(MEIOS_SCAN_GLTF_SUPPORT)
     meios_add_enrichment(scan-gltf
         LINK_PUBLIC meios::bundle meios::io
         LINK_PRIVATE nlohmann_json::nlohmann_json)
@@ -84,7 +84,7 @@ if(MEIOS_ROS_PACKAGE_SUPPORT)
         LINK_PUBLIC meios::io
         LINK_PRIVATE pugixml::pugixml)
 endif()
-if(MEIOS_BUILD_ARCHIVE_ZIP)
+if(MEIOS_ARCHIVE_ZIP_SUPPORT)
     meios_add_enrichment(archive-zip
         LINK_PUBLIC meios::bundle meios::io
         LINK_PRIVATE miniz::miniz)
@@ -95,7 +95,7 @@ endif()
 
 # eval-python drives a found (never fetched) interpreter; if Python3's embed
 # component is absent the target is skipped rather than failing the configure.
-if(MEIOS_BUILD_EVAL_PYTHON)
+if(MEIOS_EVAL_PYTHON_SUPPORT)
     if(MEIOS_REQUIRE_EVAL_PYTHON)
         find_package(Python3 QUIET COMPONENTS Interpreter Development.Embed)
         if(NOT Python3_FOUND)

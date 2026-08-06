@@ -43,7 +43,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/deps" \
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
             -DMEIOS_BUILD_TESTS=ON \
-            -DMEIOS_BUILD_EVAL_PYTHON=ON \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=ON \
             -DMEIOS_REQUIRE_EVAL_PYTHON=ON \
             -DMEIOS_FETCH_CORPUS=ON \
             -DMEIOS_CORPUS_BREADTH=ON \

@@ -49,7 +49,7 @@ if(TARGET meios_eval-python)
     meios_cmake_case(cmake_install_withholds_backend
         FIXTURE subproject
         DRIVER  meios_subproject_case.cmake
-        EXTRA   ${_export_build} -DMEIOS_BUILD_TOOLS=ON -DMEIOS_BUILD_EVAL_PYTHON=ON
+        EXTRA   ${_export_build} -DMEIOS_BUILD_TOOLS=ON -DMEIOS_EVAL_PYTHON_SUPPORT=ON
                 -DMEIOS_REQUIRE_EVAL_PYTHON=ON
         BUILD_TARGET meios
         INSTALL ON

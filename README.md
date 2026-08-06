@@ -83,11 +83,11 @@ The enrichments are separate targets behind separate options. One is on by defau
 |--------|---------|---------|--------|
 | `meios::ros` | `package://` resolution through ROS package manifests | **ON** | `MEIOS_ROS_PACKAGE_SUPPORT` |
 | `meios::scan-obj` | Wavefront `.obj` reference scanning | off | `MEIOS_SCAN_OBJ_SUPPORT` |
-| `meios::scan-stl` | STL reference scanning (a typed no-op: STL references nothing) | off | `MEIOS_BUILD_SCAN_STL` |
-| `meios::scan-collada` | COLLADA reference scanning | off | `MEIOS_BUILD_SCAN_COLLADA` |
-| `meios::scan-gltf` | glTF and GLB reference scanning | off | `MEIOS_BUILD_SCAN_GLTF` |
-| `meios::archive-zip` | Bundling into a single `.zip` archive | off | `MEIOS_BUILD_ARCHIVE_ZIP` |
-| `meios::eval-python` | Python-backed expression evaluation against a found interpreter | off | `MEIOS_BUILD_EVAL_PYTHON` |
+| `meios::scan-stl` | STL reference scanning (a typed no-op: STL references nothing) | off | `MEIOS_SCAN_STL_SUPPORT` |
+| `meios::scan-collada` | COLLADA reference scanning | off | `MEIOS_SCAN_COLLADA_SUPPORT` |
+| `meios::scan-gltf` | glTF and GLB reference scanning | off | `MEIOS_SCAN_GLTF_SUPPORT` |
+| `meios::archive-zip` | Bundling into a single `.zip` archive | off | `MEIOS_ARCHIVE_ZIP_SUPPORT` |
+| `meios::eval-python` | Python-backed expression evaluation against a found interpreter | off | `MEIOS_EVAL_PYTHON_SUPPORT` |
 
 `MEIOS_BUILD_TOOLS` additionally builds the `meios` command-line tool, which inspects, flattens, and
 bundles a description without writing a program.
@@ -103,7 +103,9 @@ better served by a purpose-built tool meios composes with:
 - **Dynamics** (RNEA, mass matrix, gravity/Coriolis) — use
   [Pinocchio](https://github.com/stack-of-tasks/pinocchio).
 - **Control and estimation** — see [ctrlpp](https://github.com/skrede/ctrlpp).
-- **Optimization and inverse-kinematics solving** — see [argmin](https://github.com/skrede/argmin).
+- **Optimization and inverse-kinematics solving** — the solvers are
+  [cartan](https://github.com/skrede/cartan)'s, over
+  [argmin](https://github.com/skrede/argmin) underneath.
 - **Rendering and visualization** — use [threepp](https://github.com/markaren/threepp) or your own
   renderer; meios hands you the model, you own the scene.
 - **A serialization round-trip** — meios pushes the resolved model into consumer types rather than
