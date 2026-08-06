@@ -234,7 +234,7 @@ from that install tree, on all three platforms, by a project that lives outside 
 | **Installs, then a separate project consumes it** — `find_package` against the install prefix, built and run | `install-test` | ● | ● | ● |
 | **An installed program finds its deployed description** — the resource consumer is installed and the installed binary is run | `install-test` | ● | ● | ● |
 | Enrichment targets build and pass together | `enrichments` | ● | ● | ● |
-| The example programs build and run | `examples` | ● | ● | ● |
+| The example programs compile | `examples` | ● | ● | ● |
 | **Every C++ block in this README and in `docs/` is extracted and compiled** | `docs` | ● | ● | ● |
 | The CLI builds and its unit tests pass | `tools` | ● | ● | ● |
 | Generative properties of the xacro evaluator | `property-tests` (RapidCheck) | ● | ● | ● |
