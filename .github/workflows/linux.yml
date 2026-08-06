@@ -479,6 +479,20 @@ jobs:
           echo "eval_python_marker_input registered $registered test(s)"
           ctest -R '^eval_python_marker_input\.' --output-on-failure --no-tests=error
 
+      # The table stating which container spellings gain dotted access is only a
+      # specification while its rows execute, and a -R filter that selects nothing
+      # exits 0, so the stem asserts it registered before the rows are run.
+      - name: Assert the container-access table ran (Python found)
+        run: |
+          cd build-py
+          registered=$(ctest -N -R '^eval_python_container_table\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "eval_python_container_table registered no tests"
+            exit 1
+          fi
+          echo "eval_python_container_table registered $registered test(s)"
+          ctest -R '^eval_python_container_table\.' --output-on-failure --no-tests=error
+
       # The build-time flatten that really runs Python registers only where the
       # CLI carries the backend, so it is asserted present for the same reason:
       # a case that quietly stopped registering would pass as a green filtered

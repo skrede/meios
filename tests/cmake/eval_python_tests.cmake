@@ -106,6 +106,21 @@ if(TARGET meios_eval-python)
             TEST_PREFIX "eval_python_marker_input.")
     endif()
 
+    set(eval_python_container_table_src
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_container_table_test.cpp)
+    if(EXISTS ${eval_python_container_table_src})
+        add_executable(eval_python_container_table_test ${eval_python_container_table_src})
+        target_link_libraries(eval_python_container_table_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                Catch2::Catch2WithMain)
+        target_compile_definitions(eval_python_container_table_test PRIVATE
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(eval_python_container_table_test)
+        meios_warnings(eval_python_container_table_test)
+        catch_discover_tests(eval_python_container_table_test
+            TEST_PREFIX "eval_python_container_table.")
+    endif()
+
     set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
     if(EXISTS ${urdf_yaml_flatten_src})
         add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})
