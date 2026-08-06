@@ -545,8 +545,8 @@ jobs:
             -DMEIOS_BUILD_EVAL_PYTHON=ON \
             -DMEIOS_REQUIRE_EVAL_PYTHON=ON
           cmake --build build-py-install
-          cmake --install build-py-install --prefix "${{ github.workspace }}/install-py"
-          prefix="${{ github.workspace }}/install-py"
+          cmake --install build-py-install --prefix "${{ runner.temp }}/install-py"
+          prefix="${{ runner.temp }}/install-py"
           test -x "$prefix/bin/meios"
           grep -q 'MEIOS_CLI_HAS_EVAL_PYTHON TRUE' "$prefix/lib/cmake/meios/meiosConfig.cmake"
           for withheld in lib/libmeios_eval-python.a include/meios/eval; do

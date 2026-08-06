@@ -5,16 +5,24 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <fstream>
 #include <filesystem>
 #include <string_view>
 
 namespace
 {
 
-using cmake_listfile::is_foreign_tree;
 using cmake_listfile::listfile_scan;
 using cmake_listfile::occurrence;
 using cmake_listfile::scan_repository;
+
+// A tree configured where git could not be asked has no set to scan. Reporting that and skipping is
+// the honest outcome: an empty scan would satisfy every claim below and prove none of them.
+void require_manifest()
+{
+    if(!std::filesystem::exists(std::filesystem::path{ MEIOS_TRACKED_LISTFILES }))
+        SKIP("no tracked-listfile manifest was generated for this build tree");
+}
 
 enum class reach
 {
@@ -81,8 +89,9 @@ bool still_occurs(const exemption &entry, const std::vector<occurrence> &occurre
 
 }
 
-TEST_CASE("cmake_listfile_scope: the walk reads the repository's listfiles")
+TEST_CASE("cmake_listfile_scope: the scan reads the repository's listfiles")
 {
+    require_manifest();
     const listfile_scan found = scan_repository();
     REQUIRE(found.files > 0);
     REQUIRE_FALSE(found.occurrences.empty());
@@ -90,6 +99,7 @@ TEST_CASE("cmake_listfile_scope: the walk reads the repository's listfiles")
 
 TEST_CASE("cmake_listfile_scope: no listfile outside the allowlist names the top of the build")
 {
+    require_manifest();
     const listfile_scan found = scan_repository();
     REQUIRE(found.files > 0);
     for(const occurrence &at : found.occurrences)
@@ -99,23 +109,27 @@ TEST_CASE("cmake_listfile_scope: no listfile outside the allowlist names the top
     }
 }
 
-// The walk had no such rule until a dependency's source, checked out beside this repository's own
-// by CI rather than by any listfile here, put its CMAKE_SOURCE_DIR lines in front of the claim
-// above. Pinned on the predicate because scan_repository reads one fixed root.
-TEST_CASE("cmake_listfile_scope: a second repository's working copy is not this one's")
+// Twice the claim above was reddened by a listfile nobody here wrote: a dependency's source checked
+// out beside this repository's own, then this repository's own modules installed into a prefix
+// inside it. Both sat in the working copy and neither was tracked, which is the whole distinction
+// the scan now draws -- so a file placed in the tree by anything other than a commit is the case.
+TEST_CASE("cmake_listfile_scope: an untracked listfile in the working copy is not scanned")
 {
-    const std::filesystem::path root
-        = std::filesystem::temp_directory_path() / "meios-listfile-scope-nested";
-    std::filesystem::remove_all(root);
-    std::filesystem::create_directories(root / "checked-out" / ".git");
-    std::filesystem::create_directories(root / "authored");
-    CHECK(is_foreign_tree(root / "checked-out"));
-    CHECK_FALSE(is_foreign_tree(root / "authored"));
-    std::filesystem::remove_all(root);
+    require_manifest();
+    const std::filesystem::path intruder = std::filesystem::path{ MEIOS_REPOSITORY_ROOT }
+        / "meios-listfile-scope-untracked.cmake";
+    std::ofstream{ intruder } << "set(anything ${CMAKE_BINARY_DIR})\n";
+
+    const listfile_scan found = scan_repository();
+    std::filesystem::remove(intruder);
+
+    for(const occurrence &at : found.occurrences)
+        CHECK(at.path != "meios-listfile-scope-untracked.cmake");
 }
 
 TEST_CASE("cmake_listfile_scope: every allowlist entry still excuses a live occurrence")
 {
+    require_manifest();
     const listfile_scan found = scan_repository();
     REQUIRE_FALSE(found.occurrences.empty());
     for(const exemption &entry : allowlist)

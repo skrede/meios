@@ -69,9 +69,35 @@ foreach(stem IN ITEMS arg_scan cmake_listfile_scope)
     endif()
 endforeach()
 
+# The listfiles this repository answers for are the ones it tracks. Asking git rather than walking
+# the working copy is what keeps a fetched dependency's source, an install prefix, or a configured
+# build tree out of the scan; each of those lives inside the checkout and none is a source of ours.
+# A tree with no git available still builds and still registers the case -- it reports the absent
+# manifest and skips, rather than passing on an empty scan.
 if(TARGET cmake_listfile_scope_test)
+    find_package(Git QUIET)
+    set(_listfile_manifest ${CMAKE_CURRENT_BINARY_DIR}/tracked_listfiles.txt)
+    set(_listfile_tracked "")
+    set(_listfile_rc 1)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} ls-files -- "*CMakeLists.txt" "*.cmake"
+            WORKING_DIRECTORY ${meios_SOURCE_DIR}
+            OUTPUT_VARIABLE _listfile_tracked
+            RESULT_VARIABLE _listfile_rc
+            ERROR_QUIET)
+    endif()
+    if(_listfile_rc EQUAL 0 AND NOT _listfile_tracked STREQUAL "")
+        file(WRITE ${_listfile_manifest} "${_listfile_tracked}")
+    else()
+        message(WARNING
+            "meios: no tracked-listfile manifest could be derived from git, so the listfile-scope "
+            "case will skip rather than scan an unknown set.")
+        file(REMOVE ${_listfile_manifest})
+    endif()
     target_compile_definitions(cmake_listfile_scope_test PRIVATE
-        MEIOS_REPOSITORY_ROOT="${meios_SOURCE_DIR}")
+        MEIOS_REPOSITORY_ROOT="${meios_SOURCE_DIR}"
+        MEIOS_TRACKED_LISTFILES="${_listfile_manifest}")
 endif()
 
 foreach(stem IN ITEMS completion_emit)

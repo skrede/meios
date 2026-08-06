@@ -27,19 +27,6 @@ struct listfile_scan
 
 constexpr std::array<std::string_view, 2> top_of_build{ "CMAKE_SOURCE_DIR", "CMAKE_BINARY_DIR" };
 
-// A configured build tree in the working copy holds hundreds of listfiles that are not repository
-// sources, and the cache file identifies one wherever a developer put it. A directory carrying its
-// own .git is a second repository's working copy, whose listfiles answer to that project's
-// conventions rather than to this one's; CI checks a dependency's source out beside this one's, so
-// the case is routine rather than hypothetical.
-inline bool is_foreign_tree(const std::filesystem::path &directory)
-{
-    const std::string name = directory.filename().string();
-    return name == ".git" || name == "_deps" || name == "CMakeFiles"
-        || std::filesystem::exists(directory / ".git")
-        || std::filesystem::exists(directory / "CMakeCache.txt");
-}
-
 inline bool is_listfile(const std::filesystem::path &file)
 {
     return file.filename() == "CMakeLists.txt" || file.extension() == ".cmake";
@@ -83,16 +70,10 @@ inline void collect(const std::string &path, int number, const std::string &line
             out.push_back({ path, number, token });
 }
 
-inline std::string repository_relative(const std::filesystem::path &file)
+inline void read_listfile(const std::string &path, listfile_scan &found)
 {
     const std::filesystem::path root{ MEIOS_REPOSITORY_ROOT };
-    return std::filesystem::relative(file, root).generic_string();
-}
-
-inline void read_listfile(const std::filesystem::path &file, listfile_scan &found)
-{
-    const std::string path = repository_relative(file);
-    std::ifstream stream{ file };
+    std::ifstream stream{ root / path };
     std::string line;
     int number = 0;
     while(std::getline(stream, line))
@@ -100,25 +81,18 @@ inline void read_listfile(const std::filesystem::path &file, listfile_scan &foun
     ++found.files;
 }
 
-inline void visit(std::filesystem::recursive_directory_iterator &walk, listfile_scan &found)
-{
-    if(walk->is_directory())
-    {
-        if(is_foreign_tree(walk->path()))
-            walk.disable_recursion_pending();
-        return;
-    }
-    if(is_listfile(walk->path()))
-        read_listfile(walk->path(), found);
-}
-
+// The subject is what the repository tracks, not what happens to sit in the working copy. A walk of
+// the tree reads whatever a build or a job left behind -- a fetched dependency's source, an install
+// prefix, a configured build tree -- and no marker distinguishes all of those from a source
+// directory, so the set is taken from version control instead of guessed at from the filesystem.
 inline listfile_scan scan_repository()
 {
-    const std::filesystem::path root{ MEIOS_REPOSITORY_ROOT };
     listfile_scan found{ 0, {} };
-    const std::filesystem::recursive_directory_iterator end;
-    for(std::filesystem::recursive_directory_iterator walk{ root }; walk != end; ++walk)
-        visit(walk, found);
+    std::ifstream manifest{ std::filesystem::path{ MEIOS_TRACKED_LISTFILES } };
+    std::string path;
+    while(std::getline(manifest, path))
+        if(!path.empty())
+            read_listfile(path, found);
     return found;
 }
 
