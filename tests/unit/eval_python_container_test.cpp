@@ -2,6 +2,8 @@
 
 #include "../marker_spelling.h"
 
+#include <meios/diagnostic/claims.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -41,18 +43,27 @@ struct journal
         meios::level lvl;
         std::string where;
         std::string message;
+        meios::diagnostic_code code;
     };
 
     std::vector<record> records;
 
     void operator()(meios::level lvl, const std::string &message)
     {
-        records.push_back({ lvl, std::string{}, message });
+        records.push_back({ lvl, std::string{}, message, meios::diagnostic_code::unspecified });
     }
 
     void operator()(meios::level lvl, const meios::source_location &at, const std::string &message)
     {
-        records.push_back({ lvl, meios::to_string(at), message });
+        records.push_back({ lvl, meios::to_string(at), message, meios::diagnostic_code::unspecified });
+    }
+
+    // Without this overload log_sink_f degrades a coded record to the located one, so the code a
+    // relocating sink synthesizes is invisible and nothing can assert it.
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &at,
+                    const std::string &message)
+    {
+        records.push_back({ lvl, meios::to_string(at), message, code });
     }
 };
 
@@ -344,6 +355,18 @@ TEST_CASE("a null result serializes as None and says so at a position", "[eval_p
     REQUIRE(warned.size() == 1);
     REQUIRE(warned.front().message.find("the expression result is null") != std::string::npos);
     REQUIRE(warned.front().where.find("robot.xacro:1:") != std::string::npos);
+}
+
+// claims_from clears a completeness bit per record code without regard to level, so a warn typed
+// as an expression failure retracts the parse claim on a load that succeeded.
+TEST_CASE("a null result warns without claiming the expression failed", "[eval_python]")
+{
+    const journaled resolved = expand_journalled(span_document("${None}"), meios::eval_policy::fail);
+    REQUIRE(resolved.expanded.has_value());
+    const std::vector<journal::record> warned = warnings(resolved);
+    REQUIRE(warned.size() == 1);
+    CHECK(warned.front().code != meios::diagnostic_code::expression_error);
+    CHECK(meios::cleared_by(warned.front().code) == meios::completeness::none);
 }
 
 TEST_CASE("a yaml key written with no value flattens as None under every policy", "[eval_python]")

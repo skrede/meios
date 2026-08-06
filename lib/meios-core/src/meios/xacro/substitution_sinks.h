@@ -87,14 +87,13 @@ private:
     }
 };
 
-// Upgrades an unlocated, code-less error or warning the injected backend emits to a typed,
-// located record anchored at the hosting node, so a diagnostic escaping a message-only
-// evaluator still leaves the layer with a code and a real position.
-// The message-only overload asserts the code rather than receiving one, because a backend
-// emitting through it has none to give: every unlocated code-less backend warn on this path is
-// therefore typed as an expression error. That is right for every warn the path carries today,
-// so a backend warn that is not about an expression must arrive through the overload carrying
-// its own code rather than relying on this one.
+// Anchors an unlocated diagnostic the injected backend emits at the hosting node, so one
+// escaping a message-only evaluator still leaves the layer with a real position.
+// The position is known here and the classification is not, so only an error is typed: a
+// terminal failure has to carry a code for the latch beneath to return it as the structured
+// cause, and reaching that latch is what an expression error means. A warning is anchored and
+// left uncoded, because claims_from clears a completeness bit per record code without regard
+// to level, so typing a warn would retract a claim on a load that succeeded.
 class relocating_sink final : public log_sink
 {
 public:
@@ -108,8 +107,10 @@ public:
 
     void log(level lvl, const std::string &message) override
     {
-        if(lvl == level::error || lvl == level::warn)
+        if(lvl == level::error)
             m_inner.log(lvl, diagnostic_code::expression_error, m_at, message);
+        else if(lvl == level::warn)
+            m_inner.log(lvl, m_at, message);
         else
             m_inner.log(lvl, message);
     }
