@@ -191,6 +191,16 @@ flattened flatten_to_text(const std::filesystem::path &path)
     return { book.errors, out->document };
 }
 
+// The serializer hands a control character to the document as a two-digit decimal reference
+// rather than as itself, so a marker surviving the strip reaches the emitted text spelled
+// "&#01;" and never as its own byte. Both spellings are the leak.
+std::string as_written(char marker)
+{
+    const int code = static_cast<int>(marker);
+    return std::string{ "&#" } + static_cast<char>('0' + code / 10)
+        + static_cast<char>('0' + code % 10) + ';';
+}
+
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
 // The smoke cases drive real published descriptions, which are far too large to vendor. A
 // developer points MEIOS_SMOKE_CORPUS_DIR at a local checkout to make them live; with no
@@ -264,8 +274,7 @@ TEST_CASE("a yaml-driven arm flattens end-to-end through the python backend", "[
     REQUIRE(elbow->limits->velocity == Catch::Approx(3.5));
 }
 
-TEST_CASE("the flattened arm carries the dotted reads and no container marker",
-          "[urdf][yaml][flatten]")
+TEST_CASE("the flattened arm carries the dotted reads", "[urdf][yaml][flatten]")
 {
     const flattened flat = flatten_to_text(fixture("yaml_arm/arm.urdf.xacro"));
 
@@ -273,11 +282,29 @@ TEST_CASE("the flattened arm carries the dotted reads and no container marker",
     REQUIRE(flat.errors == 0);
     REQUIRE(flat.document->find("xyz=\"0.27 0 0.4\"") != std::string::npos);
     REQUIRE(flat.document->find("lower=\"-2.0\" upper=\"2.5\"") != std::string::npos);
+}
+
+// A robot description writes only scalar leaves, so no container is ever emitted whole from one
+// and an absence assertion over its flattened text cannot fail. The probe document exists to
+// carry a container across each seam the strip guards, one marker at each: a yaml-sourced
+// mapping into an attribute value, a plain list into element text. The two span assertions match
+// each container's body without the delimiters around it, so an unstripped marker leaves them
+// passing and the loop below is what reports it.
+TEST_CASE("a description emitting containers whole carries no container marker",
+          "[urdf][yaml][flatten]")
+{
+    const flattened flat = flatten_to_text(fixture("container_probe/probe.xacro"));
+
+    REQUIRE(flat.document.has_value());
+    REQUIRE(flat.errors == 0);
+    REQUIRE(flat.document->find("{'upper': 1.5}") != std::string::npos);
+    REQUIRE(flat.document->find("[1, 2]") != std::string::npos);
 
     for(char marker : meios::detail::container_markers)
     {
         INFO(static_cast<int>(marker));
-        REQUIRE(flat.document->find(marker) == std::string::npos);
+        CHECK(flat.document->find(marker) == std::string::npos);
+        CHECK(flat.document->find(as_written(marker)) == std::string::npos);
     }
 }
 
