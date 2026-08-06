@@ -1,3 +1,18 @@
+add_executable(directory_source directory_source.cpp)
+target_link_libraries(directory_source PRIVATE meios::core meios::model meios::io)
+meios_warnings(directory_source)
+add_test(NAME example_directory_source COMMAND directory_source)
+
+add_executable(memory_source memory_source.cpp)
+target_link_libraries(memory_source PRIVATE meios::core meios::model meios::io)
+meios_warnings(memory_source)
+add_test(NAME example_memory_source COMMAND memory_source)
+
+add_executable(stacked_sources stacked_sources.cpp)
+target_link_libraries(stacked_sources PRIVATE meios::core meios::model meios::io)
+meios_warnings(stacked_sources)
+add_test(NAME example_stacked_sources COMMAND stacked_sources)
+
 if(TARGET meios_ros-package)
     add_executable(ros_resolve ros_resolve.cpp)
     target_link_libraries(ros_resolve PRIVATE meios::urdf meios::ros-package)
