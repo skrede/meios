@@ -5,11 +5,13 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <filesystem>
 #include <string_view>
 
 namespace
 {
 
+using cmake_listfile::is_foreign_tree;
 using cmake_listfile::listfile_scan;
 using cmake_listfile::occurrence;
 using cmake_listfile::scan_repository;
@@ -95,6 +97,21 @@ TEST_CASE("cmake_listfile_scope: no listfile outside the allowlist names the top
         INFO(at.path << ':' << at.line << " names " << at.variable);
         CHECK(exempt(at));
     }
+}
+
+// The walk had no such rule until a dependency's source, checked out beside this repository's own
+// by CI rather than by any listfile here, put its CMAKE_SOURCE_DIR lines in front of the claim
+// above. Pinned on the predicate because scan_repository reads one fixed root.
+TEST_CASE("cmake_listfile_scope: a second repository's working copy is not this one's")
+{
+    const std::filesystem::path root
+        = std::filesystem::temp_directory_path() / "meios-listfile-scope-nested";
+    std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root / "checked-out" / ".git");
+    std::filesystem::create_directories(root / "authored");
+    CHECK(is_foreign_tree(root / "checked-out"));
+    CHECK_FALSE(is_foreign_tree(root / "authored"));
+    std::filesystem::remove_all(root);
 }
 
 TEST_CASE("cmake_listfile_scope: every allowlist entry still excuses a live occurrence")

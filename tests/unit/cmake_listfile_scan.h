@@ -28,11 +28,15 @@ struct listfile_scan
 constexpr std::array<std::string_view, 2> top_of_build{ "CMAKE_SOURCE_DIR", "CMAKE_BINARY_DIR" };
 
 // A configured build tree in the working copy holds hundreds of listfiles that are not repository
-// sources, and the cache file identifies one wherever a developer put it.
-inline bool is_generated_tree(const std::filesystem::path &directory)
+// sources, and the cache file identifies one wherever a developer put it. A directory carrying its
+// own .git is a second repository's working copy, whose listfiles answer to that project's
+// conventions rather than to this one's; CI checks a dependency's source out beside this one's, so
+// the case is routine rather than hypothetical.
+inline bool is_foreign_tree(const std::filesystem::path &directory)
 {
     const std::string name = directory.filename().string();
     return name == ".git" || name == "_deps" || name == "CMakeFiles"
+        || std::filesystem::exists(directory / ".git")
         || std::filesystem::exists(directory / "CMakeCache.txt");
 }
 
@@ -100,7 +104,7 @@ inline void visit(std::filesystem::recursive_directory_iterator &walk, listfile_
 {
     if(walk->is_directory())
     {
-        if(is_generated_tree(walk->path()))
+        if(is_foreign_tree(walk->path()))
             walk.disable_recursion_pending();
         return;
     }
