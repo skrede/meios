@@ -60,7 +60,7 @@ set(_doc_snippet_link_libs meios::urdf)
 # glob-materialized or embed-dependent enrichment may be absent even with its
 # option ON), and reported (skipped) otherwise.
 set(_doc_snippet_capabilities
-    scan-obj scan-stl scan-collada scan-gltf ros archive-zip eval-python)
+    scan-obj scan-stl scan-collada scan-gltf ros-package archive-zip eval-python)
 
 foreach (_cap IN LISTS _doc_snippet_capabilities)
     file(GLOB _doc_snippet_group CONFIGURE_DEPENDS ${_doc_snippet_gen_dir}/${_cap}/*.cpp)

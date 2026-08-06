@@ -48,7 +48,7 @@ CAPABILITIES = (
     "scan-stl",
     "scan-collada",
     "scan-gltf",
-    "ros",
+    "ros-package",
     "archive-zip",
     "eval-python",
 )

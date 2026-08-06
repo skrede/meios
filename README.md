@@ -81,7 +81,7 @@ The enrichments are separate targets behind separate options. One is on by defau
 
 | Target | Carries | Default | Option |
 |--------|---------|---------|--------|
-| `meios::ros` | `package://` resolution through ROS package manifests | **ON** | `MEIOS_ROS_PACKAGE_SUPPORT` |
+| `meios::ros-package` | `package://` resolution through ROS package manifests | **ON** | `MEIOS_ROS_PACKAGE_SUPPORT` |
 | `meios::scan-obj` | Wavefront `.obj` reference scanning | off | `MEIOS_SCAN_OBJ_SUPPORT` |
 | `meios::scan-stl` | STL reference scanning (a typed no-op: STL references nothing) | off | `MEIOS_SCAN_STL_SUPPORT` |
 | `meios::scan-collada` | COLLADA reference scanning | off | `MEIOS_SCAN_COLLADA_SUPPORT` |

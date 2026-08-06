@@ -34,8 +34,8 @@ endforeach()
 # ROS package resolution composes as an ordinary source layer, gated the same way
 # a scanner is: only when the enrichment target is built does the CLI link it and
 # define the guard that folds a ros_package_source into build_sources.
-if(TARGET meios_ros)
-    target_link_libraries(meios_cli PRIVATE meios::ros)
+if(TARGET meios_ros-package)
+    target_link_libraries(meios_cli PRIVATE meios::ros-package)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_ROS)
     # A global property for the same reason the python one is: the flatten call that reads it may be
     # written in any directory, and a variable set here would reach only the parent.

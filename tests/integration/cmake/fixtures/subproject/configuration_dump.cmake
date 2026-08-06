@@ -23,7 +23,7 @@ endfunction()
 function(fx_write_configuration path)
     set(_dump "")
     foreach(_name IN ITEMS core model io urdf xacro bundle completion scan-obj scan-collada
-                           scan-stl scan-gltf archive-zip eval-python ros cli)
+                           scan-stl scan-gltf archive-zip eval-python ros-package cli)
         if(NOT TARGET meios::${_name})
             string(APPEND _dump "meios::${_name} absent\n")
             continue()

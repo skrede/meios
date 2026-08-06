@@ -85,9 +85,9 @@ meios_cmake_case(cmake_flatten_orders_after_deploy
 # joining the reference onto the entry cannot resolve it either — only the manifest read under the
 # added root can — and the expected link exists in no other package in the tree.
 #
-# That manifest read is what meios::ros carries, so the case registers only where the binary was
-# really built with it. The enrichment is on by default, so this excuses the case in a deliberately
-# minimal build rather than in an ordinary one.
+# That manifest read is what meios::ros-package carries, so the case registers only where the
+# binary was really built with it. The enrichment is on by default, so this excuses the case in a
+# deliberately minimal build rather than in an ordinary one.
 get_property(_cli_has_ros GLOBAL PROPERTY MEIOS_CLI_HAS_ROS)
 if(_cli_has_ros)
     meios_cmake_case(cmake_flatten_package_path_reaches_vendored_package

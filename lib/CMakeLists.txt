@@ -80,7 +80,7 @@ if(MEIOS_SCAN_GLTF_SUPPORT)
     endif()
 endif()
 if(MEIOS_ROS_PACKAGE_SUPPORT)
-    meios_add_enrichment(ros
+    meios_add_enrichment(ros-package
         LINK_PUBLIC meios::io
         LINK_PRIVATE pugixml::pugixml)
 endif()

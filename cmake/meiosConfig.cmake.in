@@ -30,7 +30,7 @@ set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON @MEIOS_CLI_HAS_EVAL_PYTHO
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeclareResource.cmake")
 
 set(meios_meios_FOUND TRUE)
-foreach(_meios_component core model io urdf xacro bundle completion scan-obj scan-collada scan-stl scan-gltf archive-zip eval-python ros cli)
+foreach(_meios_component core model io urdf xacro bundle completion scan-obj scan-collada scan-stl scan-gltf archive-zip eval-python ros-package cli)
     if(TARGET meios::${_meios_component})
         set(meios_${_meios_component}_FOUND TRUE)
     else()

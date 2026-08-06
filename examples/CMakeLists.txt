@@ -24,9 +24,9 @@ target_include_directories(xacro_overrides PRIVATE ${MEIOS_EXAMPLE_GENERATED_INC
 meios_warnings(xacro_overrides)
 add_test(NAME example_xacro_overrides COMMAND xacro_overrides)
 
-if(TARGET meios_ros)
+if(TARGET meios_ros-package)
     add_executable(ros_resolve ros_resolve.cpp)
-    target_link_libraries(ros_resolve PRIVATE meios::urdf meios::ros)
+    target_link_libraries(ros_resolve PRIVATE meios::urdf meios::ros-package)
     meios_warnings(ros_resolve)
     add_test(NAME example_ros_resolve COMMAND ros_resolve)
 endif()

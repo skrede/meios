@@ -433,7 +433,7 @@ TEST_CASE("cli_verbs: flatten resolves a nested folder!=name package through the
 {
     if(!cli::ros_linked())
     {
-        SUCCEED("meios::ros not linked; the ros resolution layer is absent");
+        SUCCEED("meios::ros-package not linked; the ros resolution layer is absent");
         return;
     }
 

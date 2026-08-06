@@ -88,7 +88,7 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
-      # meios::ros is the one enrichment that defaults on, so this job turns it off by
+      # meios::ros-package is the one enrichment that defaults on, so this job turns it off by
       # hand: it is the leg that proves core builds and passes with no enrichment
       # compiled in, and it is where coverage is measured.
       - name: Configure

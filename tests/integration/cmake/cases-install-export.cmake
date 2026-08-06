@@ -77,6 +77,39 @@ meios_cmake_case(cmake_install_backend_absent
     CONSUMER_CONTROL ${_export_control}
     REFUSES "${_export_refusal}")
 
+# A build-tree alias is never exported, so the spelling a consumer finally writes exists only in the
+# installed targets file and in the config's component roster. Neither is observable from the
+# working tree, which is why this one stages a prefix and reads both back.
+#
+# The shared build set turns this enrichment off; this case is the one that needs it built, so it
+# states the option itself rather than appending a contradictory second -D to that set.
+set(_export_package_build ${_export_tree} -DFX_PARENT_INSTALL=ON -DPUGIXML_INSTALL=ON
+                          -DMEIOS_ROS_PACKAGE_SUPPORT=ON)
+
+# The module's own directory and the include root it ships deliberately disagree, so the installed
+# header path is exactly what a directory move could carry off without anything noticing.
+set(_export_package_installed "${_export_installed}")
+string(APPEND _export_package_installed
+    ",${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}meios_ros-package${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    ",${CMAKE_INSTALL_INCLUDEDIR}/meios/ros/ros_package_source.h")
+
+set(_export_package_request -DFX_FIND_PACKAGE=ON -DFX_COMPONENTS=ros-package -DFX_NAME=demo)
+list(APPEND _export_package_request
+    -DFX_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/origin/clean)
+
+meios_cmake_case(cmake_install_exports_package_resolution_component
+    FIXTURE subproject
+    DRIVER  meios_subproject_case.cmake
+    EXTRA   ${_export_package_build}
+    BUILD_TARGET meios_ros-package
+    INSTALL ON
+    TIMEOUT 1800
+    REQUIRE_INSTALLED ${_export_package_installed}
+    REQUIRE_CONTAINS "${_export_cmakedir}/meiosTargets.cmake,meios::ros-package"
+    CONSUMER module
+    CONSUMER_EXTRA ${_export_package_request}
+    CONSUMER_CONTROL ${_export_control})
+
 # The path-containment check is a traversal control, and its absence from a prefix is invisible to
 # every in-tree test. What is asserted is not that a list agrees -- the derivation makes disagreement
 # structurally impossible -- but that a consumer configured against the prefix reaches the control

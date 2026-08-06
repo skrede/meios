@@ -64,12 +64,12 @@ if(TARGET meios_scan-gltf)
     endif()
 endif()
 
-if(TARGET meios_ros)
+if(TARGET meios_ros-package)
     set(ros_source_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/ros_source_test.cpp)
     if(EXISTS ${ros_source_src})
         add_executable(ros_source_test ${ros_source_src})
         target_link_libraries(ros_source_test
-            PRIVATE meios::core meios::model meios::io meios::ros
+            PRIVATE meios::core meios::model meios::io meios::ros-package
                 Catch2::Catch2WithMain)
         meios_enable_coverage(ros_source_test)
         meios_warnings(ros_source_test)
