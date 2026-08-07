@@ -146,6 +146,10 @@ find_package(meios CONFIG REQUIRED)
 target_link_libraries(my_app PRIVATE meios::urdf)
 ```
 
+Everything past these two blocks — every option and what it defaults to, how dependencies are
+acquired, and what an installed package carries — is in
+[CMake integration](docs/cmake-integration.md).
+
 ### Acquiring a robot description
 
 Either integration also brings two CMake functions for treating a description package as fetched
@@ -217,7 +221,8 @@ base_to_upper origin z = 0.3
 The `0.3` was written in the description as `${upper_length}`, and the root-first order is topology
 meios computed while reading rather than something you reconstruct afterwards.
 
-More programs to read: [`examples/`](examples/).
+Eighteen more programs, each one runnable and each listed with what it shows, are indexed in
+[`examples/`](examples/README.md).
 
 ## Continuous integration
 

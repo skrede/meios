@@ -24,42 +24,31 @@ If you are unsure: start on the consumer tier. It is the smaller surface, and ev
 program can fall back to reading a `model` first. The engine tier pays off once copying out of
 `model` into your own representation is the thing you were going to do anyway.
 
-## Which build integration is yours?
+## Where the build wiring lives
 
-Both tiers link the same target, `meios::urdf` — the target that carries the public API. Choose how
-you acquire it:
+Both tiers link the same target, and how you acquire it — built inside your own configure, or found
+as an installed package — is one page: [CMake integration](cmake-integration.md). It owns which
+target to link and which not to reach for, both acquisition recipes, every option and what it
+defaults to, and what an installed package carries. This page does not repeat any of that. A second
+copy would be a second thing to keep true, and the two would drift.
 
-**Use `find_package` if meios is installed** — a system package, a vendored install prefix, or a
-CI-built install tree. The installed package exports `meios::urdf` with its include directories and
-the C++20 requirement baked into the interface, so a single line wires it in:
+If you have not built against meios before, [Getting started](getting-started.md) is the shorter
+road. It goes from an empty directory to a running program without asking you to know what a flag
+does; come to the reference when you need one.
 
-```cmake
-find_package(meios CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE meios::urdf)
-```
-
-**Use `FetchContent` if you build meios in-tree** — you have no install step and want the source
-pinned and built as part of your own configure. It produces the same `meios::urdf` target:
-
-```cmake
-include(FetchContent)
-FetchContent_Declare(
-    meios
-    GIT_REPOSITORY https://github.com/skrede/meios.git
-    GIT_TAG        master
-)
-FetchContent_MakeAvailable(meios)
-
-target_link_libraries(my_app PRIVATE meios::urdf)
-```
-
-Link `meios::urdf` either way. Do not link `meios::core` reaching for the API — `meios::core` is the
-dependency-light nucleus and carries no reader; `meios::urdf` is the surface a consumer reaches for.
+If something has already gone wrong — a diagnostic code in hand, or a configure that stopped —
+[Troubleshooting](troubleshooting.md) is keyed on what you are looking at rather than on what you
+were trying to do.
 
 ## Guides
 
+- [Getting started](getting-started.md) — from an empty directory to a program that loads a
+  description and prints what is in it, assuming no prior knowledge of the library.
 - [Consumer guide](consumer-guide.md) — `load()` a description and read the resolved `model`.
 - [Engine guide](engine-guide.md) — receive the resolved robot into your own types via `model_sink`.
+- [CMake integration](cmake-integration.md) — the build reference: the target you link, both
+  acquisition paths, every option and its default, and what an installed package carries and what it
+  withholds.
 - [Resource guide](resources-guide.md) — acquire a description package in CMake, deploy it where
   your program looks for it, and flatten one description to a file when something downstream needs
   a plain URDF, instead of vendoring the tree into your repository.
@@ -72,5 +61,8 @@ dependency-light nucleus and carries no reader; `meios::urdf` is the surface a c
   diagnostic code each refusal carries, and the frame and unit conventions the numbers follow. It
   starts where expansion ends, so what a `${…}` may evaluate to is not here — that is
   [Evaluation](evaluation.md).
+- [Troubleshooting](troubleshooting.md) — keyed on the diagnostic code you were handed or the line
+  your configure stopped on: what each one means, what to do about it, and which guide owns the rule
+  behind it.
 - [Known limitations](known-limitations.md) — every defect and caveat live at this point in the
   library's life, described by its user-facing effect.
