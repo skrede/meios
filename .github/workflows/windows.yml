@@ -302,6 +302,8 @@ jobs:
           cmake --build pugixml-build --config Release
           cmake --install pugixml-build --config Release
 
+      # Building examples/ fetches the pinned upstream description the
+      # manifest-resolution example resolves against, so this cell needs the network.
       - name: Configure
         run: |
           cmake . -B build -A x64 `
@@ -412,9 +414,12 @@ jobs:
           cmake --build pugixml-build --config Release
           cmake --install pugixml-build --config Release
 
-      # The examples cell builds examples/ with all enrichments OFF: the flagship
-      # (core+urdf only) must compile and every enrichment example must gate itself
-      # out. All enrichments stay OFF.
+      # The examples cell builds examples/ with the enrichment options left at their
+      # defaults: the flagship (core+urdf only) must compile and every gated example
+      # must gate itself out. Manifest resolution is the one enrichment whose option
+      # defaults ON, so its example builds here too, and building examples/ fetches
+      # the pinned upstream description that example resolves against — this cell
+      # needs the network.
       - name: Configure
         run: |
           cmake . -B build -A x64 `
