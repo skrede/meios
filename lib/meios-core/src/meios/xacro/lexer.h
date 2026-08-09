@@ -12,6 +12,7 @@ namespace meios::detail
 enum class token_kind
 {
     number,
+    string,
     name,
     kw_true,
     kw_false,
@@ -20,6 +21,7 @@ enum class token_kind
     kw_not,
     kw_if,
     kw_else,
+    kw_in,
     plus,
     minus,
     star,
@@ -29,7 +31,10 @@ enum class token_kind
     star_star,
     lparen,
     rparen,
+    lbracket,
+    rbracket,
     comma,
+    dot,
     less,
     less_equal,
     greater,

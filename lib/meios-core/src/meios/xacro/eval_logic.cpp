@@ -64,25 +64,9 @@ value call_unary(parser &p, std::string_view name, const value &arg)
     return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
-bool is_comparison(token_kind k)
+bool is_constructor(std::string_view name)
 {
-    return k == token_kind::less || k == token_kind::less_equal || k == token_kind::greater
-        || k == token_kind::greater_equal || k == token_kind::equal_equal || k == token_kind::not_equal;
-}
-
-bool compare_pair(parser &p, token_kind op, const value &a, const value &b)
-{
-    double x = need_double(p, a), y = need_double(p, b);
-    switch(op)
-    {
-        case token_kind::less:          return x <  y;
-        case token_kind::less_equal:    return x <= y;
-        case token_kind::greater:       return x >  y;
-        case token_kind::greater_equal: return x >= y;
-        case token_kind::equal_equal:   return x == y;
-        case token_kind::not_equal:     return x != y;
-        default:                        return false;
-    }
+    return name == "dict" || name == "list" || name == "set" || name == "tuple";
 }
 
 value parse_call(parser &p, std::string_view name)
@@ -99,17 +83,20 @@ value parse_call(parser &p, std::string_view name)
 
 value parse_name(parser &p)
 {
+    if(!p.charge_step()) return value{};
     std::string_view name = p.peek().text;
     ++p.pos;
+    if(p.accept(token_kind::dot)) return parse_dotted(p, name);
+    if(p.at(token_kind::lparen) && is_constructor(name))
+        return p.fail_unsupported("the Python constructor '" + std::string(name)
+                                  + "()' — use eval-python");
     if(p.at(token_kind::lparen)) return parse_call(p, name);
     if(name == "pi") return real_result(p, 3.141592653589793);
     std::optional<value> bound = p.scope.lookup(name);
     if(!bound)
         return p.fail("name '" + std::string(name) + "' is not defined",
                       diagnostic_code::undefined_property);
-    if(bound->kind() != value_kind::string)
-        return *bound;
-    return p.fail_unsupported("string value '" + std::string(name) + "' in expression — use eval-python");
+    return *bound;
 }
 
 value call_math(parser &p, std::string_view name, const std::vector<value> &args)
@@ -121,30 +108,16 @@ value call_math(parser &p, std::string_view name, const std::vector<value> &args
     return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
-value parse_comparison(parser &p)
-{
-    value left = parse_add(p);
-    if(!is_comparison(p.peek().kind)) return left;
-    bool result = true;
-    while(is_comparison(p.peek().kind))
-    {
-        token_kind op = p.peek().kind;
-        ++p.pos;
-        value right = parse_add(p);
-        result = result && compare_pair(p, op, left, right);
-        left = right;
-    }
-    return value{ result };
-}
-
 value parse_not(parser &p)
 {
+    if(!p.charge_step()) return value{};
     if(p.accept(token_kind::kw_not)) return value{ !need_truth(p, parse_not(p)) };
-    return parse_comparison(p);
+    return parse_membership(p);
 }
 
 value parse_and(parser &p)
 {
+    if(!p.charge_step()) return value{};
     value left = parse_not(p);
     while(p.accept(token_kind::kw_and))
     {
@@ -156,6 +129,7 @@ value parse_and(parser &p)
 
 value parse_or(parser &p)
 {
+    if(!p.charge_step()) return value{};
     value left = parse_and(p);
     while(p.accept(token_kind::kw_or))
     {
@@ -167,6 +141,7 @@ value parse_or(parser &p)
 
 value parse_ternary(parser &p)
 {
+    if(!p.charge_step()) return value{};
     value first = parse_or(p);
     if(!p.accept(token_kind::kw_if)) return first;
     value condition = parse_or(p);

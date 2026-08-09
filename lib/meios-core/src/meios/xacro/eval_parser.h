@@ -34,6 +34,10 @@ struct parser
     bool accept(token_kind kind) { if(at(kind)) { ++pos; return true; } return false; }
     value fail(const std::string &message, diagnostic_code code = diagnostic_code::expression_error);
     value fail_unsupported(const std::string &message);
+    // Charged at the entry of every precedence level, before it recurses. The session
+    // reports and latches a crossed ceiling itself, so a refused charge only records the
+    // category here and the caller returns immediately with the poison value.
+    bool charge_step();
 
     const std::vector<token> &tokens;
     const eval_scope &scope;
@@ -86,13 +90,16 @@ value parse_ternary(parser &p);
 value parse_or(parser &p);
 value parse_and(parser &p);
 value parse_not(parser &p);
+value parse_membership(parser &p);
 value parse_comparison(parser &p);
 value parse_add(parser &p);
 value parse_mul(parser &p);
 value parse_unary(parser &p);
 value parse_power(parser &p);
+value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
+value parse_dotted(parser &p, std::string_view head);
 value call_math(parser &p, std::string_view name, const std::vector<value> &args);
 
 }

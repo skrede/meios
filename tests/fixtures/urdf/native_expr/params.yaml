@@ -1,0 +1,10 @@
+mesh_files:
+  base:
+    visual:
+      mesh:
+        package: ur_description
+        path: meshes/base.dae
+joint_limits:
+  wrist_3:
+    continuous: true
+    effort: 28.0

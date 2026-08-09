@@ -17,9 +17,17 @@ namespace meios::detail
 namespace
 {
 
+// A string does have an arithmetic and a truth meaning in Python — concatenation,
+// repetition, emptiness — and none of it is in the measured surface, so it refuses as
+// unsupported and a lenient policy may still retain the span. Every other kind reaching
+// here has no meaning upstream either, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
-    return p.fail("a " + std::string(kind_name(v.kind())) + " has no arithmetic meaning here");
+    const std::string message =
+        "a " + std::string(kind_name(v.kind())) + " has no arithmetic meaning here";
+    if(v.kind() == value_kind::string)
+        return p.fail_unsupported(message + " — use eval-python");
+    return p.fail(message);
 }
 
 std::int64_t floordiv_int(std::int64_t a, std::int64_t b)
