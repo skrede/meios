@@ -1,0 +1,27 @@
+# case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
+# non-trivial form in the closure of the Universal Robots document, each
+# driven through a minimized document seeding the names it reads. A
+# refusing row renders REFUSED and carries the failure's first line.
+e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
+e02	shoulder_pan_upper_limit - safety_pos_margin	5.85	
+e03	shoulder_lift_lower_limit + safety_pos_margin	-6.85	
+e04	shoulder_lift_upper_limit - safety_pos_margin	6.85	
+e05	elbow_joint_lower_limit + safety_pos_margin	-7.85	
+e06	elbow_joint_upper_limit - safety_pos_margin	7.85	
+e07	wrist_1_lower_limit + safety_pos_margin	-8.85	
+e08	wrist_1_upper_limit - safety_pos_margin	8.85	
+e09	wrist_2_lower_limit + safety_pos_margin	-9.85	
+e10	wrist_2_upper_limit - safety_pos_margin	9.85	
+e11	wrist_3_joint_type != 'continuous'	False	
+e12	wrist_3_lower_limit + safety_pos_margin	-10.85	
+e13	wrist_3_upper_limit - safety_pos_margin	10.85	
+e14	-pi/2.0	-1.5707963267948966	
+e15	pi/2.0	1.5707963267948966	
+e16	0.0833333 * mass * (3 * radius * radius + length * length)	0.007769996892	
+e17	0.5 * mass * radius * radius	0.00666	
+e18	type in sec_mesh_files[name]	True	
+e19	sec_mesh_files[name][type]	{'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}	
+e20	xacro.load_yaml(joint_limits_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e21	xacro.load_yaml(kinematics_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e22	xacro.load_yaml(physical_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e23	xacro.load_yaml(visual_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	

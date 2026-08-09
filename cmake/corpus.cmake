@@ -82,6 +82,10 @@ set(MEIOS_CORPUS_FAULTY_LINE 4)
 # A record is four fields — absolute path, space-separated key=value expansion
 # arguments, the evaluator the document needs, and a package root or nothing — and
 # the records are joined with the "|" the resource paths already travel under.
+# The evaluator vocabulary is closed at three spellings: core for a document that
+# needs no expression evaluation, python for one that needs the CPython backend, and
+# native for one the built-in evaluator must handle alone. Any other spelling fails
+# the document rather than falling through to a default backend.
 set(MEIOS_CORPUS_DOCUMENTS "")
 macro(meios_corpus_document _path _args _eval _root)
     list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}")

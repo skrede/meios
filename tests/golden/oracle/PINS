@@ -1,0 +1,5 @@
+# name <TAB> version or revision <TAB> content digest, or a bare - where the version
+# is the identity. Every measurement below was produced by exactly these.
+xacro	2.1.1	-
+PyYAML	6.0.3	-
+ur_description	4.3.1	3532a25c9942bedcdfe41c845be6d144bbbbcd76f179f14a53a3e7b6972ae72d

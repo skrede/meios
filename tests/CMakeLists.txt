@@ -56,6 +56,7 @@ include(cmake/core_tests.cmake)
 include(cmake/module_tests.cmake)
 include(cmake/urdf_tests.cmake)
 include(cmake/load_tests.cmake)
+include(cmake/native_eval_tests.cmake)
 
 foreach(stem IN ITEMS arg_scan cmake_listfile_scope)
     set(arg_scan_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
