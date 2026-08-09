@@ -54,9 +54,10 @@ void terminal_latch::latch(level lvl, const source_location &where, diagnostic_c
 expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
                        eval_policy policy, const std::shared_ptr<evaluator_handle> &inject,
                        log_sink &lg)
-    : scope(s), sources(src), limits(lim), observer(lg), log(observer), mode(policy),
-      backend(inject), counters(), macros(), blocks(), include_stack(), owned(), owned_text(),
-      origins(), prop_frames(), param_saves(), terminal(), ok(true)
+    : scope(s), sources(src), limits(lim), eval_limits(), session(eval_limits), observer(lg),
+      log(observer), mode(policy), backend(inject), counters(), macros(), blocks(),
+      include_stack(), owned(), owned_text(), origins(), prop_frames(), param_saves(), terminal(),
+      ok(true)
 {
 }
 

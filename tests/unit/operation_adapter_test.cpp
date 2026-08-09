@@ -39,18 +39,13 @@ struct refusing_backend
 {
     bool with_cause;
 
-    std::optional<std::string> eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &log) const
+    meios::text_outcome eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &log) const
     {
         if(with_cause)
             log.log(meios::level::error, meios::diagnostic_code::cannot_open, meios::source_location{}, native, "backend refused");
         else
             log.log(meios::level::error, "backend refused");
-        return std::nullopt;
-    }
-
-    static meios::eval_failure_kind last_failure_kind()
-    {
-        return meios::eval_failure_kind::error;
+        return meios::text_outcome{ std::nullopt, meios::eval_failure_kind::error };
     }
 };
 

@@ -69,9 +69,9 @@ TEST_CASE("substitution scanner concatenates literal, expression and command spa
     std::filesystem::path document{ "robot.xacro" };
 
     meios::eval_scope scope;
-    scope.set("prefix", meios::binding{ std::string("arm") });
-    scope.set("suffix", meios::binding{ std::string("1") });
-    scope.set("radius", meios::binding{ meios::value{ 0.2 } });
+    scope.set("prefix", meios::value{ std::string("arm") });
+    scope.set("suffix", meios::value{ std::string("1") });
+    scope.set("radius", *meios::value::make_real(0.2));
 
     SECTION("a string property span concatenates with a trailing literal")
     {

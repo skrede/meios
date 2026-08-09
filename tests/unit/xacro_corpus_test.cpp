@@ -70,7 +70,7 @@ std::string eval_str(const std::string &expression)
     meios::core_evaluator evaluator;
     meios::eval_scope scope;
     meios::log_sink sink;
-    return meios::to_python_str(evaluator.eval(expression, scope, sink));
+    return meios::render_scalar(evaluator.eval(expression, scope, sink)).value_or(std::string{});
 }
 
 }

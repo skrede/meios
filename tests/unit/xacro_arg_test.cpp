@@ -40,7 +40,7 @@ TEST_CASE("a caller override beats the declared default while others keep theirs
     recorder log;
     meios::source_stack sources;
     meios::eval_scope scope;
-    scope.set("a", meios::binding{ std::string("override") });
+    scope.set("a", meios::value{ std::string("override") });
     meios::log_sink_f sink{ std::ref(log) };
     const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
@@ -118,7 +118,7 @@ TEST_CASE("a caller override wins over a resolvable nested default", "[xacro][ar
 </robot>)XML";
 
     meios::eval_scope scope;
-    scope.set("path", meios::binding{ std::string("/override/f.yaml") });
+    scope.set("path", meios::value{ std::string("/override/f.yaml") });
     const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
     std::filesystem::remove_all(root);

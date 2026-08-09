@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <clocale>
+#include <cstdint>
 #include <fstream>
 #include <utility>
 #include <iterator>
@@ -33,7 +34,7 @@ struct mock_evaluator
 {
     meios::value eval(std::string_view, const meios::eval_scope &, meios::log_sink &) const
     {
-        return meios::value{ 0ll };
+        return meios::value{ std::int64_t{ 0 } };
     }
 };
 
@@ -42,11 +43,16 @@ struct not_an_evaluator
     int eval(int) const { return 0; }
 };
 
+meios::value real_of(double number)
+{
+    return *meios::value::make_real(number);
+}
+
 std::string eval_str(std::string_view expression, const meios::eval_scope &scope = {})
 {
     meios::core_evaluator evaluator;
     meios::log_sink sink;
-    return meios::to_python_str(evaluator.eval(expression, scope, sink));
+    return meios::render_scalar(evaluator.eval(expression, scope, sink)).value_or(std::string{});
 }
 
 struct failure

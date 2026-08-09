@@ -1,9 +1,12 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_EXPAND_CONTEXT_H
 #define HPP_GUARD_MEIOS_XACRO_EXPAND_CONTEXT_H
 
+#include "eval_session.h"
+
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/evaluator_limits.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -55,12 +58,12 @@ struct block_arg
     emit_origin origin;
 };
 
-// A macro parameter's outer binding, captured on entry and restored on exit.
-using saved_binding = std::pair<std::string, std::optional<binding>>;
+// A macro parameter's outer value, captured on entry and restored on exit.
+using saved_binding = std::pair<std::string, std::optional<value>>;
 
-// One macro invocation's record of prior property bindings, reverted when the
+// One macro invocation's record of prior property values, reverted when the
 // invocation exits so a scoped write does not leak past its owning frame.
-using prop_frame = std::vector<std::pair<std::string, std::optional<binding>>>;
+using prop_frame = std::vector<saved_binding>;
 
 // Forwards every record unchanged and keeps the first coded, located error as a
 // structured cause. A layer beneath expansion names the specific failure — an undefined
@@ -103,6 +106,10 @@ struct expand_ctx
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
+    // One load, one set of evaluator ceilings and counters: nothing a caller may share
+    // between two loads reaches them.
+    evaluator_limits eval_limits;
+    eval_session session;
     terminal_latch observer;
     log_sink &log;
     eval_policy mode;

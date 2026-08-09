@@ -24,14 +24,7 @@ namespace meios
 class unrestricted_python_evaluator
 {
 public:
-    unrestricted_python_evaluator() : m_kind(eval_failure_kind::none) {}
-
-    std::optional<std::string> eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log);
-
-    eval_failure_kind last_failure_kind() const { return m_kind; }
-
-private:
-    eval_failure_kind m_kind;
+    text_outcome eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log);
 };
 
 }

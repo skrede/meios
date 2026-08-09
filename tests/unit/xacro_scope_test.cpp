@@ -53,13 +53,11 @@ meios::text_resource_loader recorder(std::vector<std::string> &seen,
 // case observe the active document moving with the include stack.
 struct loading_backend
 {
-    std::optional<std::string> eval_to_text(std::string_view expr, const meios::eval_scope &scope,
-                                            meios::log_sink &)
+    meios::text_outcome eval_to_text(std::string_view expr, const meios::eval_scope &scope,
+                                     meios::log_sink &)
     {
-        return scope.load_text(expr);
+        return meios::text_outcome{ scope.load_text(expr), meios::eval_failure_kind::none };
     }
-
-    meios::eval_failure_kind last_failure_kind() const { return meios::eval_failure_kind::none; }
 };
 
 std::filesystem::path fresh_dir()

@@ -54,12 +54,12 @@ std::string canonical_xml(std::string_view xml);
 namespace detail
 {
 
-// Parses a raw argument or property string into a numeric binding when it reads as
-// an integer or a real, otherwise keeps it as a string.
-binding classify(std::string_view text);
+// Parses a raw argument or property string into a numeric value when it reads as an
+// integer or a real, otherwise keeps it as a string.
+value classify(std::string_view text);
 
 // Only the evaluator may mint a container marker, so a marker present in text an author wrote is a
-// forgery and is erased before that text can become a binding. Apply this to raw authored text
+// forgery and is erased before that text can become a bound value. Apply this to raw authored text
 // only, never to a substitution result: that result legitimately carries the markers the evaluator
 // minted, and erasing them there would break the container round-trip.
 std::string strip_authored_markers(std::string text);

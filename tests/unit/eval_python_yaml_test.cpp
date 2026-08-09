@@ -17,8 +17,8 @@ counted_refusal count_refusal(std::string_view expr, meios::eval_scope &scope,
                               meios::capturing_log_sink &capture)
 {
     meios::python_evaluator evaluator;
-    const bool declined = !evaluator.eval_to_text(expr, scope, capture)
-        && evaluator.last_failure_kind() == meios::eval_failure_kind::refused;
+    const meios::text_outcome got = evaluator.eval_to_text(expr, scope, capture);
+    const bool declined = !got.text && got.failure == meios::eval_failure_kind::refused;
     return { declined, capture.records() };
 }
 
@@ -168,7 +168,7 @@ TEST_CASE("a spec named through a variable is still named by the surviving recor
     const std::vector<std::filesystem::path> roots{ std::filesystem::temp_directory_path() };
     meios::eval_scope scope;
     scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, capture));
-    scope.set("limits_file", meios::binding{ std::string("../escaped-limits.yaml") });
+    scope.set("limits_file", meios::value{ std::string("../escaped-limits.yaml") });
 
     const counted_refusal got = count_refusal("xacro.load_yaml(limits_file)", scope, capture);
 

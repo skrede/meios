@@ -1,6 +1,9 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_SUBSTITUTION_DETAIL_H
 #define HPP_GUARD_MEIOS_XACRO_SUBSTITUTION_DETAIL_H
 
+#include "eval_session.h"
+
+#include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
 #include "meios/xacro/substitution.h"
@@ -58,37 +61,31 @@ inline bool is_identifier(std::string_view text)
 class core_text_evaluator
 {
 public:
-    core_text_evaluator() : m_kind(eval_failure_kind::none) {}
+    explicit core_text_evaluator(eval_session &load) : m_session(load) {}
 
-    std::optional<std::string> eval_to_text(std::string_view expr, const eval_scope &scope,
-                                            log_sink &log, const source_location &at = {});
-
-    eval_failure_kind last_failure_kind() const { return m_kind; }
+    text_outcome eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log,
+                              const source_location &at = {});
 
 private:
-    eval_failure_kind m_kind;
+    eval_session &m_session;
 };
 
 struct subst_ctx
 {
     subst_ctx(log_sink &sink, source_stack &pkg_sources, const eval_scope &names,
               const std::filesystem::path &doc, eval_policy policy,
-              const std::shared_ptr<evaluator_handle> &inject, const source_location &anchor = {})
-        : log(sink), sources(pkg_sources), scope(names), core(), document(doc), at(anchor),
-          node_anchor(anchor), mode(policy), backend(inject), last_kind(eval_failure_kind::none),
-          terminal()
-    {
-    }
-
-    subst_ctx(log_sink &sink, source_stack &pkg_sources, const eval_scope &names,
-              const std::filesystem::path &doc)
-        : subst_ctx(sink, pkg_sources, names, doc, eval_policy::fail, {})
+              const std::shared_ptr<evaluator_handle> &inject, eval_session &load,
+              const source_location &anchor = {})
+        : log(sink), sources(pkg_sources), scope(names), session(load), core(load), document(doc),
+          at(anchor), node_anchor(anchor), mode(policy), backend(inject),
+          last_kind(eval_failure_kind::none), terminal()
     {
     }
 
     log_sink &log;
     source_stack &sources;
     const eval_scope &scope;
+    eval_session &session;
     core_text_evaluator core;
     const std::filesystem::path &document;
     source_location at;
@@ -123,6 +120,23 @@ std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
 
+// An exact substitution keeps the evaluated value's type; mixed text renders it. The two
+// paths must agree on what "exact" means, so this predicate is the single place that
+// decides it: the trimmed text is one ${...} span, nothing outside it and no nested $.
+std::optional<std::string_view> exact_expression(std::string_view raw);
+
+// Answers with the value an exact span evaluates to, or nothing when the span failed or a
+// lenient policy retained it verbatim; ctx.last_kind distinguishes the two.
+std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr);
+
+// The error arm is a terminal failure; an empty value arm is a span a lenient policy
+// retained verbatim, which the caller binds as the text the author wrote.
+expected<std::optional<value>, expansion_error> substitute_exact(
+    std::string_view expr, const eval_scope &scope, source_stack &sources,
+    const std::filesystem::path &document, eval_policy policy,
+    const std::shared_ptr<evaluator_handle> &backend, eval_session &session, log_sink &log,
+    const source_location &at);
+
 // The scanner and the span machinery are mutually recursive: a command span resolves
 // its own inner text before dispatching, so `base` accumulates the enclosing span's
 // offset and a nested token still maps back to its real column.
@@ -131,14 +145,20 @@ bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t ba
 bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
                  std::size_t &cursor, std::size_t base);
 
-// Internal substitute that carries the forward-scan refinement inputs so an
-// attribute-hosted failing token's column can refine the node anchor. The public
-// substitute() overloads keep the node anchor and do not widen for this.
+// Internal substitute that charges the load's own session and carries the forward-scan
+// refinement inputs so an attribute-hosted failing token's column can refine the node
+// anchor. The public substitute() overloads keep the node anchor, do not widen for this,
+// and charge a session of their own that lives exactly as long as the call.
 expected<substitution, expansion_error> substitute_refined(
     std::string_view raw, const eval_scope &scope, source_stack &sources,
     const std::filesystem::path &document, eval_policy policy,
-    const std::shared_ptr<evaluator_handle> &backend, log_sink &log, const source_location &at,
-    pugi::xml_node host, std::string_view host_text, std::optional<std::size_t> attr_index);
+    const std::shared_ptr<evaluator_handle> &backend, eval_session &session, log_sink &log,
+    const source_location &at, pugi::xml_node host = {}, std::string_view host_text = {},
+    std::optional<std::size_t> attr_index = std::nullopt);
+
+// A nested resolution inside an already-running substitution, sharing its session so the
+// inner text is charged to the same load rather than to a fresh budget.
+expected<substitution, expansion_error> substitute_in(subst_ctx &ctx, std::string_view raw);
 
 }
 

@@ -27,21 +27,21 @@ bool bind_literal(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
 {
     bool ok = true;
     const std::string authored = strip_authored_markers(std::string(raw));
-    std::string bound = substitute_attr(ctx, call, authored, document, ok);
+    const value bound = substitute_attr_value(ctx, call, authored, document, ok);
     if(!ok)
         return false;
-    ctx.scope.set(name, classify(bound));
+    ctx.scope.set(name, bound);
     return true;
 }
 
-// A `^` default inherits the enclosing binding; `^|fallback` inherits it or the
+// A `^` default inherits the enclosing value; `^|fallback` inherits it or the
 // fallback text; a bare `^` with no inherited value is a loud error, never literal.
 bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
                   const std::string &def, const std::filesystem::path &document)
 {
     if(def != "^" && def.rfind("^|", 0) != 0)
         return bind_literal(ctx, call, name, def, document);
-    if(std::optional<binding> inherited = ctx.scope.lookup(name))
+    if(std::optional<value> inherited = ctx.scope.lookup(name))
     {
         ctx.scope.set(name, *inherited);
         return true;

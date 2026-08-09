@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cerrno>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <charconv>
 #include <version>
@@ -134,11 +135,11 @@ double parse_double(std::string_view text, bool &ok)
 #endif
 }
 
-long long parse_int(std::string_view text, bool &ok)
+std::int64_t parse_int(std::string_view text, bool &ok)
 {
     const char *first = text.data();
     const char *last = text.data() + text.size();
-    long long number = 0;
+    std::int64_t number = 0;
     std::from_chars_result result = std::from_chars(first, last, number);
     ok = result.ec == std::errc{} && result.ptr == last;
     return ok ? number : 0;

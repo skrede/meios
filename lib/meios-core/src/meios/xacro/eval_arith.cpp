@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
 
@@ -7,12 +8,7 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
-#include <cmath>
-#include <limits>
 #include <string>
-#include <vector>
-#include <variant>
-#include <cstdlib>
 
 namespace meios::detail
 {
@@ -21,7 +17,7 @@ value parser::fail(const std::string &message, diagnostic_code code)
 {
     if(ok) { log.log(level::error, code, anchor, message); failure = eval_failure_kind::error; }
     ok = false;
-    return value{ 0ll };
+    return value{};
 }
 
 value parser::fail_unsupported(const std::string &message)
@@ -32,120 +28,7 @@ value parser::fail_unsupported(const std::string &message)
         failure = eval_failure_kind::unsupported;
     }
     ok = false;
-    return value{ 0ll };
-}
-
-namespace
-{
-
-value negate(const value &v)
-{
-    if(std::holds_alternative<double>(v)) return value{ -std::get<double>(v) };
-    return value{ -as_int(v) };
-}
-
-value unary_pos(const value &v)
-{
-    if(std::holds_alternative<double>(v)) return v;
-    return value{ as_int(v) };
-}
-
-value add_sub_mul(const value &a, const value &b, token_kind op)
-{
-    if(is_int(a) && is_int(b))
-    {
-        long long x = as_int(a), y = as_int(b);
-        if(op == token_kind::plus)  return value{ x + y };
-        if(op == token_kind::minus) return value{ x - y };
-        return value{ x * y };
-    }
-    double x = as_double(a), y = as_double(b);
-    if(op == token_kind::plus)  return value{ x + y };
-    if(op == token_kind::minus) return value{ x - y };
-    return value{ x * y };
-}
-
-long long floordiv_int(long long a, long long b)
-{
-    long long q = a / b, r = a % b;
-    if(r != 0 && ((r < 0) != (b < 0))) --q;
-    return q;
-}
-
-long long mod_int(long long a, long long b)
-{
-    long long r = a % b;
-    if(r != 0 && ((r < 0) != (b < 0))) r += b;
-    return r;
-}
-
-value divide(parser &p, const value &a, const value &b)
-{
-    double y = as_double(b);
-    if(y == 0.0) return p.fail("division by zero");
-    return value{ as_double(a) / y };
-}
-
-value floor_divide(parser &p, const value &a, const value &b)
-{
-    if(is_int(a) && is_int(b))
-    {
-        if(as_int(b) == 0) return p.fail("integer division by zero");
-        return value{ floordiv_int(as_int(a), as_int(b)) };
-    }
-    double y = as_double(b);
-    if(y == 0.0) return p.fail("float floor division by zero");
-    return value{ std::floor(as_double(a) / y) };
-}
-
-value modulo(parser &p, const value &a, const value &b)
-{
-    if(is_int(a) && is_int(b))
-    {
-        if(as_int(b) == 0) return p.fail("integer modulo by zero");
-        return value{ mod_int(as_int(a), as_int(b)) };
-    }
-    double y = as_double(b);
-    if(y == 0.0) return p.fail("float modulo by zero");
-    double r = std::fmod(as_double(a), y);
-    if(r != 0.0 && ((r < 0.0) != (y < 0.0))) r += y;
-    return value{ r };
-}
-
-bool mul_overflows(long long a, long long b, long long &out)
-{
-    constexpr long long lo = std::numeric_limits<long long>::min();
-    constexpr long long hi = std::numeric_limits<long long>::max();
-    if(a > 0)
-    {
-        if(b > 0) { if(a > hi / b) return true; }
-        else      { if(b < lo / a) return true; }
-    }
-    else if(a < 0)
-    {
-        if(b > 0) { if(a < lo / b) return true; }
-        else      { if(b < hi / a) return true; }
-    }
-    out = a * b;
-    return false;
-}
-
-value power(parser &p, const value &a, const value &b)
-{
-    if(is_int(a) && is_int(b) && as_int(b) >= 0)
-    {
-        long long base = as_int(a), exp = as_int(b), result = 1;
-        while(exp > 0)
-        {
-            if((exp & 1) && mul_overflows(result, base, result)) return p.fail("integer power overflow");
-            exp >>= 1;
-            if(exp > 0 && mul_overflows(base, base, base)) return p.fail("integer power overflow");
-        }
-        return value{ result };
-    }
-    return value{ std::pow(as_double(a), as_double(b)) };
-}
-
+    return value{};
 }
 
 value parse_atom(parser &p)
@@ -177,8 +60,8 @@ value parse_power(parser &p)
 
 value parse_unary(parser &p)
 {
-    if(p.accept(token_kind::minus)) return negate(parse_unary(p));
-    if(p.accept(token_kind::plus))  return unary_pos(parse_unary(p));
+    if(p.accept(token_kind::minus)) return negate(p, parse_unary(p));
+    if(p.accept(token_kind::plus))  return unary_pos(p, parse_unary(p));
     return parse_power(p);
 }
 
@@ -188,7 +71,7 @@ value parse_mul(parser &p)
     for(;;)
     {
         token_kind op = p.peek().kind;
-        if(op == token_kind::star)              { ++p.pos; left = add_sub_mul(left, parse_unary(p), op); }
+        if(op == token_kind::star)              { ++p.pos; left = add_sub_mul(p, left, parse_unary(p), op); }
         else if(op == token_kind::slash)        { ++p.pos; left = divide(p, left, parse_unary(p)); }
         else if(op == token_kind::slash_slash)  { ++p.pos; left = floor_divide(p, left, parse_unary(p)); }
         else if(op == token_kind::percent)      { ++p.pos; left = modulo(p, left, parse_unary(p)); }
@@ -205,7 +88,7 @@ value parse_add(parser &p)
         token_kind op = p.peek().kind;
         if(op != token_kind::plus && op != token_kind::minus) break;
         ++p.pos;
-        left = add_sub_mul(left, parse_mul(p), op);
+        left = add_sub_mul(p, left, parse_mul(p), op);
     }
     return left;
 }

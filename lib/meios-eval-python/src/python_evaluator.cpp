@@ -21,25 +21,24 @@ namespace meios
 namespace
 {
 
-std::optional<std::string> eval_or_refuse(std::string_view expr, detail::yaml_context &ctx,
-                                          const std::string &quoted, eval_failure_kind &kind)
+text_outcome eval_or_refuse(std::string_view expr, detail::yaml_context &ctx,
+                            const std::string &quoted)
 {
     const py::dict priv    = detail::privileged_namespace();
     const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(expr, ctx.scope));
     if(!rule.empty())
-        return detail::report(kind, eval_failure_kind::refused, ctx.log,
+        return detail::report(eval_failure_kind::refused, ctx.log,
                               "meios refused the expression " + quoted + ": " + rule);
-    std::string text = detail::evaluate_in(priv, expr, ctx, detail::curated_builtins(priv));
-    kind             = eval_failure_kind::none;
-    return text;
+    return text_outcome{ detail::evaluate_in(priv, expr, ctx, detail::curated_builtins(priv)),
+                         eval_failure_kind::none };
 }
 
 }
 
-std::optional<std::string> python_evaluator::eval_to_text(std::string_view expr,
-                                                          const eval_scope &scope, log_sink &log)
+text_outcome python_evaluator::eval_to_text(std::string_view expr, const eval_scope &scope,
+                                            log_sink &log)
 {
-    return detail::under_interpreter(expr, scope, log, m_kind, eval_or_refuse);
+    return detail::under_interpreter(expr, scope, log, eval_or_refuse);
 }
 
 }

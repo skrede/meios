@@ -60,8 +60,8 @@ TEST_CASE("an expression reaching past arithmetic refuses under a named rule", "
 TEST_CASE("an f-string conversion calling a withheld builtin refuses by that name", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("x", std::string("arm"));
-    scope.set("v", meios::value{ 1.5 });
+    scope.set("x", meios::value{ std::string("arm") });
+    scope.set("v", *meios::value::make_real(1.5));
     REQUIRE(names(refuse_of("f'{x!r}'", scope), "repr"));
     REQUIRE(names(refuse_of("f'{x!a}'", scope), "ascii"));
     const std::optional<std::string> plain = evaluate("f'{x!s}'", scope);
@@ -83,7 +83,7 @@ TEST_CASE("a dunder inside a string literal is not an identifier", "[eval_python
 TEST_CASE("a scope-bound name colliding with a withheld builtin still resolves", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("type", std::string("revolute"));
+    scope.set("type", meios::value{ std::string("revolute") });
     const std::optional<std::string> got = evaluate("'joint_' + type", scope);
     REQUIRE(got);
     REQUIRE(*got == "joint_revolute");
@@ -92,7 +92,7 @@ TEST_CASE("a scope-bound name colliding with a withheld builtin still resolves",
 TEST_CASE("a scope-bound name spelled format is refused all the same", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("format", std::string("mesh"));
+    scope.set("format", meios::value{ std::string("mesh") });
     REQUIRE(names(refuse_of("format", scope), "format-traversal"));
 }
 

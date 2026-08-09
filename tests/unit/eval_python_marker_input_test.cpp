@@ -141,7 +141,7 @@ TEST_CASE("a forged marker in ordinary element text is erased on the way out", "
 TEST_CASE("a marker already in a binding is still honored", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("fake", marked(meios::detail::plain_container_marker, "[1, 2]"));
+    scope.set("fake", meios::value{ marked(meios::detail::plain_container_marker, "[1, 2]") });
     const std::optional<std::string> got = evaluate("fake[0]", scope);
     REQUIRE(got);
     REQUIRE(*got == "1");

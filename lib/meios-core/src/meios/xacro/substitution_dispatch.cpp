@@ -3,6 +3,7 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/substitution.h"
+#include "meios/xacro/value_render.h"
 
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
@@ -45,13 +46,6 @@ std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std:
     return std::nullopt;
 }
 
-std::string binding_str(const binding &bound)
-{
-    if(std::holds_alternative<std::string>(bound))
-        return std::get<std::string>(bound);
-    return to_python_str(std::get<value>(bound));
-}
-
 void note_env_read(subst_ctx &ctx, std::string_view name)
 {
     ctx.log.log(level::info, "read of environment variable \"" + std::string(name) + '"');
@@ -74,14 +68,21 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
         return fail(ctx, diagnostic_code::unresolved_arg, "$(arg) requires an argument name");
-    std::optional<binding> bound = ctx.scope.lookup(parts.first);
+    std::optional<value> bound = ctx.scope.lookup(parts.first);
     if(bound)
-        return binding_str(*bound);
+    {
+        // A collection has no text form, so the argument is reported unresolved rather than
+        // written into the document as its own contents.
+        std::optional<std::string> text = render_scalar(*bound);
+        if(text)
+            return text;
+        return fail(ctx, diagnostic_code::unresolved_arg,
+                    "$(arg " + std::string(parts.first) + ") holds a "
+                        + std::string(kind_name(bound->kind())) + ", which has no text form");
+    }
     if(!parts.second.empty())
     {
-        const expected<substitution, expansion_error> resolved =
-            substitute(parts.second, ctx.scope, ctx.sources, ctx.document, ctx.mode, ctx.backend,
-                       ctx.log, ctx.at);
+        const expected<substitution, expansion_error> resolved = substitute_in(ctx, parts.second);
         if(!resolved)
         {
             record_terminal(ctx, resolved.error());

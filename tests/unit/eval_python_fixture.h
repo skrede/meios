@@ -27,7 +27,7 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
 {
     meios::python_evaluator evaluator;
     meios::log_sink silent;
-    return evaluator.eval_to_text(expr, scope, silent);
+    return evaluator.eval_to_text(expr, scope, silent).text;
 }
 
 struct tally

@@ -4,7 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <variant>
+#include <cstdint>
+#include <optional>
 
 namespace
 {
@@ -19,7 +20,12 @@ meios::value eval(const std::string &expression)
     return result;
 }
 
-std::string paren(long long number)
+std::string render(const meios::value &result)
+{
+    return meios::render_scalar(result).value_or(std::string{});
+}
+
+std::string paren(std::int64_t number)
 {
     return "(" + std::to_string(number) + ")";
 }
@@ -29,29 +35,29 @@ std::string paren(long long number)
 TEST_CASE("core evaluator holds algebraic invariants inside the supported subset", "[xacro][property]")
 {
     REQUIRE(rc::check("integer addition commutes", [] {
-        const long long a = *rc::gen::inRange<long long>(-1000000, 1000000);
-        const long long b = *rc::gen::inRange<long long>(-1000000, 1000000);
-        RC_ASSERT(meios::to_python_str(eval(paren(a) + "+" + paren(b)))
-               == meios::to_python_str(eval(paren(b) + "+" + paren(a))));
+        const std::int64_t a = *rc::gen::inRange<std::int64_t>(-1000000, 1000000);
+        const std::int64_t b = *rc::gen::inRange<std::int64_t>(-1000000, 1000000);
+        RC_ASSERT(render(eval(paren(a) + "+" + paren(b)))
+               == render(eval(paren(b) + "+" + paren(a))));
     }));
 
     REQUIRE(rc::check("integer addition and multiplication keep their identities", [] {
-        const long long a = *rc::gen::inRange<long long>(-1000000, 1000000);
-        RC_ASSERT(meios::to_python_str(eval(paren(a) + "+0")) == std::to_string(a));
-        RC_ASSERT(meios::to_python_str(eval(paren(a) + "*1")) == std::to_string(a));
+        const std::int64_t a = *rc::gen::inRange<std::int64_t>(-1000000, 1000000);
+        RC_ASSERT(render(eval(paren(a) + "+0")) == std::to_string(a));
+        RC_ASSERT(render(eval(paren(a) + "*1")) == std::to_string(a));
     }));
 
     REQUIRE(rc::check("evaluation is deterministic", [] {
-        const long long a = *rc::gen::inRange<long long>(-1000000, 1000000);
-        const long long b = *rc::gen::inRange<long long>(-100, 100);
+        const std::int64_t a = *rc::gen::inRange<std::int64_t>(-1000000, 1000000);
+        const std::int64_t b = *rc::gen::inRange<std::int64_t>(-100, 100);
         const std::string expression = paren(a) + "*" + paren(b) + "-" + paren(a);
-        RC_ASSERT(meios::to_python_str(eval(expression)) == meios::to_python_str(eval(expression)));
+        RC_ASSERT(render(eval(expression)) == render(eval(expression)));
     }));
 
     REQUIRE(rc::check("a printed float parses back to itself through the evaluator", [] {
-        const double d = static_cast<double>(*rc::gen::inRange<long long>(-100000000, 100000000)) / 1000.0;
+        const double d = static_cast<double>(*rc::gen::inRange<std::int64_t>(-100000000, 100000000)) / 1000.0;
         const meios::value back = eval(meios::detail::print_double(d));
-        RC_ASSERT(std::holds_alternative<double>(back));
-        RC_ASSERT(std::get<double>(back) == d);
+        RC_ASSERT(back.kind() == meios::value_kind::real);
+        RC_ASSERT(back.real() == d);
     }));
 }

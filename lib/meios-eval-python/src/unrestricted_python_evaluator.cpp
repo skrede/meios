@@ -21,22 +21,19 @@ namespace meios
 namespace
 {
 
-std::optional<std::string> eval_unguarded(std::string_view expr, detail::yaml_context &ctx,
-                                          const std::string &, eval_failure_kind &kind)
+text_outcome eval_unguarded(std::string_view expr, detail::yaml_context &ctx, const std::string &)
 {
     const py::dict priv = detail::privileged_namespace();
-    std::string text    = detail::evaluate_in(priv, expr, ctx, detail::real_builtins());
-    kind                = eval_failure_kind::none;
-    return text;
+    return text_outcome{ detail::evaluate_in(priv, expr, ctx, detail::real_builtins()),
+                         eval_failure_kind::none };
 }
 
 }
 
-std::optional<std::string> unrestricted_python_evaluator::eval_to_text(std::string_view expr,
-                                                                      const eval_scope &scope,
-                                                                      log_sink &log)
+text_outcome unrestricted_python_evaluator::eval_to_text(std::string_view expr,
+                                                         const eval_scope &scope, log_sink &log)
 {
-    return detail::under_interpreter(expr, scope, log, m_kind, eval_unguarded);
+    return detail::under_interpreter(expr, scope, log, eval_unguarded);
 }
 
 }

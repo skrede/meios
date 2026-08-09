@@ -86,24 +86,20 @@ std::string conditional_document(std::string_view test)
 // seam is consulted ahead of the core evaluator.
 struct fixed_backend
 {
-    std::optional<std::string> eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &)
+    meios::text_outcome eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &)
     {
-        return std::string("7");
+        return meios::text_outcome{ std::string("7"), meios::eval_failure_kind::none };
     }
-
-    meios::eval_failure_kind last_failure_kind() const { return meios::eval_failure_kind::none; }
 };
 
 struct declining_backend
 {
     meios::eval_failure_kind reported{ meios::eval_failure_kind::unsupported };
 
-    std::optional<std::string> eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &)
+    meios::text_outcome eval_to_text(std::string_view, const meios::eval_scope &, meios::log_sink &)
     {
-        return std::nullopt;
+        return meios::text_outcome{ std::nullopt, reported };
     }
-
-    meios::eval_failure_kind last_failure_kind() const { return reported; }
 };
 
 }

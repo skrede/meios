@@ -1,6 +1,8 @@
+#include "eval_session.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/substitution.h"
+#include "meios/xacro/evaluator_limits.h"
 
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/expansion_error.h"
@@ -31,6 +33,16 @@ unexpected<expansion_error> refuse(const detail::subst_ctx &ctx)
         return unexpected<expansion_error>(*ctx.terminal);
     return unexpected<expansion_error>(expansion_error{});
 }
+
+// A substitute() made outside a load has no session to charge, so it gets one that lives
+// exactly as long as the call.
+struct standalone_session
+{
+    standalone_session() : ceilings(), session(ceilings) {}
+
+    evaluator_limits ceilings;
+    detail::eval_session session;
+};
 
 }
 
@@ -63,10 +75,11 @@ bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t ba
 expected<substitution, expansion_error> substitute_refined(
     std::string_view raw, const eval_scope &scope, source_stack &sources,
     const std::filesystem::path &document, eval_policy policy,
-    const std::shared_ptr<evaluator_handle> &backend, log_sink &log, const source_location &at,
-    pugi::xml_node host, std::string_view host_text, std::optional<std::size_t> attr_index)
+    const std::shared_ptr<evaluator_handle> &backend, eval_session &session, log_sink &log,
+    const source_location &at, pugi::xml_node host, std::string_view host_text,
+    std::optional<std::size_t> attr_index)
 {
-    subst_ctx ctx(log, sources, scope, document, policy, backend, at);
+    subst_ctx ctx(log, sources, scope, document, policy, backend, session, at);
     ctx.host = host;
     ctx.host_text = host_text;
     ctx.attr_index = attr_index;
@@ -75,6 +88,12 @@ expected<substitution, expansion_error> substitute_refined(
         return refuse(ctx);
     const substitution resolved{ std::move(out) };
     return resolved;
+}
+
+expected<substitution, expansion_error> substitute_in(subst_ctx &ctx, std::string_view raw)
+{
+    return substitute_refined(raw, ctx.scope, ctx.sources, ctx.document, ctx.mode, ctx.backend,
+                              ctx.session, ctx.log, ctx.at);
 }
 
 }
@@ -86,7 +105,8 @@ expected<substitution, expansion_error> substitute(std::string_view raw, const e
                                                    const std::shared_ptr<evaluator_handle> &backend,
                                                    log_sink &log, const source_location &at)
 {
-    detail::subst_ctx ctx(log, sources, scope, document, policy, backend, at);
+    standalone_session own;
+    detail::subst_ctx ctx(log, sources, scope, document, policy, backend, own.session, at);
     std::string out;
     if(!detail::scan(ctx, raw, out, 0))
         return refuse(ctx);

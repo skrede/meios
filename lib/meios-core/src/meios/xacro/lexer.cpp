@@ -4,8 +4,10 @@
 #include "meios/xacro/detail/numeric.h"
 
 #include <cctype>
-#include <cstddef>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -64,6 +66,18 @@ token_kind one_char_kind(char c)
     return token_kind::error;
 }
 
+std::optional<value> number_leaf(std::string_view text, bool is_float)
+{
+    bool ok = false;
+    if(!is_float)
+    {
+        const std::int64_t number = parse_int(text, ok);
+        return ok ? std::optional<value>(value{ number }) : std::nullopt;
+    }
+    const double number = parse_double(text, ok);
+    return ok ? value::make_real(number) : std::nullopt;
+}
+
 std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> &out)
 {
     std::size_t j = i;
@@ -76,9 +90,9 @@ std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> 
         else if(!std::isdigit(static_cast<unsigned char>(c)) && !exp_sign) break;
     }
     std::string_view text = src.substr(i, j - i);
-    bool ok = false;
-    value leaf = is_float ? value{ parse_double(text, ok) } : value{ parse_int(text, ok) };
-    out.push_back(token{ ok ? token_kind::number : token_kind::error, text, leaf });
+    const std::optional<value> leaf = number_leaf(text, is_float);
+    out.push_back(token{ leaf ? token_kind::number : token_kind::error, text,
+                         leaf.value_or(value{}) });
     return j;
 }
 

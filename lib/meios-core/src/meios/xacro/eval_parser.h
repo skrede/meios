@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EVAL_PARSER_H
 
 #include "lexer.h"
+#include "eval_session.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
@@ -12,8 +13,9 @@
 #include "meios/diagnostic/source_location.h"
 
 #include <vector>
+#include <cstdint>
 #include <cstddef>
-#include <variant>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -22,9 +24,9 @@ namespace meios::detail
 struct parser
 {
     parser(const std::vector<token> &token_stream, const eval_scope &names, log_sink &sink,
-           const source_location &origin = {})
-        : tokens(token_stream), scope(names), log(sink), anchor(origin), pos(0), ok(true),
-          failure(eval_failure_kind::none)
+           eval_session &load, const source_location &origin = {})
+        : tokens(token_stream), scope(names), log(sink), session(load), anchor(origin), pos(0),
+          ok(true), failure(eval_failure_kind::none)
     {}
 
     const token &peek() const { return tokens[pos]; }
@@ -36,33 +38,48 @@ struct parser
     const std::vector<token> &tokens;
     const eval_scope &scope;
     log_sink &log;
+    eval_session &session;
     source_location anchor;
     std::size_t pos;
     bool ok;
     eval_failure_kind failure;
 };
 
-inline bool is_int(const value &v) { return !std::holds_alternative<double>(v); }
-
-inline long long as_int(const value &v)
+inline bool is_int(const value &v)
 {
-    if(std::holds_alternative<bool>(v)) return std::get<bool>(v) ? 1 : 0;
-    if(std::holds_alternative<long long>(v)) return std::get<long long>(v);
-    return static_cast<long long>(std::get<double>(v));
+    return v.kind() == value_kind::boolean || v.kind() == value_kind::integer;
 }
 
-inline double as_double(const value &v)
+inline std::optional<std::int64_t> as_int(const value &v)
 {
-    if(std::holds_alternative<bool>(v)) return std::get<bool>(v) ? 1.0 : 0.0;
-    if(std::holds_alternative<long long>(v)) return static_cast<double>(std::get<long long>(v));
-    return std::get<double>(v);
+    if(std::optional<bool> flag = v.boolean())
+        return *flag ? 1 : 0;
+    if(std::optional<std::int64_t> number = v.integer())
+        return number;
+    if(std::optional<double> number = v.real())
+        return static_cast<std::int64_t>(*number);
+    return std::nullopt;
 }
 
-inline bool truthy(const value &v)
+inline std::optional<double> as_double(const value &v)
 {
-    if(std::holds_alternative<bool>(v)) return std::get<bool>(v);
-    if(std::holds_alternative<long long>(v)) return std::get<long long>(v) != 0;
-    return std::get<double>(v) != 0.0;
+    if(std::optional<bool> flag = v.boolean())
+        return *flag ? 1.0 : 0.0;
+    if(std::optional<std::int64_t> number = v.integer())
+        return static_cast<double>(*number);
+    return v.real();
+}
+
+// Null is the one non-arithmetic kind with a settled truth value; a string or a
+// collection has one in Python but not in the subset this evaluator claims, so it is
+// refused rather than approximated.
+inline std::optional<bool> truthy(const value &v)
+{
+    if(v.kind() == value_kind::null)
+        return false;
+    if(std::optional<double> number = as_double(v))
+        return *number != 0.0;
+    return std::nullopt;
 }
 
 value parse_ternary(parser &p);

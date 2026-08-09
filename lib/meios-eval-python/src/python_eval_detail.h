@@ -28,27 +28,24 @@ inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr
     return format_result(priv, ctx.log, pybind11::eval(std::string(expr), globals));
 }
 
-inline std::optional<std::string> report(eval_failure_kind &kind, eval_failure_kind which, log_sink &log,
-                                         const std::string &message)
+inline text_outcome report(eval_failure_kind which, log_sink &log, const std::string &message)
 {
-    kind = which;
     log.log(level::error, message);
-    return std::nullopt;
+    return text_outcome{ std::nullopt, which };
 }
 
-inline std::optional<std::string> classify(eval_failure_kind &kind, const yaml_context &ctx,
-                                           const std::string &quoted, const std::string &fallback)
+inline text_outcome classify(const yaml_context &ctx, const std::string &quoted,
+                             const std::string &fallback)
 {
     if(ctx.rule)
-        return report(kind, eval_failure_kind::refused, ctx.log, "meios refused the expression " + quoted + ": " + *ctx.rule);
-    return report(kind, eval_failure_kind::error, ctx.log, fallback);
+        return report(eval_failure_kind::refused, ctx.log, "meios refused the expression " + quoted + ": " + *ctx.rule);
+    return report(eval_failure_kind::error, ctx.log, fallback);
 }
 
 // Interpreter readiness, the interpreter lock and the failure classification are one
 // implementation for both evaluators; the body is the only thing that differs between them.
 template <typename Body>
-std::optional<std::string> under_interpreter(std::string_view expr, const eval_scope &scope, log_sink &log,
-                                             eval_failure_kind &kind, Body body)
+text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, log_sink &log, Body body)
 {
     ensure_interpreter();
     pybind11::gil_scoped_acquire gil;
@@ -56,15 +53,15 @@ std::optional<std::string> under_interpreter(std::string_view expr, const eval_s
     yaml_context ctx{ log, scope, std::nullopt };
     try
     {
-        return body(expr, ctx, quoted, kind);
+        return body(expr, ctx, quoted);
     }
     catch(pybind11::error_already_set &raised)
     {
-        return classify(kind, ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what());
+        return classify(ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what());
     }
     catch(const std::exception &raised)
     {
-        return classify(kind, ctx, quoted, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
+        return classify(ctx, quoted, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
     }
 }
 

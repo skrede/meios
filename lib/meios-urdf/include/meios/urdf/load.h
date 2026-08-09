@@ -28,6 +28,7 @@ namespace meios
 
 class source_stack;
 class evaluator_handle;
+class yaml_parser_handle;
 
 struct load_options
 {
@@ -38,6 +39,7 @@ struct load_options
           strict(strictness::fail),
           eval(eval_policy::fail),
           backend(),
+          yaml(),
           package_roots(),
           args()
     {
@@ -50,6 +52,8 @@ struct load_options
     eval_policy     eval;
 
     std::shared_ptr<evaluator_handle> backend;
+
+    std::shared_ptr<const yaml_parser_handle> yaml;
 
     std::vector<std::filesystem::path> package_roots;
 

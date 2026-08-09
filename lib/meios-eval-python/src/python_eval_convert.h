@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/value_render.h"
 #include "meios/xacro/container_marker.h"
 
 #include "meios/diagnostic/level.h"
@@ -11,8 +12,9 @@
 #include <pybind11/embed.h>
 
 #include <string>
+#include <cstdint>
 #include <utility>
-#include <variant>
+#include <optional>
 #include <algorithm>
 #include <stdexcept>
 
@@ -62,21 +64,22 @@ inline pybind11::object rehydrate(const pybind11::dict &priv, const std::string 
     return pybind11::str(inner);
 }
 
-inline pybind11::object to_py_object(const pybind11::dict &priv, const binding &bound)
+inline pybind11::object to_py_object(const pybind11::dict &priv, const value &bound)
 {
-    if(std::holds_alternative<std::string>(bound))
-        return rehydrate(priv, std::get<std::string>(bound));
-    const value &v = std::get<value>(bound);
-    if(std::holds_alternative<bool>(v))
-        return pybind11::bool_(std::get<bool>(v));
-    if(std::holds_alternative<long long>(v))
-        return pybind11::int_(std::get<long long>(v));
-    return pybind11::float_(std::get<double>(v));
+    if(std::optional<std::string> text = bound.text())
+        return rehydrate(priv, *text);
+    if(std::optional<bool> flag = bound.boolean())
+        return pybind11::bool_(*flag);
+    if(std::optional<std::int64_t> number = bound.integer())
+        return pybind11::int_(*number);
+    if(std::optional<double> number = bound.real())
+        return pybind11::float_(*number);
+    return pybind11::none();
 }
 
-// bool/float route back through the core evaluator's to_python_str so the two paths render
+// bool/float route back through the core evaluator's scalar renderer so the two paths render
 // identically (True/False, .0-append); str returns verbatim; int renders via Python's own
-// str() to preserve arbitrary-precision results (${2**64}) that overflow long long, bool
+// str() to preserve arbitrary-precision results (${2**64}) that overflow an int64_t, bool
 // preceding int because Python bool subtypes int. A list/dict/tuple is delimited with a marker
 // so rehydrate can round-trip it across a xacro:property boundary. The yaml-wrapper test must
 // precede the plain one: PyDict_Check and PyList_Check match subclasses, so the plain branch
@@ -96,9 +99,14 @@ inline std::string format_result(const pybind11::dict &priv, log_sink &log, cons
     if(pybind11::isinstance<pybind11::str>(result))
         return result.cast<std::string>();
     if(pybind11::isinstance<pybind11::bool_>(result))
-        return to_python_str(value{ result.cast<bool>() });
+        return *render_scalar(value{ result.cast<bool>() });
     if(pybind11::isinstance<pybind11::float_>(result))
-        return to_python_str(value{ result.cast<double>() });
+    {
+        const std::optional<value> number = value::make_real(result.cast<double>());
+        if(!number)
+            throw std::runtime_error("a non-finite float is not a serializable expression result");
+        return *render_scalar(*number);
+    }
     if(is_yaml_wrapper(priv, result))
         return yaml_container_marker + pybind11::str(result).cast<std::string>() + yaml_container_marker;
     if(pybind11::isinstance<pybind11::list>(result) || pybind11::isinstance<pybind11::dict>(result)

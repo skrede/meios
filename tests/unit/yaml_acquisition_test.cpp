@@ -190,7 +190,7 @@ TEST_CASE("the Python YAML continuation runs only after successful delivery", "[
     scope.set_active_document(tree.path() / "docs" / "robot.xacro");
     scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, silent, operations, delivery));
     meios::python_evaluator evaluator;
-    const auto value = evaluator.eval_to_text("load_yaml('cfg.yaml')['value']", scope, silent);
+    const auto value = evaluator.eval_to_text("load_yaml('cfg.yaml')['value']", scope, silent).text;
 
     REQUIRE(value == std::optional<std::string>{"7"});
     REQUIRE(delivery.count == 1);

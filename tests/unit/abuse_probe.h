@@ -58,7 +58,7 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
 {
     E evaluator;
     meios::log_sink silent;
-    return evaluator.eval_to_text(expr, scope, silent);
+    return evaluator.eval_to_text(expr, scope, silent).text;
 }
 
 template <typename E>
@@ -67,8 +67,8 @@ verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
     E evaluator;
-    const bool declined = !evaluator.eval_to_text(expr, scope, sink)
-        && evaluator.last_failure_kind() == meios::eval_failure_kind::refused;
+    const meios::text_outcome got = evaluator.eval_to_text(expr, scope, sink);
+    const bool declined = !got.text && got.failure == meios::eval_failure_kind::refused;
     return { declined, std::move(counts.messages) };
 }
 
@@ -88,10 +88,10 @@ struct only_config final : meios::text_resource_loader::fetcher
 // score as a refusal the table never claimed.
 inline void seed(meios::eval_scope &scope)
 {
-    scope.set("x", std::string("arm"));
-    scope.set("v", meios::value{ 1.5 });
-    scope.set("name", std::string("arm"));
-    scope.set("format", std::string("stl"));
+    scope.set("x", meios::value{ std::string("arm") });
+    scope.set("v", *meios::value::make_real(1.5));
+    scope.set("name", meios::value{ std::string("arm") });
+    scope.set("format", meios::value{ std::string("stl") });
 }
 
 inline meios::eval_scope seeded()
@@ -132,8 +132,8 @@ inline std::string span_document(const std::string &span)
 // such a row never reaches the evaluator through a document and refuses only at the direct seam.
 inline bool answered_by_scope(const row &r, const meios::eval_scope &scope)
 {
-    const std::optional<meios::binding> bound = scope.lookup(r.expr);
-    return bound && std::holds_alternative<std::string>(*bound);
+    const std::optional<meios::value> bound = scope.lookup(r.expr);
+    return bound && bound->kind() == meios::value_kind::string;
 }
 
 }

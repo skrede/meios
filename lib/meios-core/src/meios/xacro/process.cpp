@@ -1,3 +1,5 @@
+#include "eval_parser.h"
+#include "eval_session.h"
 #include "structural_detail.h"
 #include "substitution_detail.h"
 
@@ -15,7 +17,7 @@
 #include <map>
 #include <cctype>
 #include <string>
-#include <variant>
+#include <optional>
 #include <algorithm>
 #include <filesystem>
 #include <string_view>
@@ -25,15 +27,6 @@ namespace meios::detail
 
 namespace
 {
-
-bool is_true(const value &v)
-{
-    if(std::holds_alternative<bool>(v))
-        return std::get<bool>(v);
-    if(std::holds_alternative<long long>(v))
-        return std::get<long long>(v) != 0;
-    return std::get<double>(v) != 0.0;
-}
 
 std::string lowered(std::string_view text)
 {
@@ -54,14 +47,15 @@ bool condition_true(expand_ctx &ctx, const std::string &text, const source_locat
     if(flag == "false" || flag == "0" || flag.empty())
         return false;
     core_evaluator evaluator;
-    value result = evaluator.eval(text, ctx.scope, ctx.log, at);
-    if(evaluator.failed())
+    const std::optional<bool> truth =
+        truthy(evaluator.eval(text, ctx.scope, ctx.log, at, ctx.session));
+    if(evaluator.failed() || !truth)
     {
         record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
                         "conditional test did not evaluate: " + text);
         ctx.ok = false;
     }
-    return is_true(result);
+    return truth.value_or(false);
 }
 
 bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
@@ -71,8 +65,8 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
     const source_location at = locate(ctx, in);
     const expected<substitution, expansion_error> result =
-        substitute(in.attribute("value").value(), ctx.scope, ctx.sources, document,
-                   eval_policy::fail, ctx.backend, ctx.log, at);
+        substitute_refined(in.attribute("value").value(), ctx.scope, ctx.sources, document,
+                           eval_policy::fail, ctx.backend, ctx.session, ctx.log, at);
     if(!result)
     {
         record_terminal(ctx, result.error());
@@ -127,28 +121,6 @@ std::string strip_authored_markers(std::string text)
     for(char marker : container_markers)
         text.erase(std::remove(text.begin(), text.end(), marker), text.end());
     return text;
-}
-
-std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
-                            const std::filesystem::path &document, bool &ok,
-                            std::optional<std::size_t> attr_index)
-{
-    const source_location at = locate(ctx, in);
-    const std::string_view host_text =
-        ctx.origins.empty() ? std::string_view{} : ctx.origins.back().text;
-    const expected<substitution, expansion_error> result =
-        attr_index ? substitute_refined(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
-                                        ctx.log, at, in, host_text, attr_index)
-                   : substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
-                                ctx.log, at);
-    ok = result.has_value();
-    if(!ok)
-    {
-        record_terminal(ctx, result.error());
-        ctx.ok = false;
-        return {};
-    }
-    return result->text;
 }
 
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,

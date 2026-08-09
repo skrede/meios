@@ -73,7 +73,7 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
 {
     meios::python_evaluator evaluator;
     meios::log_sink silent;
-    return evaluator.eval_to_text(expr, scope, silent);
+    return evaluator.eval_to_text(expr, scope, silent).text;
 }
 
 struct verdict
@@ -87,8 +87,8 @@ verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
     meios::python_evaluator evaluator;
-    const bool declined = !evaluator.eval_to_text(expr, scope, sink)
-        && evaluator.last_failure_kind() == meios::eval_failure_kind::refused;
+    const meios::text_outcome got = evaluator.eval_to_text(expr, scope, sink);
+    const bool declined = !got.text && got.failure == meios::eval_failure_kind::refused;
     return { declined, std::move(counts.messages) };
 }
 

@@ -10,6 +10,7 @@
 
 #include <string>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -40,10 +41,10 @@ std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view na
 }
 
 // The prior an ancestor frame must record is the value it actually holds, which the
-// writing invocation's own parameter binding may be masking in the shared flat scope.
+// writing invocation's own parameter may be masking in the shared flat scope.
 // When the written name is a parameter of the writing macro, use the outer value that
 // invocation saved on entry instead of the live (masked) lookup.
-std::optional<binding> ancestor_prior(const expand_ctx &ctx, std::string_view name)
+std::optional<value> ancestor_prior(const expand_ctx &ctx, std::string_view name)
 {
     if(!ctx.param_saves.empty())
         for(const saved_binding &saved : *ctx.param_saves.back())
@@ -54,16 +55,17 @@ std::optional<binding> ancestor_prior(const expand_ctx &ctx, std::string_view na
 
 }
 
-binding classify(std::string_view text)
+value classify(std::string_view text)
 {
     bool ok = false;
-    long long integer = parse_int(text, ok);
+    const std::int64_t integer = parse_int(text, ok);
     if(ok)
-        return binding{ value{ integer } };
-    double real = parse_double(text, ok);
+        return value{ integer };
+    const double real = parse_double(text, ok);
     if(ok)
-        return binding{ value{ real } };
-    return binding{ std::string(text) };
+        if(std::optional<value> number = value::make_real(real))
+            return *number;
+    return value{ std::string(text) };
 }
 
 // An empty (default) or "local" scope records into the current frame, so a property
@@ -82,7 +84,7 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
     else
         return;
     prop_frame &frame = ctx.prop_frames[target];
-    for(const std::pair<std::string, std::optional<binding>> &prior : frame)
+    for(const saved_binding &prior : frame)
         if(prior.first == name)
             return;
     frame.emplace_back(std::string(name), scope_attr == "parent" ? ancestor_prior(ctx, name)
@@ -117,13 +119,13 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
 {
     bool ok = true;
     const std::string authored = strip_authored_markers(in.attribute("value").value());
-    std::string value_text = substitute_attr(ctx, in, authored, document, ok,
-                                             attr_dom_index(in, "value"));
+    const value bound =
+        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, "value"));
     if(!ok)
         return false;
     std::string_view name = in.attribute("name").value();
     record_scoped(ctx, in.attribute("scope").value(), name);
-    ctx.scope.set(name, classify(value_text));
+    ctx.scope.set(name, bound);
     return true;
 }
 
@@ -142,11 +144,11 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         return true;
     bool ok = true;
     const std::string authored = strip_authored_markers(fallback.value());
-    std::string resolved = substitute_attr(ctx, in, authored, document, ok,
-                                           attr_dom_index(in, "default"));
+    const value resolved =
+        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
     if(!ok)
         return false;
-    ctx.scope.set(name, classify(resolved));
+    ctx.scope.set(name, resolved);
     return true;
 }
 

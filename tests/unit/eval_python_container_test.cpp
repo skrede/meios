@@ -189,7 +189,7 @@ TEST_CASE("a mapping wider than the hint bound names six keys and counts the res
 TEST_CASE("an ordinary string binding is never fabricated into a container", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("v", std::string("6"));
+    scope.set("v", meios::value{ std::string("6") });
     const std::optional<std::string> got = evaluate("v + '0'", scope);
     REQUIRE(got);
     REQUIRE(*got == "60");

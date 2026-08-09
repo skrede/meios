@@ -65,29 +65,29 @@ TEST_CASE("numbers survive a comma-decimal global locale", "[xacro][numeric]")
 
 TEST_CASE("value prints int/float/bool as Python str() does", "[xacro][value]")
 {
-    REQUIRE(meios::to_python_str(meios::value{ 2ll }) == "2");
-    REQUIRE(meios::to_python_str(meios::value{ 2.0 }) == "2.0");
-    REQUIRE(meios::to_python_str(meios::value{ 0.5 }) == "0.5");
-    REQUIRE(meios::to_python_str(meios::value{ true }) == "True");
-    REQUIRE(meios::to_python_str(meios::value{ false }) == "False");
+    REQUIRE(meios::render_scalar(meios::value{ std::int64_t{ 2 } }) == "2");
+    REQUIRE(meios::render_scalar(real_of(2.0)) == "2.0");
+    REQUIRE(meios::render_scalar(real_of(0.5)) == "0.5");
+    REQUIRE(meios::render_scalar(meios::value{ true }) == "True");
+    REQUIRE(meios::render_scalar(meios::value{ false }) == "False");
 }
 
 TEST_CASE("eval_scope resolves a set name and reports an unset one absent", "[xacro][value]")
 {
     meios::eval_scope scope;
-    scope.set("radius", meios::value{ 0.2 });
-    scope.set("prefix", std::string{ "arm" });
+    scope.set("radius", real_of(0.2));
+    scope.set("prefix", meios::value{ std::string{ "arm" } });
 
     REQUIRE(scope.contains("radius"));
     REQUIRE_FALSE(scope.contains("length"));
 
-    const std::optional<meios::binding> radius = scope.lookup("radius");
+    const std::optional<meios::value> radius = scope.lookup("radius");
     REQUIRE(radius.has_value());
-    REQUIRE(std::get<meios::value>(*radius) == meios::value{ 0.2 });
+    REQUIRE(*radius == real_of(0.2));
 
-    const std::optional<meios::binding> prefix = scope.lookup("prefix");
+    const std::optional<meios::value> prefix = scope.lookup("prefix");
     REQUIRE(prefix.has_value());
-    REQUIRE(std::get<std::string>(*prefix) == "arm");
+    REQUIRE(prefix->text() == "arm");
 
     REQUIRE_FALSE(scope.lookup("length").has_value());
 }
@@ -98,7 +98,7 @@ TEST_CASE("a type exposing eval(expr, scope, log) satisfies expression_evaluator
     meios::eval_scope scope;
     meios::log_sink log;
 
-    REQUIRE(std::holds_alternative<long long>(evaluator.eval("0", scope, log)));
+    REQUIRE(evaluator.eval("0", scope, log).kind() == meios::value_kind::integer);
     STATIC_REQUIRE(meios::expression_evaluator<mock_evaluator>);
     STATIC_REQUIRE_FALSE(meios::expression_evaluator<not_an_evaluator>);
     STATIC_REQUIRE(meios::expression_evaluator<meios::core_evaluator>);
@@ -161,7 +161,7 @@ TEST_CASE("core evaluator follows CPython result typing", "[xacro][typing]")
     REQUIRE(eval_str("1<2") == "True");
 
     meios::eval_scope scope;
-    scope.set("radius", meios::value{ 0.2 });
+    scope.set("radius", real_of(0.2));
     REQUIRE(eval_str("radius*2", scope) == "0.4");
 }
 

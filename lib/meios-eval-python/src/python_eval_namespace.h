@@ -119,7 +119,7 @@ inline void seed_scope(const pybind11::dict &priv, pybind11::dict &globals, std:
 {
     for(const std::string &name : identifiers(expr))
     {
-        std::optional<binding> bound = scope.lookup(name);
+        std::optional<value> bound = scope.lookup(name);
         if(bound)
             globals[pybind11::str(name)] = to_py_object(priv, *bound);
     }

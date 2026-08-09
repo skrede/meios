@@ -63,15 +63,16 @@ TEST_CASE("a mathematics name is bound bare and carries no math namespace", "[ev
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
     meios::python_evaluator evaluator;
-    REQUIRE_FALSE(evaluator.eval_to_text("math.sqrt(2)", scope, sink));
-    REQUIRE(evaluator.last_failure_kind() == meios::eval_failure_kind::error);
+    const meios::text_outcome guarded = evaluator.eval_to_text("math.sqrt(2)", scope, sink);
+    REQUIRE_FALSE(guarded.text);
+    REQUIRE(guarded.failure == meios::eval_failure_kind::error);
     REQUIRE(counts.last.find("NameError") != std::string::npos);
 }
 
 TEST_CASE("a string-producing expression returns its python str", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("name", std::string("arm"));
+    scope.set("name", meios::value{ std::string("arm") });
     const std::optional<std::string> got = evaluate("'link_' + name", scope);
     REQUIRE(got);
     REQUIRE(*got == "link_arm");
@@ -96,7 +97,7 @@ TEST_CASE("an arbitrary-precision integer renders its exact CPython decimal", "[
 TEST_CASE("a seeded numeric property matches core formatting", "[eval_python]")
 {
     meios::eval_scope scope;
-    scope.set("dof", meios::value{ static_cast<long long>(6) });
+    scope.set("dof", meios::value{ std::int64_t{ 6 } });
     const std::optional<std::string> got = evaluate("dof * 2", scope);
     REQUIRE(got);
     REQUIRE(*got == "12");
