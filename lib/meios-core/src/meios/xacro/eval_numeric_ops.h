@@ -7,6 +7,8 @@
 #include "meios/xacro/value.h"
 
 #include <cstdint>
+#include <optional>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -18,6 +20,20 @@ std::int64_t need_int(parser &p, const value &v);
 double need_double(parser &p, const value &v);
 bool need_truth(parser &p, const value &v);
 value real_result(parser &p, double number);
+
+// Each yields no value when the result is not representable, so the operator above it can
+// refuse with a located diagnostic instead of wrapping, trapping or aborting the process.
+std::optional<std::int64_t> checked_abs(std::int64_t a);
+std::optional<std::int64_t> checked_negate(std::int64_t a);
+std::optional<std::int64_t> checked_add(std::int64_t a, std::int64_t b);
+std::optional<std::int64_t> checked_sub(std::int64_t a, std::int64_t b);
+std::optional<std::int64_t> checked_mul(std::int64_t a, std::int64_t b);
+std::optional<std::int64_t> checked_mod(std::int64_t a, std::int64_t b);
+std::optional<std::int64_t> checked_floordiv(std::int64_t a, std::int64_t b);
+std::optional<std::int64_t> checked_power(std::int64_t base, std::int64_t exponent);
+
+value int_from_real(parser &p, double number);
+value int_result(parser &p, std::optional<std::int64_t> made, std::string_view operation);
 
 value negate(parser &p, const value &v);
 value unary_pos(parser &p, const value &v);

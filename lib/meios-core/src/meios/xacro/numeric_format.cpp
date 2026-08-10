@@ -3,6 +3,7 @@
 #include "meios/xacro/detail/numeric.h"
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <string>
 #include <cstddef>
@@ -85,8 +86,8 @@ std::string trim_mantissa(const std::string &scientific, std::size_t e_pos)
 // Finds the fewest significant digits whose scientific form parses bit-exactly back
 // through strtod_c_locale -- that significand is the shortest round-trip -- and spells it
 // in the chosen notation. "%.17e" always round-trips a finite double, so the loop
-// terminates; non-finite values (isfinite-gated upstream) fall through defensively.
-std::string print_double_shortest(double number)
+// terminates. Only finite values reach here; the entry point below holds the guard.
+std::string print_finite_shortest(double number)
 {
     std::array<char, 64> buffer{};
     for(int sig = 1; sig <= 17; ++sig)
@@ -129,7 +130,7 @@ std::int32_t significant_digits(const std::string &scientific, std::size_t e_pos
 // Shortest round-trip double->string, spelled in the chosen notation. to_chars' general
 // form is unusable here because it applies its own shorter-wins rule, so the significand
 // is taken in scientific form and respelled fixed when the notation asks for it.
-std::string print_double_shortest(double number)
+std::string print_finite_shortest(double number)
 {
     std::array<char, 64> buffer{};
     char *last = buffer.data() + buffer.size();
@@ -148,5 +149,19 @@ std::string print_double_shortest(double number)
 }
 
 #endif
+
+// The value type refuses to construct a non-finite double, so nothing inside the evaluator
+// arrives with one; print_double is re-exported through the umbrella header and a consumer
+// can hand one in directly, so the entry point has to be total on its own. Both spellings
+// below assume a decimal exponent is present, which is why the guard sits above them rather
+// than inside either. The texts are upstream's, and what the fallback already produced.
+std::string print_double_shortest(double number)
+{
+    if(std::isfinite(number))
+        return print_finite_shortest(number);
+    if(std::isnan(number))
+        return "nan";
+    return number < 0.0 ? "-inf" : "inf";
+}
 
 }

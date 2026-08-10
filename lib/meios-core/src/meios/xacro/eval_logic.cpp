@@ -38,8 +38,7 @@ value math_abs(parser &p, const value &v)
 {
     if(v.kind() == value_kind::real)
         return real_result(p, std::fabs(*v.real()));
-    const std::int64_t number = need_int(p, v);
-    return value{ number < 0 ? -number : number };
+    return int_result(p, checked_abs(need_int(p, v)), "absolute value");
 }
 
 value math_reduce(parser &p, std::string_view name, const std::vector<value> &args)
@@ -55,8 +54,8 @@ value math_reduce(parser &p, std::string_view name, const std::vector<value> &ar
 value call_unary(parser &p, std::string_view name, const value &arg)
 {
     if(name == "abs")     return math_abs(p, arg);
-    if(name == "floor")   return value{ static_cast<std::int64_t>(std::floor(need_double(p, arg))) };
-    if(name == "ceil")    return value{ static_cast<std::int64_t>(std::ceil(need_double(p, arg))) };
+    if(name == "floor")   return int_from_real(p, std::floor(need_double(p, arg)));
+    if(name == "ceil")    return int_from_real(p, std::ceil(need_double(p, arg)));
     if(name == "radians") return real_result(p, need_double(p, arg) * (3.141592653589793 / 180.0));
     if(name == "degrees") return real_result(p, need_double(p, arg) * (180.0 / 3.141592653589793));
     math_fn fn = unary_math_fn(name);

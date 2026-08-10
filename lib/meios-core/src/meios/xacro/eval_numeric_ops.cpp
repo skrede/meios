@@ -4,12 +4,13 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/value_render.h"
+#include "meios/xacro/detail/numeric.h"
 
 #include <cmath>
-#include <limits>
 #include <string>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -30,38 +31,23 @@ value refuse_kind(parser &p, const value &v)
     return p.fail(message);
 }
 
-std::int64_t floordiv_int(std::int64_t a, std::int64_t b)
-{
-    std::int64_t q = a / b, r = a % b;
-    if(r != 0 && ((r < 0) != (b < 0))) --q;
-    return q;
 }
 
-std::int64_t mod_int(std::int64_t a, std::int64_t b)
+value int_result(parser &p, std::optional<std::int64_t> made, std::string_view operation)
 {
-    std::int64_t r = a % b;
-    if(r != 0 && ((r < 0) != (b < 0))) r += b;
-    return r;
+    if(made)
+        return value{ *made };
+    return p.fail(std::string(operation)
+                  + " produced a result outside the range of integers this evaluator represents");
 }
 
-bool mul_overflows(std::int64_t a, std::int64_t b, std::int64_t &out)
+value int_from_real(parser &p, double number)
 {
-    constexpr std::int64_t lo = std::numeric_limits<std::int64_t>::min();
-    constexpr std::int64_t hi = std::numeric_limits<std::int64_t>::max();
-    if(a > 0)
-    {
-        if(b > 0) { if(a > hi / b) return true; }
-        else      { if(b < lo / a) return true; }
-    }
-    else if(a < 0)
-    {
-        if(b > 0) { if(a < lo / b) return true; }
-        else      { if(b < hi / a) return true; }
-    }
-    out = a * b;
-    return false;
-}
-
+    const std::optional<std::int64_t> made = int_from_double(number);
+    if(made)
+        return value{ *made };
+    return p.fail(print_double(number)
+                  + " is outside the range of integers this evaluator represents");
 }
 
 std::int64_t need_int(parser &p, const value &v)
@@ -69,7 +55,10 @@ std::int64_t need_int(parser &p, const value &v)
     std::optional<std::int64_t> number = as_int(v);
     if(number)
         return *number;
-    refuse_kind(p, v);
+    if(v.kind() == value_kind::real)
+        int_from_real(p, *v.real());
+    else
+        refuse_kind(p, v);
     return 0;
 }
 
@@ -105,7 +94,7 @@ value negate(parser &p, const value &v)
 {
     if(v.kind() == value_kind::real)
         return real_result(p, -*v.real());
-    return value{ -need_int(p, v) };
+    return int_result(p, checked_negate(need_int(p, v)), "negation");
 }
 
 value unary_pos(parser &p, const value &v)
@@ -120,9 +109,9 @@ value add_sub_mul(parser &p, const value &a, const value &b, token_kind op)
     if(is_int(a) && is_int(b))
     {
         std::int64_t x = need_int(p, a), y = need_int(p, b);
-        if(op == token_kind::plus)  return value{ x + y };
-        if(op == token_kind::minus) return value{ x - y };
-        return value{ x * y };
+        if(op == token_kind::plus)  return int_result(p, checked_add(x, y), "addition");
+        if(op == token_kind::minus) return int_result(p, checked_sub(x, y), "subtraction");
+        return int_result(p, checked_mul(x, y), "multiplication");
     }
     double x = need_double(p, a), y = need_double(p, b);
     if(op == token_kind::plus)  return real_result(p, x + y);
@@ -142,7 +131,7 @@ value floor_divide(parser &p, const value &a, const value &b)
     if(is_int(a) && is_int(b))
     {
         if(need_int(p, b) == 0) return p.fail("integer division by zero");
-        return value{ floordiv_int(need_int(p, a), need_int(p, b)) };
+        return int_result(p, checked_floordiv(need_int(p, a), need_int(p, b)), "floor division");
     }
     double y = need_double(p, b);
     if(y == 0.0) return p.fail("float floor division by zero");
@@ -154,7 +143,7 @@ value modulo(parser &p, const value &a, const value &b)
     if(is_int(a) && is_int(b))
     {
         if(need_int(p, b) == 0) return p.fail("integer modulo by zero");
-        return value{ mod_int(need_int(p, a), need_int(p, b)) };
+        return int_result(p, checked_mod(need_int(p, a), need_int(p, b)), "remainder");
     }
     double y = need_double(p, b);
     if(y == 0.0) return p.fail("float modulo by zero");
@@ -167,14 +156,9 @@ value power(parser &p, const value &a, const value &b)
 {
     if(is_int(a) && is_int(b) && need_int(p, b) >= 0)
     {
-        std::int64_t base = need_int(p, a), exp = need_int(p, b), result = 1;
-        while(exp > 0)
-        {
-            if((exp & 1) && mul_overflows(result, base, result)) return p.fail("integer power overflow");
-            exp >>= 1;
-            if(exp > 0 && mul_overflows(base, base, base)) return p.fail("integer power overflow");
-        }
-        return value{ result };
+        const std::optional<std::int64_t> made = checked_power(need_int(p, a), need_int(p, b));
+        if(!made) return p.fail("integer power overflow");
+        return value{ *made };
     }
     return real_result(p, std::pow(need_double(p, a), need_double(p, b)));
 }

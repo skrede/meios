@@ -56,6 +56,18 @@ inline bool is_int(const value &v)
     return v.kind() == value_kind::boolean || v.kind() == value_kind::integer;
 }
 
+// The largest representable integer is not itself representable as a double -- it rounds up
+// to 2^63 -- so comparing against it would admit a value one step too large. The bound is
+// the smallest excluded power of two, compared strictly; a not-a-number fails both
+// comparisons and is excluded with everything else out of range.
+inline std::optional<std::int64_t> int_from_double(double number)
+{
+    constexpr double excluded = 9223372036854775808.0;
+    if(!(number >= -excluded && number < excluded))
+        return std::nullopt;
+    return static_cast<std::int64_t>(number);
+}
+
 inline std::optional<std::int64_t> as_int(const value &v)
 {
     if(std::optional<bool> flag = v.boolean())
@@ -63,7 +75,7 @@ inline std::optional<std::int64_t> as_int(const value &v)
     if(std::optional<std::int64_t> number = v.integer())
         return number;
     if(std::optional<double> number = v.real())
-        return static_cast<std::int64_t>(*number);
+        return int_from_double(*number);
     return std::nullopt;
 }
 

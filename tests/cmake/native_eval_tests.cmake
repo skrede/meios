@@ -76,7 +76,7 @@ foreach(stem IN ITEMS native_oracle_records native_corpus_record)
 endforeach()
 
 foreach(stem IN ITEMS native_value native_render native_expression native_session native_budget
-                      native_branch)
+                      native_branch native_arith)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
