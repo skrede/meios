@@ -115,16 +115,16 @@ TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]"
     REQUIRE(raised.expression_depth == 12);
 }
 
-// The measured sizes of the pinned acceptance target: about 4 500 auxiliary nodes per load
-// across four documents, a maximum auxiliary nesting of six, a largest auxiliary document of
+// The measured sizes of the pinned acceptance target: 640 auxiliary nodes per load across
+// four parse calls, a maximum auxiliary nesting of five, a largest auxiliary document of
 // 2 871 bytes, a longest expression of 58 characters, and a deepest expression of 26
 // recursive entries -- one bracket level, which is all the target ever nests.
 TEST_CASE("the defaults clear the measured acceptance target with headroom", "[native][session]")
 {
     const meios::evaluator_limits defaults;
 
-    REQUIRE(defaults.yaml_nodes > 10 * 4500);
-    REQUIRE(defaults.yaml_depth > 10 * 6);
+    REQUIRE(defaults.yaml_nodes > 10 * 640);
+    REQUIRE(defaults.yaml_depth > 10 * 5);
     REQUIRE(defaults.bytes > 10 * 2871);
     REQUIRE(defaults.tokens > 10 * 58);
     REQUIRE(defaults.steps > 10 * 58);
