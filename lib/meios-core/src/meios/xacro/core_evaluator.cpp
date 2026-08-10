@@ -34,7 +34,8 @@ value core_evaluator::eval(std::string_view expression, const eval_scope &scope,
         return value{};
     }
     detail::parser state(tokens, scope, log, session, at);
-    value result = detail::parse_ternary(state);
+    value result =
+        detail::refuse_malformed_syntax(state) ? value{} : detail::parse_ternary(state);
     if(state.ok && !state.at(detail::token_kind::end))
         result = state.fail("unexpected trailing tokens in expression");
     m_failed = !state.ok;

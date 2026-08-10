@@ -123,6 +123,7 @@ inline std::optional<bool> truthy(const value &v)
     return std::nullopt;
 }
 
+bool refuse_malformed_syntax(parser &p);
 value parse_ternary(parser &p);
 value parse_or(parser &p);
 value parse_and(parser &p);

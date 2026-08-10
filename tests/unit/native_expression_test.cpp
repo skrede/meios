@@ -344,7 +344,7 @@ TEST_CASE("a construct outside the measured surface refuses by name", "[native][
         { "sec_mesh_files[name].mesh", "dotted access on a value" },
         { "dict(a=1)", "dict()" },
         { "sec_mesh_files[1:2]", "unsupported subscript form" },
-        { "[x for x in sec_mesh_files]", "unsupported expression at '['" },
+        { "[x for x in sec_mesh_files]", "unexpected 'for' in expression" },
         { "\"continuous\"", "unsupported expression at '\"'" },
     };
 

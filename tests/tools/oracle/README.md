@@ -24,3 +24,17 @@ which is what makes a run reproducible on any machine with no ROS installed.
 cmake -S . -B build/corpus -DMEIOS_BUILD_TESTS=ON -DMEIOS_FETCH_CORPUS=ON -DMEIOS_CORPUS_EXPRESSION_DOCUMENTS=ON
 python3 tests/tools/oracle/record_upstream.py --package-root build/corpus/_meios_corpus_packages --out tests/golden/oracle
 ```
+
+## Refusal parity
+
+`refusal_parity.py` is the second runner here and is scoped differently. `record_upstream.py`
+measures upstream xacro's rendered output and writes records under `tests/golden/oracle`, whose
+digests the configure gate guards. `refusal_parity.py` measures only whether CPython will compile
+an expression body at all, and writes a test table under `tests/unit` — no record, no digest, no
+entry in the manifest. It needs a CPython 3 interpreter and nothing else, and it inherits one
+discipline from its neighbour and nothing else: it writes nothing at all unless every member of
+its malformed product is refused and every member of its well-formed product is accepted.
+
+```
+python3 tests/tools/oracle/refusal_parity.py --table tests/unit/syntax_table.h --cases build/syntax-parity/reemit.txt
+```
