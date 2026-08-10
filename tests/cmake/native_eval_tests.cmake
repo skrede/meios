@@ -83,6 +83,13 @@ foreach(stem IN ITEMS native_yaml native_yaml_resolver)
     meios_add_native_test(${stem} yaml)
 endforeach()
 
+# This stem alone reads the project's own listfiles, so the module directory reaches it and no
+# other stem gains a coupling to a directory it never opens.
+if(TARGET native_corpus_record_test)
+    target_compile_definitions(native_corpus_record_test PRIVATE
+        MEIOS_CMAKE_MODULE_DIR="${meios_SOURCE_DIR}/cmake")
+endif()
+
 # The row total is what keeps a present-but-emptied record set from passing every downstream
 # assertion vacuously.
 if(TARGET native_oracle_records_test)

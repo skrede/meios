@@ -1,3 +1,4 @@
+#include "../model_facts.h"
 #include "../corpus_record.h"
 
 #ifdef MEIOS_CORPUS_EVAL_PYTHON
@@ -13,6 +14,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <map>
 #include <string>
 #include <vector>
 #include <memory>
@@ -108,6 +110,22 @@ meios::load_options options_for(const corpus::document &doc)
     return opts;
 }
 
+// Every document the built-in evaluator is asked to handle carries measured upstream facts, so a
+// document added without them fails here rather than passing on a load that merely exited. Each
+// pairing is named outright, on the rule the corpus file names its documents by: a record name
+// composed from a document's own arguments would make an unmeasured variant look covered.
+std::string record_for(const corpus::document &doc)
+{
+    const std::map<std::string, std::string> measured{ { "ur_type=ur5e", "ur5e_facts.cases" },
+                                                       { "ur_type=ur3e", "ur3e_facts.cases" },
+                                                       { "kr6r900sixx.xacro", "kr6_facts.cases" } };
+    const std::map<std::string, std::string>::const_iterator variant = doc.args.find("ur_type");
+    const std::string key = variant == doc.args.end() ? doc.path.filename().string()
+                                                      : "ur_type=" + variant->second;
+    const std::map<std::string, std::string>::const_iterator found = measured.find(key);
+    return found == measured.end() ? std::string{} : found->second;
+}
+
 }
 
 TEST_CASE("the pinned corpus parses the known-good/known-faulty pair with typed diagnostics",
@@ -138,6 +156,8 @@ TEST_CASE("every named top-level corpus document loads with no error-level diagn
     {
         INFO("document: " << doc.path.string());
         REQUIRE(std::filesystem::exists(doc.path));
+        // The only skippable document is one wanting an absent optional backend. Nothing about
+        // the built-in evaluator is optional, so a document classified for it is never skipped.
         if(doc.backend == corpus::evaluator::python && !eval_python_linked)
         {
             ++skipped;
@@ -147,12 +167,19 @@ TEST_CASE("every named top-level corpus document loads with no error-level diagn
             meios::load(doc.path, options_for(doc));
         if(!result.has_value())
             FAIL("refused " << doc.path.string() << ": " << result.error().message);
+        if(doc.backend == corpus::evaluator::native)
+        {
+            const std::string record = record_for(doc);
+            INFO("measured facts: " << record);
+            REQUIRE_FALSE(record.empty());
+            facts::check_model(oracle::load_rows(record), result->robot);
+        }
         ++loaded;
     }
 
     // Reported unconditionally: a leg that covers less than it appears to must say so
     // in its own output rather than pass quietly.
     WARN("corpus documents: " << loaded << " loaded, " << skipped
-                              << " skipped for want of the python evaluator");
+                              << " skipped for want of the optional backend");
     REQUIRE(loaded + skipped == docs.size());
 }

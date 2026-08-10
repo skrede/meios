@@ -11,7 +11,7 @@ option(MEIOS_FETCH_CORPUS
 option(MEIOS_CORPUS_BREADTH
     "Load every top-level document the pinned known-good upstream ships" OFF)
 option(MEIOS_CORPUS_EXPRESSION_DOCUMENTS
-    "Fetch the expression-valued upstream and load it; needs meios::eval-python" OFF)
+    "Fetch the expression-valued upstream and load it through the built-in evaluator" OFF)
 
 # License determinations for every fetched upstream. Each corpus fetch NAME must
 # carry a matching "# license[<name>]:" line below; the check further down reads
@@ -82,10 +82,11 @@ set(MEIOS_CORPUS_FAULTY_LINE 4)
 # A record is four fields — absolute path, space-separated key=value expansion
 # arguments, the evaluator the document needs, and a package root or nothing — and
 # the records are joined with the "|" the resource paths already travel under.
-# The evaluator vocabulary is closed at three spellings: core for a document that
-# needs no expression evaluation, python for one that needs the CPython backend, and
-# native for one the built-in evaluator must handle alone. Any other spelling fails
-# the document rather than falling through to a default backend.
+# The evaluator vocabulary is closed at three spellings, of which the corpus names two:
+# core for a document that needs no expression evaluation, and native for one the
+# built-in evaluator must handle alone. The third selects the CPython backend and no
+# record here needs it. Any other spelling fails the document rather than falling
+# through to a default backend.
 set(MEIOS_CORPUS_DOCUMENTS "")
 macro(meios_corpus_document _path _args _eval _root)
     list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}")
@@ -100,6 +101,12 @@ if(MEIOS_CORPUS_BREADTH)
         meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/${_doc}" "" core "")
     endforeach()
 endif()
+
+# The only corpus document resolving $(find) across two sibling packages. The fetched
+# tarball root already holds both under the names the description resolves them by, so
+# it serves as the package root directly and no copy is needed.
+meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/kuka_kr6_support/urdf/kr6r900sixx.xacro"
+    "" native "${MEIOS_CORPUS_KUKA_DIR}")
 
 if(MEIOS_CORPUS_EXPRESSION_DOCUMENTS)
     meios_declare_resource(
@@ -116,10 +123,16 @@ if(MEIOS_CORPUS_EXPRESSION_DOCUMENTS)
     set(MEIOS_CORPUS_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/_meios_corpus_packages")
     file(COPY "${MEIOS_CORPUS_UR_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description")
 
-    # The shipped ur_type default is deliberately invalid, so a variant must be named;
-    # the macros subscript mapping values, which only the Python evaluator can do.
+    # The shipped ur_type default is deliberately invalid, so a variant must be named.
+    # The two variants differ at the wrist: ur3e's configuration says its third wrist has
+    # no position limits, so a boolean read out of the auxiliary document drives the
+    # branch that types the joint continuous, and the type then flows through a string
+    # comparison into a limit element carrying no position keys. Neither path is reachable
+    # from ur5e.
     meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-        "ur_type=ur5e" python "${MEIOS_CORPUS_PACKAGE_ROOT}")
+        "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+        "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 endif()
 
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)

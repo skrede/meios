@@ -26,6 +26,7 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
             Catch2::Catch2WithMain)
     string(REPLACE ";" "|" _corpus_documents "${MEIOS_CORPUS_DOCUMENTS}")
     target_compile_definitions(urdf_corpus_test PRIVATE
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         MEIOS_CORPUS_DIR="${MEIOS_CORPUS_KUKA_DIR}"
         MEIOS_CORPUS_KNOWN_GOOD="${MEIOS_CORPUS_KNOWN_GOOD}"
         MEIOS_CORPUS_FAULTY="${MEIOS_CORPUS_FAULTY}"
