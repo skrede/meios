@@ -9,9 +9,11 @@ import hashlib
 import argparse
 import tempfile
 import subprocess
+import importlib.metadata
 from pathlib import Path
 
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
+MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -145,10 +147,17 @@ def probe_set(config_dir):
     return probes + [one for one in dict.fromkeys(found) if one not in probes]
 
 
+def same_length(builder, what, counted, probed):
+    if counted != probed:
+        sys.exit("oracle: {} produced {} {} where {} were probed; nothing was recorded"
+                 .format(builder, counted, what, probed))
+
+
 def rendering_rows(tmp, config_dir):
     probes = probe_set(config_dir)
     body = "\n".join(' <p v="${%s}"/>' % escape(one) for one in probes)
-    rendered = render(tmp, body).getElementsByTagName("p")
+    rendered = list(render(tmp, body).getElementsByTagName("p"))
+    same_length("rendering", "rendered nodes", len(rendered), len(probes))
     return list(zip(probes, (node.getAttribute("v") for node in rendered)))
 
 
@@ -173,6 +182,19 @@ def seed_body(seed_file):
     return "\n".join(rows)
 
 
+# A run in which the environment rather than the expression produced the failures would otherwise
+# be recorded as a corpus of expected refusals, and the digest gate would then certify it. The floor
+# leaves room for a genuine future refusal without admitting a wholesale failure.
+REFUSAL_FLOOR = 2
+
+
+# The record carries the failure's first line and nothing more, because a multi-line message would
+# put an embedded newline into a tab-delimited row.
+def refusal_text(failure):
+    lines = str(failure).splitlines()
+    return lines[0] if lines and lines[0].strip() else type(failure).__name__
+
+
 def expression_rows(tmp, share, seed_file):
     rows = []
     seeds = seed_body(seed_file)
@@ -182,8 +204,11 @@ def expression_rows(tmp, share, seed_file):
             text = render(tmp, body).getElementsByTagName("e")[0].getAttribute("v")
             rows.append(("e{:02d}".format(at + 1), expression, text, ""))
         except Exception as failure:
-            rows.append(("e{:02d}".format(at + 1), expression, "REFUSED",
-                         str(failure).splitlines()[0]))
+            rows.append(("e{:02d}".format(at + 1), expression, "REFUSED", refusal_text(failure)))
+    refused = sum(1 for one in rows if one[2] == "REFUSED")
+    if refused > REFUSAL_FLOOR:
+        sys.exit("oracle: {} expressions refused where at most {} is a measurement rather than a "
+                 "broken environment; nothing was recorded".format(refused, REFUSAL_FLOOR))
     return rows
 
 
@@ -210,15 +235,38 @@ def scalar_rows(tmp, share):
     loaded = xacro.load_yaml(str(document))
     body = ' <xacro:property name="d" value="${xacro.load_yaml(\'%s\')}"/>\n' % document
     body += "\n".join(' <s v="${d[\'%s\']}"/>' % key for key in keys)
-    rendered = render(tmp, body).getElementsByTagName("s")
+    rendered = list(render(tmp, body).getElementsByTagName("s"))
+    same_length("yaml scalars", "keys", len(keys), len(sources))
+    same_length("yaml scalars", "rendered nodes", len(rendered), len(sources))
     return [(source, KINDS[type(loaded[key]).__name__], node.getAttribute("v"))
             for source, key, node in zip(sources, keys, rendered)]
 
 
-def pin_rows():
+def imported_from_pin(module_name):
+    origin = Path(importlib.import_module(module_name).__file__).resolve()
+    if not origin.is_relative_to(Path(sys.prefix).resolve()):
+        sys.exit("oracle: {} was imported from {}, outside the environment at {}; nothing was "
+                 "recorded".format(module_name, origin, sys.prefix))
+
+
+# The record's claim that exactly these distributions produced every measurement below it is a fact
+# only if the run reads the versions out of the environment it measures in.
+def measured_pins():
+    versions = {}
+    for name, want in PINS:
+        imported_from_pin(MODULES[name])
+        have = importlib.metadata.version(name)
+        if have != want:
+            sys.exit("oracle: the environment holds {} {} where {} is pinned; nothing was recorded"
+                     .format(name, have, want))
+        versions[name] = have
+    return versions
+
+
+def pin_rows(versions):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
     digest = re.search(r"NAME ur_description.*?HASH SHA256=([0-9a-f]+)", listfile, re.S)
-    return [("xacro", "2.1.1", "-"), ("PyYAML", "6.0.3", "-"),
+    return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-"),
             ("ur_description", "4.3.1", digest.group(1))]
 
 
@@ -245,12 +293,12 @@ HEADERS = {
 }
 
 
-def records(tmp, share):
+def records(tmp, share, versions):
     ur = share("ur_description")
     kuka = share("kuka_kr6_support").parent
     facts = HEADERS["facts"]
     return {
-        "PINS": (HEADERS["PINS"], pin_rows()),
+        "PINS": (HEADERS["PINS"], pin_rows(versions)),
         "rendering.cases": (HEADERS["rendering.cases"], rendering_rows(tmp, ur / "config" / "ur5e")),
         "expressions.cases": (HEADERS["expressions.cases"],
                               expression_rows(tmp, ur, tmp / "seed.yaml")),
@@ -264,13 +312,13 @@ def records(tmp, share):
     }
 
 
-def measure(out):
+def measure(out, versions):
     from ament_index_python.packages import get_package_share_directory
 
     with tempfile.TemporaryDirectory() as scratch:
         tmp = Path(scratch)
         (tmp / "seed.yaml").write_text(SEED_YAML, encoding="utf-8", newline="\n")
-        written = records(tmp, lambda name: Path(get_package_share_directory(name)))
+        written = records(tmp, lambda name: Path(get_package_share_directory(name)), versions)
     out.mkdir(parents=True, exist_ok=True)
     for name, (header, rows) in written.items():
         write_record(out, name, header, rows)
@@ -285,7 +333,7 @@ def worker(out):
         import ament_index_python.packages  # noqa: F401
     except ImportError:
         sys.exit("oracle: the vendored package index is not on PYTHONPATH; nothing was recorded")
-    measure(out)
+    measure(out, measured_pins())
 
 
 def main():
@@ -300,7 +348,10 @@ def main():
     if not args.package_root:
         parser.error("--package-root names the directory the descriptions resolve against")
     environment = dict(os.environ)
-    environment["PYTHONPATH"] = os.pathsep.join([str(HERE), environment.get("PYTHONPATH", "")])
+    # Every import-path entry precedes the environment's own site-packages, and an empty entry --
+    # which is what joining an unset inherited value yields -- is the working directory.
+    environment["PYTHONPATH"] = str(HERE)
+    environment.pop("PYTHONHOME", None)
     environment["ORACLE_PACKAGE_ROOTS"] = os.pathsep.join(
         str(one) for one in package_roots(args.package_root))
     python = bootstrap(Path(args.venv))

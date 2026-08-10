@@ -68,7 +68,9 @@ TEST_CASE("every measured row carries a subject and a measurement", "[oracle]")
     for(std::string_view file : measured)
     {
         INFO("record: " << file);
-        for(const oracle::row &one : oracle::load_rows(file))
+        const std::vector<oracle::row> rows = oracle::load_rows(file);
+        REQUIRE_FALSE(rows.empty());
+        for(const oracle::row &one : rows)
         {
             INFO("row: " << one.fields.front());
             CHECK(one.fields.size() >= 2);

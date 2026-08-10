@@ -230,25 +230,25 @@ TEST_CASE("every measured expression evaluates to the value upstream produced",
     const std::vector<oracle::row> rows = oracle::load_rows("expressions.cases");
     REQUIRE_FALSE(rows.empty());
 
-    std::size_t classified = 0;
+    std::size_t rendered = 0;
     for(const oracle::row &one : rows)
     {
-        REQUIRE(one.fields.size() >= 3);
+        REQUIRE(one.fields.size() == 4);
         INFO("case " << one.fields[0] << ": " << one.fields[1]);
         const outcome ran = evaluate(one.fields[1]);
         if(one.fields[2] == "REFUSED")
         {
-            CHECK(ran.failed);
-            CHECK_FALSE(ran.messages.empty());
+            REQUIRE_FALSE(one.fields[3].empty());
+            REQUIRE(ran.failed);
+            CHECK(oracle::relates(ran.messages, one.fields[3]));
+            continue;
         }
-        else
-        {
-            CHECK_FALSE(ran.failed);
-            CHECK(ran.rendered == one.fields[2]);
-        }
-        ++classified;
+        CHECK_FALSE(ran.failed);
+        CHECK(ran.rendered == one.fields[2]);
+        ++rendered;
     }
-    REQUIRE(classified == rows.size());
+    // A record of nothing but refusals would otherwise reduce this case to the claim that the evaluator refuses everything, which measures nothing.
+    REQUIRE(rendered * 4 >= rows.size() * 3);
 }
 
 TEST_CASE("a subscript chain reads by a literal key, by a variable key and through two levels",

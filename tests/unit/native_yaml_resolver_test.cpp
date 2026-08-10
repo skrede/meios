@@ -97,6 +97,7 @@ TEST_CASE("every recorded scalar resolves to the kind and text upstream produced
     std::size_t exercised = 0;
     for(const oracle::row &one : rows)
     {
+        REQUIRE(one.fields.size() == 3);
         INFO("source [" << one.fields[0] << ']');
         const probe read = resolve(one.fields[0]);
         REQUIRE(read.resolved.has_value());

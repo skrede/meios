@@ -5,8 +5,11 @@
 #include <vector>
 #include <cstddef>
 #include <fstream>
+#include <istream>
+#include <sstream>
 #include <optional>
 #include <filesystem>
+#include <stdexcept>
 #include <string_view>
 
 namespace oracle
@@ -30,11 +33,8 @@ inline std::vector<std::string> fields_of(const std::string &line)
     return fields;
 }
 
-inline std::vector<row> load_rows(std::string_view file)
+inline std::vector<row> rows_of(std::istream &in)
 {
-    const std::filesystem::path path =
-        std::filesystem::path{ MEIOS_GOLDEN_DIR } / "oracle" / file;
-    std::ifstream in(path);
     std::vector<row> rows;
     std::string line;
     while(std::getline(in, line))
@@ -44,6 +44,34 @@ inline std::vector<row> load_rows(std::string_view file)
         rows.push_back(row{ fields_of(line) });
     }
     return rows;
+}
+
+// A record that does not open, or opens empty, would otherwise become zero rows that every
+// downstream loop reads as nothing to assert. The header serves an out-of-tree program as well as
+// the test binaries, so the refusal is an exception rather than a test-framework macro.
+inline std::vector<row> load_rows(std::string_view file)
+{
+    const std::filesystem::path path =
+        std::filesystem::path{ MEIOS_GOLDEN_DIR } / "oracle" / file;
+    std::ifstream in(path);
+    if(!in)
+        throw std::runtime_error("the record " + path.string() + " did not open");
+    const std::vector<row> rows = rows_of(in);
+    if(rows.empty())
+        throw std::runtime_error("the record " + path.string() + " carries no rows");
+    return rows;
+}
+
+// A recorded failure is upstream's own wording, so an independent implementation can only be held
+// to naming the same thing upstream named, not to repeating the sentence.
+inline bool relates(const std::vector<std::string> &messages, const std::string &recorded)
+{
+    std::istringstream words(recorded);
+    for(std::string word; words >> word;)
+        for(const std::string &message : messages)
+            if(word.size() >= 4 && message.find(word) != std::string::npos)
+                return true;
+    return false;
 }
 
 inline std::optional<row> lookup(const std::vector<row> &rows, std::string_view key)
