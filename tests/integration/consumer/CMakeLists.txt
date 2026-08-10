@@ -3,7 +3,17 @@ project(meios_integration_test LANGUAGES CXX)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(meios CONFIG REQUIRED)
+# One input picks the acquisition route and nothing else does. A declaration carrying only a
+# source directory downloads nothing and ends in the same add_subdirectory a released consumer's
+# declaration ends in, so the two routes differ in where meios came from and in nothing else. The
+# working tree rather than a published revision is what a run before a push can validate.
+if(MEIOS_CONSUMER_SOURCE_DIR)
+    include(FetchContent)
+    FetchContent_Declare(meios SOURCE_DIR "${MEIOS_CONSUMER_SOURCE_DIR}")
+    FetchContent_MakeAvailable(meios)
+else()
+    find_package(meios CONFIG REQUIRED)
+endif()
 
 # The standard is deliberately not set on the target: it must arrive through the
 # exported interface, proving the installed package carries it.
@@ -23,3 +33,5 @@ target_include_directories(integration_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 enable_testing()
 add_test(NAME integration COMMAND integration_test)
+
+include(${CMAKE_CURRENT_LIST_DIR}/universal_robots.cmake)

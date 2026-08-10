@@ -319,6 +319,111 @@ jobs:
           cmake --install build-resource-consumer
           "${{ github.workspace }}/resource-consumer-install/bin/install_consumer"
 
+  # The pinned expression-valued description was kept out of the install-consumer
+  # legs because the only evaluator that could expand it forced the project's own
+  # install off, and those legs need the install. It needs that evaluator no
+  # longer, so a staged prefix can carry it and a program that builds none of the
+  # library can assert the model it received.
+  clean-consumer:
+    runs-on: ubuntu-24.04
+    name: clean consumer (pinned expression-valued description, both acquisition routes)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Build and install
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_FETCH_CORPUS=ON \
+            -DMEIOS_CORPUS_EXPRESSION_DOCUMENTS=ON \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build the consumer against the staged prefix
+        run: |
+          corpus="${{ github.workspace }}/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-installed \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
+            -DMEIOS_CONSUMER_UR_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+          cmake --build build-consumer-installed
+
+      - name: Build the consumer against the working tree
+        run: |
+          corpus="${{ github.workspace }}/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-fetched \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_CONSUMER_SOURCE_DIR="${{ github.workspace }}" \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON \
+            -DMEIOS_CONSUMER_UR_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+          cmake --build build-consumer-fetched
+
+      # ctest reports success when a -R filter selects nothing, so each selection is
+      # asserted non-empty before it runs; an out-of-tree build tree is exactly where
+      # a gate that gates nothing would go unnoticed. Both routes are held to the same
+      # count, so a route that quietly registered less than the other reddens.
+      - name: Run both routes
+        run: |
+          expected=0
+          for tree in build-consumer-installed build-consumer-fetched; do
+            listed=$(ctest --test-dir "$tree" -N -R '^universal_robots')
+            registered=$(printf '%s\n' "$listed" | grep -c 'Test *#' || true)
+            if [ "$registered" -eq 0 ]; then
+              echo "$tree registered no native load test"
+              exit 1
+            fi
+            if [ "$expected" -eq 0 ]; then
+              expected=$registered
+            elif [ "$registered" -ne "$expected" ]; then
+              echo "$tree registered $registered test(s), the other route registered $expected"
+              exit 1
+            fi
+            echo "$tree registered $registered test(s)"
+            ctest --test-dir "$tree" -R '^universal_robots' --output-on-failure --no-tests=error
+          done
+
+      # A claim about an absence nobody ran a command for is not evidence.
+      - name: Read the executables back
+        run: |
+          status=0
+          for tree in build-consumer-installed build-consumer-fetched; do
+            probe="$tree/universal_robots_probe"
+            if [ "$(nm -C "$probe" | grep -cE 'Py_Initialize|pybind11')" -ne 0 ]; then
+              echo "$probe carries an interpreter symbol"
+              status=1
+            fi
+            if [ "$(ldd "$probe" | grep -ci python)" -ne 0 ]; then
+              echo "$probe links an interpreter shared object"
+              status=1
+            fi
+          done
+          headers="${{ github.workspace }}/install/include"
+          if [ "$(grep -rl 'yaml-cpp/\|YAML::' "$headers" | wc -l)" -ne 0 ]; then
+            echo "an installed public header names the auxiliary-format module's own dependency"
+            status=1
+          fi
+          exit $status
+
   enrichments:
     runs-on: ubuntu-24.04
     name: enrichments (scanners + archive-zip + ros)

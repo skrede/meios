@@ -1,0 +1,15 @@
+#ifndef HPP_GUARD_CONSUMER_CORPUS_PATHS_H
+#define HPP_GUARD_CONSUMER_CORPUS_PATHS_H
+
+namespace consumer
+{
+
+inline constexpr const char *pinned_document = "@MEIOS_CONSUMER_UR_DOCUMENT@";
+inline constexpr const char *pinned_package_root = "@MEIOS_CONSUMER_UR_PACKAGE_ROOT@";
+inline constexpr const char *pinned_record = "@MEIOS_CONSUMER_UR_RECORD@";
+inline constexpr const char *variant_argument = "ur_type";
+inline constexpr const char *variant = "@MEIOS_CONSUMER_UR_VARIANT@";
+
+}
+
+#endif
