@@ -40,9 +40,9 @@ bool follows_operand(token_kind kind)
                           token_kind::kw_else, token_kind::comma });
 }
 
-// A closing bracket completes a value, and so does a token the lexer already rejected -- whose
-// own diagnostic is the one the author needs, so the walk must carry on past it rather than
-// speak over it.
+// A closing bracket the walk has admitted completes a value, and so does a token the lexer
+// already rejected -- whose own diagnostic is the one the author needs, so the walk must carry
+// on past it rather than speak over it.
 bool yields_value(token_kind kind)
 {
     return starts_value(kind)
@@ -50,10 +50,27 @@ bool yields_value(token_kind kind)
                           token_kind::unsupported });
 }
 
+bool closes_group(token_kind kind)
+{
+    return kind == token_kind::rparen || kind == token_kind::rbracket;
+}
+
+// A closing bracket is the one token whose legality turns on where it stands, so the verdict is
+// read off the token before it: against an owed operand it is accepted only closing an empty
+// argument list or trailing an argument separator. A bracket depth cannot decide this, since in
+// `f(1 + )` and in `f()` the bracket stands at the same depth.
+bool admits_close(const std::vector<token> &tokens, std::size_t i)
+{
+    if(i == 0) return false;
+    const token_kind opener =
+        tokens[i].kind == token_kind::rparen ? token_kind::lparen : token_kind::lbracket;
+    return tokens[i - 1].kind == token_kind::comma || tokens[i - 1].kind == opener;
+}
+
 // Alternation of operands and operators, in one left-to-right walk over the whole stream. Only
-// the cells that cannot be anything but malformed report here; a bracket, a dot, a lexical
-// failure and an empty stream all defer, because the parser reaches each of them with a more
-// specific message than this walk could give.
+// the cells that cannot be anything but malformed report here; an opening bracket, a dot, a
+// lexical failure and an empty stream all defer, because the parser reaches each of them with a
+// more specific message than this walk could give.
 std::optional<std::size_t> first_malformed(const std::vector<token> &tokens)
 {
     bool operand_expected = true;
@@ -63,6 +80,7 @@ std::optional<std::size_t> first_malformed(const std::vector<token> &tokens)
         if(kind == token_kind::end)
             return operand_expected && i > 0 ? std::optional<std::size_t>(i) : std::nullopt;
         if(operand_expected ? follows_operand(kind) : starts_value(kind)) return i;
+        if(operand_expected && closes_group(kind) && !admits_close(tokens, i)) return i;
         // `not` reads the same in either position: leading an operand, or opening the `not in`
         // spelling the membership parser refuses on its own terms.
         if(kind != token_kind::kw_not) operand_expected = !yields_value(kind);

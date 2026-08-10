@@ -49,7 +49,11 @@ TEST_CASE("every well-formed member of the enumeration evaluates", "[native][syn
 }
 
 // The two carriers of a pair differ only in which way the decision goes, so a verdict that
-// differs between them is a verdict taken at run time rather than read off the text.
+// differs between them is a verdict taken at run time rather than read off the text. The
+// refusal category is compared alongside the boolean because the category is the field an
+// evaluation policy reads. No fragment here spells a brace or a square-bracketed literal, so
+// this case measures nothing about the constructs the scan leaves to the parser; those are
+// measured in the syntax stem.
 TEST_CASE("a verdict does not depend on which way the decision goes", "[native][syntax]")
 {
     const std::size_t pairs[][2] = { { 0, 1 }, { 2, 4 }, { 3, 5 } };
@@ -59,7 +63,10 @@ TEST_CASE("a verdict does not depend on which way the decision goes", "[native][
         {
             const std::string one = syntax::formed(syntax::carriers[pair[0]], fragment);
             const std::string other = syntax::formed(syntax::carriers[pair[1]], fragment);
+            const probe::outcome ran_one = probe::evaluate(one);
+            const probe::outcome ran_other = probe::evaluate(other);
             INFO("expressions: " << one << " | " << other);
-            CHECK(probe::evaluate(one).failed == probe::evaluate(other).failed);
+            CHECK(ran_one.failed == ran_other.failed);
+            CHECK(ran_one.kind == ran_other.kind);
         }
 }
