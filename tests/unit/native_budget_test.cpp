@@ -86,9 +86,10 @@ std::string prefix_run(std::size_t length)
 }
 
 // The shapes are sized from the measurement rather than from the ceiling: each is far past
-// the ceiling and far short of the tens of thousands of recursive entries at which the stack
-// is exhausted, so a regression fails the case instead of killing the runner. That the byte
-// ceiling is nowhere near reached is what makes the refusal the nesting axis's own.
+// the ceiling and, at under five thousand recursive entries, far short of the 38 088 that
+// exhaust the main stack these cases run on, so a regression fails the case instead of
+// killing the runner. That the byte ceiling is nowhere near reached is what makes the
+// refusal the nesting axis's own.
 void refuses_on_nesting(const std::string &text)
 {
     const run refused = substitute(text, meios::eval_policy::fail);
