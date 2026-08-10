@@ -13,6 +13,7 @@ import importlib.metadata
 from pathlib import Path
 
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
+CORPUS_PIN = "4.3.1"
 MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
 HERE = Path(__file__).resolve().parent
@@ -263,11 +264,25 @@ def measured_pins():
     return versions
 
 
-def pin_rows(versions):
+# The corpus package is not an installed distribution and has no metadata to read a version from,
+# so its own manifest in the fetched tree is the statement of record.
+def package_version(share):
+    manifest = share("ur_description") / "package.xml"
+    text = manifest.read_text(encoding="utf-8") if manifest.is_file() else ""
+    found = re.search(r"<version>\s*([^<]*?)\s*</version>", text)
+    if not found or not found.group(1):
+        sys.exit("oracle: no version in the manifest {}; nothing was recorded".format(manifest))
+    if found.group(1) != CORPUS_PIN:
+        sys.exit("oracle: the corpus package declares {} where {} is pinned; nothing was recorded"
+                 .format(found.group(1), CORPUS_PIN))
+    return found.group(1)
+
+
+def pin_rows(versions, share):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
     digest = re.search(r"NAME ur_description.*?HASH SHA256=([0-9a-f]+)", listfile, re.S)
     return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-"),
-            ("ur_description", "4.3.1", digest.group(1))]
+            ("ur_description", package_version(share), digest.group(1))]
 
 
 def write_record(out, name, header, rows):
@@ -298,7 +313,7 @@ def records(tmp, share, versions):
     kuka = share("kuka_kr6_support").parent
     facts = HEADERS["facts"]
     return {
-        "PINS": (HEADERS["PINS"], pin_rows(versions)),
+        "PINS": (HEADERS["PINS"], pin_rows(versions, share)),
         "rendering.cases": (HEADERS["rendering.cases"], rendering_rows(tmp, ur / "config" / "ur5e")),
         "expressions.cases": (HEADERS["expressions.cases"],
                               expression_rows(tmp, ur, tmp / "seed.yaml")),
