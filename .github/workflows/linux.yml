@@ -402,27 +402,13 @@ jobs:
             ctest --test-dir "$tree" -R '^universal_robots' --output-on-failure --no-tests=error
           done
 
-      # A claim about an absence nobody ran a command for is not evidence.
+      # A claim about an absence nobody ran a command for is not evidence, so the assertions live
+      # in a script the repository can syntax-check and fire against deliberately wrong inputs.
       - name: Read the executables back
         run: |
-          status=0
-          for tree in build-consumer-installed build-consumer-fetched; do
-            probe="$tree/universal_robots_probe"
-            if [ "$(nm -C "$probe" | grep -cE 'Py_Initialize|pybind11')" -ne 0 ]; then
-              echo "$probe carries an interpreter symbol"
-              status=1
-            fi
-            if [ "$(ldd "$probe" | grep -ci python)" -ne 0 ]; then
-              echo "$probe links an interpreter shared object"
-              status=1
-            fi
-          done
-          headers="${{ github.workspace }}/install/include"
-          if [ "$(grep -rl 'yaml-cpp/\|YAML::' "$headers" | wc -l)" -ne 0 ]; then
-            echo "an installed public header names the auxiliary-format module's own dependency"
-            status=1
-          fi
-          exit $status
+          bash .github/scripts/read_back_consumer.sh \
+            "${{ github.workspace }}/install" \
+            build-consumer-installed build-consumer-fetched
 
   enrichments:
     runs-on: ubuntu-24.04

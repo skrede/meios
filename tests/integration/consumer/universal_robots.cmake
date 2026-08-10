@@ -78,6 +78,11 @@ add_test(NAME universal_robots COMMAND universal_robots_probe)
 # The same program again with an empty process path and no interpreter environment, so the claim
 # is about the run rather than only about the link line. The program reads the path back and
 # refuses if an interpreter is reachable after all.
-add_test(NAME universal_robots_no_interpreter COMMAND universal_robots_probe)
+#
+# The argument arms the guard and the environment empties the path, deliberately from two
+# sources: an invocation that lost the property would otherwise leave a check that inspects
+# nothing and passes, rather than a check that reddens.
+add_test(NAME universal_robots_no_interpreter
+    COMMAND universal_robots_probe --no-interpreter)
 set_tests_properties(universal_robots_no_interpreter PROPERTIES
     ENVIRONMENT "PATH=;PYTHONHOME=;PYTHONPATH=;MEIOS_CONSUMER_NO_INTERPRETER=1")
