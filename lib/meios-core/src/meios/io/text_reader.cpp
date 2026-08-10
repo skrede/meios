@@ -2,6 +2,7 @@
 
 #include <span>
 #include <array>
+#include <limits>
 #include <memory>
 #include <string>
 #include <cstddef>
@@ -18,6 +19,8 @@ namespace detail
 namespace
 {
 
+constexpr std::size_t no_maximum = std::numeric_limits<std::size_t>::max();
+
 text_read_result failure(text_read_failure_kind kind, operation_kind operation, std::error_code native)
 {
     return unexpected<text_read_failure>({kind, {operation, native}});
@@ -28,7 +31,7 @@ std::error_code backend_error(std::error_code error)
     return error ? error : make_error_code(std::errc::io_error);
 }
 
-text_read_result read_open_file(std::unique_ptr<text_file> file)
+text_read_result read_open_file(std::unique_ptr<text_file> file, std::size_t maximum)
 {
     std::array<char, 64 * 1024> buffer{};
     std::string content;
@@ -42,6 +45,8 @@ text_read_result read_open_file(std::unique_ptr<text_file> file)
             return failure(text_read_failure_kind::read, operation_kind::read, make_error_code(std::errc::io_error));
         if(transferred == 0)
             break;
+        if(transferred > maximum - content.size())
+            return failure(text_read_failure_kind::too_large, operation_kind::read, make_error_code(std::errc::file_too_large));
         content.append(buffer.data(), transferred);
     }
     if(!file->close())
@@ -51,20 +56,30 @@ text_read_result read_open_file(std::unique_ptr<text_file> file)
 
 }
 
-text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations)
+text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations, std::size_t maximum)
 {
     text_open_result opened = operations.open_checked(path);
     if(!opened)
         return unexpected<text_read_failure>(opened.error());
-    return read_open_file(std::move(*opened));
+    return read_open_file(std::move(*opened), maximum);
 }
 
-text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations)
+text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations)
+{
+    return read_text_file(path, operations, no_maximum);
+}
+
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations, std::size_t maximum)
 {
     text_open_result opened = operations.open_under(root, relative);
     if(!opened)
         return unexpected<text_read_failure>(opened.error());
-    return read_open_file(std::move(*opened));
+    return read_open_file(std::move(*opened), maximum);
+}
+
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations)
+{
+    return read_text_file_under(root, relative, operations, no_maximum);
 }
 
 text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative)
@@ -77,6 +92,11 @@ text_read_result read_text_file_under(const std::filesystem::path &root, const s
 text_read_result read_text_file(const std::filesystem::path &path)
 {
     return detail::read_text_file(path, detail::default_text_reader_operations());
+}
+
+text_read_result read_text_file(const std::filesystem::path &path, std::size_t maximum)
+{
+    return detail::read_text_file(path, detail::default_text_reader_operations(), maximum);
 }
 
 text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative)

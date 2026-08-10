@@ -56,7 +56,9 @@ protected:
 
 const text_reader_operations &default_text_reader_operations() noexcept;
 text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations);
+text_read_result read_text_file(const std::filesystem::path &path, const text_reader_operations &operations, std::size_t maximum);
 text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations);
+text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative, const text_reader_operations &operations, std::size_t maximum);
 text_read_result read_text_file_under(const std::filesystem::path &root, const std::filesystem::path &relative);
 
 }

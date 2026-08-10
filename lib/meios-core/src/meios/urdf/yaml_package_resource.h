@@ -1,6 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_CORE_URDF_YAML_PACKAGE_RESOURCE_H
 #define HPP_GUARD_MEIOS_CORE_URDF_YAML_PACKAGE_RESOURCE_H
 
+#include "yaml_resource.h"
+
 #include "meios/io/text_reader.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/source_lookup.h"
@@ -69,16 +71,18 @@ inline void report_failure(std::string_view subject, const operation_failure &ca
             "cannot " + std::string(to_string(cause.operation)) + " resource \"" + std::string(subject) + "\": " + cause.native.message());
 }
 
-inline void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
+inline void report_failure(std::string_view subject, const text_read_failure &failure, std::size_t maximum, log_sink &log)
 {
+    if(failure.kind == text_read_failure_kind::too_large)
+        return report_too_large(subject, maximum, log);
     log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
 }
 
-inline std::optional<std::string> consume(text_read_result text, std::string_view subject, log_sink &log)
+inline std::optional<std::string> consume(text_read_result text, std::string_view subject, std::size_t maximum, log_sink &log)
 {
     if(text)
         return std::move(*text);
-    report_failure(subject, text.error(), log);
+    report_failure(subject, text.error(), maximum, log);
     return std::nullopt;
 }
 
@@ -98,14 +102,14 @@ inline std::optional<resolved_asset> locate(std::string_view spec, const package
     return std::move(**hit);
 }
 
-inline text_read_result read(const resolved_asset &asset, const text_reader_operations &operations)
+inline text_read_result read(const resolved_asset &asset, const text_reader_operations &operations, std::size_t maximum)
 {
     if(asset.source_root() && asset.source_relative())
-        return read_text_file_under(*asset.source_root(), *asset.source_relative(), operations);
-    return read_text_file(asset.path(), operations);
+        return read_text_file_under(*asset.source_root(), *asset.source_relative(), operations, maximum);
+    return read_text_file(asset.path(), operations, maximum);
 }
 
-inline std::optional<std::string> fetch(std::string_view spec, source_stack &sources, log_sink &log, const text_reader_operations &operations)
+inline std::optional<std::string> fetch(std::string_view spec, source_stack &sources, log_sink &log, const text_reader_operations &operations, std::size_t maximum)
 {
     const std::optional<package_ref> ref = spec.starts_with(package_prefix) ? package_split(spec) : find_split(spec);
     if(!ref)
@@ -114,7 +118,7 @@ inline std::optional<std::string> fetch(std::string_view spec, source_stack &sou
         return std::nullopt;
     }
     const std::optional<resolved_asset> hit = locate(spec, *ref, sources, log);
-    return hit ? consume(read(*hit, operations), hit->path().string(), log) : std::nullopt;
+    return hit ? consume(read(*hit, operations, maximum), hit->path().string(), maximum, log) : std::nullopt;
 }
 
 }

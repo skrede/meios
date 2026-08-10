@@ -36,8 +36,9 @@ value index_into(parser &p, const value &container, const value &key)
 }
 
 // eval_scope::parse_yaml has already reported its own cause — the missing capability, the
-// refused construct or the crossed ceiling — so the category is recorded here without a second
-// diagnostic. Only the absent capability is softenable; the other two terminate every policy.
+// construct this backend declines, the malformed document or the crossed ceiling — so the
+// category is recorded here without a second diagnostic. An absent capability and a declined
+// construct are both softenable, since a fuller backend reads either; the other two are not.
 eval_failure_kind category_of(yaml_failure why)
 {
     switch(why)

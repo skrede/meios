@@ -32,11 +32,13 @@ scalar_result real_from(std::string_view text)
     const std::string cleaned = without_separators(text);
     bool ok = false;
     const double number = parse_double(cleaned, ok);
+    // The spelling has already matched upstream's float pattern, so a conversion that refuses it
+    // here refused a magnitude and not a syntax: what is left is a value outside double's range.
     if(!ok)
-        return rejects("a number this evaluator cannot read");
+        return declines("a number outside the range this evaluator reads");
     const std::optional<value> made = value::make_real(number);
     if(!made)
-        return rejects("a number that is not finite");
+        return declines("a number that is not finite");
     return yields(*made);
 }
 
@@ -48,8 +50,10 @@ scalar_result integer_from(std::string_view text, const integer_shape &shape)
     const char *last = cleaned.data() + cleaned.size();
     const std::from_chars_result read =
         std::from_chars(cleaned.data(), last, number, shape.base);
+    if(read.ec == std::errc::result_out_of_range)
+        return declines("a number this evaluator cannot represent");
     if(read.ec != std::errc{} || read.ptr != last)
-        return rejects("a number this evaluator cannot represent");
+        return rejects("a number this evaluator cannot read");
     return yields(value{ number });
 }
 
@@ -63,7 +67,7 @@ scalar_result resolve_plain(std::string_view text)
     if(sexagesimal_shape(text))
         return declines("a sexagesimal number '" + std::string(text) + '\'');
     if(non_finite_shape(text))
-        return rejects("a number that is not finite");
+        return declines("a number that is not finite");
     if(float_shape(text))
         return real_from(text);
     if(const std::optional<integer_shape> shape = integer_spelling(text))

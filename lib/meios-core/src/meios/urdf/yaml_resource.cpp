@@ -26,8 +26,10 @@ namespace meios::detail
 namespace
 {
 
-void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
+void report_failure(std::string_view subject, const text_read_failure &failure, std::size_t maximum, log_sink &log)
 {
+    if(failure.kind == text_read_failure_kind::too_large)
+        return report_too_large(subject, maximum, log);
     log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
 }
 
@@ -68,7 +70,8 @@ expected<std::optional<std::string>, text_read_failure> nothing(bool &verdict)
     return std::optional<std::string>{};
 }
 
-expected<std::optional<std::string>, text_read_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, sweep &seen)
+expected<std::optional<std::string>, text_read_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, std::size_t maximum,
+                                                                sweep &seen)
 {
     contained_path_result contained = try_contained_under(root, root / std::filesystem::path(spec));
     if(!contained)
@@ -86,7 +89,7 @@ expected<std::optional<std::string>, text_read_failure> try_root(std::string_vie
     expected<std::filesystem::path, operation_failure> relative = root_request(root, **contained);
     if(!relative)
         return unexpected<text_read_failure>({text_read_failure_kind::status, relative.error()});
-    text_read_result text = read_text_file_under(root, *relative, operations);
+    text_read_result text = read_text_file_under(root, *relative, operations, maximum);
     return text ? expected<std::optional<std::string>, text_read_failure>{std::optional{std::move(*text)}}
                 : expected<std::optional<std::string>, text_read_failure>{unexpected<text_read_failure>(text.error())};
 }
@@ -99,10 +102,10 @@ void remember(const text_read_failure &failure, std::optional<text_read_failure>
 
 // A determined native cause outranks both verdicts; between the two, absence wins, because a root
 // that holds the place for the resource has answered the containment question the other one raised.
-void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, log_sink &log)
+void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, std::size_t maximum, log_sink &log)
 {
     if(first_failure)
-        report_failure(spec, *first_failure, log);
+        report_failure(spec, *first_failure, maximum, log);
     else if(seen.uncontained && !seen.absent)
         log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
     else
@@ -110,27 +113,29 @@ void report_exhausted(std::string_view spec, const sweep &seen, const std::optio
 }
 
 std::optional<std::string> from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
-                                            const text_reader_operations &operations)
+                                            const text_reader_operations &operations, std::size_t maximum)
 {
     sweep seen{false, false};
     std::optional<text_read_failure> first_failure;
     for(const std::filesystem::path &root : probe_roots(document, roots))
     {
-        expected<std::optional<std::string>, text_read_failure> result = try_root(spec, root, operations, seen);
+        expected<std::optional<std::string>, text_read_failure> result = try_root(spec, root, operations, maximum, seen);
         if(!result)
             remember(result.error(), first_failure);
         else if(*result)
             return std::move(**result);
     }
-    report_exhausted(spec, seen, first_failure, log);
+    report_exhausted(spec, seen, first_failure, maximum, log);
     return std::nullopt;
 }
 
 class yaml_fetcher final : public text_resource_loader::fetcher
 {
 public:
-    yaml_fetcher(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log, const text_reader_operations &operations, yaml_text_delivery_probe &probe)
+    yaml_fetcher(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log, const text_reader_operations &operations, yaml_text_delivery_probe &probe,
+                 std::size_t maximum)
             : m_log(log)
+            , m_maximum(maximum)
             , m_probe(probe)
             , m_sources(sources)
             , m_operations(operations)
@@ -140,8 +145,8 @@ public:
 
     std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &document) override
     {
-        std::optional<std::string> text =
-                yaml_package::matches(spec) ? yaml_package::fetch(spec, m_sources, m_log, m_operations) : from_containment(spec, document, m_roots, m_log, m_operations);
+        std::optional<std::string> text = yaml_package::matches(spec) ? yaml_package::fetch(spec, m_sources, m_log, m_operations, m_maximum)
+                                                                     : from_containment(spec, document, m_roots, m_log, m_operations, m_maximum);
         if(text)
             m_probe.delivered();
         return text;
@@ -149,6 +154,7 @@ public:
 
 private:
     log_sink &m_log;
+    std::size_t m_maximum;
     yaml_text_delivery_probe &m_probe;
     source_stack &m_sources;
     const text_reader_operations &m_operations;
@@ -166,15 +172,15 @@ public:
 }
 
 text_resource_loader make_yaml_text_loader(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log, const text_reader_operations &operations,
-                                           yaml_text_delivery_probe &probe)
+                                           yaml_text_delivery_probe &probe, std::size_t maximum)
 {
-    return text_resource_loader{std::make_unique<yaml_fetcher>(sources, roots, log, operations, probe)};
+    return text_resource_loader{std::make_unique<yaml_fetcher>(sources, roots, log, operations, probe, maximum)};
 }
 
-text_resource_loader make_yaml_text_loader(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log)
+text_resource_loader make_yaml_text_loader(source_stack &sources, const std::vector<std::filesystem::path> &roots, log_sink &log, std::size_t maximum)
 {
     static null_delivery_probe probe;
-    return make_yaml_text_loader(sources, roots, log, default_text_reader_operations(), probe);
+    return make_yaml_text_loader(sources, roots, log, default_text_reader_operations(), probe, maximum);
 }
 
 }

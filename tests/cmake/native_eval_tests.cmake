@@ -80,7 +80,7 @@ foreach(stem IN ITEMS native_value native_render native_expression native_sessio
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
-foreach(stem IN ITEMS native_yaml native_yaml_resolver)
+foreach(stem IN ITEMS native_yaml native_yaml_resolver native_yaml_seam)
     meios_add_native_test(${stem} yaml)
 endforeach()
 
