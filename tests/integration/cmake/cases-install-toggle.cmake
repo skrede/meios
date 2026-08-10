@@ -84,7 +84,7 @@ meios_cmake_case(cmake_install_reason_fetched_dependency
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake
     EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=ON -DMEIOS_ARCHIVE_ZIP_SUPPORT=ON
-            -DMEIOS_CMAKE_FETCH_DEPS=ON
+            -DMEIOS_CMAKE_FETCH_DEPS=ON -DMEIOS_YAML_SUPPORT=OFF
     INSTALL ON
     TIMEOUT 900
     REQUIRE_PREFIX_EMPTY ON
@@ -107,7 +107,7 @@ meios_cmake_case(cmake_subproject_install_manifest
     FIXTURE subproject
     DRIVER  meios_subproject_case.cmake
     EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=ON -DPUGIXML_INSTALL=ON
-            -DMEIOS_ROS_PACKAGE_SUPPORT=OFF
+            -DMEIOS_ROS_PACKAGE_SUPPORT=OFF -DMEIOS_YAML_SUPPORT=OFF
     BUILD_TARGET meios_core
     INSTALL ON
     TIMEOUT 1800

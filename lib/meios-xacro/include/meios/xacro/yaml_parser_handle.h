@@ -16,6 +16,27 @@
 namespace meios
 {
 
+// Why a parse produced no value. Only an absent capability and a construct a fuller backend
+// would read are forms of unsupported syntax a lenient evaluation policy may soften; a
+// malformed document and a crossed ceiling are terminal, and collapsing the four would let a
+// hostile document leave partial output behind.
+enum class yaml_failure
+{
+    none,
+    unavailable,
+    unsupported,
+    refused,
+    exhausted,
+};
+
+// The reason travels back with the result of the call that produced it, so a parser reachable
+// from two concurrent loads keeps no failure state to read.
+struct yaml_outcome
+{
+    std::optional<value> parsed;
+    yaml_failure failure;
+};
+
 // Move-only type-erased hook turning auxiliary bytes into a value, so no evaluator ever
 // resolves or opens a path itself: the bytes arrive from the scope's contained loader and
 // the parser only reads them. The handle keeps no state of its own — the ceilings, the
@@ -33,9 +54,9 @@ public:
         parser &operator=(parser &&) = default;
         virtual ~parser() = default;
 
-        virtual std::optional<value> parse(std::string_view bytes, const evaluator_limits &limits,
-                                           evaluator_counters &counters, log_sink &log,
-                                           const source_location &at) const = 0;
+        virtual yaml_outcome parse(std::string_view bytes, const evaluator_limits &limits,
+                                   evaluator_counters &counters, log_sink &log,
+                                   const source_location &at) const = 0;
     };
 
     yaml_parser_handle() = default;
@@ -50,9 +71,9 @@ public:
 
     bool valid() const noexcept { return m_impl != nullptr; }
 
-    std::optional<value> operator()(std::string_view bytes, const evaluator_limits &limits,
-                                    evaluator_counters &counters, log_sink &log,
-                                    const source_location &at) const
+    yaml_outcome operator()(std::string_view bytes, const evaluator_limits &limits,
+                            evaluator_counters &counters, log_sink &log,
+                            const source_location &at) const
     {
         assert(valid() && "parse on a moved-from yaml_parser_handle");
         return m_impl->parse(bytes, limits, counters, log, at);

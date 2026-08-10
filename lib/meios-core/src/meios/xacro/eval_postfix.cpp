@@ -35,12 +35,24 @@ value index_into(parser &p, const value &container, const value &key)
     return *found;
 }
 
-// eval_scope::parse_yaml has already reported its own cause — the missing capability or the
-// parse fault — so the category is recorded here without a second diagnostic.
-value refuse_parsed(parser &p)
+// eval_scope::parse_yaml has already reported its own cause — the missing capability, the
+// refused construct or the crossed ceiling — so the category is recorded here without a second
+// diagnostic. Only the absent capability is softenable; the other two terminate every policy.
+eval_failure_kind category_of(yaml_failure why)
+{
+    switch(why)
+    {
+        case yaml_failure::unavailable: return eval_failure_kind::unsupported;
+        case yaml_failure::unsupported: return eval_failure_kind::unsupported;
+        case yaml_failure::exhausted:   return eval_failure_kind::exhausted;
+        default:                        return eval_failure_kind::error;
+    }
+}
+
+value refuse_parsed(parser &p, yaml_failure why)
 {
     if(p.ok)
-        p.failure = eval_failure_kind::unsupported;
+        p.failure = category_of(why);
     p.ok = false;
     return value{};
 }
@@ -59,11 +71,11 @@ value load_yaml_value(parser &p, std::string_view argument)
     if(!bytes)
         return p.fail("cannot reach the auxiliary document \"" + *spec + '"',
                       diagnostic_code::unresolved_asset);
-    const std::optional<value> parsed =
+    const yaml_outcome parsed =
         p.scope.parse_yaml(*bytes, p.session.limits, p.session.counters, p.log, p.anchor);
-    if(!parsed)
-        return refuse_parsed(p);
-    return parsed->with_yaml_origin();
+    if(!parsed.parsed)
+        return refuse_parsed(p, parsed.failure);
+    return parsed.parsed->with_yaml_origin();
 }
 
 value parse_load_yaml(parser &p)

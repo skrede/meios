@@ -52,9 +52,14 @@ meios_add_module(bundle TYPE INTERFACE ALIASES meios::bundle
 # The INTERFACE modules PUBLIC-link core, so their include roots do not flow back
 # to the core archive; compiled bodies under meios-core/src reach the module and
 # diagnostic headers only through these PRIVATE roots (header visibility, no link).
+# meios-yaml is here for the same reason and on the same terms as the rest: a core body that
+# includes the load options header reads the factory's declaration through it. Header
+# visibility only — no core translation unit constructs the options, so nothing in the archive
+# references the factory and the core keeps a zero link edge to the module.
 target_include_directories(meios_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-xacro/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-io/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/meios-yaml/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-model/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-urdf/include
     ${CMAKE_CURRENT_SOURCE_DIR}/meios-bundle/include
@@ -77,6 +82,14 @@ if(MEIOS_SCAN_GLTF_SUPPORT)
         LINK_PRIVATE nlohmann_json::nlohmann_json)
     if(TARGET meios_scan-gltf)
         set(MEIOS_SCAN_GLTF_INSTALLED TRUE PARENT_SCOPE)
+    endif()
+endif()
+if(MEIOS_YAML_SUPPORT)
+    meios_add_enrichment(yaml
+        LINK_PUBLIC meios::xacro
+        LINK_PRIVATE yaml-cpp::yaml-cpp)
+    if(TARGET meios_yaml)
+        set(MEIOS_YAML_INSTALLED TRUE PARENT_SCOPE)
     endif()
 endif()
 if(MEIOS_ROS_PACKAGE_SUPPORT)
@@ -125,4 +138,26 @@ if(MEIOS_EVAL_PYTHON_SUPPORT)
         message(FATAL_ERROR
             "meios: MEIOS_REQUIRE_EVAL_PYTHON is ON but meios::eval-python did not materialize.")
     endif()
+endif()
+
+# Every consumer that can construct load_options already links meios::urdf, because the header
+# declaring it and the module supplying it are the same one; carrying the edge here is what puts
+# the auxiliary-format archive on that consumer's link line and its include root on the path,
+# with no CMake change of the consumer's own. Unconditional linking would fail to generate when
+# the option is off and the target does not exist.
+if(TARGET meios_yaml)
+    target_link_libraries(meios_urdf INTERFACE meios::yaml)
+    set(MEIOS_HAS_YAML TRUE)
+endif()
+
+# The same fact, recorded for the consumer's preprocessor rather than its link line, and
+# configured here rather than beside version.h because it is not known until the block above has
+# run. A target_compile_definitions would not reach a consumer of the installed package.
+configure_file(
+    ${PROJECT_SOURCE_DIR}/cmake/config.h.in
+    ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/config.h
+    @ONLY)
+if(MEIOS_INSTALL)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/meios-core/include/meios/config.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/meios)
 endif()

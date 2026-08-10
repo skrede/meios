@@ -1,0 +1,8 @@
+#ifndef HPP_GUARD_MEIOS_CORE_CONFIG_H
+#define HPP_GUARD_MEIOS_CORE_CONFIG_H
+
+// Generated and installed rather than set with target_compile_definitions, because a definition
+// carried on a build target does not reach a consumer of the installed package.
+#cmakedefine MEIOS_HAS_YAML
+
+#endif

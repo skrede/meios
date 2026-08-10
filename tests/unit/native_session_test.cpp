@@ -184,9 +184,10 @@ TEST_CASE("a scope with no installed parser names the missing capability", "[nat
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
 
-    const std::optional<meios::value> parsed = scope.parse_yaml("a: 1", ceilings, counters, sink, {});
+    const meios::yaml_outcome parsed = scope.parse_yaml("a: 1", ceilings, counters, sink, {});
 
-    REQUIRE_FALSE(parsed.has_value());
+    REQUIRE_FALSE(parsed.parsed.has_value());
+    REQUIRE(parsed.failure == meios::yaml_failure::unavailable);
     REQUIRE(counts.messages.size() == 1);
     REQUIRE(counts.messages.front().find("resolves no auxiliary document format")
             != std::string::npos);

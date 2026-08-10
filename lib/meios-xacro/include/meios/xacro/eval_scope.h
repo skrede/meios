@@ -79,15 +79,15 @@ public:
         return m_load_text_cb(spec, m_active_document);
     }
 
-    std::optional<value> parse_yaml(std::string_view bytes, const evaluator_limits &limits,
-                                    evaluator_counters &counters, log_sink &log,
-                                    const source_location &at) const
+    yaml_outcome parse_yaml(std::string_view bytes, const evaluator_limits &limits,
+                            evaluator_counters &counters, log_sink &log,
+                            const source_location &at) const
     {
         if(!m_parse_yaml_cb || !m_parse_yaml_cb->valid())
         {
             log.log(level::error, diagnostic_code::unsupported_expression, at,
                     "this build resolves no auxiliary document format — use eval-python");
-            return std::nullopt;
+            return yaml_outcome{ std::nullopt, yaml_failure::unavailable };
         }
         return (*m_parse_yaml_cb)(bytes, limits, counters, log, at);
     }

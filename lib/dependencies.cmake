@@ -65,6 +65,13 @@ FetchContent_Declare(
     SYSTEM
     FIND_PACKAGE_ARGS NAMES pybind11 GLOBAL
 )
+FetchContent_Declare(
+    yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG 56e3bb550c91fd7005566f19c079cb7a503223cf  # yaml-cpp 0.9.0
+    SYSTEM
+    FIND_PACKAGE_ARGS 0.9 NAMES yaml-cpp GLOBAL
+)
 if(MEIOS_SCAN_GLTF_SUPPORT)
     set(JSON_BuildTests OFF)
     FetchContent_MakeAvailable(nlohmann_json)
@@ -80,6 +87,25 @@ if(MEIOS_ARCHIVE_ZIP_SUPPORT)
         add_library(miniz::miniz ALIAS miniz)
     endif()
     _meios_record_dependency_install(miniz INSTALL_PROJECT "${miniz_SOURCE_DIR}")
+endif()
+if(MEIOS_YAML_SUPPORT)
+    set(YAML_CPP_BUILD_TESTS OFF)
+    set(YAML_CPP_BUILD_TOOLS OFF)
+    set(YAML_CPP_BUILD_CONTRIB OFF)
+    # The inversion against pugixml above is deliberate. yaml-cpp's own default is off whenever it
+    # is consumed as a subproject, and the accounting below reads a fetched dependency that
+    # declines to install as a reason to disable meios's own install; leaving the default in place
+    # would therefore switch the install off for every default build, because this module is the
+    # one enrichment that is on by default. A consumer that has already expressed a preference
+    # keeps it.
+    if(NOT DEFINED YAML_CPP_INSTALL)
+        set(YAML_CPP_INSTALL ON)
+    endif()
+    FetchContent_MakeAvailable(yaml-cpp)
+    if(NOT TARGET yaml-cpp::yaml-cpp)
+        add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+    endif()
+    _meios_record_dependency_install(yaml-cpp YAML_CPP_INSTALL "${yaml-cpp_SOURCE_DIR}")
 endif()
 # No install fact is recorded for the interpreter binding: the module that links it withholds
 # itself from the export, so nothing in the export set reaches it and recording it would degrade

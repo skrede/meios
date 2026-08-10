@@ -12,10 +12,10 @@
 set(_export_tree "-DFX_MEIOS_SOURCE_DIR=${meios_SOURCE_DIR}")
 
 # pugixml is told to install itself so the staged prefix is self-contained whether or not the host
-# running these cases has a discoverable one, and the ROS enrichment is off so the only compiled
-# install rules are the ones the named build target really produces.
+# running these cases has a discoverable one, and both enrichments that default on are off so the
+# only compiled install rules are the ones the named build target really produces.
 set(_export_build ${_export_tree} -DFX_PARENT_INSTALL=ON -DPUGIXML_INSTALL=ON
-                  -DMEIOS_ROS_PACKAGE_SUPPORT=OFF)
+                  -DMEIOS_ROS_PACKAGE_SUPPORT=OFF -DMEIOS_YAML_SUPPORT=OFF)
 
 set(_export_cmakedir "${CMAKE_INSTALL_LIBDIR}/cmake/meios")
 set(_export_installed "${_export_cmakedir}/meiosConfig.cmake")
@@ -84,7 +84,7 @@ meios_cmake_case(cmake_install_backend_absent
 # The shared build set turns this enrichment off; this case is the one that needs it built, so it
 # states the option itself rather than appending a contradictory second -D to that set.
 set(_export_package_build ${_export_tree} -DFX_PARENT_INSTALL=ON -DPUGIXML_INSTALL=ON
-                          -DMEIOS_ROS_PACKAGE_SUPPORT=ON)
+                          -DMEIOS_ROS_PACKAGE_SUPPORT=ON -DMEIOS_YAML_SUPPORT=OFF)
 
 # The module's own directory and the include root it ships deliberately disagree, so the installed
 # header path is exactly what a directory move could carry off without anything noticing.
@@ -108,6 +108,37 @@ meios_cmake_case(cmake_install_exports_package_resolution_component
     REQUIRE_CONTAINS "${_export_cmakedir}/meiosTargets.cmake,meios::ros-package"
     CONSUMER module
     CONSUMER_EXTRA ${_export_package_request}
+    CONSUMER_CONTROL ${_export_control})
+
+# The auxiliary-format module is the one enrichment a default build produces, and it is also the
+# one whose private link edge on a static archive survives into the exported interface. So this
+# stages a prefix with it built and reads back three things a working tree cannot show: the archive
+# and its header arrived, the export carries the namespaced spelling, and a consumer configured
+# against the prefix resolves the dependency the config declares for it.
+set(_export_auxiliary_build ${_export_tree} -DFX_PARENT_INSTALL=ON -DPUGIXML_INSTALL=ON
+                            -DMEIOS_ROS_PACKAGE_SUPPORT=OFF -DMEIOS_YAML_SUPPORT=ON)
+
+set(_export_auxiliary_installed "${_export_installed}")
+string(APPEND _export_auxiliary_installed
+    ",${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}meios_yaml${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    ",${CMAKE_INSTALL_INCLUDEDIR}/meios/yaml/parser.h"
+    ",${CMAKE_INSTALL_INCLUDEDIR}/meios/config.h")
+
+set(_export_auxiliary_request -DFX_FIND_PACKAGE=ON -DFX_COMPONENTS=yaml -DFX_NAME=demo)
+list(APPEND _export_auxiliary_request
+    -DFX_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/origin/clean)
+
+meios_cmake_case(cmake_install_exports_auxiliary_format_component
+    FIXTURE subproject
+    DRIVER  meios_subproject_case.cmake
+    EXTRA   ${_export_auxiliary_build}
+    BUILD_TARGET meios_yaml
+    INSTALL ON
+    TIMEOUT 1800
+    REQUIRE_INSTALLED ${_export_auxiliary_installed}
+    REQUIRE_CONTAINS "${_export_cmakedir}/meiosTargets.cmake,meios::yaml"
+    CONSUMER module
+    CONSUMER_EXTRA ${_export_auxiliary_request}
     CONSUMER_CONTROL ${_export_control})
 
 # The path-containment check is a traversal control, and its absence from a prefix is invisible to

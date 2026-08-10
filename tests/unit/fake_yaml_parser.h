@@ -74,13 +74,14 @@ inline meios::value yaml_mapping(const std::vector<yaml_line> &rows, std::size_t
 class yaml_parser final : public meios::yaml_parser_handle::parser
 {
 public:
-    std::optional<meios::value> parse(std::string_view bytes, const meios::evaluator_limits &,
-                                      meios::evaluator_counters &, meios::log_sink &,
-                                      const meios::source_location &) const override
+    meios::yaml_outcome parse(std::string_view bytes, const meios::evaluator_limits &,
+                              meios::evaluator_counters &, meios::log_sink &,
+                              const meios::source_location &) const override
     {
         const std::vector<yaml_line> rows = yaml_lines(bytes);
         std::size_t at = 0;
-        return yaml_mapping(rows, at, rows.empty() ? 0 : rows.front().indent);
+        return meios::yaml_outcome{ yaml_mapping(rows, at, rows.empty() ? 0 : rows.front().indent),
+                                    meios::yaml_failure::none };
     }
 };
 

@@ -34,6 +34,10 @@ option(MEIOS_SCAN_GLTF_SUPPORT "Build meios::scan-gltf (nlohmann/json)" OFF)
 # Turning it off gives up that resolution and the environment search lists it reads.
 option(MEIOS_ROS_PACKAGE_SUPPORT "Resolve package:// through ROS package manifests (pugixml)" ON)
 option(MEIOS_ARCHIVE_ZIP_SUPPORT "Build meios::archive-zip (miniz)" OFF)
+# On by default, alone among the dependency-carrying enrichments: native evaluation is the default
+# public path, so a description that reads an auxiliary document has to load with no backend
+# selection, no extra link line and no CMake change on the caller's side.
+option(MEIOS_YAML_SUPPORT "Build meios::yaml (yaml-cpp)" ON)
 option(MEIOS_EVAL_PYTHON_SUPPORT "Build meios::eval-python (pybind11 + found Python3)" OFF)
 option(MEIOS_REQUIRE_EVAL_PYTHON "Turn a skipped meios::eval-python into a configure error" OFF)
 option(MEIOS_BUILD_TOOLS "Build the meios CLI" OFF)
@@ -48,6 +52,7 @@ option(MEIOS_INSTALL "Install meios into the install prefix" ${PROJECT_IS_TOP_LE
 set(MEIOS_CORE_PUGIXML_INSTALLED FALSE)
 set(MEIOS_SCAN_GLTF_INSTALLED FALSE)
 set(MEIOS_ARCHIVE_ZIP_INSTALLED FALSE)
+set(MEIOS_YAML_INSTALLED FALSE)
 set(MEIOS_CLI_HAS_EVAL_PYTHON FALSE)
 
 # Set before the subdirectories so lib/ and tests/ share one acquisition policy.

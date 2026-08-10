@@ -10,9 +10,14 @@
 
 #include "meios/model/model.h"
 
+#include "meios/config.h"
 #include "meios/expected.h"
 
 #include "meios/xacro/eval_policy.h"
+
+#ifdef MEIOS_HAS_YAML
+    #include "meios/yaml/parser.h"
+#endif
 
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/capturing_log_sink.h"
@@ -32,6 +37,11 @@ class yaml_parser_handle;
 
 struct load_options
 {
+    // The body names the module's factory, so a caller's object file carries an undefined
+    // reference the linker has to resolve and the archive member is pulled in without a static
+    // registrar. The gate is a generated installed header rather than a compile definition,
+    // because a definition set on a build target never reaches a consumer of the installed
+    // package.
     load_options()
         : on_missing(missing_asset::fail),
           topology(topology_policy::fail),
@@ -43,6 +53,9 @@ struct load_options
           package_roots(),
           args()
     {
+#ifdef MEIOS_HAS_YAML
+        yaml = make_yaml_parser();
+#endif
     }
 
     missing_asset   on_missing;
