@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EVAL_PARSER_H
 
 #include "lexer.h"
+#include "eval_spans.h"
 #include "eval_session.h"
 
 #include "meios/xacro/value.h"
@@ -25,8 +26,8 @@ struct parser
 {
     parser(const std::vector<token> &token_stream, const eval_scope &names, log_sink &sink,
            eval_session &load, const source_location &origin = {})
-        : tokens(token_stream), scope(names), log(sink), session(load), anchor(origin), pos(0),
-          ok(true), failure(eval_failure_kind::none)
+        : tokens(token_stream), spans(build_token_spans(token_stream)), scope(names), log(sink),
+          session(load), anchor(origin), pos(0), ok(true), failure(eval_failure_kind::none)
     {}
 
     const token &peek() const { return tokens[pos]; }
@@ -40,6 +41,7 @@ struct parser
     bool charge_step();
 
     const std::vector<token> &tokens;
+    token_spans spans;
     const eval_scope &scope;
     log_sink &log;
     eval_session &session;

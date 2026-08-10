@@ -115,39 +115,4 @@ value parse_not(parser &p)
     return parse_membership(p);
 }
 
-value parse_and(parser &p)
-{
-    if(!p.charge_step()) return value{};
-    value left = parse_not(p);
-    while(p.accept(token_kind::kw_and))
-    {
-        value right = parse_not(p);
-        left = value{ need_truth(p, left) && need_truth(p, right) };
-    }
-    return left;
-}
-
-value parse_or(parser &p)
-{
-    if(!p.charge_step()) return value{};
-    value left = parse_and(p);
-    while(p.accept(token_kind::kw_or))
-    {
-        value right = parse_and(p);
-        left = value{ need_truth(p, left) || need_truth(p, right) };
-    }
-    return left;
-}
-
-value parse_ternary(parser &p)
-{
-    if(!p.charge_step()) return value{};
-    value first = parse_or(p);
-    if(!p.accept(token_kind::kw_if)) return first;
-    value condition = parse_or(p);
-    if(!p.accept(token_kind::kw_else)) return p.fail("expected 'else' in conditional");
-    value second = parse_ternary(p);
-    return need_truth(p, condition) ? first : second;
-}
-
 }
