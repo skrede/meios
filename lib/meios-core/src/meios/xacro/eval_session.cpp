@@ -57,18 +57,31 @@ bool eval_session::charge_yaml_nodes(std::size_t amount, log_sink &log, const so
     return charge(counters.yaml_nodes, limits.yaml_nodes, amount, "auxiliary node", log, at);
 }
 
-// Depth is a high-water mark rather than a running total: a document reaching a nesting
-// level is what the ceiling bounds, not how many times it is reached.
-bool eval_session::admits_yaml_depth(std::size_t depth, log_sink &log, const source_location &at)
+// Depth is a high-water mark rather than a running total: reaching a nesting level is what
+// the ceiling bounds, not how many times it is reached.
+bool eval_session::admits(std::size_t &counter, std::size_t ceiling, std::size_t depth,
+                          std::string_view axis, log_sink &log, const source_location &at)
 {
-    if(failure == eval_failure_kind::exhausted || depth > limits.yaml_depth)
+    if(failure == eval_failure_kind::exhausted || depth > ceiling)
     {
-        latch_exhausted(*this, "auxiliary depth", log, at);
+        latch_exhausted(*this, axis, log, at);
         return false;
     }
-    if(depth > counters.yaml_depth)
-        counters.yaml_depth = depth;
+    if(depth > counter)
+        counter = depth;
     return true;
+}
+
+bool eval_session::admits_yaml_depth(std::size_t depth, log_sink &log, const source_location &at)
+{
+    return admits(counters.yaml_depth, limits.yaml_depth, depth, "auxiliary depth", log, at);
+}
+
+bool eval_session::admits_expression_depth(std::size_t depth, log_sink &log,
+                                           const source_location &at)
+{
+    return admits(counters.expression_depth, limits.expression_depth, depth, "expression depth",
+                  log, at);
 }
 
 }

@@ -82,7 +82,8 @@ value parse_call(parser &p, std::string_view name)
 
 value parse_name(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     std::string_view name = p.peek().text;
     ++p.pos;
     if(p.accept(token_kind::dot)) return parse_dotted(p, name);
@@ -109,7 +110,8 @@ value call_math(parser &p, std::string_view name, const std::vector<value> &args
 
 value parse_not(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     if(p.accept(token_kind::kw_not)) return value{ !need_truth(p, parse_not(p)) };
     return parse_membership(p);
 }

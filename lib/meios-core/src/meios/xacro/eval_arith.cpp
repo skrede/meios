@@ -32,12 +32,19 @@ value parser::fail_unsupported(const std::string &message)
     return value{};
 }
 
-bool parser::charge_step()
+bool parser::refuse_exhausted()
 {
-    if(session.charge_steps(1, log, anchor)) return true;
     if(ok) failure = eval_failure_kind::exhausted;
     ok = false;
     return false;
+}
+
+bool parser::enter_level()
+{
+    if(!session.charge_steps(1, log, anchor)) return refuse_exhausted();
+    if(!session.admits_expression_depth(nesting + 1, log, anchor)) return refuse_exhausted();
+    ++nesting;
+    return true;
 }
 
 namespace
@@ -63,7 +70,8 @@ std::string unsupported_message(std::string_view text)
 
 value parse_atom(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     const token &here = p.peek();
     if(p.accept(token_kind::number))   return here.leaf;
     if(p.accept(token_kind::string))   return here.leaf;
@@ -82,7 +90,8 @@ value parse_atom(parser &p)
 
 value parse_power(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     value base = parse_postfix(p);
     if(p.accept(token_kind::star_star)) return power(p, base, parse_unary(p));
     return base;
@@ -90,7 +99,8 @@ value parse_power(parser &p)
 
 value parse_unary(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     if(p.accept(token_kind::minus)) return negate(p, parse_unary(p));
     if(p.accept(token_kind::plus))  return unary_pos(p, parse_unary(p));
     return parse_power(p);
@@ -98,7 +108,8 @@ value parse_unary(parser &p)
 
 value parse_mul(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     value left = parse_unary(p);
     for(;;)
     {
@@ -114,7 +125,8 @@ value parse_mul(parser &p)
 
 value parse_add(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     value left = parse_mul(p);
     for(;;)
     {

@@ -76,7 +76,8 @@ value contained_in(parser &p, const value &needle, const value &haystack)
 
 value parse_comparison(parser &p)
 {
-    if(!p.charge_step())
+    const level_guard level(p);
+    if(!level.admitted())
         return value{};
     value left = parse_add(p);
     if(!is_comparison(p.peek().kind))
@@ -95,7 +96,8 @@ value parse_comparison(parser &p)
 
 value parse_membership(parser &p)
 {
-    if(!p.charge_step())
+    const level_guard level(p);
+    if(!level.admitted())
         return value{};
     value left = parse_comparison(p);
     while(p.accept(token_kind::kw_in))

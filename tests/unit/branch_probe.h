@@ -130,9 +130,12 @@ inline std::string expanded(std::string_view source, meios::log_sink &log)
     return out ? out->document : std::string();
 }
 
+// The nests these numbers were measured over are far deeper than any description contains --
+// a hundred bracket levels is twelve hundred recursive entries -- so the nesting ceiling is
+// lifted here and the counts stay a reading of the step axis alone.
 inline std::size_t steps_for(std::string_view expression)
 {
-    const meios::evaluator_limits ceilings;
+    const meios::evaluator_limits ceilings{ 0, 0, 0, 0, 0, 4096 };
     meios::detail::eval_session session(ceilings);
     const meios::eval_scope scope;
     meios::log_sink silent;

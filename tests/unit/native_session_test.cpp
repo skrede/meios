@@ -100,22 +100,25 @@ std::filesystem::path scratch_root()
 
 TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]")
 {
-    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0 };
+    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0, 0 };
 
     REQUIRE(zeroed.yaml_nodes == meios::default_yaml_node_ceiling);
     REQUIRE(zeroed.yaml_depth == meios::default_yaml_depth_ceiling);
     REQUIRE(zeroed.bytes == meios::default_byte_ceiling);
     REQUIRE(zeroed.tokens == meios::default_token_ceiling);
     REQUIRE(zeroed.steps == meios::default_step_ceiling);
+    REQUIRE(zeroed.expression_depth == meios::default_expression_depth_ceiling);
 
-    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11 };
+    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11, 12 };
     REQUIRE(raised.yaml_nodes == 7);
     REQUIRE(raised.steps == 11);
+    REQUIRE(raised.expression_depth == 12);
 }
 
-// The measured sizes of the pinned acceptance target: about 320 auxiliary nodes per load
-// across four documents, a maximum nesting of six, a largest auxiliary document of 2 871
-// bytes, and a longest expression of about sixty characters.
+// The measured sizes of the pinned acceptance target: about 4 500 auxiliary nodes per load
+// across four documents, a maximum auxiliary nesting of six, a largest auxiliary document of
+// 2 871 bytes, a longest expression of 58 characters, and a deepest expression of 26
+// recursive entries -- one bracket level, which is all the target ever nests.
 TEST_CASE("the defaults clear the measured acceptance target with headroom", "[native][session]")
 {
     const meios::evaluator_limits defaults;
@@ -123,8 +126,24 @@ TEST_CASE("the defaults clear the measured acceptance target with headroom", "[n
     REQUIRE(defaults.yaml_nodes > 10 * 4500);
     REQUIRE(defaults.yaml_depth > 10 * 6);
     REQUIRE(defaults.bytes > 10 * 2871);
-    REQUIRE(defaults.tokens > 10 * 60);
-    REQUIRE(defaults.steps > 10 * 60);
+    REQUIRE(defaults.tokens > 10 * 58);
+    REQUIRE(defaults.steps > 10 * 58);
+    REQUIRE(defaults.expression_depth > 9 * 26);
+}
+
+// Measured by driving a balanced parenthesis nest until the process died, on Linux x86-64
+// with an optimized build: 38 088 recursive entries against the default 8192 KiB stack, and
+// 2 396 against a 512 KiB thread. The smaller thread is the binding case, and re-measuring
+// on another machine is what these two numbers are here to invite.
+TEST_CASE("the nesting ceiling stays below the depth that exhausts the stack", "[native][session]")
+{
+    constexpr std::size_t exhausted_on_a_main_stack = 38088;
+    constexpr std::size_t exhausted_on_a_small_thread = 2396;
+
+    const meios::evaluator_limits defaults;
+
+    REQUIRE(defaults.expression_depth * 9 < exhausted_on_a_small_thread);
+    REQUIRE(defaults.expression_depth * 100 < exhausted_on_a_main_stack);
 }
 
 TEST_CASE("a session starts every counter at zero and charges before the work", "[native][session]")
@@ -138,18 +157,21 @@ TEST_CASE("a session starts every counter at zero and charges before the work", 
     REQUIRE(session.counters.steps == 0);
     REQUIRE(session.counters.yaml_nodes == 0);
     REQUIRE(session.counters.yaml_depth == 0);
+    REQUIRE(session.counters.expression_depth == 0);
     REQUIRE(session.failure == meios::eval_failure_kind::none);
 
     REQUIRE(session.charge_tokens(4, silent, {}));
     REQUIRE(session.counters.tokens == 4);
     REQUIRE(session.admits_yaml_depth(3, silent, {}));
     REQUIRE(session.counters.yaml_depth == 3);
+    REQUIRE(session.admits_expression_depth(5, silent, {}));
+    REQUIRE(session.counters.expression_depth == 5);
     REQUIRE(session.failure == meios::eval_failure_kind::none);
 }
 
 TEST_CASE("a crossed ceiling latches an exhausted failure that stays latched", "[native][session]")
 {
-    const meios::evaluator_limits ceilings{ 4, 2, 16, 8, 32 };
+    const meios::evaluator_limits ceilings{ 4, 2, 16, 8, 32, 3 };
     meios::detail::eval_session session(ceilings);
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
@@ -162,6 +184,7 @@ TEST_CASE("a crossed ceiling latches an exhausted failure that stays latched", "
 
     REQUIRE_FALSE(session.charge_bytes(1, sink, {}));
     REQUIRE_FALSE(session.admits_yaml_depth(1, sink, {}));
+    REQUIRE_FALSE(session.admits_expression_depth(1, sink, {}));
     REQUIRE(counts.messages.size() == 1);
 }
 

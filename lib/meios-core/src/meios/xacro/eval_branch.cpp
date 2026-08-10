@@ -26,7 +26,8 @@ value first_branch(parser &p, std::size_t entry, std::size_t after)
 
 value parse_and(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     value left = parse_not(p);
     while(p.accept(token_kind::kw_and))
     {
@@ -39,7 +40,8 @@ value parse_and(parser &p)
 
 value parse_or(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     value left = parse_and(p);
     while(p.accept(token_kind::kw_or))
     {
@@ -52,7 +54,8 @@ value parse_or(parser &p)
 
 value parse_ternary(parser &p)
 {
-    if(!p.charge_step()) return value{};
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     const std::size_t entry = p.pos;
     const std::size_t conditional = p.spans.conditional_at(entry);
     if(conditional == entry) return parse_or(p);

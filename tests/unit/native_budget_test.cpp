@@ -68,9 +68,35 @@ run substitute(std::string_view raw, meios::eval_policy policy, std::size_t step
     return substitute(raw, policy, session);
 }
 
+run substitute(std::string_view raw, meios::eval_policy policy)
+{
+    const meios::evaluator_limits defaults;
+    meios::detail::eval_session session(defaults);
+    return substitute(raw, policy, session);
+}
+
 std::string nested(std::size_t depth)
 {
     return std::string(depth, '(') + "1" + std::string(depth, ')');
+}
+
+std::string prefix_run(std::size_t length)
+{
+    return std::string(length, '-') + "1";
+}
+
+// The shapes are sized from the measurement rather than from the ceiling: each is far past
+// the ceiling and far short of the tens of thousands of recursive entries at which the stack
+// is exhausted, so a regression fails the case instead of killing the runner. That the byte
+// ceiling is nowhere near reached is what makes the refusal the nesting axis's own.
+void refuses_on_nesting(const std::string &text)
+{
+    const run refused = substitute(text, meios::eval_policy::fail);
+
+    CHECK_FALSE(refused.survived);
+    REQUIRE(refused.messages.size() == 1);
+    CHECK(refused.messages.front().find("expression depth ceiling") != std::string::npos);
+    CHECK(text.size() * 100 < meios::default_byte_ceiling);
 }
 
 std::size_t longest_measured()
@@ -90,7 +116,7 @@ TEST_CASE("a deeply nested expression crosses the evaluation-step ceiling", "[na
     CHECK_FALSE(substitute("value ${" + nested(8) + "}", meios::eval_policy::fail, 64).survived);
 }
 
-TEST_CASE("a crossed evaluation-step ceiling is terminal under every evaluation policy",
+TEST_CASE("a crossed evaluation ceiling is terminal under every evaluation policy",
           "[native][budget]")
 {
     for(meios::eval_policy policy :
@@ -98,7 +124,20 @@ TEST_CASE("a crossed evaluation-step ceiling is terminal under every evaluation 
     {
         CHECK(substitute("value ${1 + 1}", policy, 4096).survived);
         CHECK_FALSE(substitute("value ${1 + 1}", policy, 4).survived);
+        CHECK_FALSE(substitute("value ${" + prefix_run(4000) + "}", policy).survived);
+        CHECK_FALSE(substitute("value ${" + nested(400) + "}", policy).survived);
     }
+}
+
+TEST_CASE("a long run of prefix operators refuses before it reaches the stack",
+          "[native][budget]")
+{
+    refuses_on_nesting("value ${" + prefix_run(4000) + "}");
+}
+
+TEST_CASE("a deeply nested expression refuses before it reaches the stack", "[native][budget]")
+{
+    refuses_on_nesting("value ${" + nested(400) + "}");
 }
 
 TEST_CASE("a crossed ceiling reports one diagnostic and stops before the work it bounds",
@@ -132,23 +171,27 @@ TEST_CASE("counters start each load at zero over one shared configuration", "[na
     meios::detail::eval_session second(shared);
     CHECK(substitute(text, meios::eval_policy::fail, first).survived);
     CHECK(substitute(text, meios::eval_policy::fail, second).survived);
+    CHECK(first.counters.expression_depth > 0);
+    CHECK(first.counters.expression_depth == second.counters.expression_depth);
 }
 
 // A parenthesis pair is the most expensive spelling per character there is: it re-enters the
 // whole precedence descent, and no expression of a given length can nest deeper than half its
 // characters. A balanced nest as long as the longest measured expression therefore bounds the
-// step cost of every recorded row from above.
-TEST_CASE("the default ceilings admit the measured expression surface with headroom",
+// step cost of every recorded row from above -- at twelve recursive entries per level, which
+// is a nesting no recorded row comes near, so the nesting axis is lifted to let the step axis
+// be read alone. The nesting headroom over what the rows really contain is asserted apart.
+TEST_CASE("the default step ceiling admits the measured expression surface with headroom",
           "[native][budget]")
 {
     const std::size_t longest = longest_measured();
     REQUIRE(longest > 0);
 
-    const meios::evaluator_limits defaults;
-    meios::detail::eval_session session(defaults);
+    const meios::evaluator_limits lifted{ 0, 0, 0, 0, 0, 6 * longest + 12 };
+    meios::detail::eval_session session(lifted);
     const run dominating = substitute("value ${" + nested(longest / 2) + "}",
                                       meios::eval_policy::fail, session);
 
     CHECK(dominating.survived);
-    CHECK(dominating.steps * 10 < defaults.steps);
+    CHECK(dominating.steps * 10 < lifted.steps);
 }

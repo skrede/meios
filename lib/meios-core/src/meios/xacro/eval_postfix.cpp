@@ -111,7 +111,8 @@ value parse_dotted(parser &p, std::string_view head)
 
 value parse_postfix(parser &p)
 {
-    if(!p.charge_step())
+    const level_guard level(p);
+    if(!level.admitted())
         return value{};
     value base = parse_atom(p);
     while(p.ok)

@@ -37,9 +37,12 @@ struct eval_session
     bool charge_steps(std::size_t amount, log_sink &log, const source_location &at);
     bool charge_yaml_nodes(std::size_t amount, log_sink &log, const source_location &at);
     bool admits_yaml_depth(std::size_t depth, log_sink &log, const source_location &at);
+    bool admits_expression_depth(std::size_t depth, log_sink &log, const source_location &at);
 
 private:
     bool charge(std::size_t &counter, std::size_t ceiling, std::size_t amount,
+                std::string_view axis, log_sink &log, const source_location &at);
+    bool admits(std::size_t &counter, std::size_t ceiling, std::size_t depth,
                 std::string_view axis, log_sink &log, const source_location &at);
 };
 

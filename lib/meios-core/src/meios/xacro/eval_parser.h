@@ -27,7 +27,8 @@ struct parser
     parser(const std::vector<token> &token_stream, const eval_scope &names, log_sink &sink,
            eval_session &load, const source_location &origin = {})
         : tokens(token_stream), spans(build_token_spans(token_stream)), scope(names), log(sink),
-          session(load), anchor(origin), pos(0), ok(true), failure(eval_failure_kind::none)
+          session(load), anchor(origin), pos(0), nesting(0), ok(true),
+          failure(eval_failure_kind::none)
     {}
 
     const token &peek() const { return tokens[pos]; }
@@ -35,10 +36,12 @@ struct parser
     bool accept(token_kind kind) { if(at(kind)) { ++pos; return true; } return false; }
     value fail(const std::string &message, diagnostic_code code = diagnostic_code::expression_error);
     value fail_unsupported(const std::string &message);
-    // Charged at the entry of every precedence level, before it recurses. The session
-    // reports and latches a crossed ceiling itself, so a refused charge only records the
-    // category here and the caller returns immediately with the poison value.
-    bool charge_step();
+    // Charges the two axes a recursive descent into the grammar grows, before it recurses:
+    // one evaluation step, and one more level of nesting. The session reports and latches a
+    // crossed ceiling itself, so a refusal only records the category here.
+    bool enter_level();
+    void leave_level() { --nesting; }
+    bool refuse_exhausted();
 
     const std::vector<token> &tokens;
     token_spans spans;
@@ -47,8 +50,28 @@ struct parser
     eval_session &session;
     source_location anchor;
     std::size_t pos;
+    std::size_t nesting;
     bool ok;
     eval_failure_kind failure;
+};
+
+// Every level of the descent enters through one of these, so the level a refused entry
+// abandons is released by the same unwind that abandons it. A manual decrement would have
+// to be repeated at each of a level's several early returns, and the one that was forgotten
+// is the leak.
+struct level_guard
+{
+    explicit level_guard(parser &owner) : p(owner), entered(owner.enter_level()) {}
+
+    level_guard(const level_guard &) = delete;
+
+    ~level_guard() { if(entered) p.leave_level(); }
+
+    bool admitted() const { return entered; }
+
+private:
+    parser &p;
+    bool entered;
 };
 
 inline bool is_int(const value &v)
