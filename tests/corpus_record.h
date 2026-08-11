@@ -79,6 +79,32 @@ inline std::vector<document> documents(const std::string &records)
     return docs;
 }
 
+// Every document the built-in evaluator is asked to handle carries measured upstream facts, so a
+// document added without them fails here rather than passing on a load that merely exited. Each
+// pairing is named outright, on the rule the corpus file names its documents by: a record name
+// composed from a document's own arguments would make an unmeasured variant look covered.
+// std::map already iterates in key order, so joining every doc.args entry needs no separate sort;
+// a document sharing one argument value with another therefore keys distinctly, not aliased.
+inline std::string record_for(const document &doc)
+{
+    const std::map<std::string, std::string> measured{
+        { "ur_type=ur5e", "ur5e_facts.cases" },
+        { "ur_type=ur3e", "ur3e_facts.cases" },
+        { "ur_type=ur7e", "ur7e_facts.cases" },
+        { "safety_limits=true ur_type=ur5e", "ur5e_safety_facts.cases" },
+        { "force_abs_paths=true ur_type=ur5e", "ur5e_abs_paths_facts.cases" },
+        { "kr6r900sixx.xacro", "kr6_facts.cases" },
+        { "lbr_med14_r820.urdf.xacro", "lbr_med14_r820_facts.cases" }
+    };
+    std::string key;
+    for(const std::pair<const std::string, std::string> &arg : doc.args)
+        key += (key.empty() ? "" : " ") + arg.first + "=" + arg.second;
+    if(key.empty())
+        key = doc.path.filename().string();
+    const std::map<std::string, std::string>::const_iterator found = measured.find(key);
+    return found == measured.end() ? std::string{} : found->second;
+}
+
 }
 
 #endif

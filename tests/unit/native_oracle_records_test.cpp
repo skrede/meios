@@ -11,9 +11,16 @@
 namespace
 {
 
-constexpr std::string_view measured[] = { "PINS",           "expressions.cases",
-                                          "kr6_facts.cases", "rendering.cases",
-                                          "ur3e_facts.cases", "ur5e_facts.cases",
+constexpr std::string_view measured[] = { "PINS",
+                                          "expressions.cases",
+                                          "kr6_facts.cases",
+                                          "lbr_med14_r820_facts.cases",
+                                          "rendering.cases",
+                                          "ur3e_facts.cases",
+                                          "ur5e_abs_paths_facts.cases",
+                                          "ur5e_facts.cases",
+                                          "ur5e_safety_facts.cases",
+                                          "ur7e_facts.cases",
                                           "yaml_scalars.cases" };
 
 std::string value_of(std::string_view file, std::string_view key)

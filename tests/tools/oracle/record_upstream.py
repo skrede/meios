@@ -14,6 +14,7 @@ from pathlib import Path
 
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
 CORPUS_PIN = "4.3.1"
+LBR_PIN = "2.5.0"
 MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
 HERE = Path(__file__).resolve().parent
@@ -99,7 +100,19 @@ def origin_rows(link):
     return rows
 
 
-def facts_rows(doc):
+# force_abs_paths renders a mesh URI as file://$(find <package>)/..., which bakes this recording
+# run's own absolute build-tree location. Normalized to a portable file://<package-root>/... form
+# so the record stays reproducible across build trees; the C++ comparison applies the identical
+# normalization to its own resolved package root before comparing, so both sides agree regardless
+# of where either one's package root actually sits on disk.
+def portable_mesh_uri(filename, package_root):
+    prefix = "file://" + str(package_root)
+    if filename.startswith(prefix):
+        return "file://<package-root>" + filename[len(prefix):]
+    return filename
+
+
+def facts_rows(doc, package_root):
     links = doc.getElementsByTagName("link")
     joints = doc.getElementsByTagName("joint")
     rows = [("link.count", str(len(links))), ("joint.count", str(len(joints)))]
@@ -112,8 +125,9 @@ def facts_rows(doc):
                          attribute_text(limit, ("lower", "upper", "effort", "velocity"))))
     meshes = []
     for mesh in doc.getElementsByTagName("mesh"):
-        if mesh.getAttribute("filename") not in meshes:
-            meshes.append(mesh.getAttribute("filename"))
+        filename = portable_mesh_uri(mesh.getAttribute("filename"), package_root)
+        if filename not in meshes:
+            meshes.append(filename)
     rows += [("mesh.filename.{}".format(at), m) for at, m in enumerate(meshes)]
     for link in links:
         rows += origin_rows(link)
@@ -123,7 +137,7 @@ def facts_rows(doc):
 def robot_facts(share, document, mappings):
     import xacro
 
-    return facts_rows(xacro.process_file(str(share / document), mappings=mappings))
+    return facts_rows(xacro.process_file(str(share / document), mappings=mappings), share.parent)
 
 
 def doubles_in(node, found):
@@ -264,25 +278,33 @@ def measured_pins():
     return versions
 
 
-# The corpus package is not an installed distribution and has no metadata to read a version from,
+# A corpus package is not an installed distribution and has no metadata to read a version from,
 # so its own manifest in the fetched tree is the statement of record.
-def package_version(share):
-    manifest = share("ur_description") / "package.xml"
+def package_version(share, name, expected):
+    manifest = share(name) / "package.xml"
     text = manifest.read_text(encoding="utf-8") if manifest.is_file() else ""
     found = re.search(r"<version>\s*([^<]*?)\s*</version>", text)
     if not found or not found.group(1):
         sys.exit("oracle: no version in the manifest {}; nothing was recorded".format(manifest))
-    if found.group(1) != CORPUS_PIN:
-        sys.exit("oracle: the corpus package declares {} where {} is pinned; nothing was recorded"
-                 .format(found.group(1), CORPUS_PIN))
+    if found.group(1) != expected:
+        sys.exit("oracle: {} declares {} where {} is pinned; nothing was recorded"
+                 .format(name, found.group(1), expected))
+    return found.group(1)
+
+
+def package_digest(listfile, name):
+    found = re.search(r"NAME {}.*?HASH SHA256=([0-9a-f]+)".format(re.escape(name)), listfile, re.S)
     return found.group(1)
 
 
 def pin_rows(versions, share):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
-    digest = re.search(r"NAME ur_description.*?HASH SHA256=([0-9a-f]+)", listfile, re.S)
     return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-"),
-            ("ur_description", package_version(share), digest.group(1))]
+            ("ur_description", package_version(share, "ur_description", CORPUS_PIN),
+             package_digest(listfile, "ur_description")),
+            ("lbr_med14_r820_description",
+             package_version(share, "lbr_med14_r820_description", LBR_PIN),
+             package_digest(listfile, "lbr_med14_r820_description"))]
 
 
 def write_record(out, name, header, rows):
@@ -310,6 +332,7 @@ HEADERS = {
 
 def records(tmp, share, versions):
     ur = share("ur_description")
+    lbr = share("lbr_med14_r820_description")
     kuka = share("kuka_kr6_support").parent
     facts = HEADERS["facts"]
     return {
@@ -322,8 +345,18 @@ def records(tmp, share, versions):
                                                 {"ur_type": "ur5e", "name": "ur"})),
         "ur3e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
                                                 {"ur_type": "ur3e", "name": "ur"})),
+        "ur7e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
+                                                {"ur_type": "ur7e", "name": "ur"})),
+        "ur5e_safety_facts.cases": (facts, robot_facts(
+            ur, "urdf/ur.urdf.xacro",
+            {"ur_type": "ur5e", "name": "ur", "safety_limits": "true"})),
+        "ur5e_abs_paths_facts.cases": (facts, robot_facts(
+            ur, "urdf/ur.urdf.xacro",
+            {"ur_type": "ur5e", "name": "ur", "force_abs_paths": "true"})),
         "kr6_facts.cases": (facts, robot_facts(kuka, "kuka_kr6_support/urdf/kr6r900sixx.xacro",
                                                {})),
+        "lbr_med14_r820_facts.cases": (facts, robot_facts(lbr, "urdf/lbr_med14_r820.urdf.xacro",
+                                                          {})),
     }
 
 

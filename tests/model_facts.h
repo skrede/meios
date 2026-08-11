@@ -104,12 +104,26 @@ inline std::vector<std::string> mesh_references(const meios::model<double> &robo
     return seen;
 }
 
-inline void check_meshes(const std::vector<oracle::row> &rows, const meios::model<double> &robot)
+// force_abs_paths renders a mesh URI as file://$(find <package>)/..., which bakes this run's own
+// resolved package root into the text. Normalized to the same portable file://<package-root>/...
+// spelling the record was written in, so the comparison holds regardless of where either run's
+// package root actually sits on disk.
+inline std::string portable_mesh_uri(const std::string &filename,
+                                     const std::filesystem::path &package_root)
+{
+    const std::string prefix = "file://" + package_root.string();
+    return filename.rfind(prefix, 0) == 0 ? "file://<package-root>" + filename.substr(prefix.size())
+                                          : filename;
+}
+
+inline void check_meshes(const std::vector<oracle::row> &rows, const meios::model<double> &robot,
+                         const std::filesystem::path &package_root)
 {
     const std::vector<std::string> seen = mesh_references(robot);
     CHECK(seen.size() == rows_under(rows, "mesh.filename."));
     for(std::size_t at = 0; at < seen.size(); ++at)
-        CHECK(seen[at] == value_of(rows, "mesh.filename." + std::to_string(at)));
+        CHECK(portable_mesh_uri(seen[at], package_root)
+              == value_of(rows, "mesh.filename." + std::to_string(at)));
 }
 
 inline void check_triple(const std::map<std::string, std::vector<double>> &declared,
@@ -162,12 +176,13 @@ inline void check_origins(const std::vector<oracle::row> &rows, const meios::mod
     CHECK(compared == rows_under(rows, "origin."));
 }
 
-inline void check_model(const std::vector<oracle::row> &rows, const meios::model<double> &robot)
+inline void check_model(const std::vector<oracle::row> &rows, const meios::model<double> &robot,
+                        const std::filesystem::path &package_root)
 {
     REQUIRE_FALSE(rows.empty());
     check_names(rows, "link", robot.links);
     check_joints(rows, robot);
-    check_meshes(rows, robot);
+    check_meshes(rows, robot, package_root);
     check_origins(rows, robot);
 }
 

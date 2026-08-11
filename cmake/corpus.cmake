@@ -6,12 +6,12 @@ include_guard(GLOBAL)
 # known-faulty fixture wired via SOURCE_DIR; the breadth tier adds the remaining
 # top-level documents that same upstream ships.
 
+include("${CMAKE_CURRENT_LIST_DIR}/corpus_license.cmake")
+
 option(MEIOS_FETCH_CORPUS
     "Fetch the pinned robot-description corpus and build the corpus test" OFF)
 option(MEIOS_CORPUS_BREADTH
     "Load every top-level document the pinned known-good upstream ships" OFF)
-option(MEIOS_CORPUS_EXPRESSION_DOCUMENTS
-    "Fetch the expression-valued upstream and load it through the built-in evaluator" OFF)
 
 # License determinations for every fetched upstream. Each corpus fetch NAME must
 # carry a matching "# license[<name>]:" line below; the check further down reads
@@ -21,6 +21,7 @@ option(MEIOS_CORPUS_EXPRESSION_DOCUMENTS
 #
 # # license[kuka_experimental]: Apache-2.0 (ros-industrial/kuka_experimental, root LICENSE)
 # # license[ur_description]: BSD-3-Clause (UniversalRobots/Universal_Robots_ROS2_Description, root LICENSE)
+# # license[lbr_med14_r820_description]: Apache-2.0 (lbr-stack/med14_r820_description, package.xml <license>, no root LICENSE)
 # # license[corpus_faulty]: crafted in-repo fixture (project-owned)
 
 # lbr_fri_ros2_stack is deliberately not fetched and not listed, so it carries no
@@ -75,6 +76,35 @@ set(MEIOS_CORPUS_FAULTY "${MEIOS_CORPUS_FAULTY_DIR}/faulty.urdf")
 # faulty.urdf: <robot> on line 2, root_b (the additional root) declared on line 4.
 set(MEIOS_CORPUS_FAULTY_LINE 4)
 
+meios_declare_resource(
+    NAME ur_description
+    URL  https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/archive/refs/tags/4.3.1.tar.gz
+    HASH SHA256=3532a25c9942bedcdfe41c845be6d144bbbbcd76f179f14a53a3e7b6972ae72d
+    STRIP_TOP_LEVEL
+    OUT_DIR MEIOS_CORPUS_UR_DIR)  # ur_description 4.3.1
+meios_corpus_check_license(ur_description "${MEIOS_CORPUS_UR_DIR}/package.xml" "${_corpus_self}")
+
+meios_declare_resource(
+    NAME lbr_med14_r820_description
+    URL  https://github.com/lbr-stack/med14_r820_description/archive/refs/tags/v2.5.0.tar.gz
+    HASH SHA256=edb596d3e2b7f07f5b8f66ef68cd3ccfef0212e98efe25742867cfbe653deb5a
+    STRIP_TOP_LEVEL
+    OUT_DIR MEIOS_CORPUS_LBR_DIR)  # lbr_med14_r820_description 2.5.0
+meios_corpus_check_license(lbr_med14_r820_description "${MEIOS_CORPUS_LBR_DIR}/package.xml"
+    "${_corpus_self}")
+
+# The resolver's containment guard rejects a package root reached through a symlink, so
+# every self-contained fetch is copied under the name it resolves itself by. The copy is
+# scratch belonging to whichever build tree is running, which is why it is anchored at the
+# top of the build rather than under meios's own binary directory. Three packages anchor
+# here now: ur_description, lbr_med14_r820_description, and kuka_experimental — whose own
+# kr6r900sixx document below keeps resolving against the raw fetch directory, unchanged.
+set(MEIOS_CORPUS_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/_meios_corpus_packages")
+file(COPY "${MEIOS_CORPUS_UR_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description")
+file(COPY "${MEIOS_CORPUS_LBR_DIR}/"
+     DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/lbr_med14_r820_description")
+file(COPY "${MEIOS_CORPUS_KUKA_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/kuka_experimental")
+
 # Every corpus document is named outright rather than found by globbing an extension.
 # A glob over ".urdf" made the tier look broader than it was, and pointing it at the
 # macro extension instead loads fragments as documents: twenty-one of them carry a
@@ -108,32 +138,30 @@ endif()
 meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/kuka_kr6_support/urdf/kr6r900sixx.xacro"
     "" native "${MEIOS_CORPUS_KUKA_DIR}")
 
-if(MEIOS_CORPUS_EXPRESSION_DOCUMENTS)
-    meios_declare_resource(
-        NAME ur_description
-        URL  https://github.com/UniversalRobots/Universal_Robots_ROS2_Description/archive/refs/tags/4.3.1.tar.gz
-        HASH SHA256=3532a25c9942bedcdfe41c845be6d144bbbbcd76f179f14a53a3e7b6972ae72d
-        STRIP_TOP_LEVEL
-        OUT_DIR MEIOS_CORPUS_UR_DIR)  # ur_description 4.3.1
+# The shipped ur_type default is deliberately invalid, so a variant must be named. ur3e's
+# third wrist has no position limits, so a boolean read out of the auxiliary document drives
+# the branch that types the joint continuous, flowing through a string comparison into a
+# limit element carrying no position keys — a path ur5e cannot reach. safety_limits guards
+# one <safety_controller> element per joint and force_abs_paths changes only mesh-URI
+# spelling, so each branch keeps every row plain ur5e's record already covers; the whole
+# document's structure, including what those two branches add, is what the live differential
+# (not this fact vocabulary) is the assertion mechanism for.
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+    "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+    "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+    "ur_type=ur7e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+    "ur_type=ur5e safety_limits=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
+    "ur_type=ur5e force_abs_paths=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 
-    # The resolver's containment guard rejects a package root reached through a
-    # symlink, so the tree is copied under the name the description resolves it by. The copy is
-    # scratch belonging to whichever build tree is running, which is why it is anchored at the top
-    # of the build rather than under meios's own binary directory.
-    set(MEIOS_CORPUS_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/_meios_corpus_packages")
-    file(COPY "${MEIOS_CORPUS_UR_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description")
-
-    # The shipped ur_type default is deliberately invalid, so a variant must be named.
-    # The two variants differ at the wrist: ur3e's configuration says its third wrist has
-    # no position limits, so a boolean read out of the auxiliary document drives the
-    # branch that types the joint continuous, and the type then flows through a string
-    # comparison into a limit element carrying no position keys. Neither path is reachable
-    # from ur5e.
-    meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-        "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-    meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-        "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-endif()
+# Both of its xacro:arg declarations default, so the entry point loads with no key=value
+# override at all.
+meios_corpus_document(
+    "${MEIOS_CORPUS_PACKAGE_ROOT}/lbr_med14_r820_description/urdf/lbr_med14_r820.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
 math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")

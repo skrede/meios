@@ -117,7 +117,7 @@ TEST_CASE("the pinned expression-valued description is recorded for the built-in
         CHECK(record[2] == "native");
         ++pinned;
     }
-    CHECK(pinned == 2);
+    CHECK(pinned == 5);
 }
 
 TEST_CASE("no corpus record asks for the optional evaluator", "[corpus]")
