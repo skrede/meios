@@ -206,15 +206,20 @@ What is compared, exactly:
     switched on; and that same document again with its mesh references forced to absolute paths;
   - the `ur3e` variant, where a boolean read out of an auxiliary document types a joint and that type
     then reaches a limit element carrying no position keys;
-  - the `ur7e` variant.
+  - the `ur7e` variant, whose configuration upstream ships as a verbatim copy of `ur5e`'s, so it
+    renders the same document and its record is the same record. It is measured because upstream
+    names the variant, not because it adds a form the other four do not reach.
 - **`kuka_experimental`'s `kr6r900sixx.xacro`** — the one measured document resolving `$(find)`
   across two sibling packages.
 - **KUKA LBR Med 14 R820 at tag `v2.5.0`** (archive digest `edb596d3e2b7…`), whose macro reads a
   joint-limits document through `xacro.load_yaml` and computes every joint's limits out of it.
 - **Twenty-three minimized expression cases** — one for each non-trivial expression form in the
-  closure of the Universal Robots document: the joint-limit arithmetic, the string comparison, the
-  membership test, the subscript chains, `pi`, and the four auxiliary-document loads. Each is driven
-  through a document seeding exactly the names it reads, so a failing case names one form.
+  closure of the Universal Robots document: the joint-limit arithmetic, the inertia arithmetic, the
+  string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
+  loads. Each is driven through a document seeding exactly the names it reads, so a failing case
+  names one form. That closure is what bounds the set: a grammar form the Universal Robots document
+  never writes — `//`, `%`, `not`, a chained comparison, the conditional expression, most of the
+  mathematics names — is accepted by the evaluator and measured against upstream by nothing here.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
