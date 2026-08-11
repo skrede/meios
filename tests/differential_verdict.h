@@ -3,10 +3,11 @@
 
 #include "unit/oracle_records.h"
 
+#include <tuple>
 #include <string>
 #include <vector>
 #include <optional>
-#include <tuple>
+#include <algorithm>
 
 namespace differential
 {
@@ -73,18 +74,9 @@ inline std::vector<std::string> stale_manifest_entries(
         if(entry.fields.size() < 3)
             continue;
         const std::tuple<std::string, std::string, std::string> triple{ entry.fields[0],
-                                                                         entry.fields[1],
-                                                                         entry.fields[2] };
-        bool found = false;
-        for(const std::tuple<std::string, std::string, std::string> &one : observed)
-        {
-            if(one == triple)
-            {
-                found = true;
-                break;
-            }
-        }
-        if(!found)
+                                                                        entry.fields[1],
+                                                                        entry.fields[2] };
+        if(std::ranges::find(observed, triple) == observed.end())
             stale.push_back(entry.fields[0]);
     }
     return stale;

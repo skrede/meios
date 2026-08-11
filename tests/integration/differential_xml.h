@@ -6,8 +6,8 @@
 #include <cctype>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <cstdlib>
+#include <fstream>
 #include <sstream>
 #include <filesystem>
 #include <string_view>
@@ -74,7 +74,7 @@ inline bool numeric_text(const std::string &text, double &value)
 }
 
 // Exactly, not within a tolerance, mirroring model_facts.h's same_number(): attribute values are
-// read as numbers where the text reads as a number, as text otherwise (D-08).
+// read as numbers where the text reads as a number, as text otherwise.
 inline bool same_scalar(const std::string &a, const std::string &b)
 {
     double na = 0.0;
@@ -140,9 +140,9 @@ inline bool same_children(pugi::xml_node a, pugi::xml_node b, std::string &detai
     return true;
 }
 
-// The numeric-aware attribute comparator D-08 requires, layered on canonical_xml()'s own
-// output rather than a second normalizer (D-07): two canonical_xml() strings in, structurally
-// compared with attribute values read as numbers where the text reads as a number.
+// Layered on canonical_xml()'s own output rather than being a second normalizer: two
+// canonical_xml() strings in, structurally compared with attribute values read as numbers
+// where the text reads as a number.
 inline bool canonical_matches(const std::string &upstream_canon, const std::string &meios_canon,
                               std::string &detail)
 {

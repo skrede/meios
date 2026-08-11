@@ -229,7 +229,6 @@ Eighteen more programs, each one runnable and each listed with what it shows, ar
 [![Sanitizers](https://github.com/skrede/meios/actions/workflows/sanitizers.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/sanitizers.yml)
 [![Clang-Tidy](https://github.com/skrede/meios/actions/workflows/clang-tidy.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/clang-tidy.yml)
 [![Canary](https://github.com/skrede/meios/actions/workflows/canary.yml/badge.svg?branch=master)](https://github.com/skrede/meios/actions/workflows/canary.yml)
-[![Nightly](https://github.com/skrede/meios/actions/workflows/nightly.yml/badge.svg)](https://github.com/skrede/meios/actions/workflows/nightly.yml)
 
 Every push runs the three platform workflows in the header. Each one is a fan-out of jobs rather than
 a single build, and the integration-shaped ones are the point: meios is *installed* and then consumed

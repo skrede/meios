@@ -14,6 +14,14 @@
 namespace
 {
 
+int refuse_load(const meios::load_error &error)
+{
+    std::ostringstream refusal;
+    refusal << "load() refused " << consumer::pinned_document << ": ("
+            << meios::to_string(error.code) << ") " << error.message;
+    return consumer::refuse(refusal.str());
+}
+
 int load_and_compare(const std::vector<oracle::row> &rows)
 {
     meios::load_options opts;
@@ -24,19 +32,10 @@ int load_and_compare(const std::vector<oracle::row> &rows)
     const meios::expected<meios::load_result, meios::load_error> loaded =
         meios::load(consumer::pinned_document, opts);
     if(!loaded)
-    {
-        std::ostringstream refusal;
-        refusal << "load() refused " << consumer::pinned_document << ": ("
-                << meios::to_string(loaded.error().code) << ") " << loaded.error().message;
-        return consumer::refuse(refusal.str());
-    }
+        return refuse_load(loaded.error());
 
     const meios::model<double> &robot = loaded->robot;
-    if(const int rc = consumer::check_structure(robot, rows))
-        return rc;
-    if(const int rc = consumer::check_limits(robot, rows))
-        return rc;
-    if(const int rc = consumer::check_assets(robot, rows))
+    if(const int rc = consumer::check_all_facts(robot, rows))
         return rc;
 
     std::cout << "loaded " << consumer::pinned_document

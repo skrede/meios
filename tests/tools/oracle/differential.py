@@ -31,7 +31,7 @@ CORPUS_DOCS = (
     ("lbr_med14_r820_description", "urdf/lbr_med14_r820.urdf.xacro", {}, "lbr_med14_r820.urdf.xacro"),
 )
 
-# The two known divergences (D-12, measured in a prior phase and deliberately not changed):
+# The two known divergences, measured earlier and deliberately not changed:
 # and/or yielding a boolean rather than the deciding operand. Self-contained expressions, so
 # neither needs the expressions.cases seed scope.
 DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"), ("div_and_operand", "2 and 3"))

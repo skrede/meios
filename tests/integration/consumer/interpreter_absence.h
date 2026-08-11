@@ -112,6 +112,24 @@ inline std::string interpreter_in_implicit_directories()
 }
 #endif
 
+inline int refuse_reachable(const std::string &found)
+{
+    return refuse("an interpreter is reachable at " + found
+                  + ", so this run cannot state that the load needed none");
+}
+
+// An emptied path settles the question on POSIX but not on Windows, where the implicit
+// directories stay searched.
+inline int decide_on_empty_path()
+{
+#ifdef _WIN32
+    const std::string found = interpreter_in_implicit_directories();
+    return found.empty() ? 0 : refuse_reachable(found);
+#else
+    return 0;
+#endif
+}
+
 // The claim is defensible only against a path that is set and empty, and it is decided on that
 // emptiness rather than on what a scan found. An unset path is not an absence of candidates:
 // POSIX execvp falls back to confstr(_CS_PATH) when PATH is not in the environment, so a system
@@ -124,25 +142,13 @@ inline int refuse_reachable_interpreter()
         return refuse("the process path is unset, so the system default path still resolves an "
                       "interpreter and this run cannot state that the load needed none");
     const std::string rest = path;
-#ifdef _WIN32
     if(rest.empty())
-    {
-        const std::string found = interpreter_in_implicit_directories();
-        if(found.empty())
-            return 0;
-        return refuse("an interpreter is reachable at " + found
-                      + ", so this run cannot state that the load needed none");
-    }
-#else
-    if(rest.empty())
-        return 0;
-#endif
+        return decide_on_empty_path();
     const std::string found = interpreter_on(rest);
     if(found.empty())
         return refuse("the process path is not empty, so this run cannot state that the load "
                       "needed no interpreter; it names " + rest);
-    return refuse("an interpreter is reachable at " + found
-                  + ", so this run cannot state that the load needed none");
+    return refuse_reachable(found);
 }
 
 // The arming fact and the fact under inspection come from different sources on purpose: an

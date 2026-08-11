@@ -25,6 +25,18 @@ int check_structure(const meios::model<double> &robot, const std::vector<oracle:
 int check_limits(const meios::model<double> &robot, const std::vector<oracle::row> &rows);
 int check_assets(const meios::model<double> &robot, const std::vector<oracle::row> &rows);
 
+// Every probe owes the record all three groups, so the triple is spelled once here rather than
+// per probe, where one could quietly go missing.
+inline int check_all_facts(const meios::model<double> &robot,
+                           const std::vector<oracle::row> &rows)
+{
+    if(const int rc = check_structure(robot, rows))
+        return rc;
+    if(const int rc = check_limits(robot, rows))
+        return rc;
+    return check_assets(robot, rows);
+}
+
 // Exactly, not within a tolerance. The record holds the decimal text upstream renders, and
 // round-tripping that text through strtod reproduces the same double, so two correct sides
 // compare equal bit for bit; admitting a tolerance here would make this program's definition of a

@@ -1,5 +1,5 @@
-#include "differential_seed.h"
 #include "differential_xml.h"
+#include "differential_seed.h"
 
 #include "../model_facts.h"
 #include "../corpus_record.h"
@@ -12,8 +12,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <string>
 #include <tuple>
+#include <string>
 #include <vector>
 #include <utility>
 #include <optional>
@@ -50,6 +50,43 @@ meios::load_options native_options(const corpus::document &doc)
     return opts;
 }
 
+// A fresh upstream render has no xacro: tags left, so it loads with the argument set already
+// applied to it rather than supplied again.
+meios::load_options rendered_options(const corpus::document &doc)
+{
+    meios::load_options opts = native_options(doc);
+    opts.args.clear();
+    return opts;
+}
+
+// Both paths meet at the model: upstream's own render feeds through the same meios::load()
+// entry point, and is held to the same measured facts.
+void check_fresh_render(const corpus::document &doc, const std::filesystem::path &scratch,
+                        const std::vector<oracle::row> &facts_record)
+{
+    const meios::expected<meios::load_result, meios::load_error> fresh =
+        meios::load(scratch, rendered_options(doc));
+    REQUIRE(fresh.has_value());
+    facts::check_model(facts_record, fresh->robot, doc.package_root);
+}
+
+// A canonical disagreement is tolerable only where the manifest already records it, matched by
+// exact recorded text rather than by id alone.
+void require_reviewed_divergence(const std::vector<oracle::row> &manifest, const std::string &id,
+                                 const std::string &upstream_text, const std::string &rendered)
+{
+    const std::string meios_canon =
+        meios::canonical_xml(differential::escaped_fragment(rendered));
+    const std::string upstream_canon = meios::canonical_xml(upstream_text);
+    std::string mismatch;
+    if(differential::canonical_matches(upstream_canon, meios_canon, mismatch))
+        return;
+    const std::string upstream_value = differential::attribute_v(upstream_text);
+    std::string manifest_detail;
+    if(!differential::matches_manifest(manifest, id, upstream_value, rendered, manifest_detail))
+        FAIL(manifest_detail);
+}
+
 void compare_expression_case(const oracle::row &row, const std::vector<oracle::row> &manifest,
                              std::vector<std::string> &seen)
 {
@@ -66,16 +103,7 @@ void compare_expression_case(const oracle::row &row, const std::vector<oracle::r
     CHECK(ran.failed == upstream_refused);
     if(ran.failed || upstream_refused)
         return;
-    const std::string meios_canon =
-        meios::canonical_xml(differential::escaped_fragment(ran.rendered));
-    const std::string upstream_canon = meios::canonical_xml(upstream_text);
-    std::string mismatch;
-    if(differential::canonical_matches(upstream_canon, meios_canon, mismatch))
-        return;
-    const std::string upstream_value = differential::attribute_v(upstream_text);
-    std::string manifest_detail;
-    if(!differential::matches_manifest(manifest, id, upstream_value, ran.rendered, manifest_detail))
-        FAIL(manifest_detail);
+    require_reviewed_divergence(manifest, id, upstream_text, ran.rendered);
 }
 
 void compare_corpus_document(const corpus::document &doc, std::vector<std::string> &seen)
@@ -99,23 +127,12 @@ void compare_corpus_document(const corpus::document &doc, std::vector<std::strin
         return;
     const std::vector<oracle::row> facts_record = oracle::load_rows(record_file);
     facts::check_model(facts_record, own->robot, doc.package_root);
-
-    // "The two paths meet at the model" (D-13): upstream's own fresh render, with no xacro:
-    // tags left, feeds through the same meios::load() entry point.
-    meios::load_options fresh_opts;
-    fresh_opts.on_missing = meios::missing_asset::warn;
-    fresh_opts.materials  = meios::material_policy::warn;
-    if(!doc.package_root.empty())
-        fresh_opts.package_roots.push_back(doc.package_root);
-    const meios::expected<meios::load_result, meios::load_error> fresh =
-        meios::load(scratch, fresh_opts);
-    REQUIRE(fresh.has_value());
-    facts::check_model(facts_record, fresh->robot, doc.package_root);
+    check_fresh_render(doc, scratch, facts_record);
 }
 
 }
 
-// One test case, not two, so the named expected-comparison inventory (D-06) is checked once
+// One test case, not two, so the named expected-comparison inventory is checked once
 // against the union of both tiers' verdicts -- a comparison this target owes but skips shows up
 // as a missing inventory entry, not as a false negative in whichever tier's own loop ran first.
 TEST_CASE("fresh upstream renders agree with meios on category, structure and facts",
