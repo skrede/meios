@@ -73,8 +73,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned: the report step passes --gcov-ignore-parse-errors a value from a closed
+      # choices list, so a rename upstream turns this job into an argparse error.
       - name: Install gcovr
-        run: pip install gcovr
+        run: pip install 'gcovr==8.3'
 
       # meios::core links pugixml PRIVATE; the config-package resolves it via
       # find_dependency(pugixml 1.16), so a >= 1.16 pugixml must be discoverable.
@@ -253,17 +255,22 @@ jobs:
           echo "scratch_case_fold registered $registered test(s)"
           ctest -V -R '^scratch_case_fold\.' --no-tests=error
 
+      # gcov reports negative hit counts for arcs whose counters are merged across many
+      # runs of one instrumented binary (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68080).
+      # The focused selections above run the same binaries a dozen times before this pass,
+      # which is what provokes it. Discarding their counters costs no coverage -- every stem
+      # they select runs again here -- and leaves one run's counters per binary to report.
+      - name: Discard the focused runs' counters
+        run: find build -name '*.gcda' -delete
+
       - name: Test
         run: cd build && ctest --output-on-failure
 
       # Filter to meios sources under lib/ (compiled TUs + headers). The compiled
       # TU lib/meios-core/src/meios/version.cpp lives under src/, so a headers-only
       # glob would yield an empty report.
-      # gcov reports negative hit counts for arcs whose counters are merged across
-      # many runs of one instrumented binary (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68080),
-      # which this suite provokes by running the same binaries under several focused
-      # selections before the full pass. Demoting that to a warning keeps the report;
-      # it cannot mask a failing test, which the separate Test step decides.
+      # The negative-hits demotion stays as a belt against a merge this job does not
+      # foresee; it cannot mask a failing test, which the separate Test step decides.
       - name: Generate coverage
         run: |
           gcovr build \
@@ -502,11 +509,20 @@ jobs:
       # differential.py bootstraps the same pinned venv record_upstream.py does (a python -m venv
       # plus the two pinned installs) and re-execs itself inside it, so upstream xacro is never
       # importable from the runner's own interpreter.
+      # An empty render directory leaves the comparison a WARN-and-pass skip that the
+      # ctest -N guard below still counts as a registered test, so the renders are
+      # asserted present here rather than discovered missing as a green run.
       - name: Render fresh upstream through the pinned oracle
         run: |
           python3 tests/tools/oracle/differential.py \
             --package-root "${{ github.workspace }}/build/_meios_corpus_packages" \
             --out "${{ github.workspace }}/build/differential-renders"
+          rendered=$(find "${{ github.workspace }}/build/differential-renders" -type f | wc -l)
+          if [ "$rendered" -eq 0 ]; then
+            echo "the pinned oracle rendered nothing"
+            exit 1
+          fi
+          echo "the pinned oracle rendered $rendered file(s)"
 
       # ctest reports success when a -R filter selects nothing, so the selection is asserted
       # non-empty before it runs, matching every other filtered selector in this file.
