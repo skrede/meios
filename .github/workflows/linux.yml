@@ -466,7 +466,7 @@ jobs:
             "${{ github.workspace }}/install" \
             build-consumer-installed build-consumer-fetched
 
-  # The live differential (D-01, D-03, D-04, D-22): renders every minimized expression case and
+  # The live differential: renders every minimized expression case and
   # every corpus document fresh through the pinned upstream, expands/loads the same inputs
   # through meios, and compares the two. Linux-only, both tiers, on every push -- not the
   # scheduled run, which a working session can outrun.
