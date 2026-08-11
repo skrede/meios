@@ -22,29 +22,35 @@ struct yaml_line
     std::string text;
 };
 
+inline std::optional<yaml_line> yaml_row(std::string_view line)
+{
+    // YAML 1.2 (§5.4) counts CRLF as a single line break. Left in place, the carriage
+    // return is trailing value text, so a key introducing a nested block reads as a
+    // scalar and the whole nesting below it is lost.
+    if(line.ends_with('\r'))
+        line.remove_suffix(1);
+    const std::size_t start = line.find_first_not_of(' ');
+    const std::size_t colon = line.find(':');
+    if(start == std::string_view::npos || colon == std::string_view::npos)
+        return std::nullopt;
+    const std::string_view rest = line.substr(colon + 1);
+    const std::size_t value_at = rest.find_first_not_of(' ');
+    return yaml_line{ start, std::string(line.substr(start, colon - start)),
+                      value_at == std::string_view::npos
+                          ? std::string()
+                          : std::string(rest.substr(value_at)) };
+}
+
 inline std::vector<yaml_line> yaml_lines(std::string_view bytes)
 {
     std::vector<yaml_line> rows;
     for(std::size_t at = 0; at < bytes.size();)
     {
         const std::size_t stop = std::min(bytes.find('\n', at), bytes.size());
-        std::string_view line = bytes.substr(at, stop - at);
+        const std::optional<yaml_line> row = yaml_row(bytes.substr(at, stop - at));
         at = stop + 1;
-        // YAML 1.2 (§5.4) counts CRLF as a single line break. Left in place, the carriage
-        // return is trailing value text, so a key introducing a nested block reads as a
-        // scalar and the whole nesting below it is lost.
-        if(line.ends_with('\r'))
-            line.remove_suffix(1);
-        const std::size_t start = line.find_first_not_of(' ');
-        const std::size_t colon = line.find(':');
-        if(start == std::string_view::npos || colon == std::string_view::npos)
-            continue;
-        const std::string_view rest = line.substr(colon + 1);
-        const std::size_t value_at = rest.find_first_not_of(' ');
-        rows.push_back(yaml_line{ start, std::string(line.substr(start, colon - start)),
-                                  value_at == std::string_view::npos
-                                      ? std::string()
-                                      : std::string(rest.substr(value_at)) });
+        if(row)
+            rows.push_back(*row);
     }
     return rows;
 }

@@ -7,4 +7,6 @@ tests/golden/** text eol=lf
 # Fixtures the suite reads as raw text rather than through an XML parser get the same
 # treatment: pugixml normalizes CRLF for the .xacro and .urdf inputs, but a YAML document
 # reaches its reader byte-for-byte, where a carriage return changes what the reader sees.
-tests/fixtures/**/*.yaml text eol=lf
+# Scoped to the whole test tree rather than to tests/fixtures, because fixture YAML also
+# lives beside the CMake acquisition origins.
+tests/**/*.yaml text eol=lf
