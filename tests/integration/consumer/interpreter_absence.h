@@ -1,6 +1,10 @@
 #ifndef HPP_GUARD_CONSUMER_INTERPRETER_ABSENCE_H
 #define HPP_GUARD_CONSUMER_INTERPRETER_ABSENCE_H
 
+#ifdef _WIN32
+    #include <windows.h>
+#endif
+
 #include <string>
 #include <cstddef>
 #include <cstdlib>
@@ -65,6 +69,49 @@ inline std::string interpreter_on(const std::string &path)
     return {};
 }
 
+#ifdef _WIN32
+inline std::string module_directory()
+{
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if(length == 0 || length == MAX_PATH)
+        return {};
+    return std::filesystem::path(std::wstring(buffer, length)).parent_path().string();
+}
+
+inline std::string system_directory()
+{
+    wchar_t buffer[MAX_PATH];
+    const UINT length = GetSystemDirectoryW(buffer, MAX_PATH);
+    if(length == 0 || length >= MAX_PATH)
+        return {};
+    return std::filesystem::path(std::wstring(buffer, length)).string();
+}
+
+inline std::string windows_directory()
+{
+    wchar_t buffer[MAX_PATH];
+    const UINT length = GetWindowsDirectoryW(buffer, MAX_PATH);
+    if(length == 0 || length >= MAX_PATH)
+        return {};
+    return std::filesystem::path(std::wstring(buffer, length)).string();
+}
+
+// Windows's process-creation search covers the running image's own directory, the system
+// directory and the Windows directory regardless of PATH, so an emptied PATH alone cannot
+// support the absence claim there the way it can on POSIX.
+inline std::string interpreter_in_implicit_directories()
+{
+    for(const std::string &dir : {module_directory(), system_directory(), windows_directory()})
+    {
+        const std::string found = interpreter_in(dir);
+        if(!found.empty())
+            return found;
+    }
+    return {};
+}
+#endif
+
 // The claim is defensible only against a path that is set and empty, and it is decided on that
 // emptiness rather than on what a scan found. An unset path is not an absence of candidates:
 // POSIX execvp falls back to confstr(_CS_PATH) when PATH is not in the environment, so a system
@@ -77,8 +124,19 @@ inline int refuse_reachable_interpreter()
         return refuse("the process path is unset, so the system default path still resolves an "
                       "interpreter and this run cannot state that the load needed none");
     const std::string rest = path;
+#ifdef _WIN32
+    if(rest.empty())
+    {
+        const std::string found = interpreter_in_implicit_directories();
+        if(found.empty())
+            return 0;
+        return refuse("an interpreter is reachable at " + found
+                      + ", so this run cannot state that the load needed none");
+    }
+#else
     if(rest.empty())
         return 0;
+#endif
     const std::string found = interpreter_on(rest);
     if(found.empty())
         return refuse("the process path is not empty, so this run cannot state that the load "

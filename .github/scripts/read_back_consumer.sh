@@ -20,23 +20,66 @@ refuse()
     status=1
 }
 
+plat=$(uname -s)
+case "$plat" in
+    Linux*) plat=linux ;;
+    Darwin*) plat=darwin ;;
+    MINGW*|MSYS*|CYGWIN*) plat=windows ;;
+esac
+
 # Two stages on purpose, here and below. A count taken straight out of a pipeline reports zero for
 # a producer that could not run at all, and a zero is exactly what a clean subject reports, so the
-# producing command's own exit status is read before anything counts its output.
+# producing command's own exit status is read before anything counts its output. The Windows leg is
+# the exception: grep itself is the tool running the check, not an external tool whose absence would
+# need detecting, so a zero-match count is the clean result there, not an ambiguous one. The PE
+# image's raw bytes are read directly, needing no MSVC developer environment a bash step does not
+# carry.
 read_probe()
 {
     probe="$1"
+    if [ "$plat" = "windows" ]; then
+        carried=$(grep -aoE 'Py_Initialize|pybind11' "$probe" 2>/dev/null | wc -l)
+        test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
+        linked=$(grep -aoiE 'python3[0-9]{1,3}\.dll|python[0-9]\.[0-9]+\.dll' "$probe" 2>/dev/null | wc -l)
+        test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
+        return
+    fi
     if symbols=$(nm -C "$probe" 2>/dev/null); then
         carried=$(printf '%s\n' "$symbols" | grep -cE 'Py_Initialize|pybind11' || true)
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
     else
         refuse "$probe yielded no symbol table, so nothing was read back from it"
     fi
-    if linkage=$(ldd "$probe" 2>/dev/null); then
-        linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
-        test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
+    if [ "$plat" = "darwin" ]; then
+        if linkage=$(otool -L "$probe" 2>/dev/null); then
+            linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
+            test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
+        else
+            refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
+        fi
     else
-        refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
+        if linkage=$(ldd "$probe" 2>/dev/null); then
+            linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
+            test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
+        else
+            refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
+        fi
+    fi
+}
+
+# The staged prefix and the working tree route both build to a bare path on Linux/macOS and to
+# Release\<name>.exe on Windows; a probe missing from a tree still refuses by name rather than
+# aborting the loop, so the other probe in the same tree is still checked.
+locate_probe()
+{
+    tree="$1"
+    name="$2"
+    if test -f "$tree/$name"; then
+        printf '%s' "$tree/$name"
+    elif test -f "$tree/Release/$name.exe"; then
+        printf '%s' "$tree/Release/$name.exe"
+    else
+        return 1
     fi
 }
 
@@ -46,9 +89,8 @@ for tree in "$@"; do
         continue
     fi
     for probe_name in universal_robots_probe kr6_probe; do
-        probe="$tree/$probe_name"
-        if ! test -f "$probe"; then
-            refuse "$probe is not a regular file, so $tree built no consumer to read back"
+        if ! probe=$(locate_probe "$tree" "$probe_name"); then
+            refuse "$tree built no consumer named $probe_name to read back"
             continue
         fi
         read_probe "$probe"
