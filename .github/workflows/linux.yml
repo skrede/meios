@@ -259,6 +259,11 @@ jobs:
       # Filter to meios sources under lib/ (compiled TUs + headers). The compiled
       # TU lib/meios-core/src/meios/version.cpp lives under src/, so a headers-only
       # glob would yield an empty report.
+      # gcov reports negative hit counts for arcs whose counters are merged across
+      # many runs of one instrumented binary (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68080),
+      # which this suite provokes by running the same binaries under several focused
+      # selections before the full pass. Demoting that to a warning keeps the report;
+      # it cannot mask a failing test, which the separate Test step decides.
       - name: Generate coverage
         run: |
           gcovr build \
@@ -266,6 +271,7 @@ jobs:
             --gcov-executable "${{ matrix.gcov_executable }}" \
             --filter 'lib/.*/(include|src)/meios/' \
             --gcov-ignore-errors=source_not_found \
+            --gcov-ignore-parse-errors=negative_hits.warn_once_per_file \
             --cobertura coverage.xml
 
       - name: Upload to Codecov
