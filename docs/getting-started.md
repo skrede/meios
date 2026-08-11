@@ -5,6 +5,9 @@ the joints between them — resolves everything it references, and hands the fin
 C++ code as plain data. There is no intermediate format to parse and no silent partial result: a
 description that cannot be resolved comes back as a typed `file:line` error.
 
+A description's expressions are evaluated natively, by an evaluator compiled into the library, so
+everything below happens inside your own process and nothing is started beside it.
+
 This page takes you from an empty directory to a program that loads a description and prints what is
 in it. It assumes you have never used the library. Everything you need is here; the guides linked at
 the end pick up where it stops.
@@ -16,7 +19,9 @@ the end pick up where it stops.
 - **CMake 3.28 or newer.** That is the minimum meios's own build declares, so an older CMake refuses
   the configure outright rather than failing later.
 - **pugixml** — the one dependency the core carries. You do not have to install it: if CMake cannot
-  find a copy, meios fetches and builds a pinned one during your configure.
+  find a copy, meios fetches and builds a pinned one during your configure. The same holds for
+  yaml-cpp, which the default build carries so that a description's expressions can read an
+  auxiliary configuration document without anything extra being installed.
 
 That is the whole list. meios needs no ROS installation, no Python interpreter and no robotics
 framework. Those are optional add-ons for capabilities this page does not use.
@@ -189,5 +194,6 @@ You have a resolved model. Pick the page that owns what you want to do with it:
   `package://` is resolved, and what happens when the file is not there.
 
 If your description is xacro rather than plain URDF, the call above is unchanged — expansion happens
-inside `load`. What its expressions may run, and the rules that refuse the rest, is
+inside `load`, through the built-in evaluator, with nothing to install for it. The grammar it
+evaluates, the rules that refuse the rest, and the ceilings that bound one load are
 [evaluation](evaluation.md).

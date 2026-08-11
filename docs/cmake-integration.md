@@ -7,6 +7,11 @@ CMake functions that put a robot description where your program will look for it
 If you are wiring meios into a build for the first time, [Getting started](getting-started.md) is
 shorter and is enough for a first program. Come here when you need to know what a flag does.
 
+Nothing on this page has to be switched on to load a description whose macros compute their numbers:
+expression evaluation is native, compiled into the library, and the module that reads an auxiliary
+configuration document from an expression is built by default. Every option below either adds a
+capability beside that default or decides what this project builds beside the library.
+
 ## The target you link
 
 Link **`meios::urdf`**. It carries the public API and brings its include directories and the C++20
@@ -91,9 +96,11 @@ the library and its tests never disagree:
   whatever is installed on the machine.
 
 The dependencies themselves follow the modules that need them. `pugixml` is the one the core always
-carries. `nlohmann_json`, `miniz` and `pybind11` are acquired only when the enrichment that links
-each is being built. The Python interpreter that `meios::eval-python` drives is *found*, never
-fetched: an environment resource, not a pinned dependency.
+carries, and `yaml-cpp` follows the auxiliary-document module, which is built by default — so a
+first configure resolves those two and nothing else. `nlohmann_json`, `miniz` and `pybind11` are
+acquired only when the enrichment that links each is being built. The Python interpreter that
+`meios::eval-python` drives is *found*, never fetched — an environment resource rather than a pinned
+dependency, and one nothing acquires unless you switch that backend on.
 
 ## Options
 
@@ -113,15 +120,20 @@ Every default below is the default the declaration states.
 | `MEIOS_SCAN_COLLADA_SUPPORT` | `OFF` | Build `meios::scan-collada` (pugixml). |
 | `MEIOS_SCAN_GLTF_SUPPORT` | `OFF` | Build `meios::scan-gltf` (nlohmann/json). |
 | `MEIOS_ROS_PACKAGE_SUPPORT` | **`ON`** | Resolve `package://` through ROS package manifests (pugixml). |
+| `MEIOS_YAML_SUPPORT` | **`ON`** | Build `meios::yaml`, which reads an auxiliary configuration document from an expression (yaml-cpp). |
 | `MEIOS_ARCHIVE_ZIP_SUPPORT` | `OFF` | Build `meios::archive-zip` (miniz). |
 | `MEIOS_EVAL_PYTHON_SUPPORT` | `OFF` | Build `meios::eval-python` (pybind11 + found Python3). |
 | `MEIOS_REQUIRE_EVAL_PYTHON` | `OFF` | Turn a skipped `meios::eval-python` into a configure error. |
 
-**`MEIOS_ROS_PACKAGE_SUPPORT` is on by default, alone among the enrichments.** It is named for the
-layout it reads rather than for the module it builds, and it carries no dependency the core does not
-already have. Without it, `package://` resolution succeeds only where a directory name happens to
-equal the package name it declares; turning it off gives up that resolution and the environment
-search lists it reads. The module it builds is `meios::ros-package`.
+**Two of these are on by default, and they are the two the default load path needs.**
+`MEIOS_ROS_PACKAGE_SUPPORT` is named for the layout it reads rather than for the module it builds
+(`meios::ros-package`), and it carries no dependency the core does not already have. Without it,
+`package://` resolution succeeds only where a directory name happens to equal the package name it
+declares; turning it off gives up that resolution and the environment search lists it reads.
+`MEIOS_YAML_SUPPORT` builds `meios::yaml`, which is what answers `xacro.load_yaml` in an expression.
+Turn it off and a description reaching for an auxiliary document is told that the build resolves no
+such format, rather than being handed an empty one — a real capability loss on the descriptions that
+read their joint limits out of a file.
 
 **`MEIOS_REQUIRE_EVAL_PYTHON` enables nothing.** It is a strictness switch over
 `MEIOS_EVAL_PYTHON_SUPPORT`, not a second way to turn the module on. With support on and this off, a
@@ -175,7 +187,6 @@ declares, not because a consumer of the library has any use for them.
 | --- | --- | --- | --- |
 | `MEIOS_FETCH_CORPUS` | `OFF` | tests are built | Fetch the pinned robot-description corpus and build the corpus test. |
 | `MEIOS_CORPUS_BREADTH` | `OFF` | tests are built | Load every top-level document the pinned known-good upstream ships. |
-| `MEIOS_CORPUS_EXPRESSION_DOCUMENTS` | `OFF` | tests are built | Fetch the expression-valued upstream and load it; needs `meios::eval-python`. |
 | `MEIOS_EXAMPLE_FETCH_NETWORK` | **`ON`** | examples are built | Fetch the pinned upstream description for the examples. |
 
 ### What the library does over the network
@@ -248,8 +259,8 @@ always be there to explain an empty prefix:
 
 The installed config file publishes one component per module: `core`, `model`, `io`, `urdf`,
 `xacro`, `bundle`, `completion`, `scan-obj`, `scan-collada`, `scan-stl`, `scan-gltf`,
-`archive-zip`, `eval-python`, `ros-package` and `cli`. Each is found if and only if the matching
-imported target came out of the package:
+`archive-zip`, `eval-python`, `ros-package`, `yaml` and `cli`. Each is found if and only if the
+matching imported target came out of the package:
 
 ```cmake
 find_package(meios CONFIG REQUIRED COMPONENTS urdf ros-package)

@@ -1,8 +1,11 @@
 # Consumer guide: `load()` → `model`
 
 The consumer tier is a single call. Hand `load()` a path to a URDF or xacro description; it reads the
-file, expands xacro, resolves `package://` and `$(find)` references, builds a global material table,
-and reconstructs the kinematic topology. What you get back is an
+file, expands xacro through the native evaluator compiled into the library, resolves `package://` and
+`$(find)` references, builds a global material table, and reconstructs the kinematic topology. The
+call needs no interpreter and no capability you have to switch on — a default `load_options` already
+carries the reader that answers an expression asking for an auxiliary configuration document. What
+you get back is an
 `expected<load_result, load_error>`: on success a `load_result` carrying the fully resolved `robot`,
 every diagnostic the load raised, and the completeness claims the result is willing to make; on
 failure a typed `file:line` diagnostic on the error channel, alongside that same diagnostic list.

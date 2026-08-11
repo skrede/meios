@@ -10,7 +10,9 @@
 **meios** is a dependency-light C++20 library that reads, resolves, and flattens URDF/xacro across
 packages and hands the resolved robot model to your own code — no intermediate serialization format.
 xacro is expanded in process, `package://` and `$(find)` are resolved through a layered stack of
-package sources, and every refusal comes back as a typed `file:line` diagnostic.
+package sources, and every refusal comes back as a typed `file:line` diagnostic. Expression
+evaluation is native — the evaluator is compiled into the library — so a description resolves inside
+your own process with nothing installed beside your compiler, CMake and pugixml.
 
 There are two ways to take delivery. Call `load()` and read the flattened links, joints, materials,
 and topology out of meios's own `model`. Or declare a type satisfying the `model_sink` concept and
@@ -32,11 +34,13 @@ the work that would close it.
   resolved `model`; `load_into()` pushes the same description into a type of your own that satisfies
   `model_sink`. Both link one target and both hand back the same diagnostics.
 - **xacro expanded in process:** properties, arguments, macros, includes, and `xacro:if`/`xacro:unless`
-  are resolved by a built-in evaluator that needs nothing outside the C++ standard library and cannot
-  reach the filesystem, the network, or the process at all. Comprehensions, f-strings, `math`, and
-  `load_yaml` come from an opt-in enrichment driving a *found* (never fetched) interpreter,
-  restricted by default to a [documented subset](docs/evaluation.md) whose refusals name the rule
-  that refused them.
+  are resolved by a built-in evaluator that starts no interpreter and cannot reach the filesystem, the
+  network, or the process at all. Its grammar is range-checked arithmetic, comparison, boolean logic,
+  membership and mapping subscripts, a fixed set of mathematics functions, and `xacro.load_yaml` for
+  an auxiliary configuration document; a construct outside it is refused with a located diagnostic
+  naming what it met, and six finite ceilings bound one load. A trusted description needing
+  comprehensions, f-strings or string methods can opt into a
+  [documented backend](docs/evaluation.md) driving a *found* (never fetched) interpreter instead.
 - **Layered package resolution:** `package://` and `$(find)` resolve through an ordered stack of
   package sources — a directory, a ROS package layout, an in-memory tree, a bundle. A
   lower-precedence layer that could also have answered is reported as a shadow diagnostic instead of
@@ -76,12 +80,13 @@ Link `meios::urdf`. It carries the public API and pulls in everything below it.
 | `meios::bundle` | Flatten one description to a URDF; write a description and its assets to a folder | always |
 | `meios::completion` | The command table the CLI's parser and its shell completions are both generated from | always |
 
-The enrichments are separate targets behind separate options. One is on by default; the rest are
+The enrichments are separate targets behind separate options. Two are on by default; the rest are
 **off**, so a build that has not turned them on will not link them:
 
 | Target | Carries | Default | Option |
 |--------|---------|---------|--------|
 | `meios::ros-package` | `package://` resolution through ROS package manifests | **ON** | `MEIOS_ROS_PACKAGE_SUPPORT` |
+| `meios::yaml` | Reading an auxiliary configuration document from an expression | **ON** | `MEIOS_YAML_SUPPORT` |
 | `meios::scan-obj` | Wavefront `.obj` reference scanning | off | `MEIOS_SCAN_OBJ_SUPPORT` |
 | `meios::scan-stl` | STL reference scanning (a typed no-op: STL references nothing) | off | `MEIOS_SCAN_STL_SUPPORT` |
 | `meios::scan-collada` | COLLADA reference scanning | off | `MEIOS_SCAN_COLLADA_SUPPORT` |
@@ -256,7 +261,7 @@ when a dependency was fetched rather than found, the installed module manifest, 
 and pruning, and the configure-time refusals — each an end-to-end sub-configure of a real consumer
 tree.
 
-Four workflows are deliberately **advisory** — they report without blocking a merge, and promotion to
+Three workflows are deliberately **advisory** — they report without blocking a merge, and promotion to
 a required gate would be a visible decision rather than a silent one:
 
 | Workflow | What it watches | Why advisory |
@@ -264,7 +269,6 @@ a required gate would be a visible decision rather than a silent one:
 | Sanitizers | asan/ubsan and tsan, with a step asserting the library object really carries the instrumentation; plus four fuzz harnesses, existence checked, run 60s each | findings are triaged, not merge-blocking |
 | Clang-Tidy | first-party `lib/` translation units | the check itself says so, in its own job output |
 | Canary | newest-toolchain drift, `gcc:latest`, warnings-as-errors forced off | a benign new-compiler diagnostic must not red-light the pipeline |
-| Nightly | corpus breadth over expression-valued documents from a third-party host | fetches an upstream every run, so it can fail for reasons that are not meios |
 
 ## Documentation
 
