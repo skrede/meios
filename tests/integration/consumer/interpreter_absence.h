@@ -130,17 +130,29 @@ inline int decide_on_empty_path()
 #endif
 }
 
-// The claim is defensible only against a path that is set and empty, and it is decided on that
-// emptiness rather than on what a scan found. An unset path is not an absence of candidates:
-// POSIX execvp falls back to confstr(_CS_PATH) when PATH is not in the environment, so a system
-// interpreter stays spawnable while a scan of nothing reports nothing. The scan survives because
-// it is what makes a refusal actionable -- it names the directory and the executable it matched.
+// Windows stores an emptied variable as no variable at all, so an unset path there is not the
+// distinct state it is on POSIX -- the search reaches the same implicit directories either way,
+// and the claim is decided the same way. POSIX keeps the two apart because execvp falls back to
+// confstr(_CS_PATH) when PATH is absent, leaving a system interpreter spawnable.
+inline int decide_on_unset_path()
+{
+#ifdef _WIN32
+    return decide_on_empty_path();
+#else
+    return refuse("the process path is unset, so the system default path still resolves an "
+                  "interpreter and this run cannot state that the load needed none");
+#endif
+}
+
+// The claim is decided on the path being emptied rather than on what a scan found: an emptied
+// path is an absence of candidates only where the platform has no default to fall back on. The
+// scan survives because it is what makes a refusal actionable -- it names the directory and the
+// executable it matched.
 inline int refuse_reachable_interpreter()
 {
     const char *path = std::getenv("PATH");
     if(path == nullptr)
-        return refuse("the process path is unset, so the system default path still resolves an "
-                      "interpreter and this run cannot state that the load needed none");
+        return decide_on_unset_path();
     const std::string rest = path;
     if(rest.empty())
         return decide_on_empty_path();
