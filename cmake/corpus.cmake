@@ -143,9 +143,7 @@ meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/kuka_kr6_support/urdf/kr6r900six
 # the branch that types the joint continuous, flowing through a string comparison into a
 # limit element carrying no position keys — a path ur5e cannot reach. safety_limits guards
 # one <safety_controller> element per joint and force_abs_paths changes only mesh-URI
-# spelling, so each branch keeps every row plain ur5e's record already covers; the whole
-# document's structure, including what those two branches add, is what the live differential
-# (not this fact vocabulary) is the assertion mechanism for.
+# spelling, so each branch keeps every row plain ur5e's record already covers.
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
     "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
