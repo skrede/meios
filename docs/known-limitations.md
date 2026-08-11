@@ -109,6 +109,14 @@ the byte-backed source used to give. The fix shape is identical and it has not b
 Until it is, treat a directory-backed source's reported root as a spelling of where that source was
 configured rather than as a prefix a resolved path can be measured against.
 
+**Whether containment over-refuses on Windows is unmeasured.** The containment check canonicalizes
+both paths and compares them lexically, folding no case and expanding no short (8.3) name of its own.
+Whether a candidate that differs from its root only in case, or that arrives in short form, is
+therefore refused despite genuinely sitting inside that root depends on how much the standard
+library's `weakly_canonical` normalized first — and no test exercises it on any platform. The
+direction is safe either way: the comparison can only refuse a path it should have accepted, never
+the reverse. Suspect it first behind an unexplained containment refusal on Windows.
+
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directory once, when it is resolved.
 Whether a component that later consumes a resolved path re-checks what it handles is that component's
@@ -118,11 +126,15 @@ ends up somewhere.
 ## Diagnostics
 
 **A successful `load()` does not mean a clean load.** A value on the success arm tells you meios
-produced a model, not that the document was clean. A material collision under a `warn` policy, a
-topology issue under a `warn` policy, and an unresolved `package://` reference under a lowered
-`on_missing` all pass without failing the load. The result carries every diagnostic the document
-raised, in source order, alongside the three completeness claims; branch on those rather than on the
-presence of a value. The failure arm carries the same list beside the error that names the failure.
+produced a model, not that the document was clean. A `<visual>` naming a material nothing defines
+under a `warn` material policy, a topology issue under a `warn` topology policy, and an unresolved
+`package://` reference under a lowered `on_missing` all pass without failing the load. A material
+*collision* is not among them: a duplicate name is reported outside the policy tiers and fails the
+load at every setting. The result carries every diagnostic the document raised, alongside the three
+completeness claims; branch on those rather than on the presence of a value. The failure arm carries
+the same list beside the error that names the failure. The diagnostics are ordered by the reader's
+own pass — every material, then every link, then every joint — which is not the order a document
+that interleaves them was written in.
 
 **Two of the five policies still leave their claim standing when set to `skip`.** A completeness claim
 answers for the document rather than for the log, so silencing a class of diagnostic must not restore
@@ -172,7 +184,14 @@ geometry is a job for a consumer that owns both.
 joint, two `<inertial>` elements in one link, or a second `<axis>`, `<limit>`, `<mimic>`,
 `<geometry>`, `<parent>` or `<child>`, meios reads the first and discards the rest with no diagnostic
 at any level. The specification says nothing about how many of these an element may carry, and the
-reader has never counted. This is the one silent acceptance left in the URDF reader.
+reader has never counted.
+
+**An empty fixed-length numeric attribute is silently accepted.** A `<origin xyz="  "/>`, a `<mesh
+scale=""/>` or a `<color rgba=""/>` carries zero tokens where the reader wants three or four. It is
+not reported at any level: the reader treats "no tokens at all" as "attribute not written" and keeps
+the default the caller seeded, so the document reads as though the attribute were absent. A wrong
+*count* is reported and withdraws the parse claim; only the empty case passes quietly. Together with
+the repeated element above, these are the two silent acceptances left in the URDF reader.
 
 **Under a permissive document-validity setting a partially-valid element is lost whole.** The default
 setting refuses the document. Lower it and the same defect drops the element that contained it
@@ -202,12 +221,15 @@ that applies none of those rules and is reachable only from C++. The built-in co
 such exposure — it evaluates a fixed numeric and boolean grammar and loud-fails on anything outside
 it.
 
-**The evaluator has no bound on resource exhaustion.** An expression such as `${10**10**10}` or
-`${[0]*10**12}` is refused by nothing — it names no withheld builtin, traverses no attribute and
-touches no file — and will burn processor time and memory. The restriction above is about authority
-(the filesystem, the network, the process), never about availability. A real bound needs a
-per-expression watchdog against an embedded interpreter holding the interpreter lock, portable across
-macOS, Linux and Windows; there is none today.
+**The Python backend has no bound on resource exhaustion.** Under `meios::eval-python` an expression
+such as `${10**10**10}` or `${[0]*10**12}` is refused by nothing — it names no withheld builtin,
+traverses no attribute and touches no file — and will burn processor time and memory. The
+restriction above is about authority (the filesystem, the network, the process), never about
+availability. A real bound needs a per-expression watchdog against an embedded interpreter holding
+the interpreter lock, portable across macOS, Linux and Windows; there is none today. The built-in
+evaluator, which is the default path, does not share this: six finite ceilings bound one load, and
+both expressions above fail loudly there — the first on an integer range check, the second because
+the grammar has no list literal to multiply.
 
 **Python xacro expressions are recovered by literal re-parsing.** With the Python evaluation
 enrichment enabled, the result of a Python expression is re-hydrated by re-parsing its literal form.
@@ -216,45 +238,66 @@ the principled opaque-value path is not yet in place.
 
 ## Command-line behavior
 
-**`info` and `complete` fail loudly on a broken topology.** On a robot whose topology does not
-reconstruct — a link with more than one parent, a cycle, an undeclared link — `meios info` exits
-non-zero with no output and `meios complete` yields no completions, rather than printing a partial
-view. This follows from silent-by-default plus the default `fail` topology policy. `meios tree` uses a
-`warn` policy and still prints what it can.
+**`info` and the completion engine fail loudly on a broken topology.** On a robot whose graph does
+not reconstruct — a link with more than one parent, or a cycle — `meios info` exits non-zero with no
+output and the completion engine yields no completions, rather than printing a partial view. This
+follows from silent-by-default plus the default `fail` topology policy. `meios tree` uses a `warn`
+policy and still prints what it can. An *undeclared* link is not in that set: it is reported outside
+the policy tiers and returns from the reader before any record is emitted, so it defeats `tree` too,
+at every setting.
 
-**Unresolved meshes do not stop the reporting verbs.** `info`, `tree`, and `complete` lower
-`on_missing` to `warn`, because none of them renders asset bytes and `info`'s mesh listing is the
-report of what did *not* resolve. `flatten`, `bundle`, and `deps` keep the refusing default: each
-produces an artifact that names or needs the asset.
+**Unresolved meshes do not stop the reporting verbs.** `info`, `tree`, `validate` and the completion
+engine lower `on_missing` to `warn`, because none of them renders asset bytes and `info`'s mesh
+listing is the report of what did *not* resolve. `flatten`, `bundle`, and `deps` keep the refusing
+default: each produces an artifact that names or needs the asset.
+
+**The completion engine is not a verb you can type.** The verb `meios completion` only prints a
+shell script. What that script calls back into is `meios __complete`, which is hidden, carries no
+help entry, and is the thing the paragraphs above mean whenever they name the completion engine.
 
 ## What the description corpus proves
 
-**The blocking corpus reaches one vendor.** Every rule about what a description may say is held
+**The blocking corpus reaches three vendors.** Every rule about what a description may say is held
 against pinned, real robot descriptions, and a rule that refuses one of them turns a pull request
-red. What that gate covers, exactly, is the four top-level descriptions
-`ros-industrial/kuka_experimental` ships — named outright in the build, never found by globbing a
-directory. That is one vendor and one authoring style. A description written in some other house
-style can still meet a refusal that nothing here would have caught.
+red. What that gate covers, exactly, is eleven top-level documents named outright in the build, never
+found by globbing a directory: `ros-industrial/kuka_experimental`'s `kr6r900sixx.xacro` and the four
+pre-expanded descriptions beside it, five variants of
+`UniversalRobots/Universal_Robots_ROS2_Description`, and the single entry point
+`lbr-stack/med14_r820_description` carries. Four of those eleven — the pre-expanded KUKA set — sit
+behind a breadth option that the blocking job turns on and a plain local build does not, so a
+developer running the corpus by hand sees seven. Three vendors is not every authoring style, and a
+description written in some other house style can still meet a refusal that nothing here would have
+caught.
 
-**The corpus does not exercise the asset URI contract.** Every asset reference in it is a
-`package://` URI or a `$(find …)` substitution — 256 and 25 of them respectively, and not one
-relative, absolute or `file://` reference. So the corpus proves the package form keeps working; the
-containment rule, the relative base and the `file://` normalization are held by a case table of
-crafted documents and by nothing that ships.
+**The corpus exercises two of the asset reference forms.** Nearly every asset reference in it is a
+`package://` URI or a `$(find …)` substitution. The absolute `file://` form is covered by one
+document — the Universal Robots entry point loaded with `force_abs_paths=true`, whose recorded mesh
+rows are `file://` throughout — and no shipping document carries a relative reference at all. So
+what the corpus leaves to a case table of crafted documents is the containment rule and the
+relative base, not the whole URI contract.
 
-**A second vendor is compared against a fresh upstream render on Linux only.**
+**The comparison against a fresh upstream render reaches one vendor, on Linux only.**
 `UniversalRobots/Universal_Robots_ROS2_Description` is expanded by the built-in evaluator, with the
 interpreter binding switched off, and both that comparison and the pinned corpus run on every push.
 What is confined to Linux is the render it is compared against: producing one needs the pinned
 upstream tooling, and only the Linux workflow installs it. macOS and Windows load the same pinned
 document natively and check it against recorded facts, so what those two platforms leave unproven is
-agreement with a freshly rendered upstream, not whether the document loads.
+agreement with a freshly rendered upstream, not whether the document loads. The other two vendors'
+documents are held against recorded facts on all three platforms and against no fresh render at all.
 
-**A third vendor is named nowhere because it ships nothing to load.**
+**The third vendor is pinned as a description package, not as its umbrella repository.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
-description of any kind. Every top-level document in it includes description packages that are not
-inside the tarball. Pinning the description packages themselves would be a different upstream with
-its own license determination, and it has not been done.
+description of any kind, and every top-level document in it includes description packages that are
+not inside the tarball. What is pinned in its place is `lbr-stack/med14_r820_description` at
+`v2.5.0`, with its own license determination and one loadable entry point. The remaining description
+packages that umbrella repository refers to are still unpinned, so the authoring styles they carry
+are not covered.
+
+**One upstream revision is pinned in the build but absent from the recorded pins.**
+`tests/golden/oracle/PINS` names the upstream tooling, `ur_description` and
+`lbr_med14_r820_description`. It does not name `kuka_experimental`, whose commit and archive digest
+are pinned in the build alone — so the KR6 measurement is recorded against a revision that record
+does not state.
 
 **Fragments are not loaded, by design.** Macro and include files carrying a `<robot>` root with no
 name and no links are not top-level documents, and the corpus does not treat them as such. That
@@ -263,16 +306,20 @@ fragment loaded directly is not exercised.
 
 ## The CMake resource modules
 
-**The automated tests never reach the network.** Every acquisition case builds its own origin on the
-local disk, so nothing in the routine test set exercises a transport failure, a redirect, a
-certificate problem, or a host that serves different bytes than it did last week. A live fetch runs
-separately, in the corpus acquisition behind its own option, and the split is deliberate: the tests
-that must pass on every machine cannot depend on a third party being up.
+**The acquisition tests never reach the network.** Every acquisition case builds its own origin on
+the local disk, so nothing in that set exercises a transport failure, a redirect, a certificate
+problem, or a host that serves different bytes than it did last week. The split is deliberate: the
+tests that must pass on every machine cannot depend on a third party being up. Two paths do reach a
+real host — the corpus acquisition, behind its own option, and the example build, behind
+`MEIOS_EXAMPLE_FETCH_NETWORK`, which defaults on — so a configure on a machine with no network fails
+in the examples unless that option is turned off.
 
-**The `GITHUB` short form is never exercised end to end.** It rewrites into `URL` or
-`GIT_REPOSITORY`, and both of those are exercised — but the rewrite itself needs a real host, so a
-defect in the archive URL it composes, or in the `STRIP_TOP_LEVEL` it implies, would surface on your
-first configure rather than in the test set.
+**The `GITHUB` short form is exercised only through the examples.** It rewrites into `URL` or
+`GIT_REPOSITORY`, and both of those are exercised offline. The rewrite itself needs a real host, and
+what reaches one is the example build: it declares a `GITHUB` resource behind
+`MEIOS_EXAMPLE_FETCH_NETWORK`, which defaults on and is left on in every workflow, so the composed
+archive URL and the `STRIP_TOP_LEVEL` it implies do run against the real host on all three
+platforms. What no run covers is `GITHUB` combined with `SPARSE_PATHS`.
 
 **`MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing.** Forwarding a CA bundle to the download
 needs an origin served over TLS, which nothing offline can be. On a machine whose CMake ships
@@ -299,23 +346,24 @@ expansion itself is not exercised at all.
 **Submodules and large-file objects are left alone in a real clone, by design.** meios initializes
 no submodule and fetches no Git-LFS object of its own; what a clone brings back is whatever the
 host's git is configured to bring back, and an unsmudged mesh pointer that survives is refused
-loudly rather than shipped as stub geometry. No test clones a repository that has either, so the
-behavior you get on a machine without git-lfs configured is the loud refusal and nothing more
-graceful.
+loudly rather than shipped as stub geometry. The LFS half of that is measured: a case clones a local
+origin carrying an unsmudged pointer and asserts the refusal — though the origin is a plain
+repository holding pointer text, not one with real LFS objects behind it. Nothing clones a
+repository carrying a submodule, so what happens there is still reasoned about.
 
 **Nothing in the automated set cross-compiles.** `meios_target_flatten_resource` refuses a cross
 build that has not been handed a host-runnable binary, and both that refusal and the path it points
 at — a flatten driven by a binary built for the build host — are reasoned about rather than
 measured. If you cross-compile and flatten, you are the first to do it.
 
-**How the build integration finds the command-line tool is proven for one of the three ways it can
-be found.** Every test either hands the module an explicit path to a binary or hands it nothing and
-checks that it refuses. Neither of the two ordinary routes is exercised: picking the tool up from an
-installed package, and picking it up as a target in a build that also builds the tool. Those are
-exactly the routes that motivated exporting the tool as a target rather than recording a path
-string, because a target resolves to the right binary on a generator that builds several
-configurations out of one project — and that property is reasoned about, not measured. The effect
-for you is that the two ordinary ways of getting the tool are the two the tests do not exercise.
+**How the build integration finds the command-line tool is proven for two of the three ways it can
+be found.** A test hands the module an explicit path to a binary, another hands it nothing and
+checks that it refuses, and a third builds a project carrying a `meios` target and asserts that the
+binary that target names is the one that ran. The route left unexercised is picking the tool up from
+an installed package. That is one of the routes that motivated exporting the tool as a target rather
+than recording a path string, because a target resolves to the right binary on a generator that
+builds several configurations out of one project — and for the installed case that property is
+reasoned about, not measured.
 
 **An unrecognized evaluator name is refused by the build integration and accepted by the
 command-line tool.** `meios_target_flatten_resource(… EVAL pyhton)` is a configure error listing the
