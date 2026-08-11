@@ -242,12 +242,13 @@ relative, absolute or `file://` reference. So the corpus proves the package form
 containment rule, the relative base and the `file://` normalization are held by a case table of
 crafted documents and by nothing that ships.
 
-**A second vendor is covered only on the scheduled run, and only on Linux.**
-`UniversalRobots/Universal_Robots_ROS2_Description` expands only through the Python evaluator,
-because its macros subscript mapping values the built-in evaluator cannot. No macOS or Windows build
-carries that evaluator, and building it forces the install option off, so that upstream cannot join
-the always-on leg without taking the install-consumer coverage with it. It is loaded on the
-scheduled run instead, which does not block a pull request.
+**A second vendor is compared against a fresh upstream render on Linux only.**
+`UniversalRobots/Universal_Robots_ROS2_Description` is expanded by the built-in evaluator, with the
+interpreter binding switched off, and both that comparison and the pinned corpus run on every push.
+What is confined to Linux is the render it is compared against: producing one needs the pinned
+upstream tooling, and only the Linux workflow installs it. macOS and Windows load the same pinned
+document natively and check it against recorded facts, so what those two platforms leave unproven is
+agreement with a freshly rendered upstream, not whether the document loads.
 
 **A third vendor is named nowhere because it ships nothing to load.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
@@ -281,8 +282,7 @@ this page with nothing at all standing behind it.
 **Flattening is not proven from an installed package.** That an installed meios carries acquisition
 and deployment to a `find_package` consumer is proven on all three platforms — the install-consumer
 example is built, installed, and run — but no automated run flattens a description through an
-installed meios. Every build carrying the Python evaluator has the install step switched off, and
-the tests reach the modules through the module path instead.
+installed meios; the tests reach the modules through the module path instead.
 
 **Precedence between `PACKAGE_PATH` entries is reasoned about, not measured.** That an entry adds
 reach is exercised in both directions: a package vendored inside another package's directory is
