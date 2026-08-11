@@ -192,4 +192,8 @@ inline bool value::operator==(const value &other) const
 
 }
 
+// Included here, not at the top: these definitions index a vector of value, so they compile
+// only where value is complete.
+#include "meios/xacro/detail/value_node_access.h"
+
 #endif
