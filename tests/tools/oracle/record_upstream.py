@@ -370,8 +370,12 @@ def measure(out, versions):
     out.mkdir(parents=True, exist_ok=True)
     for name, (header, rows) in written.items():
         write_record(out, name, header, rows)
+    # Configure fails on any record present but unlisted, so the digest set is every record on
+    # disk rather than only the ones this run regenerated: a curated record the recorder does not
+    # produce keeps its coverage instead of silently losing it on the next run.
+    covered = sorted(set(written) | {found.name for found in out.glob("*.cases")})
     digests = [(hashlib.sha256((out / name).read_bytes()).hexdigest(), name)
-               for name in sorted(written)]
+               for name in covered]
     write_record(out, "RECORDS.sha256", ["sha256 <TAB> file. Every record above is listed here."],
                  digests)
 
