@@ -44,7 +44,12 @@ dll_pattern='python3[0-9]{1,3}\.dll|python[0-9]\.[0-9]+\.dll'
 prove_interpreter_pattern()
 {
     reference=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
-    if [ -z "$reference" ]; then
+    # command -v reports the name a shell would execute, which under MSYS resolves an .exe the
+    # bare path does not name; reading the image needs the name on disk.
+    if [ -n "$reference" ] && [ ! -f "$reference" ] && [ -f "$reference.exe" ]; then
+        reference="$reference.exe"
+    fi
+    if [ -z "$reference" ] || [ ! -f "$reference" ]; then
         refuse "no interpreter executable was found to prove the read-back pattern against"
         return
     fi
