@@ -34,13 +34,32 @@ esac
 # need detecting, so a zero-match count is the clean result there, not an ambiguous one. The PE
 # image's raw bytes are read directly, needing no MSVC developer environment a bash step does not
 # carry.
+dll_pattern='python3[0-9]{1,3}\.dll|python[0-9]\.[0-9]+\.dll'
+
+# A negative check that cannot fail proves nothing. The Windows leg reads raw PE bytes, so the
+# pattern is first held against a subject known to carry the linkage -- the running interpreter's
+# own executable, whose import table names its pythonXY.dll -- and a pattern matching nothing there
+# is reported as a blind detector rather than as a clean subject. A missing reference is a refusal,
+# not a skip, so the leg cannot quietly downgrade to the unproven check.
+prove_interpreter_pattern()
+{
+    reference=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+    if [ -z "$reference" ]; then
+        refuse "no interpreter executable was found to prove the read-back pattern against"
+        return
+    fi
+    seen=$(grep -aoiE "$dll_pattern" "$reference" 2>/dev/null | wc -l)
+    test "$seen" -gt 0 \
+        || refuse "the interpreter-DLL pattern matched nothing in $reference, so this read-back is blind"
+}
+
 read_probe()
 {
     probe="$1"
     if [ "$plat" = "windows" ]; then
         carried=$(grep -aoE 'Py_Initialize|pybind11' "$probe" 2>/dev/null | wc -l)
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
-        linked=$(grep -aoiE 'python3[0-9]{1,3}\.dll|python[0-9]\.[0-9]+\.dll' "$probe" 2>/dev/null | wc -l)
+        linked=$(grep -aoiE "$dll_pattern" "$probe" 2>/dev/null | wc -l)
         test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
         return
     fi
@@ -82,6 +101,10 @@ locate_probe()
         return 1
     fi
 }
+
+if [ "$plat" = "windows" ]; then
+    prove_interpreter_pattern
+fi
 
 for tree in "$@"; do
     if ! test -d "$tree"; then
