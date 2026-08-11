@@ -98,8 +98,11 @@ if(MEIOS_YAML_SUPPORT)
     # would therefore switch the install off for every default build, because this module is the
     # one enrichment that is on by default. A consumer that has already expressed a preference
     # keeps it.
+    # Tracking meios's own toggle rather than a bare ON: a tree meios does not install into has no
+    # prefix for a dependency to claim either, and a dependency that registers install rules there
+    # would install an archive such a tree never built.
     if(NOT DEFINED YAML_CPP_INSTALL)
-        set(YAML_CPP_INSTALL ON)
+        set(YAML_CPP_INSTALL ${MEIOS_INSTALL})
     endif()
     FetchContent_MakeAvailable(yaml-cpp)
     if(NOT TARGET yaml-cpp::yaml-cpp)
