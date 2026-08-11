@@ -23,8 +23,10 @@ the end pick up where it stops.
   yaml-cpp, which the default build carries so that a description's expressions can read an
   auxiliary configuration document without anything extra being installed.
 
-That is the whole list. meios needs no ROS installation, no Python interpreter and no robotics
-framework. Those are optional add-ons for capabilities this page does not use.
+That is the whole list — with one caveat about how the two libraries arrive: a fetch needs Git and
+network access on your first configure, so an offline machine wants both already discoverable.
+Beyond that, meios needs no ROS installation, no Python interpreter and no robotics framework. Those
+are optional add-ons for capabilities this page does not use.
 
 ## Adding meios to your build
 

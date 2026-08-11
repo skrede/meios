@@ -419,11 +419,14 @@ reports itself skipped with that reason rather than passing on zero rows.
 ## What the description corpus does and does not prove
 
 The pinned description corpus gates every change here, and it is worth being exact about what that
-gate covers. Classifying every asset reference in it gives **256 `package://` references and 25
-`$(find …)` substitutions, and not one relative, absolute or `file://` reference.** Real descriptions
-in the wild use the package form and essentially nothing else.
+gate covers. Classifying every asset reference in it gives **the `package://` form and the
+`$(find …)` substitution nearly throughout, and no relative reference anywhere.** Real descriptions
+in the wild use the package form and essentially nothing else. The absolute `file://` form is the
+exception: one corpus document is loaded specifically to produce it, and every mesh row in that
+document's recorded facts is a `file://` URI.
 
 So the corpus confirms that the rules on this page cause no regression on the package form, which is
-the form that matters most in practice. It does **not** exercise containment, the relative base, the
-`file://` normalization, or any refusal on this page. Those are held by the case table and by nothing
-else, which is why the drift check between this page and that table is worth having.
+the form that matters most in practice, and it exercises the `file://` normalization through that one
+document. It does **not** exercise containment, the relative base, or any refusal on this page. Those
+are held by the case table and by nothing else, which is why the drift check between this page and
+that table is worth having.

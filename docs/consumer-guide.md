@@ -75,6 +75,8 @@ list says everything else the document raised on the way there.
 `load(path).has_value() == true` does **not** mean the description resolved without complaint. The
 convenience overload is silent by default: it surfaces the first fatal error through the `load_error`
 channel and drops every `level::warn` diagnostic — an unresolved `package://` reference, a
-warn-policy material collision, a topology issue under a `warn` policy. If you need to see those
+`<visual>` naming a material nothing defines under a `warn` material policy, a topology issue under a
+`warn` policy. (A material name *collision* is not one of these: it fails the load outright at every
+setting.) If you need to see those
 warnings, inject a `log_sink` using the three-argument overload. The engine guide shows how to
 capture diagnostics into your own record type; the same sink works for a pure consumer.

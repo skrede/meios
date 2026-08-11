@@ -12,7 +12,7 @@ packages and hands the resolved robot model to your own code — no intermediate
 xacro is expanded in process, `package://` and `$(find)` are resolved through a layered stack of
 package sources, and every refusal comes back as a typed `file:line` diagnostic. Expression
 evaluation is native — the evaluator is compiled into the library — so a description resolves inside
-your own process with nothing installed beside your compiler, CMake and pugixml.
+your own process with nothing installed beside your compiler and CMake.
 
 There are two ways to take delivery. Call `load()` and read the flattened links, joints, materials,
 and topology out of meios's own `model`. Or declare a type satisfying the `model_sink` concept and
@@ -34,11 +34,13 @@ the work that would close it.
   resolved `model`; `load_into()` pushes the same description into a type of your own that satisfies
   `model_sink`. Both link one target and both hand back the same diagnostics.
 - **xacro expanded in process:** properties, arguments, macros, includes, and `xacro:if`/`xacro:unless`
-  are resolved by a built-in evaluator that starts no interpreter and cannot reach the filesystem, the
-  network, or the process at all. Its grammar is range-checked arithmetic, comparison, boolean logic,
-  membership and mapping subscripts, a fixed set of mathematics functions, and `xacro.load_yaml` for
-  an auxiliary configuration document; a construct outside it is refused with a located diagnostic
-  naming what it met, and six finite ceilings bound one load. A trusted description needing
+  are resolved by a built-in evaluator that starts no interpreter. Its grammar is range-checked
+  arithmetic, comparison, boolean logic, membership and mapping subscripts, the conditional
+  expression, a fixed set of mathematics functions, and `xacro.load_yaml` for an auxiliary
+  configuration document; a construct outside it is refused with a located diagnostic naming what it
+  met, and six finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
+  the network or the process — the one route to a file is `xacro.load_yaml`, where C++ resolves the
+  spec, enforces containment and reads the bytes before the evaluator sees one. A trusted description needing
   comprehensions, f-strings or string methods can opt into a
   [documented backend](docs/evaluation.md) driving a *found* (never fetched) interpreter instead.
 - **Layered package resolution:** `package://` and `$(find)` resolve through an ordered stack of
@@ -127,6 +129,11 @@ everything else.
 - C++20 compiler: GCC 14+, Clang 18+, MSVC 19.38+
 - CMake 3.28+
 - pugixml (found on the system, or auto-fetched via FetchContent)
+- yaml-cpp, on a default build (same treatment; needed by `meios::yaml`, which is on by default —
+  turn `MEIOS_YAML_SUPPORT` off and this dependency goes away with it)
+
+A first configure fetches what it does not find, so it wants Git and network access unless both
+libraries are already discoverable.
 
 ## Quick Install
 

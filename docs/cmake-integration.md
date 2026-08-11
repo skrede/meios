@@ -125,7 +125,8 @@ Every default below is the default the declaration states.
 | `MEIOS_EVAL_PYTHON_SUPPORT` | `OFF` | Build `meios::eval-python` (pybind11 + found Python3). |
 | `MEIOS_REQUIRE_EVAL_PYTHON` | `OFF` | Turn a skipped `meios::eval-python` into a configure error. |
 
-**Two of these are on by default, and they are the two the default load path needs.**
+**Two of these are on by default, and they are the two the default load path relies on for
+`package://` resolution and `xacro.load_yaml`.**
 `MEIOS_ROS_PACKAGE_SUPPORT` is named for the layout it reads rather than for the module it builds
 (`meios::ros-package`), and it carries no dependency the core does not already have. Without it,
 `package://` resolution succeeds only where a directory name happens to equal the package name it
@@ -211,8 +212,10 @@ These carry the `MEIOS_` prefix and turn up in caches and listfiles, so they are
 say what they are. The first two groups are not yours to set at all. The third is settable, but it
 is documented elsewhere.
 
-- **Config-package gate flags** — `MEIOS_CORE_PUGIXML_INSTALLED`, `MEIOS_SCAN_GLTF_INSTALLED`,
-  `MEIOS_ARCHIVE_ZIP_INSTALLED`, `MEIOS_CLI_HAS_EVAL_PYTHON`. The build sets each one as it decides
+- **Config-package gate flags** — `MEIOS_CORE_PUGIXML_INSTALLED`, `MEIOS_YAML_INSTALLED`,
+  `MEIOS_SCAN_GLTF_INSTALLED`, `MEIOS_ARCHIVE_ZIP_INSTALLED`, `MEIOS_CLI_HAS_EVAL_PYTHON`. The
+  second is the one a default build trips, since `meios::yaml` is on unless you turn it off. The
+  build sets each one as it decides
   which modules it is producing, and the installed config file reads them back to know which
   dependencies it must resolve. They are output, not input.
 - **Command-line capability flags** — `MEIOS_CLI_HAS_SCAN_OBJ` and its siblings, `MEIOS_CLI_HAS_ROS`,
