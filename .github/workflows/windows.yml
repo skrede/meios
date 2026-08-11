@@ -321,29 +321,33 @@ jobs:
 
       - name: Build the consumer against the staged prefix
         run: |
-          $corpus = "${{ github.workspace }}\build\_meios_corpus_packages"
+          $ws = "${{ github.workspace }}".Replace('\', '/')
+          $corpus = "$ws/build/_meios_corpus_packages"
           cmake tests/integration/consumer -B build-consumer-installed -A x64 `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" `
+            -DCMAKE_PREFIX_PATH="$ws/install;$ws/deps" `
             -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" `
             -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" `
             -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" `
             -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" `
-            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+            -DMEIOS_CONSUMER_TESTS_DIR="$ws/tests"
           cmake --build build-consumer-installed --config Release
 
+      # A backslash path reaches the generated sub-build as CMake code, where a segment such as
+      # \a reads as an invalid character escape, so the workspace is spelled with forward slashes.
       - name: Build the consumer against the working tree
         run: |
-          $corpus = "${{ github.workspace }}\build\_meios_corpus_packages"
+          $ws = "${{ github.workspace }}".Replace('\', '/')
+          $corpus = "$ws/build/_meios_corpus_packages"
           cmake tests/integration/consumer -B build-consumer-fetched -A x64 `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
-            -DMEIOS_CONSUMER_SOURCE_DIR="${{ github.workspace }}" `
+            -DCMAKE_PREFIX_PATH="$ws/deps" `
+            -DMEIOS_CONSUMER_SOURCE_DIR="$ws" `
             -DMEIOS_EVAL_PYTHON_SUPPORT=OFF `
             -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON `
             -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" `
             -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" `
             -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" `
             -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" `
-            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+            -DMEIOS_CONSUMER_TESTS_DIR="$ws/tests"
           cmake --build build-consumer-fetched --config Release
 
       # ctest reports success when a -R filter selects nothing, so each selection is
