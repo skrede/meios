@@ -86,7 +86,10 @@ public:
     // elsewhere reaches here as a plausible number; nothing above this line can rule it out.
     std::vector<captured_diagnostic> records(std::size_t mark = 0) const
     {
-        const std::ptrdiff_t from = static_cast<std::ptrdiff_t>(std::min(mark, m_records.size()));
+        // Parenthesized so a consumer that included <windows.h> first does not expand the min
+        // macro here; this header is installed, so that translation unit is not ours to control.
+        const std::ptrdiff_t from =
+            static_cast<std::ptrdiff_t>((std::min)(mark, m_records.size()));
         return {m_records.begin() + from, m_records.end()};
     }
 
