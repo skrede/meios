@@ -347,7 +347,6 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
             -DMEIOS_BUILD_TESTS=ON \
             -DMEIOS_FETCH_CORPUS=ON \
-            -DMEIOS_CORPUS_EXPRESSION_DOCUMENTS=ON \
             -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
             -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
           cmake --build build
@@ -359,8 +358,10 @@ jobs:
           cmake tests/integration/consumer -B build-consumer-installed \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
-            -DMEIOS_CONSUMER_UR_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
-            -DMEIOS_CONSUMER_UR_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" \
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" \
             -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
           cmake --build build-consumer-installed
 
@@ -373,8 +374,10 @@ jobs:
             -DMEIOS_CONSUMER_SOURCE_DIR="${{ github.workspace }}" \
             -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
             -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON \
-            -DMEIOS_CONSUMER_UR_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
-            -DMEIOS_CONSUMER_UR_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" \
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" \
             -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
           cmake --build build-consumer-fetched
 
@@ -386,7 +389,7 @@ jobs:
         run: |
           expected=0
           for tree in build-consumer-installed build-consumer-fetched; do
-            listed=$(ctest --test-dir "$tree" -N -R '^universal_robots')
+            listed=$(ctest --test-dir "$tree" -N -R 'universal_robots|kr6')
             registered=$(printf '%s\n' "$listed" | grep -c 'Test *#' || true)
             if [ "$registered" -eq 0 ]; then
               echo "$tree registered no native load test"
@@ -399,7 +402,7 @@ jobs:
               exit 1
             fi
             echo "$tree registered $registered test(s)"
-            ctest --test-dir "$tree" -R '^universal_robots' --output-on-failure --no-tests=error
+            ctest --test-dir "$tree" -R 'universal_robots|kr6' --output-on-failure --no-tests=error
           done
 
       # A claim about an absence nobody ran a command for is not evidence, so the assertions live

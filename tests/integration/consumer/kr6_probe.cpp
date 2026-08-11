@@ -1,5 +1,5 @@
+#include "kr6_paths.h"
 #include "model_facts.h"
-#include "corpus_paths.h"
 #include "interpreter_absence.h"
 
 #include <meios/urdf.h>
@@ -19,7 +19,6 @@ int load_and_compare(const std::vector<oracle::row> &rows)
     meios::load_options opts;
     opts.on_missing = meios::missing_asset::warn;
     opts.materials = meios::material_policy::warn;
-    opts.args.emplace(consumer::variant_argument, consumer::variant);
     opts.package_roots.push_back(consumer::pinned_package_root);
 
     const meios::expected<meios::load_result, meios::load_error> loaded =
@@ -40,7 +39,7 @@ int load_and_compare(const std::vector<oracle::row> &rows)
     if(const int rc = consumer::check_assets(robot, rows))
         return rc;
 
-    std::cout << "loaded " << consumer::pinned_document << " as " << consumer::variant
+    std::cout << "loaded " << consumer::pinned_document
               << " (links=" << robot.links.size() << ", joints=" << robot.joints.size()
               << ") and matched " << rows.size() << " recorded facts\n";
     return 0;

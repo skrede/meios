@@ -45,12 +45,14 @@ for tree in "$@"; do
         refuse "$tree is not a directory, so the consumer was never built there"
         continue
     fi
-    probe="$tree/universal_robots_probe"
-    if ! test -f "$probe"; then
-        refuse "$probe is not a regular file, so $tree built no consumer to read back"
-        continue
-    fi
-    read_probe "$probe"
+    for probe_name in universal_robots_probe kr6_probe; do
+        probe="$tree/$probe_name"
+        if ! test -f "$probe"; then
+            refuse "$probe is not a regular file, so $tree built no consumer to read back"
+            continue
+        fi
+        read_probe "$probe"
+    done
 done
 
 # meios's own subdirectory rather than the whole prefix: a fetched dependency that installs itself
