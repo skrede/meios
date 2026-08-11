@@ -11,7 +11,8 @@ The evaluator that runs is compiled into the library. It needs no interpreter, n
 and no Python packages; nothing about it is opt-in. `meios::yaml`, which is what lets an expression
 read an auxiliary document, is built by default too, so the plain `load()` call in
 [getting started](getting-started.md) resolves a description whose macros read a joint-limits file
-with nothing installed beyond a compiler, CMake and pugixml.
+with nothing installed beyond a compiler and CMake. The two libraries it needs, pugixml and yaml-cpp,
+are each found on the system or fetched at configure time.
 
 What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
 integers and reals, comparison, boolean logic, membership and subscripting into a mapping, a fixed
@@ -46,10 +47,12 @@ abs   acos   asin   atan   atan2   ceil   cos   degrees
 floor   max   min   radians   sin   sqrt   tan
 ```
 
-`min` and `max` take any number of arguments, `atan2` takes exactly two, and the rest take exactly
-one. `abs` of an integer is an integer; `floor` and `ceil` yield integers whatever they are handed.
-Any other name followed by `(` is refused by that name, so a description reaching for a function this
-list does not carry is told which one it reached for rather than that something went wrong.
+`min` and `max` take one or more arguments — zero is a fault, not an identity — `atan2` takes exactly
+two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
+integers whatever they are handed. Any other name followed by `(` is refused by that name, so a
+description reaching for a function this list does not carry is told which one it reached for rather
+than that something went wrong. A name on the list called at the wrong arity is refused the same way,
+by name, so `atan2(x)` reports the function rather than the count.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
@@ -98,17 +101,26 @@ reporting an unrecognized function.
 
 **Membership and subscripting both require a mapping.** `list[0]` and `x in list` are refused, and so
 is a subscript key that is not text. An auxiliary document's sequence therefore crosses a property
-boundary and reaches a macro intact, but is not indexable here.
+boundary and reaches a macro intact, but is not indexable here. The two refusals are not the same
+kind: `x in list` is `unsupported`, so a lenient policy may leave the span verbatim, while `list[0]`
+is an `error` and terminal under every policy — as is a key that is not text, on either construct.
 
-**Six ceilings bound one load.** They are the auxiliary document's node count (100 000) and nesting
-depth (64), and the bytes read (8 000 000), tokens lexed (1 000 000), evaluation steps (10 000 000)
-and expression nesting depth (256). Four of them accumulate across every expression in one load
-rather than resetting per expression, so a document cannot spend a bounded budget an unbounded number
-of times; the two depth axes are high-water marks instead, because reaching a nesting level is what
-they bound and not how often it is reached. A ceiling requested as zero is refused and takes its
-default, so there is no spelling that means unbounded. Crossing one is terminal and stops the load at
-the position that crossed it: a load continuing past its own ceiling would report a partial answer as
-a whole one.
+**Six ceilings bound the evaluator.** They are the auxiliary document's node count (100 000) and
+nesting depth (64), and the bytes read (8 000 000), tokens lexed (1 000 000), evaluation steps
+(10 000 000) and expression nesting depth (256). Four of them accumulate across every expression in
+one load rather than resetting per expression, so a document cannot spend a bounded budget an
+unbounded number of times; the two depth axes are high-water marks instead, because reaching a
+nesting level is what they bound and not how often it is reached. A ceiling requested as zero is
+refused and takes its default, so there is no spelling that means unbounded. Crossing one is terminal
+and stops the load at the position that crossed it: a load continuing past its own ceiling would
+report a partial answer as a whole one.
+
+Expansion carries two more that are not the evaluator's: a work count (1 000 000) over nodes
+visited, macro instantiations and substitutions, and an emitted-node count (100 000). They bound a
+shallow-but-wide macro fan-out that no expression ceiling would catch, and they report under the same
+`expansion_budget_exceeded` code — so a crossed ceiling naming a work limit is one of these two
+rather than one of the six. None of the eight is reachable through `load()`; that entry point always
+runs them at their defaults, and only the `meios::xacro` seam takes different ones.
 
 ## What this costs
 
@@ -123,7 +135,8 @@ it says. Text is composed by writing it — a substitution span beside literal c
 
 **A list is readable but not indexable.** A configuration whose value is a sequence crosses a
 property boundary and reaches a macro whole, and `${limits['A1']['range'][0]}` is still refused. A
-description that indexes a sequence needs the explicit backend.
+description that indexes a sequence needs the explicit backend — and until it gets one the refusal is
+terminal, so no policy will carry the load past it by leaving the span verbatim.
 
 **`xacro.load_yaml` takes a bound name, not a literal.** `${xacro.load_yaml('config/limits.yaml')}`
 refuses; the spec must be bound to a property, an argument or a macro parameter first, and
@@ -250,12 +263,18 @@ Three spec forms are accepted:
 
 | Form | Resolution | Refused by shape |
 |------|------------|------------------|
-| `package://<pkg>/<rel>` | through the source stack, the same resolution a mesh or an include takes | an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
-| `$(find <pkg>)/<rel>` | identical — both spellings split to the same package/relative pair and take one lookup | the same three under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
+| `package://<pkg>/<rel>` | through the source stack, the same resolution a mesh or an include takes | no divider at all, an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
+| `$(find <pkg>)/<rel>` | the same — both spellings split to a package/relative pair and take one lookup | the same four under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
 | anything else | probed against the calling document's directory, then against each configured containment root | — |
 
 A spelling refused by shape is decided before the source stack is asked, so no lookup, no containment
 decision and no filesystem call runs for it — the same order the asset grammar keeps.
+
+The two package spellings agree on which four shapes they refuse but not on what divides them: the
+`$(find …)` splitter treats a backslash as a divider and as a further separator, while the
+`package://` splitter recognizes only a forward slash. So `$(find pkg)\cfg.yaml` splits and resolves
+where `package://pkg\cfg.yaml` is malformed. Write the separator as `/` in both and the distinction
+never arises.
 
 Containment is judged on the **resolved candidate**, never on the authored spelling. An absolute path
 that canonicalizes inside a root is accepted; one that does not is refused under `uncontained_asset`,
@@ -268,8 +287,9 @@ answered the containment question the first one raised.
 **Which document a relative spec resolves against.** The document it is written in — which is not
 always the top-level one:
 
-- Inside an included file, that included file. A bare `'inner-config.yaml'` written in a file pulled
-  in by `<xacro:include>` resolves next to *that* file, not next to the description that included it.
+- Inside an included file, that included file. A spec whose text is a bare `inner-config.yaml`, bound
+  in a file pulled in by `<xacro:include>`, resolves next to *that* file, not next to the description
+  that included it.
 - Inside a macro body, the document that **invoked** the macro, not the one that defined it. This
   matches the compatibility target and is not obvious from reading the macro: a macro that loads a
   configuration sitting beside its own definition will not find it when called from elsewhere.
@@ -280,12 +300,18 @@ always the top-level one:
   package spec forms: they split into the same package/relative pair and read the returned file's
   text.
 
-**Windows over-refuses.** Containment compares canonicalized paths without case folding and without
-expanding short (8.3) path names. On Windows a candidate whose spelling differs from its root's in
-case, or which arrives in short form, therefore compares unequal to that root and is refused even
-though it genuinely sits inside it. This fails closed — it is over-refusal, not a bypass — but it is
-a real functional limit on one of the three supported platforms, and it is the first thing to suspect
-behind an unexplained containment refusal there.
+**Windows may over-refuse, and it is unmeasured.** Containment canonicalizes both paths and then
+compares them lexically, with no case folding and no expansion of short (8.3) path names of its own.
+Whether a candidate that differs from its root only in case, or that arrives in short form, therefore
+compares unequal and is refused depends entirely on how much the standard library's
+`weakly_canonical` already normalized: an implementation that resolves the existing prefix through
+the filesystem repairs both spellings before the comparison sees them, and one that does not leaves
+them to compare unequal. No test in this project exercises either, on any platform.
+
+What the direction guarantees is the part that matters: the comparison can only refuse a path it
+should have accepted, never accept one it should have refused. It fails closed. Treat this as the
+first thing to suspect behind an unexplained containment refusal on Windows, and as a claim this page
+has not earned the right to state either way.
 
 ## Reading a loaded configuration
 
