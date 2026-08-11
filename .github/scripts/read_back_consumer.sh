@@ -68,7 +68,9 @@ read_probe()
         test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
         return
     fi
-    if symbols=$(nm -C "$probe" 2>/dev/null); then
+    # Emptiness is read as well as the exit status: nm succeeds on a stripped image and prints
+    # nothing, which counts the same as a clean subject while having read nothing at all.
+    if symbols=$(nm -C "$probe" 2>/dev/null) && [ -n "$symbols" ]; then
         carried=$(printf '%s\n' "$symbols" | grep -cE 'Py_Initialize|pybind11' || true)
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
     else

@@ -50,6 +50,12 @@ inline std::string text_of(double value)
     return out.str();
 }
 
+inline int refuse(const std::string &what)
+{
+    std::cerr << what << '\n';
+    return 1;
+}
+
 inline int refuse_fact(const std::string &key, const std::string &recorded,
                        const std::string &loaded)
 {

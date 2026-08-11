@@ -1,6 +1,5 @@
 #include "kr6_paths.h"
 #include "model_facts.h"
-#include "interpreter_absence.h"
 
 #include <meios/urdf.h>
 #include <meios/model.h>
@@ -46,11 +45,8 @@ int load_and_compare(const std::vector<oracle::row> &rows)
 
 }
 
-int main(int argc, char **argv)
+int main()
 {
-    if(const int rc = consumer::guard_interpreter_absence(argc, argv))
-        return rc;
-
     try
     {
         return load_and_compare(oracle::load_rows(consumer::pinned_record));
