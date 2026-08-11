@@ -79,12 +79,23 @@ inline std::vector<document> documents(const std::string &records)
     return docs;
 }
 
+// The join record_for() keys by, exposed on its own so a caller needing the id a document keys
+// under -- the live differential's inventory and manifest rows are keyed this way, not by the
+// record filename record_for() resolves to -- has one source for both.
+// std::map already iterates in key order, so joining every doc.args entry needs no separate sort;
+// a document sharing one argument value with another therefore keys distinctly, not aliased.
+inline std::string document_key(const document &doc)
+{
+    std::string key;
+    for(const std::pair<const std::string, std::string> &arg : doc.args)
+        key += (key.empty() ? "" : " ") + arg.first + "=" + arg.second;
+    return key.empty() ? doc.path.filename().string() : key;
+}
+
 // Every document the built-in evaluator is asked to handle carries measured upstream facts, so a
 // document added without them fails here rather than passing on a load that merely exited. Each
 // pairing is named outright, on the rule the corpus file names its documents by: a record name
 // composed from a document's own arguments would make an unmeasured variant look covered.
-// std::map already iterates in key order, so joining every doc.args entry needs no separate sort;
-// a document sharing one argument value with another therefore keys distinctly, not aliased.
 inline std::string record_for(const document &doc)
 {
     const std::map<std::string, std::string> measured{
@@ -96,12 +107,7 @@ inline std::string record_for(const document &doc)
         { "kr6r900sixx.xacro", "kr6_facts.cases" },
         { "lbr_med14_r820.urdf.xacro", "lbr_med14_r820_facts.cases" }
     };
-    std::string key;
-    for(const std::pair<const std::string, std::string> &arg : doc.args)
-        key += (key.empty() ? "" : " ") + arg.first + "=" + arg.second;
-    if(key.empty())
-        key = doc.path.filename().string();
-    const std::map<std::string, std::string>::const_iterator found = measured.find(key);
+    const std::map<std::string, std::string>::const_iterator found = measured.find(document_key(doc));
     return found == measured.end() ? std::string{} : found->second;
 }
 

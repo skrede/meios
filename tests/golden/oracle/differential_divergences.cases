@@ -1,0 +1,6 @@
+# id <TAB> upstream <TAB> meios <TAB> reason. The bidirectional reviewed divergence manifest
+# (D-11): a divergence not listed here fails the differential run, a listed entry whose
+# divergence no longer reproduces also fails it, and a listed entry present under the right id
+# but with drifted recorded text fails it too -- matched by exact text, never by id alone.
+div_or_operand	1	True	and/or yield a boolean rather than the deciding operand (measured in a prior phase, deliberately not changed)
+div_and_operand	3	True	and/or yield a boolean rather than the deciding operand (measured in a prior phase, deliberately not changed)

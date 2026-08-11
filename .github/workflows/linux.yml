@@ -275,6 +275,53 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
+  # A separate job rather than a third entry in build's own matrix: that job's per-scratch-stem
+  # focused steps exist to catch a filtered selector that silently discovers nothing, a concern
+  # orthogonal to which standard library the binary links, and tripling them here would not add
+  # coverage this leg's own full `ctest --output-on-failure` does not already give. The
+  # containment defect this leg guards was previously caught only by macOS CI; libc++ gives the
+  # same class of ABI-specific coverage on Linux instead.
+  libcxx:
+    runs-on: ubuntu-24.04
+    name: clang-18 (libc++)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libc++
+        run: sudo apt-get update && sudo apt-get install -y libc++-18-dev libc++abi-18-dev
+
+      - name: Install pugixml
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          CXXFLAGS: -stdlib=libc++
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          CXXFLAGS: -stdlib=libc++
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
   install-test:
     runs-on: ubuntu-24.04
 
@@ -412,6 +459,63 @@ jobs:
           bash .github/scripts/read_back_consumer.sh \
             "${{ github.workspace }}/install" \
             build-consumer-installed build-consumer-fetched
+
+  # The live differential (D-01, D-03, D-04, D-22): renders every minimized expression case and
+  # every corpus document fresh through the pinned upstream, expands/loads the same inputs
+  # through meios, and compares the two. Linux-only, both tiers, on every push -- not the
+  # scheduled run, which a working session can outrun.
+  differential:
+    runs-on: ubuntu-24.04
+    name: differential (live oracle comparison, minimized cases + full corpus)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure and build
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_FETCH_CORPUS=ON \
+            -DMEIOS_CORPUS_BREADTH=ON
+          cmake --build build --target native_differential_test
+
+      # differential.py bootstraps the same pinned venv record_upstream.py does (a python -m venv
+      # plus the two pinned installs) and re-execs itself inside it, so upstream xacro is never
+      # importable from the runner's own interpreter.
+      - name: Render fresh upstream through the pinned oracle
+        run: |
+          python3 tests/tools/oracle/differential.py \
+            --package-root "${{ github.workspace }}/build/_meios_corpus_packages" \
+            --out "${{ github.workspace }}/build/differential-renders"
+
+      # ctest reports success when a -R filter selects nothing, so the selection is asserted
+      # non-empty before it runs, matching every other filtered selector in this file.
+      - name: Compare the fresh renders against meios
+        run: |
+          cmake build -DMEIOS_DIFFERENTIAL_RENDERS_DIR="${{ github.workspace }}/build/differential-renders"
+          cmake --build build --target native_differential_test
+          cd build
+          registered=$(ctest -N -R '^native_differential\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "native_differential registered no tests"
+            exit 1
+          fi
+          echo "native_differential registered $registered test(s)"
+          ctest -R '^native_differential\.' --output-on-failure --no-tests=error
 
   enrichments:
     runs-on: ubuntu-24.04
@@ -863,9 +967,9 @@ jobs:
       # or parse regression turns the PR red. Breadth is on here too: it names
       # every top-level document that same fetch already carries, so a rule that
       # refuses a real robot description turns the PR red without a second
-      # network dependency entering a blocking path. The evaluator-requiring
-      # documents stay in the scheduled run, because building that backend forces
-      # the install option off and the install-consumer legs need it.
+      # network dependency entering a blocking path. Every named corpus document
+      # builds in this job because none needs the Python evaluator and the
+      # install-off-when-interpreter-on defect no longer exists.
       - name: Configure
         env:
           CC: gcc-14

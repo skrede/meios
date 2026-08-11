@@ -71,7 +71,7 @@ function(meios_add_native_test stem kind)
     catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
 endfunction()
 
-foreach(stem IN ITEMS native_oracle_records native_corpus_record)
+foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_verdict)
     meios_add_native_test(${stem} record)
 endforeach()
 

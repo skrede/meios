@@ -15,6 +15,7 @@ struct recorder
 {
     int diagnostics{ 0 };
     meios::level worst{ meios::level::info };
+    meios::diagnostic_code code{ meios::diagnostic_code::unspecified };
     std::string message{};
 
     void note(meios::level severity, const std::string &text)
@@ -32,9 +33,10 @@ struct recorder
         note(severity, text);
     }
 
-    void operator()(meios::level severity, meios::diagnostic_code, const meios::source_location &,
-                    const std::string &text)
+    void operator()(meios::level severity, meios::diagnostic_code found,
+                    const meios::source_location &, const std::string &text)
     {
+        code = found;
         note(severity, text);
     }
 };
@@ -73,6 +75,21 @@ TEST_CASE("out-of-subset forms loud-fail with an error diagnostic", "[xacro][uns
         REQUIRE(log.diagnostics >= 1);
         REQUIRE(log.worst == meios::level::error);
     }
+}
+
+// dict(...) is the one Python-constructor call in the pinned Universal Robots closure, appearing
+// only in ros2_control_mock_hardware.xacro and inc/ur_joint_control.xacro -- both outside the
+// closure reached from ur.urdf.xacro, so this is the one form the reached surface never measures.
+TEST_CASE("a Python dict(...) constructor call loud-fails naming the construct",
+          "[xacro][unsupported]")
+{
+    bool failed = false;
+    const recorder log = run("dict(a=1, b=2)", failed);
+    REQUIRE(failed);
+    REQUIRE(log.diagnostics >= 1);
+    REQUIRE(log.worst == meios::level::error);
+    REQUIRE(log.code == meios::diagnostic_code::unsupported_expression);
+    REQUIRE(log.message.find("dict") != std::string::npos);
 }
 
 TEST_CASE("a name absent from scope loud-fails rather than defaulting", "[xacro][unsupported]")

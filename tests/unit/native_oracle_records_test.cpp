@@ -12,6 +12,8 @@ namespace
 {
 
 constexpr std::string_view measured[] = { "PINS",
+                                          "differential_divergences.cases",
+                                          "differential_inventory.cases",
                                           "expressions.cases",
                                           "kr6_facts.cases",
                                           "lbr_med14_r820_facts.cases",

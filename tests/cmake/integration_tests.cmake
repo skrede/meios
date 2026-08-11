@@ -45,6 +45,29 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${urdf_corpus_src})
     catch_discover_tests(urdf_corpus_test TEST_PREFIX "urdf_corpus.")
 endif()
 
+# The live differential's comparator: reads fresh upstream renders (differential.py's output,
+# supplied via MEIOS_DIFFERENTIAL_RENDERS_DIR) plus the committed records, and compares both
+# against meios's own expansion/load. The renders directory defaults empty so a plain
+# MEIOS_FETCH_CORPUS configure with no scratch renders still builds and skips cleanly at
+# test-run time; the CI job that runs differential.py first supplies it via -D.
+set(MEIOS_DIFFERENTIAL_RENDERS_DIR "" CACHE PATH
+    "Scratch directory differential.py wrote fresh upstream renders into")
+set(native_differential_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/native_differential_test.cpp)
+if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
+    add_executable(native_differential_test ${native_differential_src})
+    target_link_libraries(native_differential_test
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+            pugixml::pugixml Catch2::Catch2WithMain)
+    string(REPLACE ";" "|" _differential_documents "${MEIOS_CORPUS_DOCUMENTS}")
+    target_compile_definitions(native_differential_test PRIVATE
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
+        MEIOS_CORPUS_DOCUMENTS="${_differential_documents}"
+        MEIOS_DIFFERENTIAL_RENDERS_DIR="${MEIOS_DIFFERENTIAL_RENDERS_DIR}")
+    meios_enable_coverage(native_differential_test)
+    meios_warnings(native_differential_test)
+    catch_discover_tests(native_differential_test TEST_PREFIX "native_differential.")
+endif()
+
 # The flatten instrument asserts byte identity of flatten output against a
 # committed baseline derived from the pinned known-good description; it registers
 # only under MEIOS_FETCH_CORPUS so the pinned source is present. TEST_PREFIX names

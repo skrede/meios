@@ -2,7 +2,7 @@
 
 Measures upstream xacro so the records under `tests/golden/oracle` can authorize what the native
 evaluator is allowed to do. The records are the authority; this runner exists only to regenerate
-them and is never invoked from a test.
+them. `differential.py`, below, is what puts the pinned oracle under continuous execution.
 
 Two packages are pinned exactly and installed into a virtual environment beneath the build tree:
 `xacro==2.1.1` and `PyYAML==6.0.3`. Nothing else is installed, and neither is linked into or
@@ -21,8 +21,27 @@ corpus fetch copies into the build directory — rather than against a sourced R
 which is what makes a run reproducible on any machine with no ROS installed.
 
 ```
-cmake -S . -B build/corpus -DMEIOS_BUILD_TESTS=ON -DMEIOS_FETCH_CORPUS=ON -DMEIOS_CORPUS_EXPRESSION_DOCUMENTS=ON
+cmake -S . -B build/corpus -DMEIOS_BUILD_TESTS=ON -DMEIOS_FETCH_CORPUS=ON
 python3 tests/tools/oracle/record_upstream.py --package-root build/corpus/_meios_corpus_packages --out tests/golden/oracle
+```
+
+## Live differential
+
+`differential.py` is the third runner here, and the one invoked from CI (the `differential` job
+on the Linux push workflow) rather than by hand. It reuses `bootstrap()`/`render()`/
+`package_roots()`/`closure_expressions()`/`seed_body()` from `record_upstream.py` verbatim,
+rendering every minimized expression case and every native-evaluator corpus document fresh
+through the pinned upstream into a scratch directory. `native_differential_test.cpp` reads those
+renders plus the committed records and compares both against meios's own expansion/load, on
+exit category, `canonical_xml`-normalized structure, and measured facts; a divergence not listed
+in `differential_divergences.cases`, or listed but no longer reproducing, fails the run.
+
+```
+cmake -S . -B build/corpus -DMEIOS_BUILD_TESTS=ON -DMEIOS_FETCH_CORPUS=ON -DMEIOS_CORPUS_BREADTH=ON
+python3 tests/tools/oracle/differential.py --package-root build/corpus/_meios_corpus_packages --out build/corpus/differential-renders
+cmake build/corpus -DMEIOS_DIFFERENTIAL_RENDERS_DIR=build/corpus/differential-renders
+cmake --build build/corpus --target native_differential_test
+ctest --test-dir build/corpus -R '^native_differential\.' --output-on-failure --no-tests=error
 ```
 
 ## Refusal parity

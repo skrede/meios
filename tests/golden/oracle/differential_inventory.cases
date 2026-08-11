@@ -1,0 +1,33 @@
+# id <TAB> kind. The named expected-comparison inventory: one row per expressions.cases id and
+# one row per native-evaluator corpus document, keyed exactly as corpus::record_for() keys it. A
+# row with no verdict fails the differential run before any pass/fail count is reported.
+e01	expression
+e02	expression
+e03	expression
+e04	expression
+e05	expression
+e06	expression
+e07	expression
+e08	expression
+e09	expression
+e10	expression
+e11	expression
+e12	expression
+e13	expression
+e14	expression
+e15	expression
+e16	expression
+e17	expression
+e18	expression
+e19	expression
+e20	expression
+e21	expression
+e22	expression
+e23	expression
+ur_type=ur5e	document
+ur_type=ur3e	document
+ur_type=ur7e	document
+safety_limits=true ur_type=ur5e	document
+force_abs_paths=true ur_type=ur5e	document
+kr6r900sixx.xacro	document
+lbr_med14_r820.urdf.xacro	document
