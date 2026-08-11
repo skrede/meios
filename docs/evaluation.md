@@ -209,7 +209,12 @@ matching nothing. Each known divergence is listed in a reviewed manifest by its 
 directions: an unlisted divergence fails the run, and a listed one that no longer reproduces fails it
 too.
 
-<!-- PLATFORM-PROFILE-PENDING -->
+The comparison against a fresh upstream render runs on Linux, where the pinned upstream tooling is
+installed and run. The documents themselves are not confined to it: every push builds the library and
+runs its suite on Linux, macOS and Windows, and on each of the three a consumer outside this project
+loads the pinned Universal Robots and KR6 documents natively and checks them against the same
+recorded facts. Agreement with upstream is established on one platform; that these documents resolve
+to the same facts is established on all three.
 
 That is the whole of it. The claim extends no further than these documents at these revisions and
 these expression forms. Another vendor's authoring style, another revision of the same upstream, or
