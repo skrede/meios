@@ -54,9 +54,13 @@ function(meios_add_native_test stem kind)
     target_link_libraries(${stem}_test PRIVATE meios::core meios::model Catch2::Catch2WithMain)
     target_compile_definitions(${stem}_test PRIVATE
         MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+    # The core-private headers these stems reach take pugixml handles, and core links pugixml
+    # privately, so the include directory does not arrive with meios::core: a host carrying
+    # pugixml on its default search path hides that, a prefix-installed one does not.
     if(NOT kind STREQUAL "record")
         target_include_directories(${stem}_test PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
-        target_link_libraries(${stem}_test PRIVATE meios::io meios::xacro meios::urdf)
+        target_link_libraries(${stem}_test PRIVATE meios::io meios::xacro meios::urdf
+            pugixml::pugixml)
         target_compile_definitions(${stem}_test PRIVATE
             MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
     endif()
