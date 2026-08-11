@@ -2,238 +2,269 @@
 
 A xacro description carries executable expressions, and this page is the contract for what meios will
 and will not run when it evaluates them. It is the one place that owns the boundary: the supported
-subset, the literal rules that refuse everything else, where those rules diverge from the
-compatibility target, how the resource helper resolves a file, what a loaded configuration is reachable
-by, the unrestricted backend and what choosing it means, and the two things this boundary explicitly
-does not do.
+grammar, the rules that refuse everything else, the ceilings that bound one load, where those rules
+diverge from the compatibility target, exactly what the running evidence for that comparison covers,
+how the resource helper reaches a file, what a loaded configuration is readable by, and the explicit
+backend for a description that needs more than the grammar carries.
 
-The built-in **core evaluator** is always present, needs nothing outside the C++ standard library, and
-evaluates a fixed numeric and boolean grammar. It cannot reach the filesystem, the network or the
-process at all, and nothing below applies to it.
+The evaluator that runs is compiled into the library. It needs no interpreter, no Python installation
+and no Python packages; nothing about it is opt-in. `meios::yaml`, which is what lets an expression
+read an auxiliary document, is built by default too, so the plain `load()` call in
+[getting started](getting-started.md) resolves a description whose macros read a joint-limits file
+with nothing installed beyond a compiler, CMake and pugixml.
 
-The **`meios::eval-python` enrichment** drives a found (never fetched) CPython. Its default class,
-`meios::python_evaluator`, is restricted: it evaluates the subset described here, and refuses anything
-outside it with a `file:line` diagnostic naming the rule that refused it. Its sibling
-`meios::unrestricted_python_evaluator` evaluates whatever CPython evaluates; it has its own section
-near the end.
-
-The enrichment embeds that interpreter, and an embedded interpreter binds a binary to one of them.
-Everything that links it — including the command-line tool, which an install prefix carries — is
-compiled against a single CPython minor version and loads that version's runtime and no other, so a
-binary built here does not run on a machine carrying a different one. There is no negotiation at
-startup and no fallback to the core evaluator: the failure is at load, before any description is
-read. Build against the interpreter you have.
+What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
+integers and reals, comparison, boolean logic, membership and subscripting into a mapping, a fixed
+set of mathematics functions, and one namespaced call that reads an auxiliary document. A construct
+outside that grammar is refused with a located diagnostic naming what it met — never evaluated, and
+never quietly approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
+description needing Python behavior the grammar does not carry; it has
+[its own section](#meioseval-python-an-explicit-backend) near the end.
 
 ## What evaluates
 
-- Arithmetic, comparison and boolean operators over numbers and strings, including `**`, `//` and the
-  `%` operator in both its numeric and its string-formatting sense.
-- The mathematics module: every public name of Python's `math`, bound directly as a bare name, so
-  `sqrt(2)`, `radians(180)` and `pi` all work. The module object itself is never bound, so the
-  `math.<name>` spelling is not available and `${math.pi}` fails with a `NameError`.
-- List, dict and set comprehensions, generator expressions, and lambdas.
-- String operations — concatenation, slicing, `join`, `split`, the case and strip methods — with the
-  single exception of the two formatting methods named in the next section.
-- Subscripting and indexing, including into a mapping returned by the resource helper — which also
-  answers the dotted spelling, under the rules in
-  [Reading a loaded configuration](#reading-a-loaded-configuration).
-- Interpolated (f-) strings, with format specs and the `!s` conversion.
-- `load_yaml` / `xacro.load_yaml`, under the rules in [The resource helper](#the-resource-helper).
-- Every property, argument and macro parameter the description itself has bound.
+- Arithmetic: `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-`. Integer arithmetic stays
+  integer — `2 + 3` is `5`, not `5.0` — while `/` is always true division, so `4 / 2` is `2.0`.
+  Every integer operation is range-checked and every real result must be finite, so a crossed range,
+  a division by zero and a non-finite result are all loud failures rather than a wrapped value or an
+  `inf` reaching your document.
+- Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
+  reads as both comparisons rather than as a comparison against a boolean.
+- Boolean logic: `and`, `or`, `not`, short-circuiting — an operand that cannot change the result is
+  never evaluated.
+- The conditional expression, `a if condition else b`. Only the branch taken is evaluated.
+- Membership: `key in mapping`, where the key reads as text.
+- Subscripting a mapping, including a chain of them: `${joint_limits['A1']['lower']}`.
+- `xacro.load_yaml(name)`, under the rules in [the resource helper](#the-resource-helper).
+- Every property, argument and macro parameter the description itself has bound. `True` and `False`
+  are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
 
-Twenty builtin names are reachable, and no others:
+Mathematics is a fixed set of functions, called by bare name and never through a module:
 
 ```
-abs   all   any   bool   dict   enumerate   float   int   len   list
-max   min   range   round   set   sorted   str   sum   tuple   zip
+abs   acos   asin   atan   atan2   ceil   cos   degrees
+floor   max   min   radians   sin   sqrt   tan
 ```
 
-`pow` also evaluates, and it is worth a sentence because the rule that admits it is derived rather
-than curated. The withheld set is computed as `dir(builtins)` minus the twenty names above minus the
-public `math` names. `pow` is the only name those last two share, so it is subtracted back out and
-reaches a description as `math.pow` — which returns a float, so `${pow(2,3)}` renders `8.0`, not `8`.
-Nothing here is a hand-maintained denylist: widening what is reachable means adding a name to the
-allowlist, and a future CPython that grows a new builtin withholds it without anyone editing a list.
+`min` and `max` take any number of arguments, `atan2` takes exactly two, and the rest take exactly
+one. `abs` of an integer is an integer; `floor` and `ceil` yield integers whatever they are handed.
+Any other name followed by `(` is refused by that name, so a description reaching for a function this
+list does not carry is told which one it reached for rather than that something went wrong.
+
+**The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
+integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
+written into a document; a sequence and a mapping have none, so one reaching a document's text is a
+located, typed failure naming the kind rather than an invented serialization. Those last two arrive
+only from an auxiliary document — nothing in the grammar constructs one.
+
+**A string is text, and only text.** String literals evaluate, compare for equality against another
+string, and serve as mapping keys. They carry no arithmetic and no truth value here: `'mesh.' + name`
+and `not name` are refused rather than concatenated or tested for emptiness, and so is ordering one
+string against another. The measured surface contains no such comparison, and coercing a string to a
+number is how a description quietly means something other than what it says.
 
 ## What refuses, and by which rule
 
-A refused expression is never evaluated. The refusal is a distinct failure kind — not the
-"unsupported construct" kind a lenient evaluation policy may soften — so it hard-fails under every
-policy, and the refused span is never copied verbatim into the flattened output. Every refusal
-diagnostic names one of exactly four rules:
+A refused expression is never evaluated. Which refusals the active `eval_policy` may soften is
+decided by the failure's kind, and there are exactly four:
 
-| Rule | Refuses |
-|------|---------|
-| `dunder-identifier` | an identifier beginning with a double underscore, anywhere in the expression |
-| `format-traversal` | the string formatting primitives, by spelling |
-| `non-allowlisted-builtin` | a builtin name outside the twenty above, and the `!r` / `!a` conversion fields |
-| `uncontained-yaml-path` | a resource spec that does not resolve inside a containment root |
+| Kind | What produces it | Terminal |
+|------|------------------|----------|
+| `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a string method, a Python constructor, a dotted read, arithmetic on a string | no: a lenient policy may leave the span verbatim |
+| `error` | a genuine fault — an undefined name, a missing key, division by zero, a crossed integer range, a non-finite result, malformed syntax | yes, under every policy |
+| `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
+| `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
-The expression is parsed with `ast.parse(expr, mode='eval')` — which builds a tree and does not
-execute anything — and the rules are applied to that tree in the order above.
+Every diagnostic carries a `file:line:column` and a `diagnostic_code`, so a caller branches on a code
+rather than matching message text. `unsupported_expression` covers the whole first row,
+`undefined_property` covers both a name the scope does not bind and a key a mapping does not hold,
+and `expansion_budget_exceeded` covers a crossed ceiling. The message names the lexeme the walk
+stopped on, which is what tells you where in a long expression to look.
 
-**The identifier test, literally.** Every `Name` identifier, every `Attribute` name, every keyword
-argument name and every function parameter name in the tree is tested with `startswith('__')`. It is a
-leading-double-underscore test, not a contains-a-dunder test. The walk descends into lambda bodies and
-comprehension bodies, and it never inspects the contents of a string constant — which is why
-`'a literal containing __import__'` evaluates, and why the formatting rule below has to exist. This
-one test closes an attribute chain that names no builtin at all: `load_yaml.__globals__` reaches a
-live module's namespace without the allowlist ever being consulted.
+**Malformed syntax is refused before anything is evaluated.** One left-to-right walk over the token
+stream alternates operands and operators, so `1 +` is reported as an expression ending where an
+operand is expected and `f(1 + )` as an unexpected `)`. A closing bracket is the one token whose
+legality turns on what stands before it, which is why an empty argument list is accepted and a
+truncated argument is not.
 
-**The withheld-name rule.** Any `Name` loaded in the expression that is in the withheld set and is
-*not* bound by the description's own scope is refused. The scope exception matters: a description
-property genuinely named `type` is answered from the scope and not refused, because the rule is about
-what the interpreter would supply, not about spelling. This rule is what closes an attribute computed
-at run time — `getattr(x, '_' + '_class__')` builds its attribute name out of two string constants,
-where no name-based check can possibly see it, and only the absence of `getattr` itself closes it.
+**A dotted spelling is refused, with one exception.** `xacro.load_yaml` is the one namespaced call
+the grammar carries. Every other dotted spelling — `math.pi`, a mapping read as `config.limits`, a
+method on a value — is refused, because a description that means something here other than what it
+means upstream is worse than a description that will not load.
 
-The same rule covers the conversion fields of an interpolated string. `f'{x!r}'` and `f'{x!a}'` refuse:
-the conversion field is a call to `repr` and to `ascii` respectively, both withheld, and it names no
-identifier the walk would otherwise see, so the field is read as that builtin's name. `f'{x!s}'`
-evaluates, because the string type it calls is on the allowlist.
+**The Python constructors are refused by name.** `dict(...)`, `list(...)`, `set(...)` and
+`tuple(...)` are named outright, so the diagnostic says which constructor was reached for instead of
+reporting an unrecognized function.
 
-That clause reaches the `!r` and `!a` conversion fields and nothing further. The `%` operator's
-conversions reach the same two builtins — `'%r' % x` calls `repr` — and are **deliberately not
-covered**. Percent formatting performs no attribute traversal: it walks no attributes, and its mapping
-form subscripts only a mapping the caller already supplied. There is no reach to close, so the
-restriction is not widened to cover it. Widening a restriction to match the shape of an overstated
-claim is the wrong repair; the claim is what gets made precise.
+**Membership and subscripting both require a mapping.** `list[0]` and `x in list` are refused, and so
+is a subscript key that is not text. An auxiliary document's sequence therefore crosses a property
+boundary and reaches a macro intact, but is not indexable here.
 
-**The traversal rule.** `format` and `format_map` are refused outright — as an attribute, and as a bare
-name loaded from the scope. The formatting mini-language performs attribute access and subscripting on
-text written *inside a string constant*, which the walk deliberately never inspects, so the traversal
-is invisible to the identifier test: `'{0.__globals__}'.format(f)` interpolates a function's entire
-defining namespace while the tree shows not one dunder identifier. Reaching the method through the
-allowlisted string type instead — `str.format('{0.__self__}', len)` — is the same reach and is refused
-by the same rule. Because the traversal cannot be seen, the primitive itself is what had to go.
-
-**Why the withheld-name rule cannot be replaced by curating the namespace.** Every allowlisted builtin
-carries an attribute leading back to the module that defines it — `len.__self__` *is* the real
-`builtins` module — so the reach exists no matter which names are bound. Removing the primitives that
-compute or traverse attributes is the only thing that closes it, which is why `getattr`, `type`, `vars`
-and `dir` are absent rather than merely unbound.
-
-**Why the check walks a syntax tree.** The obvious alternative is to inspect the name table of a
-compiled code object, which is what the compatibility target does. A nested code object escapes it:
-`(lambda: __import__('os').getcwd())()` compiles to a top-level object whose name table is empty,
-because the lambda body is a code object of its own. The tree walk descends into it and refuses.
+**Six ceilings bound one load.** They are the auxiliary document's node count (100 000) and nesting
+depth (64), and the bytes read (8 000 000), tokens lexed (1 000 000), evaluation steps (10 000 000)
+and expression nesting depth (256). Four of them accumulate across every expression in one load
+rather than resetting per expression, so a document cannot spend a bounded budget an unbounded number
+of times; the two depth axes are high-water marks instead, because reaching a nesting level is what
+they bound and not how often it is reached. A ceiling requested as zero is refused and takes its
+default, so there is no spelling that means unbounded. Crossing one is terminal and stops the load at
+the position that crossed it: a load continuing past its own ceiling would report a partial answer as
+a whole one.
 
 ## What this costs
 
-Three refusals are deliberately false. You should meet them here rather than in a description that
-mysteriously stopped working.
+The refusals above are correct for the grammar and still cost a real description something. You
+should meet them here rather than in a document that mysteriously stopped loading.
 
-**Every use of the string formatting method refuses, including an innocent one.** `'{}'.format(2)` is
-refused under `format-traversal`, because the primitive is refused by spelling and not by what it is
-asked to reach. The trade was taken because a xacro description composes text with substitution spans
-and concatenation and has no need of the method; the conversion field calling the string type
-(`f'{x!s}'`) and a numeric format spec (`f'{v:.3f}'`) both still evaluate, so the formatting a
-description actually does is untouched.
+**A filename composed by concatenation refuses.** `${'mesh.' + suffix}` is refused, because a string
+has no arithmetic meaning here. The trade was taken deliberately: the alternative is deciding what
+`'2' + 2` means, and every such decision is a place a description can mean something other than what
+it says. Text is composed by writing it — a substitution span beside literal characters,
+`filename="meshes/${name}.stl"`, is not an expression and is unaffected.
 
-**A property named `format` refuses once it enters a composed expression — but not on its own.** This
-one has two halves, and reading only the first will mislead you. With
-`<xacro:property name="format" value="stl"/>` in the description:
+**A list is readable but not indexable.** A configuration whose value is a sequence crosses a
+property boundary and reaches a macro whole, and `${limits['A1']['range'][0]}` is still refused. A
+description that indexes a sequence needs the explicit backend.
 
-- `${format}` expands to `stl`, with no diagnostic at all. The substitution layer answers a lone
-  identifier bound to a string straight from the scope and never calls the evaluator.
-- `${'mesh.' + format}` refuses under `format-traversal`. The moment that property joins a composed
-  expression the short-circuit no longer applies, the evaluator sees the bare name, and the spelling
-  refusal fires.
+**`xacro.load_yaml` takes a bound name, not a literal.** `${xacro.load_yaml('config/limits.yaml')}`
+refuses; the spec must be bound to a property, an argument or a macro parameter first, and
+`${xacro.load_yaml(limits_file)}` then reads it. That is how every measured description already
+writes it, so the cost is narrow — but it is a refusal, not a coercion, and a document written the
+other way will say so at the call rather than silently reading nothing.
 
-So the cost is real but narrower than "a property named `format` is broken": it bites at the first
-concatenation, not at the reference. The bare-name branch is deliberately not exempted by what the
-scope binds — it is a spelling refusal like the identifier test, not a namespace lookup, and making it
-conditional would read as a lookup and invite a future exemption.
+**One unit tag converts.** `!degrees` is converted, and only when its text is a finite numeric
+literal. Every other tag declines, which is a softenable refusal rather than a fault, so a lenient
+policy leaves the span verbatim instead of failing the load.
 
 ## Where this diverges from the compatibility target
 
-The reference is xacro's `safe_eval`. Its boundary is treated here as a floor rather than a target, so
-the two differ in both directions.
+The reference is xacro's own evaluation of a `${}` body through Python. The two differ in both
+directions, and every difference below is measured against a pinned upstream rather than reasoned
+about from its source.
 
-**Tighter.** `safe_eval` empties `__builtins__` but exposes a wide symbol table beside it, including
-`type` and `vars` — the two classic roots of an attribute walk back into the interpreter. meios
-withholds both, along with `getattr`, `dir`, `globals`, `locals`, `open`, `eval`, `exec`, `compile`,
-`input` and `__import__`. The reference also applies its double-underscore test to a compiled code
-object's name table, which a nested code object escapes; the tree walk does not.
+**Tighter, by construction rather than by restriction.** The reference hands an expression to an
+interpreter alongside a symbol table; there is no interpreter here and no table to widen.
+Comprehensions, generator expressions, lambdas, f-strings, string methods, the constructors,
+attribute access and the import machinery are not restricted — they are absent from the grammar, and
+an expression reaching for one is refused with a located diagnostic. Nothing in the grammar can name
+the filesystem, the network or the process: the one route to a file is the resource helper, where C++
+resolves the spec, enforces containment and reads the bytes.
 
-**Louder on the same accept set.** A missing key fails on both sides, and under the dotted and the
-subscript spelling alike, so nothing a description can write moves from working to broken or the other
-way; the divergence is in what the failure says. The reference raises a bare `KeyError` naming the key.
-meios names the key *and* the keys the mapping does have, at the `file:line` that read it, bounded to
-six names with a count of the rest so a wide configuration cannot turn a diagnostic into a dump.
-Against a configuration nested three mappings deep, which mapping and which keys is the whole question
-a bare key error leaves unanswered, and answering it costs no parity.
+**`and` and `or` yield a boolean, not the deciding operand.** `${1 or 2}` renders `True` here and `1`
+upstream; `${2 and 3}` renders `True` here and `3`. This is measured and deliberately unchanged — the
+grammar's logical operators produce booleans, and the measured descriptions use them in conditions
+rather than for their operand. It is recorded as a reviewed divergence, which means the comparison
+fails if it stops reproducing exactly as much as it fails if a new one appears.
 
-**Closed at the value-to-text seam.** A result that cannot be written into a flattened document is a
-loud typed failure naming its Python type, rather than whatever the interpreter's string conversion
-would have produced. The permitted set is closed — a string, a bool, an int, a float, a list, a dict, a
-tuple, and a null — so `${config.items}`, `${config.values()}`, `${set([1, 2])}`, `${zip(a, b)}`,
-`${enumerate(a)}`, `${range(3)}` and an uncalled mathematics name such as `${sqrt}` all fail where they
-previously produced text. In three of those — a bound mapping method, a zip and an enumerate — that
-text was a live heap address, written into a file the author would then commit and diff and different
-on every run. The refusal names the type and never the value, so a diagnostic cannot leak the
-configuration it declined to render. The null is admitted rather than refused: it serializes as the
-text `None` the reference produces and carries a warning at its position, because a configuration key
-written with no value after it is ordinary and refusing it would break a description that works today.
+**A missing key is named; the mapping's other keys are not.** The reference raises a bare key error.
+Here the diagnostic names the key that was absent and the `file:line` that read it, and deliberately
+never lists the keys the mapping does hold: a diagnostic must not spill the configuration it declined
+to read. Against a configuration nested three mappings deep that costs you one lookup you can make
+yourself, and it means a message written into a build log carries no auxiliary content.
 
-**Omissions that can bite.** `map` and `filter` are exposed by the reference and are not among the
-twenty names above. `${list(map(...))}` does appear in real descriptions, so that is the omission most
-likely to be met in practice. Any such name produces a loud `non-allowlisted-builtin` refusal, which
-makes it a decision: a name a real description needs gets added to the allowlist deliberately, and is
-never passed through silently.
+**Auxiliary scalars resolve to the same kinds.** How a scalar in an auxiliary document reads is a
+recorded measurement against the pinned reader rather than a reading of the YAML specification, and
+it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings, `010` is the
+integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
+value at all is a null that spells `None`.
 
-**Parity gaps that predate this restriction.** The mathematics names are spread into a `math` namespace
-beside the bare ones by the reference, so `${math.pi}` works there, while meios binds only the bare
-names and the dotted spelling raises a `NameError` rather than a refusal. The reference's argument,
-tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning` / `error` /
-`fatal`) are not exposed at all. A unit-tagged yaml value is read as a literal here, where the reference
-evaluates it as an expression.
+**Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
+namespace upstream, so `${math.pi}` works there and is refused here as a dotted read. The reference's
+argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
+/ `error` / `fatal`) are not exposed at all. `map` and `filter` are not among the functions above,
+and `${list(map(...))}` does appear in real descriptions, which makes it the omission most likely to
+be met in practice. Every one of these is a loud refusal naming what it met, so it is a decision
+rather than a silent difference in what a document means.
+
+## What this evidence covers
+
+Everything this page claims about agreement with the compatibility target rests on a comparison that
+runs on every push, not on a reading of upstream's source. Three things are compared for each input:
+a fresh render produced by the pinned upstream at that moment, the committed record of what upstream
+produced when it was last measured, and what meios produces. A fresh render disagreeing with a
+committed record fails the comparison as loudly as a meios-versus-upstream disagreement does, so a
+re-measurement is surfaced rather than absorbed by rewriting the record.
+
+What is compared, exactly:
+
+- **The pinned upstream tooling** — `xacro` 2.1.1 and PyYAML 6.0.3, and no other distribution.
+- **Universal Robots ROS2 Description at tag `4.3.1`** (archive digest `3532a25c9942…`), through five
+  documents, each paired by name with its own measured record:
+  - the `ur5e` variant of the top-level document; that same document with its safety-limit elements
+    switched on; and that same document again with its mesh references forced to absolute paths;
+  - the `ur3e` variant, where a boolean read out of an auxiliary document types a joint and that type
+    then reaches a limit element carrying no position keys;
+  - the `ur7e` variant.
+- **`kuka_experimental`'s `kr6r900sixx.xacro`** — the one measured document resolving `$(find)`
+  across two sibling packages.
+- **KUKA LBR Med 14 R820 at tag `v2.5.0`** (archive digest `edb596d3e2b7…`), whose macro reads a
+  joint-limits document through `xacro.load_yaml` and computes every joint's limits out of it.
+- **Twenty-three minimized expression cases** — one for each non-trivial expression form in the
+  closure of the Universal Robots document: the joint-limit arithmetic, the string comparison, the
+  membership test, the subscript chains, `pi`, and the four auxiliary-document loads. Each is driven
+  through a document seeding exactly the names it reads, so a failing case names one form.
+
+Every comparison the run owes is named in a committed inventory, and a named comparison that produces
+no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
+matching nothing. Each known divergence is listed in a reviewed manifest by its exact text, in both
+directions: an unlisted divergence fails the run, and a listed one that no longer reproduces fails it
+too.
+
+<!-- PLATFORM-PROFILE-PENDING -->
+
+That is the whole of it. The claim extends no further than these documents at these revisions and
+these expression forms. Another vendor's authoring style, another revision of the same upstream, or
+an expression form the closure above does not contain is covered by nothing on this page, and
+[known limitations](known-limitations.md) is where the rest of what is not yet proven is written
+down.
 
 ## What this is not
 
-This is a hardening pass. It is **not a sandbox** and it is **not a jail**.
+**This is not a sandbox, and it does not need to be one.** There is no interpreter to escape and no
+authority to withdraw: the grammar has no import machinery, no attribute access, no `open` and no way
+to name one. Those are absent rather than withheld, so there is no denylist to keep current as a
+future language grows a name, and no reach to close. The one thing an expression touches outside
+itself is an auxiliary text document, and C++ resolves, contains and reads that before the evaluator
+sees a byte of it.
 
-An embedded interpreter evaluating author-supplied expressions inside your process is not a security
-boundary you would put across a network, and nothing here proves what a description *cannot* do. What
-the restriction does is reduce what a description can reach: the import machinery, the filesystem, the
-process, and the attribute graph that leads back to them are not reachable through the supported
-subset, and an expression that tries is refused loudly instead of executed. Read that as raising the
-cost of a hostile description, not as containment. If you are about to load a description you would
-not read first, this restriction is not the thing that makes that safe.
+That does not make a hostile description harmless, and nothing here should be read as containment. A
+description you did not write still chooses which files the helper is asked for, what arithmetic
+runs, and how deep and how long it runs for. Containment is what bounds the first of those and the
+ceilings above are what bound the last, and neither is a reason to load a description you would not
+read first.
 
 ## The resource helper
 
-`load_yaml(spec)` — also spelled `xacro.load_yaml(spec)` — is the only way an expression reaches a
-file, and it does not read one itself. C++ resolves the spec, enforces containment and reads the bytes;
-the interpreter is handed *text* and parses it. Under the restricted evaluator no `open` exists in any
-namespace an expression can reach, so the helper is the only route to a file there; under the
-unrestricted evaluator `open` is an ordinary reachable builtin, so containment governs `load_yaml` and
-not what an expression reads by other means. An evaluation scope with no resource loader installed
-refuses every spec: the capability is absent by default, its absence is a checked refusal, and there is
-no fallback read anywhere.
+`xacro.load_yaml(spec)` is the only way an expression reaches a file, and it does not read one
+itself: `spec` names a property, argument or macro parameter whose text is the specification, C++
+resolves that text, enforces containment and reads the bytes, and the parser is handed *text*. An
+evaluation scope with no resource loader installed refuses every spec, and a build without
+`meios::yaml` reports that it resolves no auxiliary document format at all: the capability is absent
+by declaration, its absence is a checked refusal, and there is no fallback read anywhere.
 
 Three spec forms are accepted:
 
 | Form | Resolution | Refused by shape |
 |------|------------|------------------|
-| `package://<pkg>/<rel>` | `source_stack::locate`, the same resolution a mesh or an include takes | an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
-| `$(find <pkg>)/<rel>` | identical — both spellings split to the same package/relative pair and take one `locate` call | the same three under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
+| `package://<pkg>/<rel>` | through the source stack, the same resolution a mesh or an include takes | an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
+| `$(find <pkg>)/<rel>` | identical — both spellings split to the same package/relative pair and take one lookup | the same three under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
 | anything else | probed against the calling document's directory, then against each configured containment root | — |
 
 A spelling refused by shape is decided before the source stack is asked, so no lookup, no containment
 decision and no filesystem call runs for it — the same order the asset grammar keeps.
 
 Containment is judged on the **resolved candidate**, never on the authored spelling. An absolute path
-that canonicalizes inside a root is accepted; one that does not is refused under
-`uncontained-yaml-path`, and so are a `../` escape and a symlink inside a root whose real target leaves
-it. The rule has to be "lands inside a root" rather than "does not look absolute", because the two
-substitution entry points hand the resolver different shapes for the same authored form.
+that canonicalizes inside a root is accepted; one that does not is refused under `uncontained_asset`,
+and so are a `../` escape and a symlink inside a root whose real target leaves it. The rule has to be
+"lands inside a root" rather than "does not look absolute", because the two substitution entry points
+hand the resolver different shapes for the same authored form. A resource one root excludes and
+another holds the place for is reported as missing rather than as escaping, since the second root
+answered the containment question the first one raised.
 
 **Which document a relative spec resolves against.** The document it is written in — which is not
 always the top-level one:
 
-- Inside an included file, that included file. A bare `'inner-config.yaml'` written in a file pulled in
-  by `<xacro:include>` resolves next to *that* file, not next to the description that included it.
+- Inside an included file, that included file. A bare `'inner-config.yaml'` written in a file pulled
+  in by `<xacro:include>` resolves next to *that* file, not next to the description that included it.
 - Inside a macro body, the document that **invoked** the macro, not the one that defined it. This
   matches the compatibility target and is not obvious from reading the macro: a macro that loads a
   configuration sitting beside its own definition will not find it when called from elsewhere.
@@ -241,97 +272,61 @@ always the top-level one:
   bytes into a scratch area it owns and hands back the path of the file it wrote, so a relative spec
   written in that document resolves beside it exactly as it would beside a document read off disk.
   The scratch tree lives for as long as the source does. Source kind does not distinguish the two
-  package spec forms: `package://<pkg>/<rel>` and `$(find <pkg>)/<rel>` split into the same
-  package/relative pair, take the same `locate` call and read the returned file's text.
-
-**Unit tags.** `!radians`, `!degrees`, `!meters`, `!millimeters`, `!foot` and `!inches` are registered
-as constructors on PyYAML's `SafeLoader` the first time a configuration is parsed, and stay registered
-for the life of the process. The registration is idempotent — re-registering a tag replaces it with an
-identical constructor — and it touches `SafeLoader` and no other loader class, so a sibling loader in
-your own embedded Python is unaffected.
+  package spec forms: they split into the same package/relative pair and read the returned file's
+  text.
 
 **Windows over-refuses.** Containment compares canonicalized paths without case folding and without
 expanding short (8.3) path names. On Windows a candidate whose spelling differs from its root's in
 case, or which arrives in short form, therefore compares unequal to that root and is refused even
-though it genuinely sits inside it. This fails closed — it is over-refusal, not a bypass — but it is a
-real functional limit on one of the three supported platforms, and it is the first thing to suspect
-behind an unexplained `uncontained-yaml-path` there.
+though it genuinely sits inside it. This fails closed — it is over-refusal, not a bypass — but it is
+a real functional limit on one of the three supported platforms, and it is the first thing to suspect
+behind an unexplained containment refusal there.
 
 ## Reading a loaded configuration
 
-A mapping or a sequence that came back from `load_yaml` answers both spellings, so
-`${config['limits']['shoulder']}` and `${config.limits.shoulder}` read the same value. Reachability by
-dot is a property of where a container came from and not of its shape: the helper grants it, and
-nothing else does.
+A mapping or a sequence that came back from `xacro.load_yaml` is a value like any other: it binds to
+a property, passes as a macro argument, and is read by subscript. What it does not do is answer a
+dotted read — `${config.joint_limits}` is refused under the dotted rule above, and
+`${config['joint_limits']}` is how the same value is read here.
 
-**What carries it.** Anything reached from a helper result — by subscript, by dot, by index, by
-iterating it or by slicing it — is itself reachable the same way. A property binds text, so a container
-crossing a `xacro:property` boundary is carried across as text and restored on the other side; the
-third property out reads exactly as the first does, and there is no hop limit to exceed.
+**What crosses a property boundary.** A property binds text, so a mapping or a sequence crossing a
+`xacro:property` boundary is carried across inside a text encoding and restored on the other side.
+The third property out reads exactly as the first does, and there is no hop limit to exceed:
 
 ```xml
-<xacro:property name="config" value="${load_yaml('arm.yaml')}"/>
-<xacro:property name="limits" value="${config['limits']}"/>
+<xacro:arg name="limits" default="$(find my_description)/config/joint_limits.yaml"/>
+<xacro:property name="limits_file" value="$(arg limits)"/>
+<xacro:property name="config" value="${xacro.load_yaml(limits_file)}"/>
+<xacro:property name="joint_limits" value="${config['joint_limits']}"/>
 
-<joint name="shoulder">
-  <limit lower="${limits.shoulder.lower}" upper="${limits['shoulder']['upper']}"/>
+<joint name="shoulder_pan" type="revolute">
+  <parent link="base_link"/>
+  <child link="shoulder_link"/>
+  <axis xyz="0 0 1"/>
+  <limit lower="${joint_limits['shoulder_pan']['min']}"
+         upper="${joint_limits['shoulder_pan']['max']}"
+         effort="${joint_limits['shoulder_pan']['effort']}"
+         velocity="${joint_limits['shoulder_pan']['velocity']}"/>
 </joint>
 ```
 
-**What does not carry it.** A container an author wrote literally in a value is text and stays text. A
-mapping an expression constructs is a new, plain mapping, so rebuilding one loses what reaching into
-one preserves. And a mapping method's result is not wrapped either, deliberately: `get`, `items`,
-`keys` and `values` are C-level methods that bypass the hook doing the wrapping, so the compatibility
-target leaves their results plain too, and accepting a spelling the target rejects is the one
-divergence direction a consumer cannot notice.
-
-| Form | Dotted access | Why |
-|------|---------------|-----|
-| `config.limits.shoulder.max`, straight off `load_yaml` | yes | The helper's result carries its origin, and so does every mapping and sequence reached from it, across any number of property boundaries |
-| `config['joints'][0].name`, a mapping inside a sequence | yes | A sequence answers no dotted read of its own, but indexing, iterating and slicing one hand back elements that do |
-| `${p.a}`, where `p` was authored as `value="{'a': 1}"` | no | An author-written value is text; wrapping it would run a description the compatibility target rejects |
-| `dict(config['limits']).shoulder`, a rebuilt container | no | A constructor returns a new, plain mapping — as does a container the evaluator itself minted, such as `${dict(a=1)}` bound to a property |
-| `config.get('limits').shoulder`, a mapping method's result | no | The mapping methods bypass the hook that wraps, so the target leaves their results plain too |
-| `config.items`, where the configuration has a key named `items` | no | Normal attribute lookup finds the method first, so the key is shadowed under a dot exactly as it is on the target; `config['items']` reads the value |
-
-**A missing key fails under either spelling.** Subscript and dot are one operation here, so
-`${config.nope}` and `${config['nope']}` produce the same diagnostic, naming the key, the keys the
-mapping does have and the position that read it. Neither expands to an empty string.
+**What does not carry.** A container an author wrote literally in a value is text and stays text: a
+property whose value is `{'a': 1}` binds that string, and subscripting it is refused rather than
+answered. Nothing in the grammar constructs a mapping or a sequence, so there is no rebuilt-container
+case to describe — a container's origin is always an auxiliary document.
 
 **A control character an author writes is erased.** A container crosses a property boundary inside a
 text encoding delimited by control characters the XML 1.0 charset clause forbids outright, so one can
 never appear in a legitimate document. An author who writes one anyway — as a raw byte, or as the
-character reference spelling of the same code point — gains nothing by it: the character is
-erased from authored text before that text becomes a property value, an argument default, a macro
-parameter or a caller-supplied argument. The reachability a yaml load grants therefore cannot be forged
+character-reference spelling of the same code point — gains nothing by it: the character is erased
+from authored text before that text becomes a property value, an argument default, a macro parameter
+or a caller-supplied argument. The reachability an auxiliary load grants therefore cannot be forged
 from a description, and the same erase runs at the output seams, so no flattened document carries one
 either.
 
-The identifier rule runs in front of a wrapped container like any other expression:
-`${config.limits.__class__}` is refused under `dunder-identifier` before evaluation, so nothing here
-opens a road [the refusal rules](#what-refuses-and-by-which-rule) do not already close.
-
-## The unrestricted evaluator
-
-`meios::unrestricted_python_evaluator`, declared in `meios/eval/unrestricted_python_evaluator.h`, is a
-supported and documented backend that applies none of the expression rules above.
-`${__import__('os').getcwd()}` evaluates under it.
-
-It is reachable only from C++. The command-line tool never constructs it and carries no flag for it —
-`--eval python` means the restricted class and nothing else — so arbitrary code execution is never one
-flag away from an ad-hoc invocation on a file somebody sent you. Choosing it is a compile-time act: an
-include line and a construction site, both visible in review.
-
-The two classes share **one** resolution and containment implementation. The unrestricted class refuses
-`load_yaml('/etc/passwd')` under the same `uncontained-yaml-path` rule, resolves `package://` the same
-way, and reads byte-backed sources the same way. The expression sandbox is the only difference between
-them, and what it widens is the expression itself — which is enough to reach the filesystem directly,
-`open` included. The helper's resolution and containment are identical under both, so an unrestricted
-expression is bounded where it goes through `load_yaml` and unbounded where it does not.
-
-What you accept by choosing it: every expression in every description you load — including ones pulled
-in by an include, from a package you did not write — runs with your process's authority. Choose it for
-descriptions you would be willing to run as a script.
+**A missing key fails where it is read.** `${config['nope']}` names the key and the position that
+read it, and does not expand to an empty string. It does not name the keys the mapping does hold, for
+the reason given above.
 
 ## What an expansion hands back
 
@@ -342,7 +337,7 @@ operation's native cause. A terminal failure is reported exactly once through th
 and returned on the error arm, so you neither log it again nor risk seeing it twice. Warnings, the
 environment-read note and every other nonterminal diagnostic keep travelling that same sink,
 unaffected. A span the active policy declines to resolve is a **success** whose span is left
-verbatim; [What refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which
+verbatim; [what refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which
 failures are terminal at all. `meios::substitute` publishes the same two arms over the same record.
 
 <!-- meios:snippet name=expansion-result tu -->
@@ -372,20 +367,64 @@ int main()
 }
 ```
 
+## meios::eval-python: an explicit backend
+
+`meios::eval-python` is a separate module, off by default, for a description you trust that needs
+Python behavior the grammar above does not carry — a comprehension, an f-string, a string method, a
+dotted read, arithmetic on a string, or a wider set of unit tags, whose tagged text it evaluates as
+an expression the way the reference does. It drives a *found* (never fetched) CPython. Its default
+class, `meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses
+anything outside it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`,
+`format-traversal`, `non-allowlisted-builtin`, `uncontained-yaml-path`. Its sibling
+`meios::unrestricted_python_evaluator` applies none of those rules and evaluates whatever CPython
+evaluates, `${__import__('os').getcwd()}` included.
+
+The unrestricted class is reachable only from C++. The command-line tool never constructs it and
+carries no flag for it, so arbitrary code execution is never one flag away from an ad-hoc invocation
+on a file somebody sent you; choosing it is a compile-time act, an include line and a construction
+site, both visible in review. What you accept by choosing it is that every expression in every
+description you load — including ones pulled in by an include, from a package you did not write —
+runs with your process's authority. Choose it for descriptions you would be willing to run as a
+script. Both classes share one resolution and containment implementation with each other and with
+the built-in evaluator, so the helper's containment holds under all three; what the unrestricted
+class widens is the expression itself, which is enough to reach the filesystem directly, `open`
+included.
+
+Resource exhaustion is unbounded under this backend, where the built-in evaluator's six ceilings do
+not apply: `${10**10**10}` and `${[0]*10**12}` are refused by nothing there and will burn processor
+time and memory. A real bound needs a per-expression watchdog against an embedded interpreter holding
+the interpreter lock, portable across all three supported platforms, and there is none.
+
+The enrichment embeds that interpreter, and an embedded interpreter binds a binary to one of them.
+Everything that links it — including the command-line tool, which an install prefix carries — is
+compiled against a single CPython minor version and loads that version's runtime and no other, so a
+binary built here does not run on a machine carrying a different one. There is no negotiation at
+startup and no fallback to the built-in evaluator: the failure is at load, before any description is
+read. Build against the interpreter you have.
+
+Neither class reaches an installed package. The module's embedded-interpreter link edge cannot be
+re-resolved from an install tree, so its archive and its headers are withheld together and
+`meios_eval-python_FOUND` is false in every package installed from this project; build it and link it
+in-tree and it works.
+
 ## Explicit non-goals
 
-**Resource exhaustion is outside this boundary.** `${10**10**10}` and `${[0]*10**12}` are refused by
-nothing: they name no withheld builtin, traverse no attribute and touch no file. They will burn
-processor time and memory. The boundary is about *authority* — the filesystem, the network, the
-process — and not about *availability*. A real bound needs a per-expression watchdog against an
-embedded interpreter holding the interpreter lock, portable across all three supported platforms;
-there is none today, and its absence is deliberate rather than overlooked.
+**Duration is not one of the ceilings.** The step ceiling bounds how much work an expression may do,
+not how long that work takes, and none of the six adapts to the machine it runs on. There is no
+per-expression timeout, and a load whose expressions all stay inside their budgets has no
+wall-clock guarantee of any kind.
 
-**The expression fuzzing does not cover this boundary.** The fuzz corpus is seeded with the refused
-expressions from the boundary's own table, but the harness those seeds feed drives the built-in core
-evaluator — which carries none of this exposure — and the fuzz targets do not link the Python
-enrichment at all. That is a genuine robustness check on a parser that must not crash on
-hostile-looking input, and it is not a check of the trust boundary. Nothing currently fuzzes the
-boundary. Its proof is the table-driven suite: `tests/golden/expr/abuse.cases` states every expression,
-its verdict and the rule that produces it, and `tests/unit/eval_python_abuse_test.cpp` runs the table
-through the evaluator seam and through a full document expansion.
+**Nothing here validates an auxiliary document against a schema.** `xacro.load_yaml` hands back
+whatever the document holds. A key that is absent, or present carrying a string where the description
+arithmetic wants a number, surfaces at the expression that reads it and not at the load that parsed
+it — which is why the ceilings bound the parse and the diagnostics name the reader.
+
+**The fuzzing is a robustness check, not a proof of this boundary.** A harness drives this evaluator
+directly on arbitrary bytes, asserting that no input makes it invoke undefined behavior; a loud
+failure result is an acceptable outcome there and a sanitizer trap is not. That is a genuine property
+of a parser that must not crash on hostile-looking input, and it says nothing about whether the
+grammar admits the right forms. The proof of *that* is the table-driven suites and the comparison
+above: `tests/golden/oracle/expressions.cases` states every measured expression, its upstream
+rendering and its verdict, and `tests/unit/native_expression_test.cpp` and
+`tests/integration/native_differential_test.cpp` run that table through the evaluator seam and
+through a full document expansion.
