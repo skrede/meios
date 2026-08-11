@@ -28,8 +28,13 @@ inline std::vector<yaml_line> yaml_lines(std::string_view bytes)
     for(std::size_t at = 0; at < bytes.size();)
     {
         const std::size_t stop = std::min(bytes.find('\n', at), bytes.size());
-        const std::string_view line = bytes.substr(at, stop - at);
+        std::string_view line = bytes.substr(at, stop - at);
         at = stop + 1;
+        // YAML 1.2 (§5.4) counts CRLF as a single line break. Left in place, the carriage
+        // return is trailing value text, so a key introducing a nested block reads as a
+        // scalar and the whole nesting below it is lost.
+        if(line.ends_with('\r'))
+            line.remove_suffix(1);
         const std::size_t start = line.find_first_not_of(' ');
         const std::size_t colon = line.find(':');
         if(start == std::string_view::npos || colon == std::string_view::npos)
