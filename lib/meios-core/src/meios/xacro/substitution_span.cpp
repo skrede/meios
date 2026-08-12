@@ -1,3 +1,4 @@
+#include "quote_scan.h"
 #include "substitution_detail.h"
 
 #include "meios/detail/text_location.h"
@@ -29,14 +30,35 @@ void refine_span_column(subst_ctx &ctx, std::size_t decoded_offset)
                                        ctx.node_anchor).column;
 }
 
-std::size_t find_close(std::string_view raw, std::size_t opener, char open_ch, char close_ch)
+std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
 {
     int depth = 1;
     for(std::size_t k = opener + 1; k < raw.size(); ++k)
     {
-        if(raw[k] == open_ch)
+        if(raw[k] == '(')
             ++depth;
-        else if(raw[k] == close_ch && --depth == 0)
+        else if(raw[k] == ')' && --depth == 0)
+            return k;
+    }
+    return std::string_view::npos;
+}
+
+// A brace inside a string literal is that literal's text and so steers no span. Command
+// spans are deliberately excluded from this rule: a command resolves its inner text
+// before dispatching and therefore nests, where upstream's command scanner is
+// quote-blind.
+std::size_t find_expr_close(std::string_view raw, std::size_t opener)
+{
+    char open = '\0';
+    int depth = 1;
+    for(std::size_t k = opener + 1; k < raw.size(); ++k)
+    {
+        open = step_quote(open, raw[k]);
+        if(open != '\0')
+            continue;
+        if(raw[k] == '{')
+            ++depth;
+        else if(raw[k] == '}' && --depth == 0)
             return k;
     }
     return std::string_view::npos;
@@ -119,8 +141,8 @@ bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::
     const std::size_t span_offset = base + dollar;
     refine_span_column(ctx, span_offset);
     char opener = raw[dollar + 1];
-    char closer = opener == '{' ? '}' : ')';
-    std::size_t close = find_close(raw, dollar + 1, opener, closer);
+    std::size_t close = opener == '{' ? find_expr_close(raw, dollar + 1)
+                                      : find_cmd_close(raw, dollar + 1);
     if(close == std::string_view::npos)
         return fail_unterminated(ctx, opener, dollar);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);

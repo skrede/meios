@@ -1,3 +1,4 @@
+#include "quote_scan.h"
 #include "structural_detail.h"
 
 #include <string>
@@ -14,15 +15,6 @@ namespace
 bool is_separating_space(char c)
 {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
-}
-
-char step_quote(char open, char c)
-{
-    if(open != '\0')
-        return c == open ? '\0' : open;
-    if(c == '\'' || c == '"')
-        return c;
-    return open;
 }
 
 std::size_t token_end(std::string_view spec, std::size_t from)

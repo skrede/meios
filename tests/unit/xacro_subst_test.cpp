@@ -21,8 +21,8 @@ struct refusing_row
 
 // Every refusal the two substitution stems drive, in one table: the two package-locating
 // forms, the two argument forms, the two environment forms, the optional-environment
-// form, the unknown command, the recursive default and the scanner's own unterminated
-// spans.
+// form, the unknown command, the recursive default, the double-quoted string spelling
+// and the scanner's own unterminated spans.
 const refusing_row refusing_rows[] = {
     { "$(find)", "a find with no package name" },
     { "$(find missing)", "an unresolvable package" },
@@ -33,6 +33,7 @@ const refusing_row refusing_rows[] = {
     { "$(env MEIOS_SUBST_SWEEP_ABSENT)", "an absent environment variable" },
     { "$(optenv)", "an optenv with no variable name" },
     { "$(bogus x)", "an unknown command" },
+    { "${\"a{b\"}", "the unmeasured double-quoted string spelling" },
     { "${prefix", "an unterminated expression span" },
     { "$(find pkg", "an unterminated command span" },
 };
@@ -103,6 +104,24 @@ TEST_CASE("substitution scanner concatenates literal, expression and command spa
             meios::substitute("price $5 only", scope, sources, document, log);
         REQUIRE(out.has_value());
         REQUIRE(out->text == "price $5 only");
+    }
+
+    SECTION("an opening brace inside a string literal is that literal's text")
+    {
+        const substitution_result out =
+            meios::substitute("${'a{b'}", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "a{b");
+    }
+
+    // Upstream refuses this spelling as an unterminated string literal; meios renders it,
+    // a deliberate divergence rather than an accident of the scan.
+    SECTION("a closing brace inside a string literal does not end the span")
+    {
+        const substitution_result out =
+            meios::substitute("${'a}b'}", scope, sources, document, log);
+        REQUIRE(out.has_value());
+        REQUIRE(out->text == "a}b");
     }
 
     SECTION("an unterminated expression span loud-fails")
