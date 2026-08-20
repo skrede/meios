@@ -15,6 +15,7 @@ from pathlib import Path
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
 CORPUS_PIN = "4.3.1"
 LBR_PIN = "2.5.0"
+FRANKA_PIN = "2.8.1"
 MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
 HERE = Path(__file__).resolve().parent
@@ -82,6 +83,11 @@ STRING_PROBES = ("'x' + 'y'", "'' + 'y'", "'x' + ''", "'' + ''", "name + '_' + t
                  "'ab'.split('b')", "'a b c'.split(' ')[3]", "'abc'.split('')",
                  "'a b'.split(1)",
                  "sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]")
+# Every top-level document the pinned Franka tree ships whose stem names its own directory and
+# whose renders this project reproduces. All eight were rendered and compared: no two are alike, so
+# each of these carries its own measurement rather than standing in for a sibling. The two absent
+# ones build an arm list with a bracket literal and slice it, which this grammar does not read.
+FRANKA_DOCUMENTS = ("fer", "fp3", "fr3", "fr3v2", "fr3v2_1", "tmrv0_2")
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -458,7 +464,9 @@ def pin_rows(versions, share):
              package_digest(listfile, "ur_description")),
             ("lbr_med14_r820_description",
              package_version(share, "lbr_med14_r820_description", LBR_PIN),
-             package_digest(listfile, "lbr_med14_r820_description"))]
+             package_digest(listfile, "lbr_med14_r820_description")),
+            ("franka_description", package_version(share, "franka_description", FRANKA_PIN),
+             package_digest(listfile, "franka_description"))]
 
 
 def write_record(out, name, header, rows):
@@ -508,6 +516,7 @@ def records(tmp, share, versions):
     ur = share("ur_description")
     lbr = share("lbr_med14_r820_description")
     kuka = share("kuka_kr6_support").parent
+    franka = share("franka_description")
     facts = HEADERS["facts"]
     return {
         "PINS": (HEADERS["PINS"], pin_rows(versions, share)),
@@ -533,6 +542,9 @@ def records(tmp, share, versions):
                                                {})),
         "lbr_med14_r820_facts.cases": (facts, robot_facts(lbr, "urdf/lbr_med14_r820.urdf.xacro",
                                                           {})),
+        **{"{}_facts.cases".format(one): (facts, robot_facts(
+            franka, "robots/{}/{}.urdf.xacro".format(one, one), {}))
+           for one in FRANKA_DOCUMENTS},
     }
 
 

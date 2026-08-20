@@ -59,5 +59,35 @@ meios_corpus_document(
     "${MEIOS_CORPUS_PACKAGE_ROOT}/lbr_med14_r820_description/urdf/lbr_med14_r820.urdf.xacro"
     "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 
+# The only family here whose descriptions read a loaded mapping by a dotted member name, and the
+# only one that carries such a mapping through a macro parameter. All eight top-level documents it
+# ships were rendered against the upstream this project measures and their renders compared byte
+# for byte: no two are alike, so none of the six below stands in for another and each carries its
+# own measurement. Every declared argument of each defaults, so none takes an override.
+#
+# The two absent ones are a finding rather than an omission. fr3_duo and mobile_fr3_duo_v0_2 build
+# their arm list with a bracket literal and then take a slice of it; neither spelling is admitted
+# here, so both refuse and a corpus document that does not load would claim coverage it has none of.
+#
+# Nothing under robots/common, accessories or end_effectors is a document -- those are the macro
+# fragments the rule at the top of this file describes. Neither is a .srdf.xacro: a semantic
+# description names links and joints that are declared elsewhere, so a measurement taken from one
+# would record references rather than a model.
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/fer/fer.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/fp3/fp3.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/fr3/fr3.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document(
+    "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/fr3v2/fr3v2.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document(
+    "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/fr3v2_1/fr3v2_1.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+meios_corpus_document(
+    "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/tmrv0_2/tmrv0_2.urdf.xacro"
+    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
 math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")

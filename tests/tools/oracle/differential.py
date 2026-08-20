@@ -29,7 +29,8 @@ CORPUS_DOCS = (
      "force_abs_paths=true ur_type=ur5e"),
     ("kuka_kr6_support", "kuka_kr6_support/urdf/kr6r900sixx.xacro", {}, "kr6r900sixx.xacro"),
     ("lbr_med14_r820_description", "urdf/lbr_med14_r820.urdf.xacro", {}, "lbr_med14_r820.urdf.xacro"),
-)
+) + tuple(("franka_description", "robots/{}/{}.urdf.xacro".format(one, one), {},
+           "{}.urdf.xacro".format(one)) for one in oracle.FRANKA_DOCUMENTS)
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing

@@ -22,51 +22,61 @@ namespace meios::detail
 namespace
 {
 
-bool bind_literal(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
-                  std::string_view raw, const std::filesystem::path &document)
+bool bind_literal(expand_ctx &ctx, pugi::xml_node call, std::string_view raw,
+                  const std::filesystem::path &document, value &bound)
 {
     bool ok = true;
     const std::string authored = strip_authored_markers(std::string(raw));
-    const value bound = substitute_attr_value(ctx, call, authored, document, ok);
-    if(!ok)
-        return false;
-    ctx.scope.set(name, bound);
-    return true;
+    bound = substitute_attr_value(ctx, call, authored, document, ok);
+    return ok;
 }
 
 // A `^` default inherits the enclosing value; `^|fallback` inherits it or the
 // fallback text; a bare `^` with no inherited value is a loud error, never literal.
 bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
-                  const std::string &def, const std::filesystem::path &document)
+                  const std::string &def, const std::filesystem::path &document, value &bound)
 {
     if(def != "^" && def.rfind("^|", 0) != 0)
-        return bind_literal(ctx, call, name, def, document);
+        return bind_literal(ctx, call, def, document, bound);
     if(std::optional<value> inherited = ctx.scope.lookup(name))
     {
-        ctx.scope.set(name, *inherited);
+        bound = *inherited;
         return true;
     }
     if(def.rfind("^|", 0) == 0)
-        return bind_literal(ctx, call, name, std::string_view(def).substr(2), document);
+        return bind_literal(ctx, call, std::string_view(def).substr(2), document, bound);
     return fail(ctx, call, diagnostic_code::xacro_structural_error,
                 "macro parameter '" + name + "' inherits no value and has no fallback");
 }
 
+bool bind_one(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, std::size_t at,
+              const std::filesystem::path &document, value &bound)
+{
+    const std::string &name = def.params[at];
+    pugi::xml_attribute attr = call.attribute(name.c_str());
+    if(!attr && !def.defaults[at])
+        return fail(ctx, call, diagnostic_code::xacro_structural_error,
+                    "macro instantiation is missing required parameter '" + name + '\'');
+    return attr ? bind_literal(ctx, call, attr.value(), document, bound)
+                : bind_default(ctx, call, name, *def.defaults[at], document, bound);
+}
+
+// Every argument is evaluated before any of them is bound, because the reference evaluates a
+// call's arguments in the caller's own symbol table and writes them into a table the body
+// alone reads. Binding as it went would let one argument read a sibling's new value -- which
+// a description does write, passing both `ee_id="${ee_id}_${ee_color}"` and a second argument
+// naming `ee_id`, where the two spellings mean different things.
 bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                  const std::filesystem::path &document, std::vector<saved_binding> &saved)
 {
+    std::vector<value> bound(def.params.size());
+    for(std::size_t i = 0; i < def.params.size(); ++i)
+        if(!bind_one(ctx, def, call, i, document, bound[i]))
+            return false;
     for(std::size_t i = 0; i < def.params.size(); ++i)
     {
-        const std::string &name = def.params[i];
-        saved.emplace_back(name, ctx.scope.lookup(name));
-        pugi::xml_attribute attr = call.attribute(name.c_str());
-        if(!attr && !def.defaults[i])
-            return fail(ctx, call, diagnostic_code::xacro_structural_error,
-                        "macro instantiation is missing required parameter '" + name + '\'');
-        const bool ok = attr ? bind_literal(ctx, call, name, attr.value(), document)
-                             : bind_default(ctx, call, name, *def.defaults[i], document);
-        if(!ok)
-            return false;
+        saved.emplace_back(def.params[i], ctx.scope.lookup(def.params[i]));
+        ctx.scope.set(def.params[i], bound[i]);
     }
     return true;
 }

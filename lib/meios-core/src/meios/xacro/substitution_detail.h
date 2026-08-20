@@ -154,7 +154,7 @@ std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
 
 // An exact substitution keeps the evaluated value's type; mixed text renders it. The two
 // paths must agree on what "exact" means, so this predicate is the single place that
-// decides it: the trimmed text is one ${...} span, nothing outside it and no nested $.
+// decides it: the trimmed text is one ${...} span, closed where the scanner closes it.
 std::optional<std::string_view> exact_expression(std::string_view raw);
 
 // Answers with the value an exact span evaluates to, or nothing when the span failed or a

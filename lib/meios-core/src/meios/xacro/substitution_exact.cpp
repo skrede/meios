@@ -1,3 +1,4 @@
+#include "quote_scan.h"
 #include "eval_session.h"
 #include "substitution_sinks.h"
 #include "substitution_detail.h"
@@ -57,23 +58,37 @@ std::optional<value> eval_native(subst_ctx &ctx, std::string_view expr)
     return std::nullopt;
 }
 
+// The inner text resolves before the expression runs, on the same terms and at the same cost
+// as a span the scanner reaches: an exact span is one span, and which caller found it must not
+// change what it means.
+bool scan_inner(subst_ctx &ctx, std::string_view expr, std::string &out)
+{
+    const span_level level(ctx, nested_scan_cost);
+    return level.admitted() && scan(ctx, expr, out, 0);
+}
+
 }
 
 std::optional<std::string_view> exact_expression(std::string_view raw)
 {
     const std::string_view text = trim(raw);
-    if(text.size() < 3 || text.substr(0, 2) != "${" || text.back() != '}')
+    if(text.size() < 3 || text.substr(0, 2) != "${")
         return std::nullopt;
-    const std::string_view inner = text.substr(2, text.size() - 3);
-    if(inner.find('$') != std::string_view::npos || inner.find('}') != std::string_view::npos)
+    if(find_expr_close(text, 1) != text.size() - 1)
         return std::nullopt;
-    return inner;
+    return text.substr(2, text.size() - 3);
 }
 
-// A bound name answers with the value it already holds, so a collection crosses the
-// boundary intact; a bound string is reclassified so an exact span and mixed text agree on
-// what a numeric-looking text means. An injected backend keeps the text path it has
-// always had, which is what leaves its container transport untouched.
+// Every text that crosses this boundary is reclassified, whether it came from a bound name or
+// from an expression, so an exact span and mixed text agree on what a numeric-looking or
+// boolean-looking text means; a collection crosses intact, having no text to reclassify. The
+// reference does the same to whatever a bound value evaluates to. An injected backend keeps the
+// text path it has always had, which is what leaves its container transport untouched.
+value reclassified(const value &read)
+{
+    return read.kind() == value_kind::string ? classify(*read.text()) : read;
+}
+
 std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
 {
     ctx.last_kind = eval_failure_kind::none;
@@ -82,14 +97,21 @@ std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
     {
         std::optional<value> bound = ctx.scope.lookup(name);
         if(bound)
-            return bound->kind() == value_kind::string ? classify(*bound->text()) : *bound;
+            return reclassified(*bound);
     }
-    if(!ctx.backend)
-        return eval_native(ctx, expr);
-    std::optional<std::string> text = eval_expr(ctx, expr);
-    if(!text)
+    std::string resolved;
+    if(!scan_inner(ctx, expr, resolved))
         return std::nullopt;
-    return classify(*text);
+    ctx.last_kind = eval_failure_kind::none;
+    if(ctx.backend)
+    {
+        std::optional<std::string> text = eval_expr(ctx, resolved);
+        return text ? std::optional<value>(classify(*text)) : std::nullopt;
+    }
+    std::optional<value> read = eval_native(ctx, resolved);
+    if(!read)
+        return std::nullopt;
+    return reclassified(*read);
 }
 
 expected<std::optional<value>, expansion_error> substitute_exact(

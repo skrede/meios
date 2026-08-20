@@ -257,17 +257,24 @@ help entry, and is the thing the paragraphs above mean whenever they name the co
 
 ## What the description corpus proves
 
-**The blocking corpus reaches three vendors.** Every rule about what a description may say is held
+**The blocking corpus reaches four vendors.** Every rule about what a description may say is held
 against pinned, real robot descriptions, and a rule that refuses one of them turns a pull request
-red. What that gate covers, exactly, is eleven top-level documents named outright in the build, never
-found by globbing a directory: `ros-industrial/kuka_experimental`'s `kr6r900sixx.xacro` and the four
-pre-expanded descriptions beside it, five variants of
-`UniversalRobots/Universal_Robots_ROS2_Description`, and the single entry point
-`lbr-stack/med14_r820_description` carries. Four of those eleven — the pre-expanded KUKA set — sit
-behind a breadth option that the blocking job turns on and a plain local build does not, so a
-developer running the corpus by hand sees seven. Three vendors is not every authoring style, and a
-description written in some other house style can still meet a refusal that nothing here would have
-caught.
+red. What that gate covers, exactly, is seventeen top-level documents named outright in the build,
+never found by globbing a directory: `ros-industrial/kuka_experimental`'s `kr6r900sixx.xacro` and the
+four pre-expanded descriptions beside it, five variants of
+`UniversalRobots/Universal_Robots_ROS2_Description`, the single entry point
+`lbr-stack/med14_r820_description` carries, and six of the eight `frankarobotics/franka_description`
+ships. Four of those seventeen — the pre-expanded KUKA set — sit behind a breadth option that the
+blocking job turns on and a plain local build does not, so a developer running the corpus by hand
+sees thirteen. Four vendors is not every authoring style, and a description written in some other
+house style can still meet a refusal that nothing here would have caught.
+
+**Two of the pinned family's own entry points do not load.** All eight documents
+`franka_description` ships were rendered against the pinned upstream and compared; the six that are
+corpus documents load and agree, and the two that are not — its two-arm and mobile two-arm
+assemblies — build their arm list with a bracket literal and then take a slice of it. Neither
+spelling is read here, so both refuse rather than loading with the wrong model. A description
+assembling its parts that way is outside what the corpus proves.
 
 **The corpus exercises two of the asset reference forms.** Nearly every asset reference in it is a
 `package://` URI or a `$(find …)` substitution. The absolute `file://` form is covered by one
@@ -276,14 +283,13 @@ rows are `file://` throughout — and no shipping document carries a relative re
 what the corpus leaves to a case table of crafted documents is the containment rule and the
 relative base, not the whole URI contract.
 
-**The comparison against a fresh upstream render reaches one vendor, on Linux only.**
-`UniversalRobots/Universal_Robots_ROS2_Description` is expanded by the built-in evaluator, with the
-interpreter binding switched off, and both that comparison and the pinned corpus run on every push.
-What is confined to Linux is the render it is compared against: producing one needs the pinned
-upstream tooling, and only the Linux workflow installs it. macOS and Windows load the same pinned
-document natively and check it against recorded facts, so what those two platforms leave unproven is
-agreement with a freshly rendered upstream, not whether the document loads. The other two vendors'
-documents are held against recorded facts on all three platforms and against no fresh render at all.
+**The comparison against a fresh upstream render is confined to Linux.** Every corpus document
+the built-in evaluator handles is expanded by it, with the interpreter binding switched off, and
+both that comparison and the pinned corpus run on every push. What is confined to Linux is the
+render each is compared against: producing one needs the pinned upstream tooling, and only the Linux
+workflow installs it. macOS and Windows load the same pinned documents natively and check them
+against recorded facts, so what those two platforms leave unproven is agreement with a freshly
+rendered upstream, not whether the documents load.
 
 **The third vendor is pinned as a description package, not as its umbrella repository.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
@@ -294,10 +300,10 @@ packages that umbrella repository refers to are still unpinned, so the authoring
 are not covered.
 
 **One upstream revision is pinned in the build but absent from the recorded pins.**
-`tests/golden/oracle/PINS` names the upstream tooling, `ur_description` and
-`lbr_med14_r820_description`. It does not name `kuka_experimental`, whose commit and archive digest
-are pinned in the build alone — so the KR6 measurement is recorded against a revision that record
-does not state.
+`tests/golden/oracle/PINS` names the upstream tooling, `ur_description`,
+`lbr_med14_r820_description` and `franka_description`. It does not name `kuka_experimental`, whose
+commit and archive digest are pinned in the build alone — so the KR6 measurement is recorded against
+a revision that record does not state.
 
 **Fragments are not loaded, by design.** Macro and include files carrying a `<robot>` root with no
 name and no links are not top-level documents, and the corpus does not treat them as such. That

@@ -43,6 +43,20 @@ description needing Python behavior the grammar does not carry; it has
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
   are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
 
+**What a bound value is, before an expression ever reads it.** A property, an argument default and
+a macro parameter each bind a *value*, not the text the author wrote. The text is read as an
+integer, then as a real, then as one of `true`, `True`, `false` and `False`, and it stays a string
+only if none of those fit — the order is what leaves `1` an integer rather than a true, and
+`yes` and `no` strings rather than booleans. So `<xacro:property name="hand" value="false"/>`
+followed by `${'' if hand else prefix}` takes the branch a reader expects; a non-empty string would
+take the other one. The same reading is applied to whatever an expression evaluates to, so
+`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
+
+**A macro call's arguments are evaluated against the caller.** All of them are read before any is
+bound, so one argument never sees a sibling's new value: a call passing both
+`ee_id="${ee_id}_white"` and `inertials="${...ee_id...}"` reads the caller's `ee_id` in the second,
+not the one the first just wrote. An inherited `^` default reads the caller too.
+
 Mathematics is a fixed set of functions, called by bare name and never through a module:
 
 ```
@@ -288,6 +302,12 @@ What is compared, exactly:
   across two sibling packages.
 - **KUKA LBR Med 14 R820 at tag `v2.5.0`** (archive digest `edb596d3e2b7…`), whose macro reads a
   joint-limits document through `xacro.load_yaml` and computes every joint's limits out of it.
+- **Franka Robotics' description at tag `2.8.1`** (archive digest `4adcc45f83fd…`), through six of
+  the eight entry points it ships, each paired by name with its own measured record. It is the only
+  measured description that reads a loaded mapping by a dotted member name, and the only one that
+  passes such a mapping through a macro parameter. All eight were rendered and compared: no two are
+  alike, so none of the six stands in for another, and the two that are absent build their arm list
+  with a bracket literal and then slice it — neither spelling is read here.
 - **Twenty-three minimized expression cases** — one for each non-trivial expression form in the
   closure of the Universal Robots document: the joint-limit arithmetic, the inertia arithmetic, the
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document

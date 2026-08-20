@@ -82,3 +82,9 @@ safety_limits=true ur_type=ur5e	document
 force_abs_paths=true ur_type=ur5e	document
 kr6r900sixx.xacro	document
 lbr_med14_r820.urdf.xacro	document
+fer.urdf.xacro	document
+fp3.urdf.xacro	document
+fr3.urdf.xacro	document
+fr3v2.urdf.xacro	document
+fr3v2_1.urdf.xacro	document
+tmrv0_2.urdf.xacro	document
