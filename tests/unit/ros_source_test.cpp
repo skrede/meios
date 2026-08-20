@@ -1,4 +1,4 @@
-#include "source_lookup_fixture.h"
+#include "ros_package_fixture.h"
 
 #include <meios/ros/ros_package_source.h>
 
@@ -20,7 +20,6 @@
 #include <optional>
 #include <algorithm>
 #include <filesystem>
-#include <string_view>
 
 static_assert(meios::package_source<meios::ros_package_source>);
 static_assert(meios::provides_path<meios::ros_package_source>);
@@ -29,51 +28,14 @@ static_assert(meios::enumerates_packages<meios::ros_package_source>);
 namespace
 {
 using acquisition_test::make_tree;
-using acquisition_test::real_path;
 using acquisition_test::record;
 using acquisition_test::recorder;
-
-constexpr std::string_view mesh = "meshes/x.stl";
-
-void write_file(const std::filesystem::path &path, std::string_view content)
-{
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream(path) << content;
-}
-
-// Both seeders answer with the base the discovery layer will register for the package, so a
-// case compares authorization against the layout it wrote rather than against a returned path.
-std::filesystem::path ament_package(const std::filesystem::path &prefix, std::string_view pkg)
-{
-    write_file(prefix / "share" / "ament_index" / "resource_index" / "packages" / pkg, "");
-    write_file(prefix / "share" / pkg / mesh, "solid\n");
-    return meios::detail::absolute_base(prefix) / "share" / pkg;
-}
-
-std::filesystem::path ros1_package(const std::filesystem::path &dir, std::string_view name)
-{
-    write_file(dir / "package.xml", "<package><name>" + std::string(name) + "</name></package>");
-    write_file(dir / mesh, "solid\n");
-    return real_path(dir);
-}
-
-bool has_package(const std::vector<std::string> &names, std::string_view wanted)
-{
-    return std::find(names.begin(), names.end(), std::string(wanted)) != names.end();
-}
-
-// A hit authorizes a later checked open with the base the discovery layer found and the
-// caller's own relative half, neither of them recovered from the presentation path.
-void require_authorized(const std::optional<meios::resolved_asset> &hit, const std::filesystem::path &base)
-{
-    REQUIRE(hit.has_value());
-    REQUIRE(hit->path().is_absolute());
-    REQUIRE(std::filesystem::exists(hit->path()));
-    REQUIRE(hit->source_root() == std::optional{base});
-    REQUIRE(hit->source_relative() == std::optional{std::filesystem::path(mesh)});
-    REQUIRE(real_path(base / mesh) == real_path(hit->path()));
-}
-
+using ros_test::ament_package;
+using ros_test::has_package;
+using ros_test::mesh;
+using ros_test::require_authorized;
+using ros_test::ros1_package;
+using ros_test::write_file;
 }
 
 TEST_CASE("a ROS2 ament prefix resolves a share file and authorizes it", "[ros]")
@@ -88,25 +50,6 @@ TEST_CASE("a ROS2 ament prefix resolves a share file and authorizes it", "[ros]"
     REQUIRE(source.capabilities().package_enumerable);
     REQUIRE(has_package(source.packages(), "arm"));
     require_authorized(source.locate("arm", mesh), base);
-}
-
-TEST_CASE("a relative ament prefix resolves and authorizes against the same base", "[ros]")
-{
-    const meios::scratch_dir tree = make_tree();
-    ament_package(tree.path(), "arm");
-    const std::filesystem::path saved = std::filesystem::current_path();
-    std::vector<record> records;
-    meios::log_sink_f log{recorder{records}};
-
-    std::filesystem::current_path(tree.path().parent_path());
-    const std::filesystem::path base = meios::detail::absolute_base(tree.path().filename()) / "share" / "arm";
-    meios::ros_package_source source({}, {tree.path().filename()}, log);
-    const bool known                               = has_package(source.packages(), "arm");
-    const std::optional<meios::resolved_asset> hit = source.locate("arm", mesh);
-    std::filesystem::current_path(saved);
-
-    REQUIRE(known);
-    require_authorized(hit, base);
 }
 
 TEST_CASE("a relative that escapes the resolved share dir is rejected", "[ros]")

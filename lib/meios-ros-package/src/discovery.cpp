@@ -122,9 +122,13 @@ void crawl_ros1_root(const std::filesystem::path &root,
     }
 }
 
+// An empty prefix joined with "share" is a relative path, and a relative index path is listed
+// against the process working directory rather than against a root the caller named.
 void read_ament_prefix(const std::filesystem::path &prefix,
                        std::map<std::string, std::filesystem::path> &out)
 {
+    if(prefix.empty())
+        return;
     const std::filesystem::path index =
         prefix / "share" / "ament_index" / "resource_index" / "packages";
     std::error_code ec;
