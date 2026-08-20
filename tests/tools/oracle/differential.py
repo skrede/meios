@@ -1,6 +1,6 @@
 # Renders every minimized expression case and every native-evaluator corpus document fresh
 # through upstream xacro, for the live differential comparator (native_differential_test.cpp) to
-# read. Reuses bootstrap()/render()/package_roots()/closure_expressions()/seed_body() from
+# read. Reuses bootstrap()/render()/package_roots()/expression_cases()/write_seed_documents() from
 # record_upstream.py verbatim -- this file writes nothing but scratch renders; the committed
 # records under tests/golden/oracle stay the recorder's sole output.
 
@@ -86,12 +86,10 @@ def render_corpus_document(share, out, share_name, document, mappings, case_id):
 
 
 def render_all(tmp, share, out):
-    seed_file = tmp / "seed.yaml"
-    seed_file.write_text(oracle.SEED_YAML, encoding="utf-8", newline="\n")
     ur = share("ur_description")
-    seeds = oracle.seed_body(seed_file)
-    for at, expression in enumerate(oracle.closure_expressions(ur)):
-        render_expression_case(tmp, out, seeds, "e{:02d}".format(at + 1), expression)
+    seeds = oracle.write_seed_documents(tmp)
+    for case_id, expression in oracle.expression_cases(ur):
+        render_expression_case(tmp, out, seeds, case_id, expression)
     for case_id, expression in DIVERGENCE_PROBES:
         render_divergence_probe(tmp, out, case_id, expression)
     for share_name, document, mappings, case_id in CORPUS_DOCS:

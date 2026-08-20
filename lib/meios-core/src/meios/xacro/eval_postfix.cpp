@@ -19,22 +19,6 @@ namespace meios::detail
 namespace
 {
 
-// The mapping's own contents never reach the message: a description author is told which key
-// was missing, not what the auxiliary document holds.
-value index_into(parser &p, const value &container, const value &key)
-{
-    if(container.kind() != value_kind::mapping)
-        return p.fail("a " + std::string(kind_name(container.kind()))
-                      + " cannot be subscripted here");
-    const std::optional<std::string> name = key.text();
-    if(!name)
-        return p.fail("a " + std::string(kind_name(key.kind())) + " is not a subscript key here");
-    const std::optional<value> found = container.at(*name);
-    if(!found)
-        return p.fail("key '" + *name + "' is not present", diagnostic_code::undefined_property);
-    return *found;
-}
-
 // eval_scope::parse_yaml has already reported its own cause — the missing capability, the
 // construct this backend declines, the malformed document or the crossed ceiling — so the
 // category is recorded here without a second diagnostic. An absent capability and a declined

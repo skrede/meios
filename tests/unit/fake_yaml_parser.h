@@ -17,10 +17,24 @@ namespace fake
 
 struct yaml_line
 {
+    bool item;
     std::size_t indent;
     std::string key;
     std::string text;
 };
+
+inline std::optional<yaml_line> yaml_pair(std::string_view line, std::size_t start)
+{
+    const std::size_t colon = line.find(':');
+    if(colon == std::string_view::npos)
+        return std::nullopt;
+    const std::string_view rest = line.substr(colon + 1);
+    const std::size_t value_at = rest.find_first_not_of(' ');
+    return yaml_line{ false, start, std::string(line.substr(start, colon - start)),
+                      value_at == std::string_view::npos
+                          ? std::string()
+                          : std::string(rest.substr(value_at)) };
+}
 
 inline std::optional<yaml_line> yaml_row(std::string_view line)
 {
@@ -30,15 +44,11 @@ inline std::optional<yaml_line> yaml_row(std::string_view line)
     if(line.ends_with('\r'))
         line.remove_suffix(1);
     const std::size_t start = line.find_first_not_of(' ');
-    const std::size_t colon = line.find(':');
-    if(start == std::string_view::npos || colon == std::string_view::npos)
+    if(start == std::string_view::npos)
         return std::nullopt;
-    const std::string_view rest = line.substr(colon + 1);
-    const std::size_t value_at = rest.find_first_not_of(' ');
-    return yaml_line{ start, std::string(line.substr(start, colon - start)),
-                      value_at == std::string_view::npos
-                          ? std::string()
-                          : std::string(rest.substr(value_at)) };
+    if(line.substr(start).starts_with("- "))
+        return yaml_line{ true, start, std::string(), std::string(line.substr(start + 2)) };
+    return yaml_pair(line, start);
 }
 
 inline std::vector<yaml_line> yaml_lines(std::string_view bytes)
@@ -63,25 +73,45 @@ inline meios::value yaml_scalar(const std::string &text)
 }
 
 inline meios::value yaml_mapping(const std::vector<yaml_line> &rows, std::size_t &at,
+                                 std::size_t indent);
+
+inline meios::value yaml_sequence(const std::vector<yaml_line> &rows, std::size_t &at,
+                                  std::size_t indent)
+{
+    std::vector<meios::value> items;
+    while(at < rows.size() && rows[at].item && rows[at].indent == indent)
+        items.push_back(yaml_scalar(rows[at++].text));
+    return meios::value::make_sequence(std::move(items));
+}
+
+inline meios::value yaml_block(const std::vector<yaml_line> &rows, std::size_t &at,
+                               std::size_t indent)
+{
+    if(rows[at].item)
+        return yaml_sequence(rows, at, indent);
+    return yaml_mapping(rows, at, indent);
+}
+
+inline meios::value yaml_mapping(const std::vector<yaml_line> &rows, std::size_t &at,
                                  std::size_t indent)
 {
     std::vector<meios::value::entry> entries;
-    while(at < rows.size() && rows[at].indent == indent)
+    while(at < rows.size() && !rows[at].item && rows[at].indent == indent)
     {
         const yaml_line row = rows[at++];
         if(!row.text.empty())
             entries.emplace_back(row.key, yaml_scalar(row.text));
         else if(at < rows.size() && rows[at].indent > indent)
-            entries.emplace_back(row.key, yaml_mapping(rows, at, rows[at].indent));
+            entries.emplace_back(row.key, yaml_block(rows, at, rows[at].indent));
         else
             entries.emplace_back(row.key, meios::value{});
     }
     return meios::value::make_mapping(std::move(entries));
 }
 
-// A deliberately small block-mapping reader: nesting by indentation, one plain scalar per
-// leaf, and no other YAML construct. It exists so the expression grammar is provable with
-// no third-party dependency and no optional module built — it is a fake, not a parser.
+// A deliberately small block reader: mappings and sequences nested by indentation, one plain
+// scalar per leaf, and no other YAML construct. It exists so the expression grammar is provable
+// with no third-party dependency and no optional module built — it is a fake, not a parser.
 class yaml_parser final : public meios::yaml_parser_handle::parser
 {
 public:
@@ -91,7 +121,9 @@ public:
     {
         const std::vector<yaml_line> rows = yaml_lines(bytes);
         std::size_t at = 0;
-        return meios::yaml_outcome{ yaml_mapping(rows, at, rows.empty() ? 0 : rows.front().indent),
+        if(rows.empty())
+            return meios::yaml_outcome{ meios::value::make_mapping({}), meios::yaml_failure::none };
+        return meios::yaml_outcome{ yaml_block(rows, at, rows.front().indent),
                                     meios::yaml_failure::none };
     }
 };

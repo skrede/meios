@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot name="arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="limits_file" value="joint_limits.yaml"/>
+  <xacro:property name="limits" value="${xacro.load_yaml(limits_file)}"/>
+  <xacro:property name="bounds" value="${limits['shoulder_pan']['bounds']}"/>
+  <xacro:property name="upper" value="${bounds[-1]}"/>
+
+  <xacro:macro name="republish" params="carried whole">
+    <xacro:property name="inner_bounds" value="${carried}" scope="global"/>
+    <xacro:property name="inner_limits" value="${whole}" scope="global"/>
+    <xacro:property name="inner_lower" value="${carried[0]}" scope="global"/>
+    <joint name="shoulder_pan_joint" type="revolute">
+      <limit lower="${carried[0]}" upper="${carried[-1]}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:republish carried="${bounds}" whole="${limits}"/>
+</robot>

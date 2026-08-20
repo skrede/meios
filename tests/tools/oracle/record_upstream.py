@@ -27,9 +27,17 @@ SCALARS = ("true", "false", "yes", "no", "y", "n", "'true'", '"1"', "1e5", "1.5e
            "010", "1_000", "42", "3.5", "", "~", "null", "hello")
 SEED_YAML = ("mesh_files:\n  base:\n    visual:\n      mesh:\n        package: ur_description\n"
              "        path: meshes/base.dae\njoint_limits:\n  shoulder_pan:\n    min: -6.28\n")
+# A second document, kept apart from the seed above so adding a sequence does not change what the
+# expressions reading the whole seed document already render.
+SEQUENCE_YAML = "bounds:\n  - -6.28\n  - 0.0\n  - 6.28\n"
 SEEDS = {"safety_pos_margin": "0.15", "mass": "3.7", "radius": "0.06", "length": "0.12",
          "wrist_3_joint_type": "continuous", "name": "base", "type": "visual",
-         "sec_mesh_files": "${xacro.load_yaml(seed_file)['mesh_files']}"}
+         "sec_mesh_files": "${xacro.load_yaml(seed_file)['mesh_files']}",
+         "sec_bounds": "${xacro.load_yaml(sequence_file)['bounds']}"}
+# Authored rather than found in the closure: no pinned description subscripts a sequence, so the
+# spellings are named here and upstream is asked what each one means.
+SEQUENCE_PROBES = ("sec_bounds[0]", "sec_bounds[-1]", "sec_bounds[3]", "sec_bounds[-4]",
+                   "sec_bounds['0']")
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -186,8 +194,9 @@ def closure_expressions(share):
     return [one for one in seen if not trivial.match(one)]
 
 
-def seed_body(seed_file):
-    rows = [' <xacro:property name="seed_file" value="%s"/>' % escape(str(seed_file))]
+def seed_body(seed_file, sequence_file):
+    rows = [' <xacro:property name="seed_file" value="%s"/>' % escape(str(seed_file)),
+            ' <xacro:property name="sequence_file" value="%s"/>' % escape(str(sequence_file))]
     rows += [' <xacro:property name="%s_parameters_file" value="%s"/>' % (n, escape(str(seed_file)))
              for n in ("joint_limits", "kinematics", "physical", "visual")]
     rows += [' <xacro:property name="%s" value="%s"/>' % (n, escape(v)) for n, v in SEEDS.items()]
@@ -195,6 +204,12 @@ def seed_body(seed_file):
         rows += [' <xacro:property name="%s_%s_limit" value="%s"/>' % (joint, edge, sign * (6.0 + at))
                  for edge, sign in (("lower", -1.0), ("upper", 1.0))]
     return "\n".join(rows)
+
+
+def write_seed_documents(tmp):
+    (tmp / "seed.yaml").write_text(SEED_YAML, encoding="utf-8", newline="\n")
+    (tmp / "sequence.yaml").write_text(SEQUENCE_YAML, encoding="utf-8", newline="\n")
+    return seed_body(tmp / "seed.yaml", tmp / "sequence.yaml")
 
 
 # A run in which the environment rather than the expression produced the failures would otherwise
@@ -210,21 +225,47 @@ def refusal_text(failure):
     return lines[0] if lines and lines[0].strip() else type(failure).__name__
 
 
-def expression_rows(tmp, share, seed_file):
-    rows = []
-    seeds = seed_body(seed_file)
-    for at, expression in enumerate(closure_expressions(share)):
-        body = '%s\n <e v="${%s}"/>' % (seeds, escape(expression))
-        try:
-            text = render(tmp, body).getElementsByTagName("e")[0].getAttribute("v")
-            rows.append(("e{:02d}".format(at + 1), expression, text, ""))
-        except Exception as failure:
-            rows.append(("e{:02d}".format(at + 1), expression, "REFUSED", refusal_text(failure)))
-    refused = sum(1 for one in rows if one[2] == "REFUSED")
-    if refused > REFUSAL_FLOOR:
+def closure_cases(share):
+    return [("e{:02d}".format(at + 1), one)
+            for at, one in enumerate(closure_expressions(share))]
+
+
+def sequence_cases():
+    return [("s{:02d}".format(at + 1), one) for at, one in enumerate(SEQUENCE_PROBES)]
+
+
+def expression_cases(share):
+    return closure_cases(share) + sequence_cases()
+
+
+def probe_row(tmp, seeds, case_id, expression):
+    body = '%s\n <e v="${%s}"/>' % (seeds, escape(expression))
+    try:
+        text = render(tmp, body).getElementsByTagName("e")[0].getAttribute("v")
+        return (case_id, expression, text, "")
+    except Exception as failure:
+        return (case_id, expression, "REFUSED", refusal_text(failure))
+
+
+def refused_in(rows):
+    return sum(1 for one in rows if one[2] == "REFUSED")
+
+
+# The closure floor and the authored floor bound the same failure from opposite ends: the closure
+# is expected to render, so too many refusals is a broken environment, while the authored probes
+# exist to record refusals, so a set in which nothing rendered is one.
+def expression_rows(tmp, share):
+    seeds = write_seed_documents(tmp)
+    closure = [probe_row(tmp, seeds, one, text) for one, text in closure_cases(share)]
+    if refused_in(closure) > REFUSAL_FLOOR:
         sys.exit("oracle: {} expressions refused where at most {} is a measurement rather than a "
-                 "broken environment; nothing was recorded".format(refused, REFUSAL_FLOOR))
-    return rows
+                 "broken environment; nothing was recorded"
+                 .format(refused_in(closure), REFUSAL_FLOOR))
+    authored = [probe_row(tmp, seeds, one, text) for one, text in sequence_cases()]
+    if refused_in(authored) == len(authored):
+        sys.exit("oracle: every authored subscript probe refused, which is a broken environment "
+                 "rather than a measurement; nothing was recorded")
+    return closure + authored
 
 
 def degree_operands(share):
@@ -319,9 +360,11 @@ HEADERS = {
     "rendering.cases": ["probe <TAB> the text upstream renders it as, measured by evaluating the",
                         "probe in an attribute and reading the attribute back."],
     "expressions.cases": ["case <TAB> expression <TAB> upstream rendering <TAB> failure. Every",
-                          "non-trivial form in the closure of the Universal Robots document, each",
-                          "driven through a minimized document seeding the names it reads. A",
-                          "refusing row renders REFUSED and carries the failure's first line."],
+                          "non-trivial form in the closure of the Universal Robots document,",
+                          "followed by the authored subscript spellings no pinned description",
+                          "reaches, each driven through a minimized document seeding the names it",
+                          "reads. A refusing row renders REFUSED and carries the failure's first",
+                          "line."],
     "yaml_scalars.cases": ["source <TAB> resolved kind <TAB> rendered text. The source is the",
                            "scalar exactly as written after the key; an empty source column is a",
                            "key written with no value at all."],
@@ -339,7 +382,7 @@ def records(tmp, share, versions):
         "PINS": (HEADERS["PINS"], pin_rows(versions, share)),
         "rendering.cases": (HEADERS["rendering.cases"], rendering_rows(tmp, ur / "config" / "ur5e")),
         "expressions.cases": (HEADERS["expressions.cases"],
-                              expression_rows(tmp, ur, tmp / "seed.yaml")),
+                              expression_rows(tmp, ur)),
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
         "ur5e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
                                                 {"ur_type": "ur5e", "name": "ur"})),
@@ -365,7 +408,6 @@ def measure(out, versions):
 
     with tempfile.TemporaryDirectory() as scratch:
         tmp = Path(scratch)
-        (tmp / "seed.yaml").write_text(SEED_YAML, encoding="utf-8", newline="\n")
         written = records(tmp, lambda name: Path(get_package_share_directory(name)), versions)
     out.mkdir(parents=True, exist_ok=True)
     for name, (header, rows) in written.items():

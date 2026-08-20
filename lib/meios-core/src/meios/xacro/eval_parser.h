@@ -138,6 +138,7 @@ value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
 value parse_dotted(parser &p, std::string_view head);
+value index_into(parser &p, const value &container, const value &key);
 value call_math(parser &p, std::string_view name, const std::vector<value> &args);
 
 }

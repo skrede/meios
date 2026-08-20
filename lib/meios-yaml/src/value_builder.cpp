@@ -63,13 +63,24 @@ void value_builder::OnScalar(const YAML::Mark &mark, const std::string &tag, YAM
     deliver(resolved(text, tag, mark), mark);
 }
 
-void value_builder::OnSequenceStart(const YAML::Mark &mark, const std::string &, YAML::anchor_t,
+void value_builder::OnSequenceStart(const YAML::Mark &mark, const std::string &tag, YAML::anchor_t,
                                     YAML::EmitterStyle::value)
 {
-    throw stopped("a sequence", mark, yaml_failure::unsupported);
+    charge_node();
+    admit_depth(m_frames.size() + 1);
+    if(expecting_key())
+        throw stopped("a sequence as a mapping key", mark, yaml_failure::unsupported);
+    if(tag != "?" && tag != "!")
+        throw stopped("an unsupported tag '" + tag + '\'', mark, yaml_failure::unsupported);
+    m_frames.push_back(frame{ .listing = true, .at = mark });
 }
 
-void value_builder::OnSequenceEnd() {}
+void value_builder::OnSequenceEnd()
+{
+    frame done = std::move(m_frames.back());
+    m_frames.pop_back();
+    deliver(value::make_sequence(std::move(done.items)), done.at);
+}
 
 void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag, YAML::anchor_t,
                                YAML::EmitterStyle::value)
@@ -80,7 +91,7 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag, Y
         throw stopped("a non-string mapping key", mark, yaml_failure::unsupported);
     if(tag != "?" && tag != "!")
         throw stopped("an unsupported tag '" + tag + '\'', mark, yaml_failure::unsupported);
-    m_frames.push_back(frame{ .at = mark });
+    m_frames.push_back(frame{ .listing = false, .at = mark });
 }
 
 void value_builder::OnMapEnd()
@@ -97,7 +108,7 @@ value value_builder::result() const
 
 bool value_builder::expecting_key() const
 {
-    return !m_frames.empty() && !m_frames.back().key.has_value();
+    return !m_frames.empty() && !m_frames.back().listing && !m_frames.back().key.has_value();
 }
 
 void value_builder::charge_node()
@@ -126,7 +137,16 @@ void value_builder::deliver(value produced, const YAML::Mark &mark)
         m_root = std::move(produced);
         return;
     }
-    frame &top = m_frames.back();
+    place(m_frames.back(), std::move(produced));
+}
+
+void value_builder::place(frame &top, value produced)
+{
+    if(top.listing)
+    {
+        top.items.push_back(std::move(produced));
+        return;
+    }
     top.entries.emplace_back(std::move(*top.key), std::move(produced));
     top.key.reset();
 }

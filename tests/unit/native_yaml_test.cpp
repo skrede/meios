@@ -211,10 +211,9 @@ TEST_CASE("a nested mapping converts through every level", "[native][yaml]")
 TEST_CASE("a construct outside the read surface refuses by name", "[native][yaml]")
 {
     const std::pair<std::string_view, std::string_view> refusals[] = {
-        { "a:\n  - 1\n  - 2\n", "a sequence" },
         { "a: &anchor 1\nb: *anchor\n", "an alias" },
         { "base: &b\n  x: 1\na:\n  <<: *b\n", "a merge key" },
-        { "? [1, 2]\n: 3\n", "a sequence" },
+        { "? [1, 2]\n: 3\n", "a sequence as a mapping key" },
         { "1: one\n", "a non-string mapping key" },
         { "a: 1\na: 2\n", "a duplicate key" },
     };
@@ -288,10 +287,10 @@ TEST_CASE("a malformed document terminates where an unread construct may be reta
 
     CHECK_FALSE(substitute("a: *nope\n", roomy, meios::eval_policy::skip).survived);
 
-    const run retained = substitute("a:\n  - 1\n", roomy, meios::eval_policy::skip);
+    const run retained = substitute("a: &x 1\nb: *x\n", roomy, meios::eval_policy::skip);
     CHECK(retained.survived);
     CHECK(retained.text.find("xacro.load_yaml") != std::string::npos);
-    CHECK_FALSE(substitute("a:\n  - 1\n", roomy, meios::eval_policy::fail).survived);
+    CHECK_FALSE(substitute("a: &x 1\nb: *x\n", roomy, meios::eval_policy::fail).survived);
 }
 
 #endif

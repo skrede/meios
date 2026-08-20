@@ -35,7 +35,9 @@ class value_builder final : public YAML::EventHandler
 {
     struct frame
     {
+        bool listing;
         YAML::Mark at;
+        std::vector<value> items;
         std::optional<std::string> key;
         std::vector<value::entry> entries;
         std::unordered_set<std::string> seen;
@@ -72,6 +74,7 @@ private:
     void charge_node();
     void admit_depth(std::size_t depth);
     void deliver(value produced, const YAML::Mark &mark);
+    void place(frame &top, value produced);
     void take_key(const std::string &text, const std::string &tag, const YAML::Mark &mark);
     value resolved(const std::string &text, const std::string &tag, const YAML::Mark &mark);
     parse_stopped stopped(const std::string &construct, const YAML::Mark &mark, yaml_failure why);

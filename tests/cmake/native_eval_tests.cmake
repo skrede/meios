@@ -62,7 +62,8 @@ function(meios_add_native_test stem kind)
         target_link_libraries(${stem}_test PRIVATE meios::io meios::xacro meios::urdf
             pugixml::pugixml)
         target_compile_definitions(${stem}_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+            MEIOS_XACRO_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro")
     endif()
     # Registered outside the module guard so the stem still builds and runs its non-module cases in
     # a tree configured without the YAML module.
@@ -84,7 +85,8 @@ foreach(stem IN ITEMS native_value native_render native_expression native_sessio
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
-foreach(stem IN ITEMS native_yaml native_yaml_resolver native_yaml_seam)
+foreach(stem IN ITEMS native_yaml native_yaml_resolver native_yaml_seam native_sequence
+                      native_sequence_edge)
     meios_add_native_test(${stem} yaml)
 endforeach()
 

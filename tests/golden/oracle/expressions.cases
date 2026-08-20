@@ -1,7 +1,9 @@
 # case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
-# non-trivial form in the closure of the Universal Robots document, each
-# driven through a minimized document seeding the names it reads. A
-# refusing row renders REFUSED and carries the failure's first line.
+# non-trivial form in the closure of the Universal Robots document,
+# followed by the authored subscript spellings no pinned description
+# reaches, each driven through a minimized document seeding the names it
+# reads. A refusing row renders REFUSED and carries the failure's first
+# line.
 e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
 e02	shoulder_pan_upper_limit - safety_pos_margin	5.85	
 e03	shoulder_lift_lower_limit + safety_pos_margin	-6.85	
@@ -25,3 +27,8 @@ e20	xacro.load_yaml(joint_limits_parameters_file)	{'mesh_files': {'base': {'visu
 e21	xacro.load_yaml(kinematics_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
 e22	xacro.load_yaml(physical_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
 e23	xacro.load_yaml(visual_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+s01	sec_bounds[0]	-6.28	
+s02	sec_bounds[-1]	6.28	
+s03	sec_bounds[3]	REFUSED	list index out of range 
+s04	sec_bounds[-4]	REFUSED	list index out of range 
+s05	sec_bounds['0']	REFUSED	list indices must be integers or slices, not str 
