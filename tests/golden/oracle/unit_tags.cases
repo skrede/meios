@@ -1,0 +1,24 @@
+# tag <TAB> operand <TAB> the text upstream renders the converted value
+# as. The operand is written after the tag exactly as recorded. Every
+# operand measured here is a decimal literal; upstream evaluates the tagged
+# text as an expression and so also accepts a name, a call or a
+# hexadecimal literal, none of which are measured here.
+!radians	1	1.0
+!radians	0.5	0.5
+!radians	-2	-2.0
+!degrees	1	0.017453292519943295
+!degrees	45	0.7853981633974483
+!degrees	90	1.5707963267948966
+!degrees	-180.0	-3.141592653589793
+!meters	1	1.0
+!meters	2	2.0
+!meters	-0.75	-0.75
+!millimeters	1	0.001
+!millimeters	1500	1.5
+!millimeters	-25.4	-0.0254
+!foot	1	0.3048
+!foot	3	0.9144000000000001
+!foot	-0.5	-0.1524
+!inches	1	0.0254
+!inches	12	0.30479999999999996
+!inches	-6	-0.15239999999999998

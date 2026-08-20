@@ -30,6 +30,15 @@ SEED_YAML = ("mesh_files:\n  base:\n    visual:\n      mesh:\n        package: u
 # A second document, kept apart from the seed above so adding a sequence does not change what the
 # expressions reading the whole seed document already render.
 SEQUENCE_YAML = "bounds:\n  - -6.28\n  - 0.0\n  - 6.28\n"
+# Upstream registers exactly these six tags and converts each by multiplying the tagged text by
+# its constant. An operand of 1 makes a row carry the constant itself; the wider operands separate
+# the constants from one another and pin the multiplication order.
+UNIT_TAGS = (("!radians", ("1", "0.5", "-2")),
+             ("!degrees", ("1", "45", "90", "-180.0")),
+             ("!meters", ("1", "2", "-0.75")),
+             ("!millimeters", ("1", "1500", "-25.4")),
+             ("!foot", ("1", "3", "-0.5")),
+             ("!inches", ("1", "12", "-6")))
 SEEDS = {"safety_pos_margin": "0.15", "mass": "3.7", "radius": "0.06", "length": "0.12",
          "wrist_3_joint_type": "continuous", "name": "base", "type": "visual",
          "sec_mesh_files": "${xacro.load_yaml(seed_file)['mesh_files']}",
@@ -298,6 +307,25 @@ def scalar_rows(tmp, share):
             for source, key, node in zip(sources, keys, rendered)]
 
 
+def unit_tag_probes():
+    return [(tag, operand) for tag, operands in UNIT_TAGS for operand in operands]
+
+
+def unit_tag_rows(tmp):
+    probes = unit_tag_probes()
+    keys = ["u{:03d}".format(at) for at in range(len(probes))]
+    document = tmp / "unit_tags.yaml"
+    document.write_text("".join("{}: {} {}\n".format(key, tag, operand)
+                                for key, (tag, operand) in zip(keys, probes)),
+                        encoding="utf-8", newline="\n")
+    body = ' <xacro:property name="t" value="${xacro.load_yaml(\'%s\')}"/>\n' % document
+    body += "\n".join(' <u v="${t[\'%s\']}"/>' % key for key in keys)
+    rendered = list(render(tmp, body).getElementsByTagName("u"))
+    same_length("unit tags", "rendered nodes", len(rendered), len(probes))
+    return [(tag, operand, node.getAttribute("v"))
+            for (tag, operand), node in zip(probes, rendered)]
+
+
 def imported_from_pin(module_name):
     origin = Path(importlib.import_module(module_name).__file__).resolve()
     if not origin.is_relative_to(Path(sys.prefix).resolve()):
@@ -365,6 +393,11 @@ HEADERS = {
                           "reaches, each driven through a minimized document seeding the names it",
                           "reads. A refusing row renders REFUSED and carries the failure's first",
                           "line."],
+    "unit_tags.cases": ["tag <TAB> operand <TAB> the text upstream renders the converted value",
+                        "as. The operand is written after the tag exactly as recorded. Every",
+                        "operand measured here is a decimal literal; upstream evaluates the tagged",
+                        "text as an expression and so also accepts a name, a call or a",
+                        "hexadecimal literal, none of which are measured here."],
     "yaml_scalars.cases": ["source <TAB> resolved kind <TAB> rendered text. The source is the",
                            "scalar exactly as written after the key; an empty source column is a",
                            "key written with no value at all."],
@@ -383,6 +416,7 @@ def records(tmp, share, versions):
         "rendering.cases": (HEADERS["rendering.cases"], rendering_rows(tmp, ur / "config" / "ur5e")),
         "expressions.cases": (HEADERS["expressions.cases"],
                               expression_rows(tmp, ur)),
+        "unit_tags.cases": (HEADERS["unit_tags.cases"], unit_tag_rows(tmp)),
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
         "ur5e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
                                                 {"ur_type": "ur5e", "name": "ur"})),
