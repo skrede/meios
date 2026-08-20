@@ -15,8 +15,10 @@ with nothing installed beyond a compiler and CMake. The two libraries it needs, 
 are each found on the system or fetched at configure time.
 
 What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
-integers and reals, comparison, boolean logic, membership and subscripting into a mapping, a fixed
-set of mathematics functions, and one namespaced call that reads an auxiliary document. A construct
+integers and reals, the addition of two strings, comparison, boolean logic, membership against a
+mapping's keys and against a string's text, subscripting into a mapping and a sequence, one named
+string operation, a fixed set of mathematics functions, and one namespaced call that reads an
+auxiliary document. A construct
 outside that grammar is refused with a located diagnostic naming what it met — never evaluated, and
 never quietly approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
 description needing Python behavior the grammar does not carry; it has
@@ -60,11 +62,20 @@ written into a document; a sequence and a mapping have none, so one reaching a d
 located, typed failure naming the kind rather than an invented serialization. Those last two arrive
 only from an auxiliary document — nothing in the grammar constructs one.
 
-**A string is text, and only text.** String literals evaluate, compare for equality against another
-string, and serve as mapping keys. They carry no arithmetic and no truth value here: `'mesh.' + name`
-and `not name` are refused rather than concatenated or tested for emptiness, and so is ordering one
-string against another. The measured surface contains no such comparison, and coercing a string to a
-number is how a description quietly means something other than what it says.
+**A string is text, and the operations on it are the ones a real description evaluates.** String
+literals evaluate, compare for equality against another string, and serve as mapping keys. Two
+strings add to their concatenation, a string's truth value is its emptiness, `'x' in text` tests
+substring containment, and `text.split('<separator>')` yields the fields between separators — an
+empty field wherever two separators meet and at either end — which the subscript layer then indexes.
+Every other meaning a string carries in Python stays out and refuses: repetition by an integer,
+ordering one string against another, and every member spelling but the one named split. A string
+added to any other kind refuses the way the reference's own type error refuses it, because coercing a
+string to a number is how a description quietly means something other than what it says.
+
+The four admitted meanings compare and count by bytes where the reference counts code points. The two
+agree over the ASCII text every measured description carries; whether any of them carries non-ASCII
+text through containment, a split or a concatenation is unmeasured, so the difference is recorded
+here rather than claimed absent.
 
 ## What refuses, and by which rule
 
@@ -73,7 +84,7 @@ decided by the failure's kind, and there are exactly four:
 
 | Kind | What produces it | Terminal |
 |------|------------------|----------|
-| `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a string method, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string | no: a lenient policy may leave the span verbatim |
+| `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a member of a string other than the named split, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string beyond adding two of them | no: a lenient policy may leave the span verbatim |
 | `error` | a genuine fault — an undefined name, a missing key, division by zero, a crossed integer range, a non-finite result, malformed syntax | yes, under every policy |
 | `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
@@ -144,16 +155,16 @@ runs them at their defaults, and only the `meios::xacro` seam takes different on
 The refusals above are correct for the grammar and still cost a real description something. You
 should meet them here rather than in a document that mysteriously stopped loading.
 
-**A filename composed by concatenation refuses.** `${'mesh.' + suffix}` is refused, because a string
-has no arithmetic meaning here. The trade was taken deliberately: the alternative is deciding what
-`'2' + 2` means, and every such decision is a place a description can mean something other than what
-it says. Text is composed by writing it — a substitution span beside literal characters,
-`filename="meshes/${name}.stl"`, is not an expression and is unaffected.
+**A filename composed from a string and a number refuses.** `${'mesh.' + suffix}` reads when
+`suffix` is text and refuses when it is a number, because deciding what `'2' + 2` means is a place a
+description can mean something other than what it says. Text is also composed by writing it — a
+substitution span beside literal characters, `filename="meshes/${name}.stl"`, is not an expression
+and is unaffected.
 
-**A list is readable but not indexable.** A configuration whose value is a sequence crosses a
-property boundary and reaches a macro whole, and `${limits['A1']['range'][0]}` is still refused. A
-description that indexes a sequence needs the explicit backend — and until it gets one the refusal is
-terminal, so no policy will carry the load past it by leaving the span verbatim.
+**A string carries one named operation, not a method surface.** `text.split('/')` reads;
+`text.upper()`, `text.strip()`, `text.split()` with no separator and `text.split(' ', 1)` with a
+count all refuse, and no member spelling on a string yields a value that can be called. A description
+needing any of them needs the explicit backend.
 
 **`xacro.load_yaml` takes a bound name, not a literal.** `${xacro.load_yaml('config/limits.yaml')}`
 refuses; the spec must be bound to a property, an argument or a macro parameter first, and
@@ -173,9 +184,10 @@ about from its source.
 
 **Tighter, by construction rather than by restriction.** The reference hands an expression to an
 interpreter alongside a symbol table; there is no interpreter here and no table to widen.
-Comprehensions, generator expressions, lambdas, f-strings, string methods, the sequence and set
-constructors, attribute access and the import machinery are not restricted — they are absent from
-the grammar, and an expression reaching for one is refused with a located diagnostic. Nothing in the grammar can name
+Comprehensions, generator expressions, lambdas, f-strings, every string method but the one named
+split, the sequence and set constructors, attribute access and the import machinery are not
+restricted — they are absent from the grammar, and an expression reaching for one is refused with a
+located diagnostic. Nothing in the grammar can name
 the filesystem, the network or the process: the one route to a file is the resource helper, where C++
 resolves the spec, enforces containment and reads the bytes.
 
@@ -251,9 +263,12 @@ What is compared, exactly:
   closure of the Universal Robots document: the joint-limit arithmetic, the inertia arithmetic, the
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
   loads. Each is driven through a document seeding exactly the names it reads, so a failing case
-  names one form. That closure is what bounds the set: a grammar form the Universal Robots document
-  never writes — `//`, `%`, `not`, a chained comparison, the conditional expression, most of the
-  mathematics names — is accepted by the evaluator and measured against upstream by nothing here.
+  names one form.
+- **Authored expression cases beside them** — the spellings no pinned description reaches, named here
+  and driven through the same minimized document: an index into a sequence, a key the reference's own
+  mapping wrapper answers itself, the keyword-argument mapping constructor, and every string meaning
+  this grammar admits or refuses. A chained comparison and most of the mathematics names are still
+  written by no measured description and are measured against upstream by nothing here.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -441,8 +456,9 @@ int main()
 ## meios::eval-python: an explicit backend
 
 `meios::eval-python` is a separate module, off by default, for a description you trust that needs
-Python behavior the grammar above does not carry — a comprehension, an f-string, a string method, a
-method call on a loaded mapping, arithmetic on a string, or a wider set of unit tags, whose tagged text it evaluates as
+Python behavior the grammar above does not carry — a comprehension, an f-string, a string method
+other than the named split, a method call on a loaded mapping, string repetition or ordering, or a
+wider set of unit tags, whose tagged text it evaluates as
 an expression the way the reference does. It drives a *found* (never fetched) CPython. Its default
 class, `meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses
 anything outside it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`,

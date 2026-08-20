@@ -56,12 +56,26 @@ bool compare_pair(parser &p, token_kind op, const value &a, const value &b)
     return compare_numbers(p, op, a, b);
 }
 
+// Containment is by bytes where upstream counts code points; the two agree over the ASCII text
+// every measured description carries, and the empty needle is contained in every string.
+value substring_of(parser &p, const value &needle, const std::string &haystack)
+{
+    const std::optional<std::string> text = needle.text();
+    if(!text)
+        return p.fail("only a string is contained in a string, not a "
+                      + std::string(kind_name(needle.kind())));
+    return value{ haystack.find(*text) != std::string::npos };
+}
+
 // Python chains a membership test and a relational operator as one comparison — `a in b == c`
 // means `(a in b) and (b == c)` — where these sit at separate precedence levels here. That
 // cannot silently mean the other thing: either spelling puts a boolean on one side of a
-// membership test, and a boolean is never a mapping key, so a mixed run always refuses.
+// membership test, and a boolean is neither a mapping key nor a substring, so a mixed run
+// always refuses.
 value contained_in(parser &p, const value &needle, const value &haystack)
 {
+    if(haystack.kind() == value_kind::string)
+        return substring_of(p, needle, *haystack.text());
     if(haystack.kind() != value_kind::mapping)
         return p.fail_unsupported("membership against a "
                                   + std::string(kind_name(haystack.kind()))

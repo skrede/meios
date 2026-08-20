@@ -18,17 +18,30 @@ namespace meios::detail
 namespace
 {
 
-// A string does have an arithmetic and a truth meaning in Python — concatenation,
-// repetition, emptiness — and none of it is in the measured surface, so it refuses as
-// unsupported and a lenient policy may still retain the span. Every other kind reaching
-// here has no meaning upstream either, which makes it a genuine fault.
+// Concatenation is the one arithmetic meaning a string carries here; repetition by an integer
+// is the meaning that stays outside the measured surface, so a string reaching any other
+// operator refuses as unsupported and a lenient policy may still retain the span. Every other
+// kind reaching here has no meaning upstream either, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
     const std::string message =
-        "a " + std::string(kind_name(v.kind())) + " has no arithmetic meaning here";
+        "a " + std::string(kind_name(v.kind())) + " operand has no arithmetic meaning here";
     if(v.kind() == value_kind::string)
         return p.fail_unsupported(message + " — use eval-python");
     return p.fail(message);
+}
+
+// Upstream adds two strings and refuses a string beside any other kind with a type error; this
+// names the same mismatch, and reports the kind that is not the string.
+value concatenate(parser &p, const value &a, const value &b)
+{
+    const std::optional<std::string> left = a.text();
+    const std::optional<std::string> right = b.text();
+    if(left && right)
+        return value{ *left + *right };
+    return p.fail_unsupported("a string concatenates only with another string operand, not with a "
+                              + std::string(kind_name(left ? b.kind() : a.kind()))
+                              + " — use eval-python");
 }
 
 }
@@ -106,6 +119,9 @@ value unary_pos(parser &p, const value &v)
 
 value add_sub_mul(parser &p, const value &a, const value &b, token_kind op)
 {
+    if(op == token_kind::plus
+       && (a.kind() == value_kind::string || b.kind() == value_kind::string))
+        return concatenate(p, a, b);
     if(is_int(a) && is_int(b))
     {
         std::int64_t x = need_int(p, a), y = need_int(p, b);

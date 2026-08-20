@@ -273,7 +273,8 @@ TEST_CASE("the arithmetic helpers are total over every kind", "[native][value]")
         REQUIRE(meios::detail::as_int(subject).has_value() == arithmetic);
         REQUIRE(meios::detail::as_double(subject).has_value() == arithmetic);
         REQUIRE(meios::detail::truthy(subject).has_value()
-                == (arithmetic || subject.kind() == meios::value_kind::null));
+                == (arithmetic || subject.kind() == meios::value_kind::null
+                    || subject.kind() == meios::value_kind::string));
         REQUIRE(meios::detail::is_int(subject)
                 == (subject.kind() == meios::value_kind::boolean
                     || subject.kind() == meios::value_kind::integer));

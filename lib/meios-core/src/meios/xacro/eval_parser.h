@@ -112,13 +112,16 @@ inline std::optional<double> as_double(const value &v)
     return v.real();
 }
 
-// Null is the one non-arithmetic kind with a settled truth value; a string or a
-// collection has one in Python but not in the subset this evaluator claims, so it is
+// Null and a string are the non-arithmetic kinds with a settled truth value here: null is
+// false, and a string is false exactly when it holds no bytes. A collection has one in Python
+// too, by the same emptiness rule, but that meaning is outside the measured surface and is
 // refused rather than approximated.
 inline std::optional<bool> truthy(const value &v)
 {
     if(v.kind() == value_kind::null)
         return false;
+    if(v.kind() == value_kind::string)
+        return !v.text()->empty();
     if(std::optional<double> number = as_double(v))
         return *number != 0.0;
     return std::nullopt;
@@ -140,6 +143,7 @@ value parse_atom(parser &p);
 value parse_name(parser &p);
 value parse_dict(parser &p);
 value parse_dotted(parser &p, std::string_view head);
+value parse_load_yaml(parser &p);
 value parse_member(parser &p, const value &base);
 value member_of(parser &p, const value &base, std::string_view member);
 value index_into(parser &p, const value &container, const value &key);

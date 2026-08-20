@@ -65,6 +65,23 @@ CONSTRUCTOR_PROBES = ("dict(a=1, b=2)", "dict(a=1, b=2)['a']", "dict()",
                       "dict(radius=radius, length=length)['radius']", "dict(a=dict(b=2)['b'])",
                       "dict(mesh=sec_mesh_files['base'])", "'a' in dict(a=1)",
                       "dict()['missing']", "dict(a=1, a=2)", "dict(a=)")
+# The four string meanings a real vendor description evaluates on its default render, driven
+# through a minimized document because the pinned files carrying them are macro fragments: two
+# strings added, a string's truth value, substring containment, and the one named split. The
+# refusing probes are the ones whose refusal upstream names something an independent
+# implementation can also name -- an operand mismatch, a needle that is not text, an index past
+# the last field, an empty separator, and a separator that is not text.
+STRING_PROBES = ("'x' + 'y'", "'' + 'y'", "'x' + ''", "'' + ''", "name + '_' + type",
+                 "'x' + 1", "1 + 'x'", "'x' - 'y'", "'x' / 'y'", "'x' // 'y'", "'x' % 'y'",
+                 "'x' ** 'y'",
+                 "not ''", "not 'a'", "'' if '' else name + type + '_'",
+                 "name + '_' if name else ''", "'' if name else name + type + '_'",
+                 "'x' in 'axb'", "'' in 'abc'", "'z' in 'abc'", "1 in 'abc'",
+                 "'a b c'.split(' ')", "'a b c'.split(' ')[0]", "'a b c'.split(' ')[-1]",
+                 "'a  b'.split(' ')", "' a '.split(' ')", "''.split(' ')", "'abc'.split('x')",
+                 "'ab'.split('b')", "'a b c'.split(' ')[3]", "'abc'.split('')",
+                 "'a b'.split(1)",
+                 "sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]")
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -271,8 +288,12 @@ def constructor_cases():
     return [("d{:02d}".format(at + 1), one) for at, one in enumerate(CONSTRUCTOR_PROBES)]
 
 
+def string_cases():
+    return [("t{:02d}".format(at + 1), one) for at, one in enumerate(STRING_PROBES)]
+
+
 def authored_cases():
-    return sequence_cases() + collision_cases() + constructor_cases()
+    return sequence_cases() + collision_cases() + constructor_cases() + string_cases()
 
 
 def expression_cases(share):
@@ -454,8 +475,10 @@ HEADERS = {
     "expressions.cases": ["case <TAB> expression <TAB> upstream rendering <TAB> failure. Every",
                           "non-trivial form in the closure of the Universal Robots document,",
                           "followed by the authored spellings no pinned description reaches -- an",
-                          "index into a sequence, a key the mapping wrapper answers itself, and",
-                          "the keyword-argument mapping constructor -- each driven through a",
+                          "index into a sequence, a key the mapping wrapper answers itself, the",
+                          "keyword-argument mapping constructor, and the string meanings a vendor",
+                          "description evaluates: two strings added, a string's truth value,",
+                          "substring containment and the named split -- each driven through a",
                           "minimized document seeding the names it reads. A refusing row renders",
                           "REFUSED and carries the failure's first line."],
     "unit_tags.cases": ["tag <TAB> operand <TAB> the text upstream renders the converted value",

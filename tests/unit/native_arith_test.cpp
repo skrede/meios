@@ -109,6 +109,30 @@ TEST_CASE("rounding inside the range is unchanged, extremes included", "[native]
     CHECK(arith::evaluate("ceil(-9223372036854775808.0)").rendered == "-9223372036854775808");
 }
 
+// The inertia expression a real description writes spells its leading operand with a trailing
+// point and raises with the exponentiation operator in the same term, so both are read here
+// rather than assumed loadable.
+TEST_CASE("a float literal written with a trailing point evaluates beside exponentiation",
+          "[native][arith]")
+{
+    CHECK(arith::evaluate("1./12").rendered == "0.08333333333333333");
+    CHECK(arith::evaluate("2.**3").rendered == "8.0");
+    CHECK(arith::evaluate("1.e2").rendered == "100.0");
+    CHECK(arith::evaluate("1./12 * 3.7 * (3 * 0.06**2 + 0.12**2)").rendered == "0.00777");
+    CHECK(arith::evaluate(".5 + 1").rendered == "1.5");
+}
+
+TEST_CASE("two strings add where every other operator on a string still refuses",
+          "[native][arith]")
+{
+    CHECK(arith::evaluate("'mesh.' + 'stl'").rendered == "mesh.stl");
+    CHECK(arith::evaluate("'a' + '' + 'b'").rendered == "ab");
+    CHECK(arith::evaluate("'x' + 1").failed);
+    CHECK(arith::evaluate("'x' * 2").failed);
+    CHECK(arith::evaluate("'x' - 'y'").failed);
+    CHECK(arith::evaluate("-'x'").failed);
+}
+
 TEST_CASE("the exported printer spells every double a consumer can hand it", "[native][arith]")
 {
     constexpr double infinite = std::numeric_limits<double>::infinity();

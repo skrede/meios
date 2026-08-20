@@ -114,7 +114,7 @@ TEST_CASE("a malformed conditional still refuses by name", "[native][branch]")
 
 TEST_CASE("a condition whose truth cannot be taken evaluates neither branch", "[native][branch]")
 {
-    const probe::outcome ran = probe::evaluate("undefined_name if word else missing_name");
+    const probe::outcome ran = probe::evaluate("undefined_name if cfg else missing_name");
 
     CHECK(ran.failed);
     REQUIRE(ran.messages.size() == 1);
@@ -180,14 +180,16 @@ TEST_CASE("a skipped operand ends at an argument comma", "[native][branch]")
     CHECK(probe::evaluate("min(True or undefined_name, -1)").rendered == "-1");
 }
 
-TEST_CASE("a string operand still refuses as unsupported and says so once", "[native][branch]")
+TEST_CASE("a collection operand still refuses and says so once, where a string now decides",
+          "[native][branch]")
 {
-    const probe::outcome ran = probe::evaluate("word and True");
+    const probe::outcome ran = probe::evaluate("cfg and True");
 
-    CHECK(ran.kind == meios::eval_failure_kind::unsupported);
+    CHECK(ran.kind == meios::eval_failure_kind::error);
     REQUIRE(ran.messages.size() == 1);
     CHECK(ran.messages.front().find("no arithmetic meaning") != std::string::npos);
-    CHECK(probe::evaluate("word or True").kind == meios::eval_failure_kind::unsupported);
+    CHECK(probe::evaluate("cfg or True").kind == meios::eval_failure_kind::error);
+    CHECK(probe::evaluate("word and True").rendered == "True");
 }
 
 TEST_CASE("an expression holding no branch keyword charges the steps it charged before",

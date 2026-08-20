@@ -87,18 +87,33 @@ inline std::string key_repr(const meios::detail::scalar_key &key)
     return text ? '\'' + *text + '\'' : meios::render_scalar(key);
 }
 
-// Python's own spelling of a value, matching upstream's str()/repr() of an evaluated
-// expression -- built only so a fresh render can be compared verbatim.
+// Python's own spelling of a value inside a collection -- built only so a fresh render can be
+// compared verbatim.
 inline std::string repr(const meios::value &one)
 {
     if(one.kind() == meios::value_kind::string)
         return '\'' + *one.text() + '\'';
+    if(one.kind() == meios::value_kind::sequence)
+    {
+        std::string out = "[";
+        for(std::size_t at = 0; at < one.size(); ++at)
+            out += (at == 0 ? "" : ", ") + repr(*one.at(at));
+        return out + ']';
+    }
     if(one.kind() != meios::value_kind::mapping)
         return meios::render_scalar(one).value_or("<no scalar spelling>");
     std::string out = "{";
     for(std::size_t at = 0; at < one.size(); ++at)
         out += (at == 0 ? "" : ", ") + key_repr(*one.key_at(at)) + ": " + repr(*one.at(at));
     return out + '}';
+}
+
+// A substitution carries a value into a document by Python's str(), which hands back a string's
+// own text; only a string nested inside a collection is spelled with its quotes.
+inline std::string rendered_as(const meios::value &one)
+{
+    const std::optional<std::string> text = one.text();
+    return text ? *text : repr(one);
 }
 
 struct outcome
@@ -114,7 +129,7 @@ inline outcome evaluate_seeded(std::string_view expression)
     const meios::eval_scope scope = seeded_scope(silent);
     meios::core_evaluator evaluator;
     const meios::value result = evaluator.eval(expression, scope, silent);
-    return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
+    return { evaluator.failed(), evaluator.failed() ? std::string() : rendered_as(result) };
 }
 
 // No seeding: a divergence-manifest probe is a self-contained expression.
@@ -124,7 +139,7 @@ inline outcome evaluate_bare(std::string_view expression)
     meios::log_sink silent;
     meios::core_evaluator evaluator;
     const meios::value result = evaluator.eval(expression, scope, silent);
-    return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
+    return { evaluator.failed(), evaluator.failed() ? std::string() : rendered_as(result) };
 }
 
 #ifdef MEIOS_TEST_HAS_YAML
@@ -152,7 +167,7 @@ inline outcome evaluate_read(std::string_view expression)
     meios::log_sink silent;
     meios::core_evaluator evaluator;
     const meios::value result = evaluator.eval(expression, scope, silent);
-    return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
+    return { evaluator.failed(), evaluator.failed() ? std::string() : rendered_as(result) };
 }
 
 // Spelled exactly as differential.py's own table spells them, so an id names the same rendered
@@ -164,11 +179,15 @@ struct probe
     std::string_view expression;
 };
 
-inline constexpr std::array<probe, 5> divergence_probes{
+inline constexpr std::array<probe, 9> divergence_probes{
     probe{ false, "div_or_operand", "1 or 2" }, probe{ false, "div_and_operand", "2 and 3" },
     probe{ true, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" },
     probe{ false, "div_dict_pair_sequence", "dict([('a', 1)])" },
-    probe{ false, "div_dict_mixed_arguments", "dict([('a', 1)], b=2)" }
+    probe{ false, "div_dict_mixed_arguments", "dict([('a', 1)], b=2)" },
+    probe{ false, "div_string_repetition", "'ab' * 3" },
+    probe{ false, "div_string_ordering", "'a' < 'b'" },
+    probe{ false, "div_string_split_whitespace", "'a b'.split()" },
+    probe{ false, "div_string_split_limit", "'a b c'.split(' ', 1)" }
 };
 
 inline std::string observed_value(const probe &one)

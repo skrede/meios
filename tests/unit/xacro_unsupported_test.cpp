@@ -62,7 +62,6 @@ TEST_CASE("out-of-subset forms loud-fail with an error diagnostic", "[xacro][uns
         "{'a': 1}",
         "load_yaml('robot.yaml')",
         "foo(1, 2)",
-        "'left' + 'right'",
         "python::eval",
     };
 
@@ -75,6 +74,21 @@ TEST_CASE("out-of-subset forms loud-fail with an error diagnostic", "[xacro][uns
         REQUIRE(log.diagnostics >= 1);
         REQUIRE(log.worst == meios::level::error);
     }
+}
+
+// Two strings added are inside the subset now that the meaning is measured; a string beside any
+// other kind is still outside it, and refuses rather than being given an invented coercion.
+TEST_CASE("two strings concatenate where a string beside another kind still loud-fails",
+          "[xacro][unsupported]")
+{
+    bool failed = true;
+    const recorder joined = run("'left' + 'right'", failed);
+    REQUIRE_FALSE(failed);
+    REQUIRE(joined.diagnostics == 0);
+
+    const recorder mixed = run("'left' + 1", failed);
+    REQUIRE(failed);
+    REQUIRE(mixed.worst == meios::level::error);
 }
 
 // The mapping constructor is the one Python constructor an expression here builds a value from,

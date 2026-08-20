@@ -177,7 +177,8 @@ TEST_CASE("a member path belongs to a loaded value and never to an authored one"
     CHECK(evaluate("authored['base']").rendered == "1");
 }
 
-TEST_CASE("a member of a loaded sequence or a loaded scalar refuses naming the kind",
+TEST_CASE("a member of a loaded sequence refuses naming the kind, and one of a loaded string "
+          "reaches the text operations",
           "[native][member]")
 {
     const outcome sequence = evaluate("config.bounds.first");
@@ -186,7 +187,7 @@ TEST_CASE("a member of a loaded sequence or a loaded scalar refuses naming the k
     REQUIRE_FALSE(sequence.messages.empty());
     REQUIRE_FALSE(scalar.messages.empty());
     CHECK(sequence.messages.front().find("a sequence has no member") != std::string::npos);
-    CHECK(scalar.messages.front().find("a string has no member") != std::string::npos);
+    CHECK(scalar.messages.front().find("a string answers no member 'size'") != std::string::npos);
 }
 
 TEST_CASE("a missing member names what was asked for and none of the mapping's other keys",

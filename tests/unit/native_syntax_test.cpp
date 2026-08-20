@@ -113,14 +113,14 @@ TEST_CASE("an adjacency the parser names better is left to the parser", "[native
     const probe::outcome no_else = probe::evaluate("1 if True");
     const probe::outcome no_first = probe::evaluate("if True else 1");
     const probe::outcome empty = probe::evaluate("");
-    const probe::outcome text = probe::evaluate("word and True");
+    const probe::outcome text = probe::evaluate("cfg and True");
 
     REQUIRE_FALSE(no_else.messages.empty());
     CHECK(no_else.messages.front().find("expected 'else' in conditional") != std::string::npos);
     REQUIRE_FALSE(no_first.messages.empty());
     CHECK(no_first.messages.front().find("'if'") != std::string::npos);
     CHECK_FALSE(empty.messages.empty());
-    CHECK(text.kind == meios::eval_failure_kind::unsupported);
+    CHECK(text.kind == meios::eval_failure_kind::error);
     REQUIRE(text.messages.size() == 1);
     CHECK(text.messages.front().find("no arithmetic meaning") != std::string::npos);
 }

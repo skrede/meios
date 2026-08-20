@@ -77,12 +77,27 @@ std::string repr(const meios::value &one)
 {
     if(one.kind() == meios::value_kind::string)
         return '\'' + *one.text() + '\'';
+    if(one.kind() == meios::value_kind::sequence)
+    {
+        std::string out = "[";
+        for(std::size_t at = 0; at < one.size(); ++at)
+            out += (at == 0 ? "" : ", ") + repr(*one.at(at));
+        return out + ']';
+    }
     if(one.kind() != meios::value_kind::mapping)
         return meios::render_scalar(one).value_or("<no scalar spelling>");
     std::string out = "{";
     for(std::size_t at = 0; at < one.size(); ++at)
         out += (at == 0 ? "" : ", ") + key_repr(*one.key_at(at)) + ": " + repr(*one.at(at));
     return out + '}';
+}
+
+// A substitution carries a value into a document by Python's str(), which hands back a string's
+// own text; only a string nested inside a collection is spelled with its quotes.
+std::string rendered_as(const meios::value &one)
+{
+    const std::optional<std::string> text = one.text();
+    return text ? *text : repr(one);
 }
 
 meios::eval_scope seeded_scope(meios::log_sink &log)
@@ -154,7 +169,7 @@ outcome evaluate(std::string_view expression)
     meios::core_evaluator evaluator;
     const meios::value result = evaluator.eval(expression, scope, sink);
     return outcome{ evaluator.failed(), evaluator.failure_kind(),
-                    evaluator.failed() ? std::string() : repr(result), heard.messages,
+                    evaluator.failed() ? std::string() : rendered_as(result), heard.messages,
                     heard.codes };
 }
 
@@ -289,9 +304,9 @@ TEST_CASE("a subscript chain reads by a literal key, by a variable key and throu
           "[native][expression]")
 {
     CHECK(evaluate("sec_mesh_files['base']['visual']['mesh']['package']").rendered
-          == "'ur_description'");
+          == "ur_description");
     CHECK(evaluate("sec_mesh_files[name][type]['mesh']['path']").rendered
-          == "'meshes/base.dae'");
+          == "meshes/base.dae");
     CHECK(evaluate("xacro.load_yaml(seed_file)['joint_limits']['shoulder_pan']['min']").rendered
           == "-6.28");
 }
@@ -324,13 +339,14 @@ TEST_CASE("a string compares only against another string and never becomes a num
     CHECK(ordered.messages.front().find("ordering comparison") != std::string::npos);
 }
 
-// A concatenation is real Python the CPython backend can run, so it stays in the one category
-// a lenient policy may soften; a missing key or an unsubscriptable value stays terminal.
-TEST_CASE("a string reaching arithmetic is refused as unsupported, not as a fault",
+// Repetition is real Python the CPython backend can run, so it stays in the one category a
+// lenient policy may soften; a missing key or an unsubscriptable value stays terminal.
+TEST_CASE("a string reaching the arithmetic it has no meaning for is unsupported, not a fault",
           "[native][expression]")
 {
-    CHECK(evaluate("wrist_3_joint_type + 'x'").kind == meios::eval_failure_kind::unsupported);
+    CHECK(evaluate("wrist_3_joint_type + 'x'").rendered == "continuousx");
     CHECK(evaluate("wrist_3_joint_type * 2").kind == meios::eval_failure_kind::unsupported);
+    CHECK(evaluate("wrist_3_joint_type + 2").kind == meios::eval_failure_kind::unsupported);
     CHECK(evaluate("sec_mesh_files['missing']").kind == meios::eval_failure_kind::error);
     CHECK(evaluate("sec_mesh_files + 1").kind == meios::eval_failure_kind::error);
 }
@@ -357,7 +373,7 @@ TEST_CASE("the namespaced document call reaches bytes only through the scope",
 {
     CHECK(evaluate("xacro.load_yaml(seed_file)['mesh_files'][name][type]['mesh']['package']")
               .rendered
-          == "'ur_description'");
+          == "ur_description");
 
     meios::eval_scope bare;
     bare.set("seed_file", meios::value{ std::string("seed.yaml") });
@@ -435,7 +451,7 @@ TEST_CASE("a keyword-argument constructor builds a mapping the evaluator can sub
     CHECK(evaluate("dict()").rendered == "{}");
     CHECK(evaluate("dict(a=dict(b=2)['b'])").rendered == "{'a': 2}");
     CHECK(evaluate("dict(mesh=sec_mesh_files['base'])['mesh']['visual']['mesh']['package']")
-              .rendered == "'ur_description'");
+              .rendered == "ur_description");
     CHECK(evaluate("'a' in dict(a=1)").rendered == "True");
 }
 

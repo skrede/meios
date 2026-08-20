@@ -1,8 +1,10 @@
 # case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
 # non-trivial form in the closure of the Universal Robots document,
 # followed by the authored spellings no pinned description reaches -- an
-# index into a sequence, a key the mapping wrapper answers itself, and
-# the keyword-argument mapping constructor -- each driven through a
+# index into a sequence, a key the mapping wrapper answers itself, the
+# keyword-argument mapping constructor, and the string meanings a vendor
+# description evaluates: two strings added, a string's truth value,
+# substring containment and the named split -- each driven through a
 # minimized document seeding the names it reads. A refusing row renders
 # REFUSED and carries the failure's first line.
 e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
@@ -46,3 +48,36 @@ d07	'a' in dict(a=1)	True
 d08	dict()['missing']	REFUSED	'missing' 
 d09	dict(a=1, a=2)	REFUSED	keyword argument repeated: a (<expression>, line 1) 
 d10	dict(a=)	REFUSED	expected argument value expression (<expression>, line 1) 
+t01	'x' + 'y'	xy	
+t02	'' + 'y'	y	
+t03	'x' + ''	x	
+t04	'' + ''		
+t05	name + '_' + type	base_visual	
+t06	'x' + 1	REFUSED	can only concatenate str (not "int") to str 
+t07	1 + 'x'	REFUSED	unsupported operand type(s) for +: 'int' and 'str' 
+t08	'x' - 'y'	REFUSED	unsupported operand type(s) for -: 'str' and 'str' 
+t09	'x' / 'y'	REFUSED	unsupported operand type(s) for /: 'str' and 'str' 
+t10	'x' // 'y'	REFUSED	unsupported operand type(s) for //: 'str' and 'str' 
+t11	'x' % 'y'	REFUSED	not all arguments converted during string formatting 
+t12	'x' ** 'y'	REFUSED	unsupported operand type(s) for ** or pow(): 'str' and 'str' 
+t13	not ''	True	
+t14	not 'a'	False	
+t15	'' if '' else name + type + '_'	basevisual_	
+t16	name + '_' if name else ''	base_	
+t17	'' if name else name + type + '_'		
+t18	'x' in 'axb'	True	
+t19	'' in 'abc'	True	
+t20	'z' in 'abc'	False	
+t21	1 in 'abc'	REFUSED	'in <string>' requires string as left operand, not int 
+t22	'a b c'.split(' ')	['a', 'b', 'c']	
+t23	'a b c'.split(' ')[0]	a	
+t24	'a b c'.split(' ')[-1]	c	
+t25	'a  b'.split(' ')	['a', '', 'b']	
+t26	' a '.split(' ')	['', 'a', '']	
+t27	''.split(' ')	['']	
+t28	'abc'.split('x')	['abc']	
+t29	'ab'.split('b')	['a', '']	
+t30	'a b c'.split(' ')[3]	REFUSED	list index out of range 
+t31	'abc'.split('')	REFUSED	empty separator 
+t32	'a b'.split(1)	REFUSED	must be str or None, not int 
+t33	sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]	base.dae	
