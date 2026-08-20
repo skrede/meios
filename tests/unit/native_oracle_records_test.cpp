@@ -12,6 +12,7 @@ namespace
 {
 
 constexpr std::string_view measured[] = { "PINS",
+                                          "collisions.cases",
                                           "differential_divergences.cases",
                                           "differential_inventory.cases",
                                           "expressions.cases",
@@ -71,6 +72,27 @@ TEST_CASE("upstream leaves a wrist joint without position limits its effort and 
     CHECK(limit.find("lower=") == std::string::npos);
     CHECK(limit.find("upper=") == std::string::npos);
     CHECK(limit.find("effort=") != std::string::npos);
+}
+
+// The one case the refusal set turns on: a name the wrapper answers itself reads as a bound
+// method by the attribute spelling and as the document's own value by the subscript spelling.
+TEST_CASE("a colliding member name reads differently by each spelling, a plain key does not",
+          "[oracle]")
+{
+    const std::vector<oracle::row> rows = oracle::load_rows("collisions.cases");
+
+    std::size_t differing = 0;
+    for(const oracle::row &one : rows)
+    {
+        INFO("name: " << one.fields.front());
+        REQUIRE(one.fields.size() == 3);
+        CHECK(one.fields.front().rfind("__", 0) != 0);
+        if(one.fields[1] != one.fields[2])
+            ++differing;
+    }
+    CHECK(differing + 1 == rows.size());
+    CHECK(value_of("collisions.cases", "keys") == "method");
+    CHECK(value_of("collisions.cases", "plain") != "method");
 }
 
 TEST_CASE("every measured row carries a subject and a measurement", "[oracle]")

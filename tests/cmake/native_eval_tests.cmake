@@ -80,8 +80,9 @@ foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_ve
     meios_add_native_test(${stem} record)
 endforeach()
 
-foreach(stem IN ITEMS native_value native_render native_expression native_session native_budget
-                      native_branch native_arith native_syntax native_syntax_table native_limits)
+foreach(stem IN ITEMS native_value native_render native_expression native_member native_session
+                      native_budget native_branch native_arith native_syntax native_syntax_table
+                      native_limits)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 

@@ -73,7 +73,7 @@ decided by the failure's kind, and there are exactly four:
 
 | Kind | What produces it | Terminal |
 |------|------------------|----------|
-| `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a string method, a Python constructor, a dotted read, arithmetic on a string | no: a lenient policy may leave the span verbatim |
+| `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a string method, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string | no: a lenient policy may leave the span verbatim |
 | `error` | a genuine fault — an undefined name, a missing key, division by zero, a crossed integer range, a non-finite result, malformed syntax | yes, under every policy |
 | `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
@@ -90,9 +90,17 @@ operand is expected and `f(1 + )` as an unexpected `)`. A closing bracket is the
 legality turns on what stands before it, which is why an empty argument list is accepted and a
 truncated argument is not.
 
-**A dotted spelling is refused, with one exception.** `xacro.load_yaml` is the one namespaced call
-the grammar carries. Every other dotted spelling — `math.pi`, a mapping read as `config.limits`, a
-method on a value — is refused, because a description that means something here other than what it
+**A dotted spelling reads a loaded mapping and nothing else.** `xacro.load_yaml` is the one
+namespaced call the grammar carries; every other namespaced spelling, `math.pi` among them, is
+refused by name. A dot after a value is a member read, and it resolves only for a value that came
+out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
+`${config['joint_limits']['wrist_3']['effort']}` reads, chains with a subscript in either order, and
+survives a property, a macro argument and a nested scope. A mapping a description built itself has
+no member path at all, and neither does a loaded sequence or a loaded scalar. Two member spellings
+are refused on a loaded mapping as well: a name the reference's own mapping wrapper answers before
+it consults the document (`clear`, `copy`, `fromkeys`, `get`, `items`, `keys`, `pop`, `popitem`,
+`setdefault`, `update`, `values`), and any name written with a leading `__`. Both point at the
+subscript spelling instead, because a description that means something here other than what it
 means upstream is worse than a description that will not load.
 
 **The Python constructors are refused by name.** `dict(...)`, `list(...)`, `set(...)` and
@@ -168,6 +176,16 @@ grammar's logical operators produce booleans, and the measured descriptions use 
 rather than for their operand. It is recorded as a reviewed divergence, which means the comparison
 fails if it stops reproducing exactly as much as it fails if a new one appears.
 
+**A member name the reference's mapping wrapper answers itself is refused, not answered.** The
+reference hands a loaded mapping back inside a wrapper that tries ordinary attribute lookup before
+falling through to the document, so `${config.keys}` renders a bound method there — text carrying
+the object's own address — while `${config['keys']}` renders the document's value. The eleven
+colliding names are measured into a committed record and the refusing set is checked against it
+rather than written down. Here the attribute spelling refuses and names the subscript spelling; the
+subscript spelling agrees with the reference and is compared on every push. This one is recorded as
+a reviewed divergence in prose rather than in the manifest the comparison reads, because the text
+the reference produces embeds an address and does not reproduce between runs.
+
 **A missing key is named; the mapping's other keys are not.** The reference raises a bare key error.
 Here the diagnostic names the key that was absent and the `file:line` that read it, and deliberately
 never lists the keys the mapping does hold: a diagnostic must not spill the configuration it declined
@@ -181,7 +199,7 @@ integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a
 value at all is a null that spells `None`.
 
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
-namespace upstream, so `${math.pi}` works there and is refused here as a dotted read. The reference's
+namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target. The reference's
 argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
 / `error` / `fatal`) are not exposed at all. `map` and `filter` are not among the functions above,
 and `${list(map(...))}` does appear in real descriptions, which makes it the omission most likely to
@@ -321,9 +339,10 @@ has not earned the right to state either way.
 ## Reading a loaded configuration
 
 A mapping or a sequence that came back from `xacro.load_yaml` is a value like any other: it binds to
-a property, passes as a macro argument, and is read by subscript. What it does not do is answer a
-dotted read — `${config.joint_limits}` is refused under the dotted rule above, and
-`${config['joint_limits']}` is how the same value is read here.
+a property, passes as a macro argument, and is read by subscript. A mapping also answers a dotted
+read, so `${config.joint_limits}` and `${config['joint_limits']}` reach the same key; a sequence is
+read by index only, and both spellings of a name the reference's mapping wrapper answers itself are
+covered by the dotted rule above.
 
 **What crosses a property boundary.** A property binds text, so a mapping or a sequence crossing a
 `xacro:property` boundary is carried across inside a text encoding and restored on the other side.
@@ -407,7 +426,7 @@ int main()
 
 `meios::eval-python` is a separate module, off by default, for a description you trust that needs
 Python behavior the grammar above does not carry — a comprehension, an f-string, a string method, a
-dotted read, arithmetic on a string, or a wider set of unit tags, whose tagged text it evaluates as
+method call on a loaded mapping, arithmetic on a string, or a wider set of unit tags, whose tagged text it evaluates as
 an expression the way the reference does. It drives a *found* (never fetched) CPython. Its default
 class, `meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses
 anything outside it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`,

@@ -13,6 +13,7 @@
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
+#include <span>
 #include <vector>
 #include <cstdint>
 #include <cstddef>
@@ -138,7 +139,10 @@ value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
 value parse_dotted(parser &p, std::string_view head);
+value parse_member(parser &p, const value &base);
+value member_of(parser &p, const value &base, std::string_view member);
 value index_into(parser &p, const value &container, const value &key);
+std::span<const std::string_view> colliding_members();
 value call_math(parser &p, std::string_view name, const std::vector<value> &args);
 
 }

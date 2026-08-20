@@ -1,7 +1,9 @@
 # case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
 # non-trivial form in the closure of the Universal Robots document,
 # followed by the authored subscript spellings no pinned description
-# reaches, each driven through a minimized document seeding the names it
+# reaches -- an index into a sequence, and a key the mapping wrapper
+# answers itself -- each driven through a minimized document seeding the
+# names it
 # reads. A refusing row renders REFUSED and carries the failure's first
 # line.
 e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
@@ -32,3 +34,6 @@ s02	sec_bounds[-1]	6.28
 s03	sec_bounds[3]	REFUSED	list index out of range 
 s04	sec_bounds[-4]	REFUSED	list index out of range 
 s05	sec_bounds['0']	REFUSED	list indices must be integers or slices, not str 
+c01	sec_collisions['keys']	5	
+c02	sec_collisions['values']	6	
+c03	sec_collisions['plain']	7	

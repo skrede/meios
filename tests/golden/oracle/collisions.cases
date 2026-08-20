@@ -1,0 +1,22 @@
+# name <TAB> the category the attribute spelling yields <TAB> the
+# category the subscript spelling yields. Every non-dunder attribute the
+# mapping wrapper carries, read off the wrapper itself, followed by one
+# control key that is not an attribute name at all. The attribute
+# spelling's own text is not recorded because it embeds the object's
+# address and does not reproduce between runs, which is also why these
+# rows carry no live comparison probe. A dunder-prefixed name is not
+# recorded: how many there are is a property of the interpreter that did
+# the recording rather than of the mapping type, so the prefix is carried
+# as a rule instead.
+clear	method	integer
+copy	method	integer
+fromkeys	method	integer
+get	method	integer
+items	method	integer
+keys	method	integer
+pop	method	integer
+popitem	method	integer
+setdefault	method	integer
+update	method	integer
+values	method	integer
+plain	integer	integer

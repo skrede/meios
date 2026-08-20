@@ -30,6 +30,9 @@ SEED_YAML = ("mesh_files:\n  base:\n    visual:\n      mesh:\n        package: u
 # A second document, kept apart from the seed above so adding a sequence does not change what the
 # expressions reading the whole seed document already render.
 SEQUENCE_YAML = "bounds:\n  - -6.28\n  - 0.0\n  - 6.28\n"
+# A third, kept apart for the same reason: two keys the mapping wrapper answers itself and one it
+# does not, so the subscript spelling of each can be rendered beside the other.
+COLLISION_YAML = "keys: 5\nvalues: 6\nplain: 7\n"
 # Upstream registers exactly these six tags and converts each by multiplying the tagged text by
 # its constant. An operand of 1 makes a row carry the constant itself; the wider operands separate
 # the constants from one another and pin the multiplication order.
@@ -42,11 +45,17 @@ UNIT_TAGS = (("!radians", ("1", "0.5", "-2")),
 SEEDS = {"safety_pos_margin": "0.15", "mass": "3.7", "radius": "0.06", "length": "0.12",
          "wrist_3_joint_type": "continuous", "name": "base", "type": "visual",
          "sec_mesh_files": "${xacro.load_yaml(seed_file)['mesh_files']}",
-         "sec_bounds": "${xacro.load_yaml(sequence_file)['bounds']}"}
+         "sec_bounds": "${xacro.load_yaml(sequence_file)['bounds']}",
+         "sec_collisions": "${xacro.load_yaml(collision_file)}"}
 # Authored rather than found in the closure: no pinned description subscripts a sequence, so the
 # spellings are named here and upstream is asked what each one means.
 SEQUENCE_PROBES = ("sec_bounds[0]", "sec_bounds[-1]", "sec_bounds[3]", "sec_bounds[-4]",
                    "sec_bounds['0']")
+# The subscript spelling of a name the mapping wrapper answers itself, beside a name it does not.
+# Only this spelling is probed: the attribute spelling of a colliding name renders an object
+# address and does not reproduce between runs.
+COLLISION_PROBES = ("sec_collisions['keys']", "sec_collisions['values']",
+                    "sec_collisions['plain']")
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -203,9 +212,10 @@ def closure_expressions(share):
     return [one for one in seen if not trivial.match(one)]
 
 
-def seed_body(seed_file, sequence_file):
+def seed_body(seed_file, sequence_file, collision_file):
     rows = [' <xacro:property name="seed_file" value="%s"/>' % escape(str(seed_file)),
-            ' <xacro:property name="sequence_file" value="%s"/>' % escape(str(sequence_file))]
+            ' <xacro:property name="sequence_file" value="%s"/>' % escape(str(sequence_file)),
+            ' <xacro:property name="collision_file" value="%s"/>' % escape(str(collision_file))]
     rows += [' <xacro:property name="%s_parameters_file" value="%s"/>' % (n, escape(str(seed_file)))
              for n in ("joint_limits", "kinematics", "physical", "visual")]
     rows += [' <xacro:property name="%s" value="%s"/>' % (n, escape(v)) for n, v in SEEDS.items()]
@@ -218,7 +228,8 @@ def seed_body(seed_file, sequence_file):
 def write_seed_documents(tmp):
     (tmp / "seed.yaml").write_text(SEED_YAML, encoding="utf-8", newline="\n")
     (tmp / "sequence.yaml").write_text(SEQUENCE_YAML, encoding="utf-8", newline="\n")
-    return seed_body(tmp / "seed.yaml", tmp / "sequence.yaml")
+    (tmp / "collisions.yaml").write_text(COLLISION_YAML, encoding="utf-8", newline="\n")
+    return seed_body(tmp / "seed.yaml", tmp / "sequence.yaml", tmp / "collisions.yaml")
 
 
 # A run in which the environment rather than the expression produced the failures would otherwise
@@ -243,8 +254,16 @@ def sequence_cases():
     return [("s{:02d}".format(at + 1), one) for at, one in enumerate(SEQUENCE_PROBES)]
 
 
+def collision_cases():
+    return [("c{:02d}".format(at + 1), one) for at, one in enumerate(COLLISION_PROBES)]
+
+
+def authored_cases():
+    return sequence_cases() + collision_cases()
+
+
 def expression_cases(share):
-    return closure_cases(share) + sequence_cases()
+    return closure_cases(share) + authored_cases()
 
 
 def probe_row(tmp, seeds, case_id, expression):
@@ -270,7 +289,7 @@ def expression_rows(tmp, share):
         sys.exit("oracle: {} expressions refused where at most {} is a measurement rather than a "
                  "broken environment; nothing was recorded"
                  .format(refused_in(closure), REFUSAL_FLOOR))
-    authored = [probe_row(tmp, seeds, one, text) for one, text in sequence_cases()]
+    authored = [probe_row(tmp, seeds, one, text) for one, text in authored_cases()]
     if refused_in(authored) == len(authored):
         sys.exit("oracle: every authored subscript probe refused, which is a broken environment "
                  "rather than a measurement; nothing was recorded")
@@ -305,6 +324,38 @@ def scalar_rows(tmp, share):
     same_length("yaml scalars", "rendered nodes", len(rendered), len(sources))
     return [(source, KINDS[type(loaded[key]).__name__], node.getAttribute("v"))
             for source, key, node in zip(sources, keys, rendered)]
+
+
+# The mapping wrapper upstream hands a loaded document back in defines attribute lookup to fall
+# through to the document and binds subscript to the same function, so ordinary attribute lookup
+# answers first and a key that is also an attribute of the wrapper never reaches the document. The
+# colliding set is read off the wrapper here rather than written down: it is a property of the type
+# upstream happens to derive from, and a typed-out list would be a claim about another program.
+COLLISION_CONTROL = "plain"
+
+
+def wrapper_names():
+    import xacro
+
+    return [one for one in dir(xacro.YamlDictWrapper) if not one.startswith("__")]
+
+
+def result_category(one):
+    return "method" if callable(one) else KINDS[type(one).__name__]
+
+
+def collision_rows(tmp):
+    import xacro
+
+    names = wrapper_names() + [COLLISION_CONTROL]
+    document = tmp / "collisions.yaml"
+    document.write_text("".join("{}: {}\n".format(name, at) for at, name in enumerate(names)),
+                        encoding="utf-8", newline="\n")
+    xacro.init_stacks(None)
+    loaded = xacro.load_yaml(str(document))
+    same_length("collisions", "document keys", len(loaded), len(names))
+    return [(name, result_category(getattr(loaded, name)), result_category(loaded[name]))
+            for name in names]
 
 
 def unit_tag_probes():
@@ -390,7 +441,9 @@ HEADERS = {
     "expressions.cases": ["case <TAB> expression <TAB> upstream rendering <TAB> failure. Every",
                           "non-trivial form in the closure of the Universal Robots document,",
                           "followed by the authored subscript spellings no pinned description",
-                          "reaches, each driven through a minimized document seeding the names it",
+                          "reaches -- an index into a sequence, and a key the mapping wrapper",
+                          "answers itself -- each driven through a minimized document seeding the",
+                          "names it",
                           "reads. A refusing row renders REFUSED and carries the failure's first",
                           "line."],
     "unit_tags.cases": ["tag <TAB> operand <TAB> the text upstream renders the converted value",
@@ -398,6 +451,16 @@ HEADERS = {
                         "operand measured here is a decimal literal; upstream evaluates the tagged",
                         "text as an expression and so also accepts a name, a call or a",
                         "hexadecimal literal, none of which are measured here."],
+    "collisions.cases": ["name <TAB> the category the attribute spelling yields <TAB> the",
+                         "category the subscript spelling yields. Every non-dunder attribute the",
+                         "mapping wrapper carries, read off the wrapper itself, followed by one",
+                         "control key that is not an attribute name at all. The attribute",
+                         "spelling's own text is not recorded because it embeds the object's",
+                         "address and does not reproduce between runs, which is also why these",
+                         "rows carry no live comparison probe. A dunder-prefixed name is not",
+                         "recorded: how many there are is a property of the interpreter that did",
+                         "the recording rather than of the mapping type, so the prefix is carried",
+                         "as a rule instead."],
     "yaml_scalars.cases": ["source <TAB> resolved kind <TAB> rendered text. The source is the",
                            "scalar exactly as written after the key; an empty source column is a",
                            "key written with no value at all."],
@@ -418,6 +481,7 @@ def records(tmp, share, versions):
                               expression_rows(tmp, ur)),
         "unit_tags.cases": (HEADERS["unit_tags.cases"], unit_tag_rows(tmp)),
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
+        "collisions.cases": (HEADERS["collisions.cases"], collision_rows(tmp)),
         "ur5e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
                                                 {"ur_type": "ur5e", "name": "ur"})),
         "ur3e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",

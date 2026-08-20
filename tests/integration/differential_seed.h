@@ -29,6 +29,8 @@ inline constexpr std::string_view seed_yaml =
 
 inline constexpr std::string_view sequence_yaml = "bounds:\n  - -6.28\n  - 0.0\n  - 6.28\n";
 
+inline constexpr std::string_view collision_yaml = "keys: 5\nvalues: 6\nplain: 7\n";
+
 inline constexpr std::string_view seeded_joints[] = { "shoulder_pan", "shoulder_lift",
                                                        "elbow_joint",  "wrist_1",
                                                        "wrist_2",      "wrist_3" };
@@ -44,7 +46,9 @@ class seed_loader final : public meios::text_resource_loader::fetcher
 public:
     std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
     {
-        return std::string(spec == "sequence.yaml" ? sequence_yaml : seed_yaml);
+        if(spec == "sequence.yaml")
+            return std::string(sequence_yaml);
+        return std::string(spec == "collisions.yaml" ? collision_yaml : seed_yaml);
     }
 };
 
@@ -66,10 +70,12 @@ inline meios::eval_scope seeded_scope(meios::log_sink &log)
         scope.set(std::string(joint) + "_upper_limit", *meios::value::make_real(magnitude));
     }
     scope.set("sequence_file", meios::value{ std::string("sequence.yaml") });
+    scope.set("collision_file", meios::value{ std::string("collisions.yaml") });
     meios::core_evaluator evaluator;
     scope.set("sec_mesh_files",
               evaluator.eval("xacro.load_yaml(seed_file)['mesh_files']", scope, log));
     scope.set("sec_bounds", evaluator.eval("xacro.load_yaml(sequence_file)['bounds']", scope, log));
+    scope.set("sec_collisions", evaluator.eval("xacro.load_yaml(collision_file)", scope, log));
     return scope;
 }
 

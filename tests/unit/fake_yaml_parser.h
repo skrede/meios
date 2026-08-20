@@ -65,11 +65,13 @@ inline std::vector<yaml_line> yaml_lines(std::string_view bytes)
     return rows;
 }
 
+// Marked at every depth, because the module's own reader marks at its single delivery seam and
+// a stand-in that left the tree unmarked would refuse a dotted read the reader admits.
 inline meios::value yaml_scalar(const std::string &text)
 {
     if(text == "true" || text == "false")
-        return meios::value{ text == "true" };
-    return meios::detail::classify(text);
+        return meios::value{ text == "true" }.with_yaml_origin();
+    return meios::detail::classify(text).with_yaml_origin();
 }
 
 inline meios::value yaml_mapping(const std::vector<yaml_line> &rows, std::size_t &at,
@@ -81,7 +83,7 @@ inline meios::value yaml_sequence(const std::vector<yaml_line> &rows, std::size_
     std::vector<meios::value> items;
     while(at < rows.size() && rows[at].item && rows[at].indent == indent)
         items.push_back(yaml_scalar(rows[at++].text));
-    return meios::value::make_sequence(std::move(items));
+    return meios::value::make_sequence(std::move(items)).with_yaml_origin();
 }
 
 inline meios::value yaml_block(const std::vector<yaml_line> &rows, std::size_t &at,
@@ -104,9 +106,9 @@ inline meios::value yaml_mapping(const std::vector<yaml_line> &rows, std::size_t
         else if(at < rows.size() && rows[at].indent > indent)
             entries.emplace_back(row.key, yaml_block(rows, at, rows[at].indent));
         else
-            entries.emplace_back(row.key, meios::value{});
+            entries.emplace_back(row.key, meios::value{}.with_yaml_origin());
     }
-    return meios::value::make_mapping(std::move(entries));
+    return meios::value::make_mapping(std::move(entries)).with_yaml_origin();
 }
 
 // A deliberately small block reader: mappings and sequences nested by indentation, one plain
@@ -122,7 +124,8 @@ public:
         const std::vector<yaml_line> rows = yaml_lines(bytes);
         std::size_t at = 0;
         if(rows.empty())
-            return meios::yaml_outcome{ meios::value::make_mapping({}), meios::yaml_failure::none };
+            return meios::yaml_outcome{ meios::value::make_mapping({}).with_yaml_origin(),
+                                        meios::yaml_failure::none };
         return meios::yaml_outcome{ yaml_block(rows, at, rows.front().indent),
                                     meios::yaml_failure::none };
     }

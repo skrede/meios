@@ -40,6 +40,8 @@ constexpr std::string_view seed_document =
 
 constexpr std::string_view sequence_document = "bounds:\n  - -6.28\n  - 0.0\n  - 6.28\n";
 
+constexpr std::string_view collision_document = "keys: 5\nvalues: 6\nplain: 7\n";
+
 constexpr std::string_view seeded_joints[] = { "shoulder_pan", "shoulder_lift", "elbow_joint",
                                               "wrist_1",      "wrist_2",       "wrist_3" };
 
@@ -54,7 +56,9 @@ class seed_loader final : public meios::text_resource_loader::fetcher
 public:
     std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
     {
-        return std::string(spec == "sequence.yaml" ? sequence_document : seed_document);
+        if(spec == "sequence.yaml")
+            return std::string(sequence_document);
+        return std::string(spec == "collisions.yaml" ? collision_document : seed_document);
     }
 };
 
@@ -99,10 +103,12 @@ meios::eval_scope seeded_scope(meios::log_sink &log)
         scope.set(std::string(joint) + "_upper_limit", *meios::value::make_real(magnitude));
     }
     scope.set("sequence_file", meios::value{ std::string("sequence.yaml") });
+    scope.set("collision_file", meios::value{ std::string("collisions.yaml") });
     meios::core_evaluator evaluator;
     scope.set("sec_mesh_files",
               evaluator.eval("xacro.load_yaml(seed_file)['mesh_files']", scope, log));
     scope.set("sec_bounds", evaluator.eval("xacro.load_yaml(sequence_file)['bounds']", scope, log));
+    scope.set("sec_collisions", evaluator.eval("xacro.load_yaml(collision_file)", scope, log));
     return scope;
 }
 
@@ -352,8 +358,8 @@ TEST_CASE("the namespaced document call reaches bytes only through the scope",
 TEST_CASE("a construct outside the measured surface refuses by name", "[native][expression]")
 {
     const std::pair<std::string_view, std::string_view> refused[] = {
-        { "sec_mesh_files.base", "sec_mesh_files.base" },
-        { "sec_mesh_files[name].mesh", "dotted access on a value" },
+        { "math.pi", "unsupported call target 'math.pi'" },
+        { "mass.base", "not an auxiliary document" },
         { "dict(a=1)", "dict()" },
         { "sec_mesh_files[1:2]", "unsupported subscript form" },
         { "[x for x in sec_mesh_files]", "unexpected 'for' in expression" },
