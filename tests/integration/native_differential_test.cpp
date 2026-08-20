@@ -170,7 +170,12 @@ TEST_CASE("the divergence manifest matches the measured divergences and no other
         const std::filesystem::path scratch =
             differential::render_path(MEIOS_DIFFERENTIAL_RENDERS_DIR, std::string(one.id), ".txt");
         REQUIRE(std::filesystem::exists(scratch));
-        const std::string upstream_text = differential::trimmed(differential::slurp(scratch));
+        const std::string rendered = differential::trimmed(differential::slurp(scratch));
+        // A refusing render carries upstream's own wording after the verdict, which no manifest
+        // column can hold: a tab is the column separator. Both sides therefore record the
+        // verdict, and the wording of a refusal is what expressions.cases exists to carry.
+        const std::string upstream_text =
+            differential::refused(rendered) ? std::string("REFUSED") : rendered;
         INFO("probe " << one.id << ": " << one.expression);
         const std::string meios_value = differential::observed_value(one);
         REQUIRE(upstream_text != meios_value);

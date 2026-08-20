@@ -11,6 +11,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <vector>
 #include <utility>
 
@@ -133,4 +134,37 @@ TEST_CASE("two independent budget-exhausting constructs still report exactly one
     REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::errors(records) == 1);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
+}
+
+// One level of span nesting is several stack frames, so a span nested past the ceiling must
+// answer with the exhausted refusal rather than with the stack. Both openers descend through
+// the same inner scan and both must stop at the same depth.
+TEST_CASE("span nesting past the expression-depth ceiling refuses rather than descending",
+          "[xacro][budget]")
+{
+    meios::source_stack sources;
+    meios::eval_scope scope;
+
+    for(const std::pair<const char *, const char *> &pair :
+        { std::pair<const char *, const char *>{ "${", "}" },
+          std::pair<const char *, const char *>{ "$(", ")" } })
+    {
+        std::vector<xacro_probe::captured> records;
+        meios::log_sink_f log{ xacro_probe::recorder{ records } };
+        INFO("opener " << pair.first);
+        std::string raw;
+        for(int at = 0; at < 50'000; ++at)
+            raw += pair.first;
+        raw += "1";
+        for(int at = 0; at < 50'000; ++at)
+            raw += pair.second;
+
+        const meios::expected<meios::substitution, meios::expansion_error> out =
+            meios::substitute(raw, scope, sources, "robot.xacro", log);
+
+        REQUIRE_FALSE(out.has_value());
+        CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+        CHECK_FALSE(out.error().loc.file.empty());
+        CHECK(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
+    }
 }

@@ -78,7 +78,7 @@ struct subst_ctx
               const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), session(load), core(load), document(doc),
           at(anchor), node_anchor(anchor), mode(policy), backend(inject),
-          last_kind(eval_failure_kind::none), terminal()
+          last_kind(eval_failure_kind::none), span_depth(0), terminal()
     {
     }
 
@@ -95,6 +95,10 @@ struct subst_ctx
     eval_policy mode;
     std::shared_ptr<evaluator_handle> backend;
     eval_failure_kind last_kind;
+    // How many spans the scan currently stands inside. Each level is several stack frames, so
+    // it is charged against the expression-depth ceiling before the descent rather than left
+    // to exhaust the stack.
+    std::size_t span_depth;
     // The first terminal failure, kept so one refusal reports one structured cause; a
     // later refusal neither replaces it nor emits a second error-level diagnostic.
     std::optional<expansion_error> terminal;

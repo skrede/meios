@@ -101,36 +101,47 @@ std::string_view leading_command(std::string_view inner)
     return inner.substr(start, end - start);
 }
 
-// A `$(...)` command first resolves any `${}`/`$()` in its inner text, so
-// `$(find ${pkg})` dispatches the resolved package name; a `${...}` expression is
-// handed to the evaluator whole. `$(arg name default)` is the exception: its inner
-// is dispatched unscanned so the `default` is evaluated lazily by `cmd_arg` only on
-// the unset branch — a pre-scan would eagerly evaluate a default the bound arg never
-// uses, failing on an unresolvable fallback. A failed inner scan yields nullopt so
-// the caller's verbatim/leniency handling governs the outcome rather than a mis-dispatch.
-// `span_offset` is the failing span's `$` byte as an offset into the whole decoded
-// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps
-// back to the real column. After a nested scan clobbers ctx.at, the outer command's
-// dispatch is re-anchored to its own span before it can emit.
+// Each level of the descent is several stack frames, so the nesting is charged before it is
+// entered; the ceiling it answers to is the one the expression grammar's own descent answers to.
+// The session reports a crossed ceiling against the real sink rather than through the latch, so
+// the cause is copied here to keep the refusal from reaching the caller unnamed.
+bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::size_t base)
+{
+    ++ctx.span_depth;
+    const bool admitted = ctx.session.admits_expression_depth(ctx.span_depth, ctx.log, ctx.at);
+    const bool resolved = admitted && scan(ctx, inner, out, base);
+    --ctx.span_depth;
+    if(!admitted && ctx.session.terminal)
+        record_terminal(ctx, *ctx.session.terminal);
+    return resolved;
+}
+
+// Upstream resolves a substitution as safe_eval(eval_text(body)): a span's inner text is
+// expanded first and the string that produces is what is then evaluated or dispatched, so a
+// package-locating command written inside a quoted literal has already become a path by the
+// time the expression runs. Both openers therefore take the same inner scan. `$(arg name
+// default)` is the exception: its inner is dispatched unscanned so the `default` is evaluated
+// lazily by `cmd_arg` only on the unset branch — a pre-scan would eagerly evaluate a default
+// the bound arg never uses, failing on an unresolvable fallback. A failed inner scan yields
+// nullopt so the caller's verbatim/leniency handling governs the outcome rather than a
+// mis-dispatch. `span_offset` is the failing span's `$` byte as an offset into the whole decoded
+// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps back to
+// the real column. After a nested scan clobbers ctx.at, the outer span is re-anchored to its own
+// offset before it can emit.
 std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string_view inner,
                                         std::size_t span_offset)
 {
-    if(opener == '{')
-    {
-        ctx.last_kind = eval_failure_kind::none;
-        return eval_expr(ctx, inner);
-    }
-    if(leading_command(inner) == "arg")
+    if(opener == '(' && leading_command(inner) == "arg")
     {
         ctx.last_kind = eval_failure_kind::none;
         return dispatch(ctx, inner);
     }
     std::string resolved;
-    if(!scan(ctx, inner, resolved, span_offset + 2))
+    if(!scan_nested(ctx, inner, resolved, span_offset + 2))
         return std::nullopt;
     refine_span_column(ctx, span_offset);
     ctx.last_kind = eval_failure_kind::none;
-    return dispatch(ctx, resolved);
+    return opener == '{' ? eval_expr(ctx, resolved) : dispatch(ctx, resolved);
 }
 
 }

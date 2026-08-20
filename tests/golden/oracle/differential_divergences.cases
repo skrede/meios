@@ -1,7 +1,9 @@
 # id <TAB> upstream <TAB> meios <TAB> reason. The bidirectional reviewed divergence manifest:
 # a divergence not listed here fails the differential run, a listed entry whose divergence no
 # longer reproduces also fails it, and a listed entry present under the right id but with
-# drifted recorded text fails it too -- matched by exact text, never by id alone.
+# drifted recorded text fails it too -- matched by exact text, never by id alone. A side that
+# refuses is recorded as REFUSED on that side; the wording of a refusal is carried by
+# expressions.cases, because a tab is this file's column separator.
 div_or_operand	1	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
 div_and_operand	3	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
 div_self_reference	[1, [1, [...]]]	REFUSED	a self-referential alias graph loads upstream as a value that contains itself; an immutable value with shared collection storage cannot denote one, so the alias arrives while its anchor is still incomplete and refuses there
@@ -11,3 +13,6 @@ div_string_repetition	ababab	REFUSED	a string repeated by an integer renders ups
 div_string_ordering	True	REFUSED	upstream orders two strings by their code points; this grammar compares strings for equality alone, so an ordering operator against a string refuses rather than inventing a collation
 div_string_split_whitespace	['a', 'b']	REFUSED	the no-argument split collapses runs of whitespace and drops the leading and trailing fields, a different algorithm from the explicit-separator form admitted here, so it refuses rather than being approximated by a single-space separator
 div_string_split_limit	['a', 'b c']	REFUSED	a second argument bounds how many separators are consumed; one named operation taking one separator is admitted, so any further argument refuses
+div_span_closing_brace_in_literal	REFUSED	a}b	upstream's span pattern is quote-blind, so a closing brace inside a string literal ends the span there and the truncated fragment refuses as an unterminated literal; the close finder here folds over quotes and the whole literal renders, accepted by maintainer override on 2026-08-12, the day that fold landed
+div_span_format_operator	1.234	REFUSED	the remainder operator formats a string against its right operand upstream; only arithmetic remainder was measured into this grammar, so a string operand refuses rather than taking a meaning nothing measured
+div_span_nested_expression	REFUSED	3	upstream's span pattern never counts a nested brace, so an expression span written inside another ends at the inner brace and the truncated fragment refuses; the close finder here counts depth and the inner scan resolves the nested span before the outer expression is evaluated

@@ -33,11 +33,12 @@ CORPUS_DOCS = (
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
-# itself, the two mapping-constructor argument shapes upstream accepts that are refused here, and
-# the four string meanings upstream carries that this grammar does not -- repetition, ordering,
-# and the split's two further argument shapes. None needs the expressions.cases seed scope -- the
-# third reads only the document written beside the probe, which load_yaml resolves relative to
-# the probe itself.
+# itself, the two mapping-constructor argument shapes upstream accepts that are refused here, the
+# four string meanings upstream carries that this grammar does not -- repetition, ordering, and
+# the split's two further argument shapes -- and three differences in what the span scanner hands
+# the evaluator, upstream's own span pattern being ^\$\{[^\}]*\} and so neither quote-aware nor
+# nesting. None needs the expressions.cases seed scope -- the third reads only the document
+# written beside the probe, which load_yaml resolves relative to the probe itself.
 DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"),
                      ("div_and_operand", "2 and 3"),
                      ("div_self_reference", "xacro.load_yaml('recursive.yaml')['a']"),
@@ -46,7 +47,10 @@ DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"),
                      ("div_string_repetition", "'ab' * 3"),
                      ("div_string_ordering", "'a' < 'b'"),
                      ("div_string_split_whitespace", "'a b'.split()"),
-                     ("div_string_split_limit", "'a b c'.split(' ', 1)"))
+                     ("div_string_split_limit", "'a b c'.split(' ', 1)"),
+                     ("div_span_closing_brace_in_literal", "'a}b'"),
+                     ("div_span_format_operator", "'%.3f' % 1.2345"),
+                     ("div_span_nested_expression", "${'1 + 2'}"))
 RECURSIVE_YAML = "a: &a [1, *a]\n"
 
 

@@ -38,7 +38,8 @@ description needing Python behavior the grammar does not carry; it has
 - The conditional expression, `a if condition else b`. Only the branch taken is evaluated.
 - Membership: `key in mapping`, where the key reads as text.
 - Subscripting a mapping, including a chain of them: `${joint_limits['A1']['lower']}`.
-- `xacro.load_yaml(name)`, under the rules in [the resource helper](#the-resource-helper).
+- `xacro.load_yaml(spec)`, where `spec` is any expression yielding text, under the rules in
+  [the resource helper](#the-resource-helper).
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
   are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
 
@@ -55,6 +56,16 @@ integers whatever they are handed. Any other name followed by `(` is refused by 
 description reaching for a function this list does not carry is told which one it reached for rather
 than that something went wrong. A name on the list called at the wrong arity is refused the same way,
 by name, so `atan2(x)` reports the function rather than the count.
+
+**A span's own text is resolved before its expression is evaluated.** `${...}` and `$(...)` both
+expand any span written inside them first, and what the evaluator or the command dispatcher is handed
+is the string that produced — so `${xacro.load_yaml('$(find arm_description)/cfg/limits.yaml')}` has
+already become a path by the time the expression runs. That is the order the reference resolves a
+substitution in, and it is why the spelling a real description writes for a package-qualified
+document reads at all. An argument command's default is the one exception: `$(arg name default)` is
+dispatched unscanned, so a default the bound argument never uses is never evaluated. The nesting this
+descends is charged against the expression-depth ceiling, so a span nested past it refuses rather
+than running out of stack.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
@@ -166,11 +177,12 @@ and is unaffected.
 count all refuse, and no member spelling on a string yields a value that can be called. A description
 needing any of them needs the explicit backend.
 
-**`xacro.load_yaml` takes a bound name, not a literal.** `${xacro.load_yaml('config/limits.yaml')}`
-refuses; the spec must be bound to a property, an argument or a macro parameter first, and
-`${xacro.load_yaml(limits_file)}` then reads it. That is how every measured description already
-writes it, so the cost is narrow — but it is a refusal, not a coercion, and a document written the
-other way will say so at the call rather than silently reading nothing.
+**`xacro.load_yaml` reads one argument, and it must yield text.** The argument is an ordinary
+expression, so a bound name, a quoted literal and a composition of the two all name a document:
+`${xacro.load_yaml('config/' + variant + '.yaml')}` reads. What costs you something is an argument
+yielding anything else — the diagnostic names the kind it produced rather than probing for a
+filename, so a number or a collection reaching the call says so at the call instead of composing a
+path nobody wrote.
 
 **One unit tag converts.** `!degrees` is converted, and only when its text is a finite numeric
 literal. Every other tag declines, which is a softenable refusal rather than a fault, so a lenient
@@ -225,6 +237,20 @@ recorded measurement against the pinned reader rather than a reading of the YAML
 it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings, `010` is the
 integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
 value at all is a null that spells `None`.
+
+**The span scanner is quote-aware and counts nesting where the reference's is neither.** The
+reference finds a `${}` span's end with a pattern that stops at the first `}` wherever it stands, and
+three spellings differ because of it. `${'a}b'}` renders `a}b` here and refuses there as an
+unterminated string literal, because a brace inside a literal is that literal's text here.
+`${${'1 + 2'}}` renders `3` here and refuses there, because the close finder here counts depth and
+the inner scan then resolves the nested span before the outer expression runs. And
+`${'%.3f' % 1.2345}` renders `1.234` there and refuses here, because only arithmetic remainder was
+measured into this grammar and a string operand takes no formatting meaning. All three are recorded
+as reviewed divergences, so the comparison fails if one stops reproducing exactly as much as it fails
+if a new one appears. Two neighbouring spellings are *not* divergences, though they refuse for
+different reasons on each side: `${ {'a': 1} }` and `${f'{v:.3f}'}` refuse on both, there because the
+truncated fragment will not parse and here because neither a brace literal nor a format literal is in
+the grammar.
 
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
 namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target. The reference's
@@ -307,8 +333,10 @@ read first.
 ## The resource helper
 
 `xacro.load_yaml(spec)` is the only way an expression reaches a file, and it does not read one
-itself: `spec` names a property, argument or macro parameter whose text is the specification, C++
-resolves that text, enforces containment and reads the bytes, and the parser is handed *text*. An
+itself: `spec` is any expression yielding text and that text is the specification, C++ resolves it,
+enforces containment and reads the bytes, and the parser is handed *text*. Widening the argument from
+a bare name to an expression added no resolution of its own — whatever the expression composes still
+arrives at exactly the one loader below. An
 evaluation scope with no resource loader installed refuses every spec, and a build without
 `meios::yaml` reports that it resolves no auxiliary document format at all: the capability is absent
 by declaration, its absence is a checked refusal, and there is no fallback read anywhere.
