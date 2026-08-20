@@ -71,7 +71,7 @@ TEST_CASE("a diagnostic sink that throws does not escape the module", "[native][
         meios::evaluator_counters counters;
         const meios::evaluator_limits ceilings;
         const meios::yaml_outcome out =
-            (*parser)("a: &x 1\nb: *x\n", ceilings, counters, sink, {});
+            (*parser)("a: !degrees pi/2\n", ceilings, counters, sink, {});
         CHECK_FALSE(out.parsed.has_value());
         CHECK(out.failure == meios::yaml_failure::unsupported);
     }

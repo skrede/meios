@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <utility>
 #include <optional>
 #include <string_view>
 
@@ -34,13 +35,27 @@ struct parse_stopped
 
 class value_builder final : public YAML::EventHandler
 {
+    // An alias shares the anchored value rather than copying it, so what the alias costs is not
+    // the sharing but the size of the tree it denotes; that count is computed once, here, and
+    // charged again at every site that names the anchor.
+    struct anchored
+    {
+        value held;
+        std::size_t denoted;
+    };
+
+    // The end events carry no arguments, so a collection can only learn which anchor it belongs
+    // to by having remembered it from its own start event.
     struct frame
     {
         bool listing;
+        bool merging;
         YAML::Mark at;
+        std::size_t denoted;
+        YAML::anchor_t anchor;
         std::vector<value> items;
-        std::vector<scalar_key> seen;
         std::optional<scalar_key> key;
+        std::vector<value::entry> merged;
         std::vector<value::entry> entries;
     };
 
@@ -70,14 +85,23 @@ private:
     std::vector<frame> m_frames;
     evaluator_counters &m_counters;
     const evaluator_limits &m_limits;
+    std::vector<std::pair<YAML::anchor_t, anchored>> m_anchors;
 
     bool expecting_key() const;
     void charge_node();
+    void charge_alias(std::size_t denoted);
     void admit_depth(std::size_t depth);
-    void deliver(value produced, const YAML::Mark &mark);
     void place(frame &top, value produced);
-    void admit_key(scalar_key key, const YAML::Mark &mark);
-    void take_key(const std::string &text, const std::string &tag, const YAML::Mark &mark);
+    void admit_key(scalar_key key);
+    void share(const anchored &source, const YAML::Mark &mark);
+    void merge_into(frame &top, const value &source, const YAML::Mark &mark);
+    void gather(std::vector<value::entry> &into, const value &source, const YAML::Mark &mark);
+    void remember(YAML::anchor_t anchor, const value &held, std::size_t denoted);
+    void deliver(value produced, std::size_t denoted, YAML::anchor_t anchor,
+                 const YAML::Mark &mark);
+    const anchored *anchor_at(YAML::anchor_t anchor) const;
+    void take_key(const std::string &text, const std::string &tag, YAML::anchor_t anchor,
+                  const YAML::Mark &mark);
     value resolved(const std::string &text, const std::string &tag, const YAML::Mark &mark);
     parse_stopped stopped(const std::string &construct, const YAML::Mark &mark, yaml_failure why);
     parse_stopped exhausted(std::string_view axis);

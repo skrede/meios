@@ -67,7 +67,7 @@ scalar_result resolve_unit_tag(std::string_view text, std::string_view tag)
 {
     const std::optional<double> constant = conversion_for(tag);
     if(!constant)
-        return declines("an unsupported tag '" + std::string(tag) + '\'');
+        return rejects("an unsupported tag '" + std::string(tag) + '\'');
     const std::optional<double> literal = numeric_literal(text);
     if(!literal)
         return declines("a '" + std::string(tag) + "' value that is not a finite numeric literal");

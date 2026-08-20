@@ -4,3 +4,4 @@
 # drifted recorded text fails it too -- matched by exact text, never by id alone.
 div_or_operand	1	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
 div_and_operand	3	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
+div_self_reference	[1, [1, [...]]]	REFUSED	a self-referential alias graph loads upstream as a value that contains itself; an immutable value with shared collection storage cannot denote one, so the alias arrives while its anchor is still incomplete and refuses there

@@ -63,6 +63,12 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
         MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         MEIOS_CORPUS_DOCUMENTS="${_differential_documents}"
         MEIOS_DIFFERENTIAL_RENDERS_DIR="${MEIOS_DIFFERENTIAL_RENDERS_DIR}")
+    # One divergence probe reads a document, so the comparator needs the module's own reader
+    # rather than the seeded test double the expression probes run under.
+    if(TARGET meios_yaml)
+        target_link_libraries(native_differential_test PRIVATE meios::yaml)
+        target_compile_definitions(native_differential_test PRIVATE MEIOS_TEST_HAS_YAML=1)
+    endif()
     meios_enable_coverage(native_differential_test)
     meios_warnings(native_differential_test)
     catch_discover_tests(native_differential_test TEST_PREFIX "native_differential.")

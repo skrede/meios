@@ -15,7 +15,6 @@
 #include <tuple>
 #include <string>
 #include <vector>
-#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -153,35 +152,36 @@ TEST_CASE("fresh upstream renders agree with meios on category, structure and fa
         FAIL("no differential verdict was produced for inventory entry '" << *missing << "'");
 }
 
-TEST_CASE("the divergence manifest matches the measured and/or divergences and no others",
+// Registered only where the auxiliary-document module is built, because one of the probes reads
+// a document: a build with no reader could observe that divergence only by asserting it from the
+// manifest it is meant to police.
+#ifdef MEIOS_TEST_HAS_YAML
+
+TEST_CASE("the divergence manifest matches the measured divergences and no others",
           "[native_differential]")
 {
     if(!renders_available())
         return skip_without_renders();
 
     const std::vector<oracle::row> manifest = oracle::load_rows("differential_divergences.cases");
-    const std::pair<std::string, std::string> probes[] = { { "div_or_operand", "1 or 2" },
-                                                            { "div_and_operand", "2 and 3" } };
     std::vector<std::tuple<std::string, std::string, std::string>> observed;
-    for(const std::pair<std::string, std::string> &probe : probes)
+    for(const differential::probe &one : differential::divergence_probes)
     {
         const std::filesystem::path scratch =
-            differential::render_path(MEIOS_DIFFERENTIAL_RENDERS_DIR, probe.first, ".txt");
+            differential::render_path(MEIOS_DIFFERENTIAL_RENDERS_DIR, std::string(one.id), ".txt");
         REQUIRE(std::filesystem::exists(scratch));
-        std::string upstream_text = differential::slurp(scratch);
-        while(!upstream_text.empty()
-              && (upstream_text.back() == '\n' || upstream_text.back() == '\r'))
-            upstream_text.pop_back();
-        INFO("probe " << probe.first << ": " << probe.second);
-        const differential::outcome ran = differential::evaluate_bare(probe.second);
-        const std::string meios_value = ran.failed ? "REFUSED" : ran.rendered;
+        const std::string upstream_text = differential::trimmed(differential::slurp(scratch));
+        INFO("probe " << one.id << ": " << one.expression);
+        const std::string meios_value = differential::observed_value(one);
         REQUIRE(upstream_text != meios_value);
         std::string detail;
-        if(!differential::matches_manifest(manifest, probe.first, upstream_text, meios_value,
-                                           detail))
+        if(!differential::matches_manifest(manifest, std::string(one.id), upstream_text,
+                                           meios_value, detail))
             FAIL(detail);
-        observed.emplace_back(probe.first, upstream_text, meios_value);
+        observed.emplace_back(one.id, upstream_text, meios_value);
     }
     for(const std::string &stale : differential::stale_manifest_entries(manifest, observed))
         FAIL("divergence manifest entry '" << stale << "' no longer reproduces");
 }
+
+#endif

@@ -212,11 +212,9 @@ TEST_CASE("a nested mapping converts through every level", "[native][yaml]")
 TEST_CASE("a construct outside the read surface refuses by name", "[native][yaml]")
 {
     const std::pair<std::string_view, std::string_view> refusals[] = {
-        { "a: &anchor 1\nb: *anchor\n", "an alias" },
-        { "base: &b\n  x: 1\na:\n  <<: *b\n", "a merge key" },
         { "? [1, 2]\n: 3\n", "a sequence as a mapping key" },
         { "? {a: 1}\n: 3\n", "a mapping as a mapping key" },
-        { "a: 1\na: 2\n", "a duplicate key" },
+        { "a: !!set {}\n", "an unsupported tag" },
     };
     for(const std::pair<std::string_view, std::string_view> &one : refusals)
     {
@@ -247,19 +245,6 @@ TEST_CASE("a key is read in any of the scalar kinds a document can write", "[nat
         CHECK(out.parsed->key_at(0)->kind() == one.second);
         CHECK(out.parsed->at(std::size_t{ 0 }).has_value());
     }
-}
-
-// The builder's own duplicate check and the mapping constructor's search run over the same key
-// comparison, so a document that writes one key in two scalar kinds is refused here rather than
-// being admitted and then silently folded into one entry.
-TEST_CASE("a key repeated in a second scalar kind is the duplicate both halves see",
-          "[native][yaml]")
-{
-    const probe out = read("1: one\ntrue: two\n");
-
-    CHECK_FALSE(out.parsed.has_value());
-    REQUIRE(out.messages.size() == 1);
-    CHECK(out.messages.front().find("a duplicate key 'True'") != std::string::npos);
 }
 
 TEST_CASE("every value a document produces reports its origin at every depth", "[native][yaml]")
@@ -364,7 +349,9 @@ TEST_CASE("a crossed auxiliary ceiling is terminal under every evaluation policy
 
 // The one distinction leniency turns on: a construct a fuller backend would read is
 // unsupported syntax and a lenient policy may retain the span, while a malformed document is
-// invalid input and terminates whatever the policy says.
+// invalid input and terminates whatever the policy says. The reference backend evaluates a
+// tagged value as an expression, so a tagged spelling this evaluator cannot read is the
+// unsupported half.
 TEST_CASE("a malformed document terminates where an unread construct may be retained",
           "[native][yaml]")
 {
@@ -372,10 +359,24 @@ TEST_CASE("a malformed document terminates where an unread construct may be reta
 
     CHECK_FALSE(substitute("a: *nope\n", roomy, meios::eval_policy::skip).survived);
 
-    const run retained = substitute("a: &x 1\nb: *x\n", roomy, meios::eval_policy::skip);
+    const run retained = substitute("a: !degrees pi/2\n", roomy, meios::eval_policy::skip);
     CHECK(retained.survived);
     CHECK(retained.text.find("xacro.load_yaml") != std::string::npos);
-    CHECK_FALSE(substitute("a: &x 1\nb: *x\n", roomy, meios::eval_policy::fail).survived);
+    CHECK_FALSE(substitute("a: !degrees pi/2\n", roomy, meios::eval_policy::fail).survived);
+}
+
+// The other half of the same rule: a construct the reference backend refuses too is terminal,
+// so no leniency setting can leave partial output standing where it appeared.
+TEST_CASE("a construct the reference backend also refuses stays terminal", "[native][yaml]")
+{
+    const meios::evaluator_limits roomy;
+    const std::string_view terminal[] = { "a: &a [1, *a]\n", "a: !grams 1\n", "? [1]\n: 3\n" };
+    for(std::string_view document : terminal)
+    {
+        INFO("document [" << document << ']');
+        for(meios::eval_policy policy : { meios::eval_policy::warn, meios::eval_policy::skip })
+            CHECK_FALSE(substitute(document, roomy, policy).survived);
+    }
 }
 
 #endif

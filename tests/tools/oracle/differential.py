@@ -31,10 +31,14 @@ CORPUS_DOCS = (
     ("lbr_med14_r820_description", "urdf/lbr_med14_r820.urdf.xacro", {}, "lbr_med14_r820.urdf.xacro"),
 )
 
-# The two known divergences, measured earlier and deliberately not changed:
-# and/or yielding a boolean rather than the deciding operand. Self-contained expressions, so
-# neither needs the expressions.cases seed scope.
-DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"), ("div_and_operand", "2 and 3"))
+# The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
+# than the deciding operand, and a self-referential alias graph that loads here as a value
+# containing itself. None needs the expressions.cases seed scope -- the third reads only the
+# document written beside the probe, which load_yaml resolves relative to the probe itself.
+DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"),
+                     ("div_and_operand", "2 and 3"),
+                     ("div_self_reference", "xacro.load_yaml('recursive.yaml')['a']"))
+RECURSIVE_YAML = "a: &a [1, *a]\n"
 
 
 def sanitize(case_id):
@@ -61,7 +65,7 @@ def render_expression_case(tmp, out, seeds, case_id, expression):
         write_refusal(out, case_id, ".xml", failure)
 
 
-# The bare rendered value, not wrapped in XML: these two ids feed the divergence manifest's
+# The bare rendered value, not wrapped in XML: these ids feed the divergence manifest's
 # exact-text match directly, not the structural comparator.
 def render_divergence_probe(tmp, out, case_id, expression):
     body = ' <e v="${%s}"/>' % oracle.escape(expression)
@@ -88,6 +92,7 @@ def render_corpus_document(share, out, share_name, document, mappings, case_id):
 def render_all(tmp, share, out):
     ur = share("ur_description")
     seeds = oracle.write_seed_documents(tmp)
+    (tmp / "recursive.yaml").write_text(RECURSIVE_YAML, encoding="utf-8", newline="\n")
     for case_id, expression in oracle.expression_cases(ur):
         render_expression_case(tmp, out, seeds, case_id, expression)
     for case_id, expression in DIVERGENCE_PROBES:

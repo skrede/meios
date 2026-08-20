@@ -5,6 +5,11 @@
 
 #include <meios/xacro.h>
 
+#ifdef MEIOS_TEST_HAS_YAML
+    #include <meios/yaml/parser.h>
+#endif
+
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -106,7 +111,7 @@ inline outcome evaluate_seeded(std::string_view expression)
     return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
 }
 
-// No seeding: the divergence-manifest probes are self-contained expressions.
+// No seeding: a divergence-manifest probe is a self-contained expression.
 inline outcome evaluate_bare(std::string_view expression)
 {
     meios::eval_scope scope;
@@ -115,6 +120,63 @@ inline outcome evaluate_bare(std::string_view expression)
     const meios::value result = evaluator.eval(expression, scope, silent);
     return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
 }
+
+#ifdef MEIOS_TEST_HAS_YAML
+
+// The document differential.py writes beside its probe, served here by name so both sides read
+// the same bytes; upstream loads it as a value that contains itself.
+inline constexpr std::string_view recursive_yaml = "a: &a [1, *a]\n";
+
+class named_loader final : public meios::text_resource_loader::fetcher
+{
+public:
+    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    {
+        return std::string(recursive_yaml);
+    }
+};
+
+// A probe reading a document needs the module's own reader rather than the test double: the
+// divergence it records belongs to the document reader, not to the expression grammar.
+inline outcome evaluate_read(std::string_view expression)
+{
+    meios::eval_scope scope;
+    scope.install_text_loader(meios::text_resource_loader{ std::make_unique<named_loader>() });
+    scope.install_yaml_parser(meios::make_yaml_parser());
+    meios::log_sink silent;
+    meios::core_evaluator evaluator;
+    const meios::value result = evaluator.eval(expression, scope, silent);
+    return { evaluator.failed(), evaluator.failed() ? std::string() : repr(result) };
+}
+
+// Spelled exactly as differential.py's own table spells them, so an id names the same rendered
+// file whichever side wrote it.
+struct probe
+{
+    bool reads;
+    std::string_view id;
+    std::string_view expression;
+};
+
+inline constexpr std::array<probe, 3> divergence_probes{
+    probe{ false, "div_or_operand", "1 or 2" }, probe{ false, "div_and_operand", "2 and 3" },
+    probe{ true, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" }
+};
+
+inline std::string observed_value(const probe &one)
+{
+    const outcome ran = one.reads ? evaluate_read(one.expression) : evaluate_bare(one.expression);
+    return ran.failed ? std::string("REFUSED") : ran.rendered;
+}
+
+inline std::string trimmed(std::string text)
+{
+    while(!text.empty() && (text.back() == '\n' || text.back() == '\r'))
+        text.pop_back();
+    return text;
+}
+
+#endif
 
 }
 

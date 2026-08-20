@@ -99,6 +99,9 @@ TEST_CASE("a tagged value that is not a numeric literal refuses naming its own t
     }
 }
 
+// A tag outside the closed vocabulary is terminal rather than softenable: the fuller backend
+// does not read it either, so retaining the span under a lenient policy would keep a document
+// the reference loader rejects outright.
 TEST_CASE("every other tag refuses by name", "[native][yaml]")
 {
     for(std::string_view tag : { "!grams", "!kilograms", "!feet", "!inch", "!Degrees", "!!int" })
@@ -106,7 +109,7 @@ TEST_CASE("every other tag refuses by name", "[native][yaml]")
         INFO("tag [" << tag << ']');
         const scalar_probe::outcome refused = scalar_probe::resolve(std::string(tag) + " 1");
         CHECK_FALSE(refused.resolved.has_value());
-        CHECK(refused.failure == meios::yaml_failure::unsupported);
+        CHECK(refused.failure == meios::yaml_failure::refused);
         REQUIRE(refused.messages.size() == 1);
         CHECK(refused.messages.front().find("unsupported tag") != std::string::npos);
     }
