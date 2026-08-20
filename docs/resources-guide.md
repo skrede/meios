@@ -353,8 +353,8 @@ invisible from the tree root and resolves only when the directory holding it is 
 ordinary directories is found at any depth with no entry at all.
 
 `EVAL` selects the evaluator backend, `core` or `python`. `core` is the default and evaluates the
-fixed numeric and boolean grammar; `python` needs a binary built with the evaluation enrichment. The
-choice is not a detail — see below.
+built-in closed grammar, which is what [evaluation](evaluation.md) is the contract for; `python` needs
+a binary built with the evaluation enrichment. The choice is not a detail — see below.
 
 `INSTALL_RUNTIME_RELATIVE`, `INSTALL_DESTINATION` and `INSTALL_COMPONENT` install the flattened
 document under the same rules the deploy call uses, and carry the same trap: without one of them the

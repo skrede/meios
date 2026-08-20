@@ -16,8 +16,9 @@ are each found on the system or fetched at configure time.
 
 What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
 integers and reals, the addition of two strings, comparison, boolean logic, membership against a
-mapping's keys and against a string's text, subscripting into a mapping and a sequence, one named
-string operation, a fixed set of mathematics functions, and one namespaced call that reads an
+mapping's keys and against a string's text, subscripting into a mapping and into a sequence, one
+named string operation, a keyword-argument mapping constructor, a dotted read of a key in a document
+this evaluator loaded, a fixed set of mathematics functions, and one namespaced call that reads an
 auxiliary document. A construct
 outside that grammar is refused with a located diagnostic naming what it met — never evaluated, and
 never quietly approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
@@ -36,8 +37,15 @@ description needing Python behavior the grammar does not carry; it has
 - Boolean logic: `and`, `or`, `not`, short-circuiting — an operand that cannot change the result is
   never evaluated.
 - The conditional expression, `a if condition else b`. Only the branch taken is evaluated.
-- Membership: `key in mapping`, where the key reads as text.
-- Subscripting a mapping, including a chain of them: `${joint_limits['A1']['lower']}`.
+- Membership, against two kinds: `key in mapping`, where the key reads as text, and
+  `'x' in text`, which tests substring containment.
+- Subscripting a mapping, including a chain of them: `${joint_limits['A1']['lower']}`. A sequence
+  takes an integer subscript on the same spelling, and a negative one counts back from the end, so
+  `${names[0]}` and `${names[-1]}` are its first and last elements.
+- `dict(a=1, b=2)`, which builds a mapping the rest of the grammar can read.
+- A dotted read of a key in a mapping this evaluator loaded: `${config.joint_limits.wrist_3.effort}`
+  reaches what the subscript chain reaches. The rules that gate it are
+  [below](#what-refuses-and-by-which-rule).
 - `xacro.load_yaml(spec)`, where `spec` is any expression yielding text, under the rules in
   [the resource helper](#the-resource-helper).
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
@@ -77,15 +85,24 @@ is the string that produced — so `${xacro.load_yaml('$(find arm_description)/c
 already become a path by the time the expression runs. That is the order the reference resolves a
 substitution in, and it is why the spelling a real description writes for a package-qualified
 document reads at all. An argument command's default is the one exception: `$(arg name default)` is
-dispatched unscanned, so a default the bound argument never uses is never evaluated. The nesting this
-descends is charged against the expression-depth ceiling, so a span nested past it refuses rather
-than running out of stack.
+dispatched unscanned, so a default the bound argument never uses is never evaluated — and when it is
+used, it resolves through the enclosing substitution rather than beside it, so it is charged to the
+same load.
+
+All of that nesting is charged against the expression-depth ceiling, and each shape is charged what it
+costs in stack rather than one apiece: descending into the grammar is one, a nested scan is three and a
+nested substitution is eleven, weighted from the depth at which each shape was measured to exhaust a
+512 KiB thread. So the one ceiling leaves every shape the same headroom, and a document nesting spans
+past it — through a `${}`, through a `$(…)`, or through an argument default that names an argument of
+its own — refuses at a stated position rather than running out of stack.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
 written into a document; a sequence and a mapping have none, so one reaching a document's text is a
-located, typed failure naming the kind rather than an invented serialization. Those last two arrive
-only from an auxiliary document — nothing in the grammar constructs one.
+located, typed failure naming the kind rather than an invented serialization. Those last two reach an
+expression two ways: out of an auxiliary document, and out of the grammar itself — the mapping
+constructor builds a mapping and the named split builds a sequence. Which of the two an expression is
+holding still matters, because only a document's mapping answers a dotted member read.
 
 **A string is text, and the operations on it are the ones a real description evaluates.** String
 literals evaluate, compare for equality against another string, and serve as mapping keys. Two
@@ -152,11 +169,14 @@ representable kind here at all. Brace-literal and bracket-literal container synt
 the reference's own substitution scanner closes the span at the first `}`, so a brace literal never
 reaches its interpreter either.
 
-**Membership and subscripting both require a mapping.** `list[0]` and `x in list` are refused, and so
-is a subscript key that is not text. An auxiliary document's sequence therefore crosses a property
-boundary and reaches a macro intact, but is not indexable here. The two refusals are not the same
-kind: `x in list` is `unsupported`, so a lenient policy may leave the span verbatim, while `list[0]`
-is an `error` and terminal under every policy — as is a key that is not text, on either construct.
+**Subscripting reads a mapping by a text key and a sequence by an integer index; membership tests a
+mapping and a string, and refuses a sequence.** `list[0]` and `list[-1]` read, and an index outside
+the sequence is named as the index it was rather than folded to an end. What refuses on a subscript
+is the key whose kind the container cannot take: text into a sequence, and anything but text into a
+mapping — including a mapping key an auxiliary document wrote as a number or a boolean, which loads
+but which no subscript spelling reaches. `x in list` refuses too, and the refusals are not the same
+kind: `x in list` is `unsupported`, so a lenient policy may leave the span verbatim, while a
+wrong-kind subscript key is an `error` and terminal under every policy.
 
 **Ten ceilings bound the evaluator.** They are the auxiliary document's node count (100 000),
 nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 000), tokens lexed
@@ -201,9 +221,14 @@ yielding anything else — the diagnostic names the kind it produced rather than
 filename, so a number or a collection reaching the call says so at the call instead of composing a
 path nobody wrote.
 
-**One unit tag converts.** `!degrees` is converted, and only when its text is a finite numeric
-literal. Every other tag declines, which is a softenable refusal rather than a fault, so a lenient
-policy leaves the span verbatim instead of failing the load.
+**Six unit tags convert, and only over a numeric literal.** `!radians`, `!degrees`, `!meters`,
+`!millimeters`, `!foot` and `!inches` each multiply their tagged value by the reference's own
+constant, so `!degrees 90` reads as `1.5707963267948966` and `!inches 12` as `0.30479999999999996`.
+The reference evaluates a tagged scalar's text as an expression; here the character set admits a
+decimal literal and nothing else, so a tag written over a name, a call or a hexadecimal literal
+declines rather than being approximated. That decline is softenable — a lenient policy leaves the
+span verbatim — while a tag outside the six is a fault under every policy, named in the diagnostic,
+because a conversion this table does not carry has no constant to apply.
 
 ## Where this diverges from the compatibility target
 
@@ -214,9 +239,10 @@ about from its source.
 **Tighter, by construction rather than by restriction.** The reference hands an expression to an
 interpreter alongside a symbol table; there is no interpreter here and no table to widen.
 Comprehensions, generator expressions, lambdas, f-strings, every string method but the one named
-split, the sequence and set constructors, attribute access and the import machinery are not
+split, the sequence and set constructors, the object protocol and the import machinery are not
 restricted — they are absent from the grammar, and an expression reaching for one is refused with a
-located diagnostic. Nothing in the grammar can name
+located diagnostic. The one thing a dot can mean here is a key of a mapping this evaluator loaded;
+it reaches no attribute of anything. Nothing in the grammar can name
 the filesystem, the network or the process: the one route to a file is the resource helper, where C++
 resolves the spec, enforces containment and reads the bytes.
 
@@ -255,6 +281,31 @@ it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings
 integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
 value at all is a null that spells `None`.
 
+**A block argument's contents are evaluated at the call site there and at the insertion site here.**
+Where a macro receives a block and then drops it, the reference has already evaluated every expression
+inside that block; here nothing inside it is evaluated at all. The rendered documents agree, because
+the work is discarded on both sides, and the corpus comparison covers a pinned description that takes
+exactly this path. What does not agree is the failure: an undefined name inside a discarded block is a
+load failure there and passes unnoticed here. This one is measured but not yet in the reviewed manifest,
+and [known limitations](known-limitations.md) is where a reader meets it.
+
+**A self-referential alias graph loads there and refuses here.** A document whose anchor contains an
+alias to itself — `a: &x [1, *x]` — reads upstream as a value that contains itself, because its reader
+builds a mutable node and fills it in afterwards. A value here is immutable once constructed and its
+collection storage is shared by copying, which cannot denote a cycle at all: the alias arrives while
+its own anchor is still incomplete, and that is where it refuses. This is a reviewed divergence, so
+the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
+**Two string meanings and two mapping-constructor shapes refuse here and render there.** A string
+repeated by an integer and one string ordered against another both render upstream; only the addition
+of two strings and equality between two were measured into this grammar, so the multiplication
+operator and the ordering operators refuse a string operand rather than taking a meaning nothing
+measured. The same rule governs the split: the no-argument form collapses runs of whitespace and
+drops the leading and trailing fields, which is a different algorithm from the explicit-separator form
+admitted here, and a second argument bounding how many separators are consumed is a second parameter
+this one operation does not take. All four are reviewed divergences, and so are the two wider mapping
+constructor shapes above.
+
 **The span scanner is quote-aware and counts nesting where the reference's is neither.** The
 reference finds a `${}` span's end with a pattern that stops at the first `}` wherever it stands, and
 three spellings differ because of it. `${'a}b'}` renders `a}b` here and refuses there as an
@@ -264,7 +315,7 @@ the inner scan then resolves the nested span before the outer expression runs. A
 `${'%.3f' % 1.2345}` renders `1.234` there and refuses here, because only arithmetic remainder was
 measured into this grammar and a string operand takes no formatting meaning. All three are recorded
 as reviewed divergences, so the comparison fails if one stops reproducing exactly as much as it fails
-if a new one appears. Two neighbouring spellings are *not* divergences, though they refuse for
+if a new one appears. Two neighboring spellings are *not* divergences, though they refuse for
 different reasons on each side: `${ {'a': 1} }` and `${f'{v:.3f}'}` refuse on both, there because the
 truncated fragment will not parse and here because neither a brace literal nor a format literal is in
 the grammar.
@@ -313,17 +364,32 @@ What is compared, exactly:
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
   loads. Each is driven through a document seeding exactly the names it reads, so a failing case
   names one form.
-- **Authored expression cases beside them** — the spellings no pinned description reaches, named here
-  and driven through the same minimized document: an index into a sequence, a key the reference's own
-  mapping wrapper answers itself, the keyword-argument mapping constructor, and every string meaning
+- **Fifty-one authored expression cases beside them** — the spellings no pinned description reaches,
+  named here and driven through the same minimized document: an index into a sequence, forwards and
+  backwards and off both ends, a key the reference's own mapping wrapper answers itself, the
+  keyword-argument mapping constructor and every argument shape it refuses, and every string meaning
   this grammar admits or refuses. A chained comparison and most of the mathematics names are still
   written by no measured description and are measured against upstream by nothing here.
+- **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
+  tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
+  than read off the YAML specification.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
 matching nothing. Each known divergence is listed in a reviewed manifest by its exact text, in both
 directions: an unlisted divergence fails the run, and a listed one that no longer reproduces fails it
 too.
+
+**What each pinned entry point is, and what it exercises, is recorded rather than described.** A third
+committed record carries one row per pinned entry point: the document, its immutable source revision,
+the arguments it needs, what upstream produced, what meios produced, which constructs the load
+actually exercised, and any reviewed divergence. The construct column is compared against an
+observation taken from loading that document, in both directions, so a description that quietly stops
+exercising what it was pinned for fails as loudly as one that starts exercising something the row does
+not claim. All thirteen rows record agreement — on the result and on the whole normalized rendered
+document — and that empty divergence column is asserted empty rather than ignored. Two things fall
+straight out of the record: exactly one pinned description resolves a duplicate key, and no Universal
+Robots or KUKA entry point reads a mapping by a member name.
 
 The comparison against a fresh upstream render runs on Linux, where the pinned upstream tooling is
 installed and run. The documents themselves are not confined to it: every push builds the library and
@@ -341,9 +407,10 @@ down.
 ## What this is not
 
 **This is not a sandbox, and it does not need to be one.** There is no interpreter to escape and no
-authority to withdraw: the grammar has no import machinery, no attribute access, no `open` and no way
-to name one. Those are absent rather than withheld, so there is no denylist to keep current as a
-future language grows a name, and no reach to close. The one thing an expression touches outside
+authority to withdraw: the grammar has no import machinery, no object protocol, no `open` and no way
+to name one — a dot after a value reaches a loaded document's key and nothing else. Those are absent
+rather than withheld, so there is no denylist to keep current as a future language grows a name, and
+no reach to close. The one thing an expression touches outside
 itself is an auxiliary text document, and C++ resolves, contains and reads that before the evaluator
 sees a byte of it.
 
@@ -423,12 +490,29 @@ has not earned the right to state either way.
 A mapping or a sequence that came back from `xacro.load_yaml` is a value like any other: it binds to
 a property, passes as a macro argument, and is read by subscript. A mapping also answers a dotted
 read, so `${config.joint_limits}` and `${config['joint_limits']}` reach the same key; a sequence is
-read by index only, and both spellings of a name the reference's mapping wrapper answers itself are
-covered by the dotted rule above.
+read by index only, counting back from the end for a negative one, so `${links[-1]}` is the last
+element of a `links:` list. Both spellings of a name the reference's mapping wrapper answers itself
+are covered by the dotted rule above.
 
-**What crosses a property boundary.** A property binds text, so a mapping or a sequence crossing a
-`xacro:property` boundary is carried across inside a text encoding and restored on the other side.
-The third property out reads exactly as the first does, and there is no hop limit to exceed:
+**What a document may say, and how it reads.** An anchor and the alias that names it denote the same
+subtree, so a configuration that writes one inertia and reuses it reads the same both places. A merge
+key flattens the mapping it names into the one that carries it, and a key the carrying mapping also
+writes wins over the merged one. A key written twice resolves to the first position and the last
+value, which is a rule a real robot description reaches: one auxiliary document in the measured
+corpus writes a key twice. And a key need not be text — a document may write a number, a boolean or
+an empty key, and it loads. Two such keys are the same key when the reference's own comparison would
+say so, which means the numeric kinds compare by value across their whole range (`1` and `true` are
+one key) while text and a null compare only within their own kind (`'1'` and `1` are two). What a
+non-text key does *not* have is a way to be read: every subscript key is text, so such an entry loads,
+counts and can collide, and no expression reaches it.
+
+**What crosses a property boundary.** An attribute that is exactly one `${…}` binds the value that
+span evaluated to, with its kind and its origin intact, so a mapping or a sequence crosses a
+`xacro:property`, a macro argument and a nested scope without being rendered and re-read. The third
+property out reads exactly as the first does — dotted reads included — and there is no hop limit to
+exceed. An attribute mixing a span with literal text is the other path, and it renders: a collection
+has no scalar spelling, so a collection reaching mixed text is a typed failure naming the kind rather
+than an invented serialization.
 
 ```xml
 <xacro:arg name="limits" default="$(find my_description)/config/joint_limits.yaml"/>
@@ -449,12 +533,16 @@ The third property out reads exactly as the first does, and there is no hop limi
 
 **What does not carry.** A container an author wrote literally in a value is text and stays text: a
 property whose value is `{'a': 1}` binds that string, and subscripting it is refused rather than
-answered. Nothing in the grammar constructs a mapping or a sequence, so there is no rebuilt-container
-case to describe — a container's origin is always an auxiliary document.
+answered. A container the grammar itself built — a `dict(…)` or the sequence a split yields — crosses
+a property boundary the same way a loaded one does and reads the same on the other side, with one
+difference: it never gains a member path. `${dict(a=1)['a']}` reads after any number of hops, and
+`${dict(a=1).a}` refuses after none, because what the dotted rule gates on is which document a value
+came out of and an authored container came out of none.
 
-**A control character an author writes is erased.** A container crosses a property boundary inside a
-text encoding delimited by control characters the XML 1.0 charset clause forbids outright, so one can
-never appear in a legitimate document. An author who writes one anyway — as a raw byte, or as the
+**A control character an author writes is erased.** Under the opt-in backend a container does cross a
+property boundary as text, delimited by two control characters the XML 1.0 charset clause forbids
+outright, so neither can appear in a legitimate document. An author who writes one anyway — as a raw
+byte, or as the
 character-reference spelling of the same code point — gains nothing by it: the character is erased
 from authored text before that text becomes a property value, an argument default, a macro parameter
 or a caller-supplied argument. The reachability an auxiliary load grants therefore cannot be forged
@@ -468,8 +556,11 @@ the reason given above.
 ## What an expansion hands back
 
 Expansion is a result, never a flag beside a document. `meios::expand` returns either an `expansion`
-carrying the expanded document beside a record of which constructs that one load exercised — marked
-where each was exercised rather than declared anywhere, and read through `exercised` — or an
+carrying the expanded document beside a record of which constructs that one load exercised — a closed
+vocabulary of fourteen, six the auxiliary-document reader marks and eight the expression evaluator
+marks, each at the point the construct actually resolves rather than declared anywhere, and read
+through `exercised`. A spelling outside the vocabulary resolves to nothing, and nothing is charged
+against the record: it is an observation, not an eleventh ceiling. The other arm is an
 `expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a
 refused system operation caused it — that operation's native cause. A terminal failure is reported
 exactly once through the sink you supplied and returned on the error arm, so you neither log it
@@ -511,8 +602,9 @@ int main()
 `meios::eval-python` is a separate module, off by default, for a description you trust that needs
 Python behavior the grammar above does not carry — a comprehension, an f-string, a string method
 other than the named split, a method call on a loaded mapping, string repetition or ordering, or a
-wider set of unit tags, whose tagged text it evaluates as
-an expression the way the reference does. It drives a *found* (never fetched) CPython. Its default
+unit tag written over something other than a numeric literal: it registers the same six tags and
+evaluates the tagged text as an expression, the way the reference does. It drives a *found* (never
+fetched) CPython. Its default
 class, `meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses
 anything outside it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`,
 `format-traversal`, `non-allowlisted-builtin`, `uncontained-yaml-path`. Its sibling

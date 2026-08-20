@@ -35,10 +35,12 @@ the work that would close it.
   `model_sink`. Both link one target and both hand back the same diagnostics.
 - **xacro expanded in process:** properties, arguments, macros, includes, and `xacro:if`/`xacro:unless`
   are resolved by a built-in evaluator that starts no interpreter. Its grammar is range-checked
-  arithmetic, comparison, boolean logic, membership and mapping subscripts, the conditional
-  expression, a fixed set of mathematics functions, and `xacro.load_yaml` for an auxiliary
-  configuration document; a construct outside it is refused with a located diagnostic naming what it
-  met, and six finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
+  arithmetic, comparison, boolean logic, membership against a mapping and against a string, subscripts
+  into a mapping and into a sequence, the conditional expression, four string meanings including one
+  named split, a keyword-argument mapping constructor, a dotted read of a loaded document's key, a
+  fixed set of mathematics functions, and `xacro.load_yaml` for an auxiliary configuration document;
+  a construct outside it is refused with a located diagnostic naming what it
+  met, and ten finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
   the network or the process — the one route to a file is `xacro.load_yaml`, where C++ resolves the
   spec, enforces containment and reads the bytes before the evaluator sees one. A trusted description needing
   comprehensions, f-strings or string methods can opt into a
@@ -296,6 +298,9 @@ build instead of rotting on the page.
   refusal carries, and the frame and unit conventions the numbers follow.
 - [Known limitations](docs/known-limitations.md) — every defect and caveat live at this point in the
   library's life, described by its user-facing effect.
+- [Description corpus survey](docs/corpus-survey.md) — which public third-party robot descriptions were
+  examined for the evaluator constructs no pinned description exercises, what each one contributes, and
+  which constructs no maintained carrier was found for.
 
 ## Contributing
 

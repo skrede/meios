@@ -66,3 +66,7 @@ were trying to do.
   behind it.
 - [Known limitations](known-limitations.md) — every defect and caveat live at this point in the
   library's life, described by its user-facing effect.
+- [Description corpus survey](corpus-survey.md) — the record of which public third-party robot
+  descriptions were examined for the evaluator constructs no pinned description exercises: what each
+  candidate contributes, at which revision and under which license, what was rejected and why, and
+  which constructs no maintained carrier was found for.

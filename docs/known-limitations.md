@@ -214,12 +214,14 @@ to matter is better served by loading and walking in two explicit steps you cont
 mathematics names and twenty builtins — the import machinery, the filesystem and the process are not
 reachable through it. That costs coverage in both directions: `map` and `filter` are not available,
 every use of the string formatting method is refused including an innocent one, and a description
-property named `format` is refused the moment it enters a composed expression. The full subset, the
-four refusal rules and the divergences from canonical xacro are in the [evaluation
-guide](evaluation.md), which also covers `meios::unrestricted_python_evaluator` — a supported backend
-that applies none of those rules and is reachable only from C++. The built-in core evaluator has no
-such exposure — it evaluates a fixed numeric and boolean grammar and loud-fails on anything outside
-it.
+property named `format` is refused the moment it enters a composed expression. This backend is off by
+default and nothing reaches it unless a build asks for it: the [evaluation
+guide](evaluation.md) leads with the built-in grammar that actually runs, and carries this backend's
+subset, its four refusal rules and `meios::unrestricted_python_evaluator` — which applies none of
+those rules and is reachable only from C++ — in a section of its own at the end. The built-in
+evaluator has no such exposure. Its grammar is closed rather than restricted: it has no interpreter to
+widen, no object protocol and no way to name a file, and it loud-fails on anything outside what it
+carries.
 
 **The Python backend has no bound on resource exhaustion.** Under `meios::eval-python` an expression
 such as `${10**10**10}` or `${[0]*10**12}` is refused by nothing — it names no withheld builtin,
@@ -235,6 +237,71 @@ the grammar has no list literal to multiply.
 enrichment enabled, the result of a Python expression is re-hydrated by re-parsing its literal form.
 A result that is not expressible as a Python literal is therefore not representable through this seam;
 the principled opaque-value path is not yet in place.
+
+## Expression evaluation
+
+**Every way this evaluator differs from canonical xacro is written down, and twelve of them are
+measured.** The reviewed manifest carries twelve rows and the differential drives them on every push in
+both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as a
+new one does. Most of them are a meaning upstream has and this grammar refuses:
+
+- A string repeated by an integer, and one string ordered against another. Only the addition of two
+  strings and equality between two were measured into this grammar.
+- `split()` with no separator, which collapses runs of whitespace and drops the leading and trailing
+  fields, and `split(sep, n)` with a count. One separator, given explicitly, is the whole of what the
+  named split takes.
+- The mapping constructor built from a sequence of pairs, and from a positional argument mixed with
+  keyword ones. `dict(a=1, b=2)` is the one admitted shape.
+- The remainder operator against a string, which formats upstream: `${'%.3f' % 1.2345}` renders there.
+- An auxiliary document whose anchor contains an alias to itself. Upstream's reader builds a value that
+  contains itself; a value here is immutable once constructed, so the alias meets an anchor that is
+  still incomplete and refuses.
+- A member name the reference's own mapping wrapper answers before it consults the document —
+  `${config.keys}` and the ten others like it. Here that spelling refuses and names `${config['keys']}`
+  instead, because answering it would mean something other than what upstream means by it.
+- The mathematics names reached through a `math` namespace, and the reference's own `xacro.arg`,
+  `xacro.tokenize` and message helpers, which are not exposed at all.
+- `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
+  to be met in a real description.
+
+Two differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+string literal, and one expression span written inside another. Both follow from a span scanner that
+folds over quotes and counts depth where the reference's pattern does neither. And two render on both
+sides with different answers: `and` and `or` yield a boolean here rather than the deciding operand, so
+`${1 or 2}` is `True` here and `1` there. That one is deliberate and measured, not an oversight.
+
+The last three entries above are the ones the manifest does not carry, because none of them can be
+matched by exact text: the colliding member names produce upstream text embedding an object's own
+address, and the other two are absences rather than divergent renderings. They are recorded here and on
+the evaluation page instead. The colliding names are checked against a committed measurement of what
+the reference's wrapper answers, and the `math` namespace refuses by a named case; the argument and
+message helpers and the two missing functions refuse as any unrecognized name does, and nothing names
+them individually.
+
+**An expression inside a discarded block argument is never evaluated here, and is evaluated upstream.**
+Where a macro takes a block argument and then drops it — `<xacro:if value="${off}">` around the
+`<xacro:insert_block>` — the reference expands that block's contents at the *call* site, before the
+receiving macro decides anything, while meios expands them only if the block is inserted. On a
+well-formed description the two agree, because the work is discarded either way; the whole rendered
+document is compared against upstream's on every push, and one pinned description takes exactly this
+path. What differs is a description that is *not* well formed there: a block argument naming a property
+nobody bound fails the load upstream and loads clean here. So a description validated only against
+meios can carry a defect in a discarded block that the reference will refuse. This one is not in the
+reviewed manifest — it was measured after that record was last written — and the direction is the
+permissive one, which is why it is written down here rather than left to be met.
+
+**A mapping key an auxiliary document did not write as text loads, and nothing can read it.** A
+document may key a mapping by a number, a boolean or an empty scalar, and it parses — the key is
+admitted, it counts toward the mapping's extent, and it collides with another key exactly as the
+reference's own comparison would have it collide. What no expression has is a spelling that reaches it:
+every subscript key is text, and a dotted member is a name. So such an entry is present and unreadable
+rather than refused at the parse, and a description that needs one needs the explicit backend.
+
+**The string operations compare and count by bytes where the reference counts code points.** Substring
+containment, the named split, the addition of two strings and a string's truth value all work over
+bytes. The two agree over the ASCII text every measured description carries. Whether any real
+description carries non-ASCII text through one of them is unmeasured, so this is written down rather
+than claimed absent.
 
 ## Command-line behavior
 
