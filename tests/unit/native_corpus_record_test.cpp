@@ -104,7 +104,7 @@ TEST_CASE("the pinned expression-valued description is recorded for the built-in
           "[corpus]")
 {
     const std::vector<std::vector<std::string>> found =
-        recorded_documents(listfile_text("corpus.cmake"));
+        recorded_documents(listfile_text("corpus_documents.cmake"));
     REQUIRE(found.size() >= 3);
 
     std::size_t pinned = 0;
@@ -122,7 +122,8 @@ TEST_CASE("the pinned expression-valued description is recorded for the built-in
 
 TEST_CASE("no corpus record asks for the optional evaluator", "[corpus]")
 {
-    for(const std::vector<std::string> &record : recorded_documents(listfile_text("corpus.cmake")))
+    const std::string text = listfile_text("corpus_documents.cmake");
+    for(const std::vector<std::string> &record : recorded_documents(text))
     {
         REQUIRE(record.size() == 4);
         INFO("record for " << record[0] << " naming " << record[2]);
@@ -133,7 +134,7 @@ TEST_CASE("no corpus record asks for the optional evaluator", "[corpus]")
 
 TEST_CASE("the corpus no longer claims the built-in evaluator cannot subscript", "[corpus]")
 {
-    const std::string text = listfile_text("corpus.cmake");
+    const std::string text = listfile_text("corpus_documents.cmake");
     CHECK(text.find("only the Python evaluator") == std::string::npos);
     CHECK(text.find("only the CPython evaluator") == std::string::npos);
     CHECK(text.find("eval-python") == std::string::npos);

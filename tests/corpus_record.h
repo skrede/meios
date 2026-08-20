@@ -65,8 +65,8 @@ inline std::map<std::string, std::string> arg_map(const std::string &spec)
 }
 
 // Four fields per record, joined with '|': path, expansion arguments, evaluator, package root.
-// The records are named in cmake/corpus.cmake; nothing here globs. A field count that is not a
-// whole number of records is not partially parsed — it yields nothing.
+// The records are named in cmake/corpus_documents.cmake; nothing here globs. A field count
+// that is not a whole number of records is not partially parsed — it yields nothing.
 inline std::vector<document> documents(const std::string &records)
 {
     const std::vector<std::string> fields = split(records, '|');

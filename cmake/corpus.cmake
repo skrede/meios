@@ -17,11 +17,15 @@ option(MEIOS_CORPUS_BREADTH
 # carry a matching "# license[<name>]:" line below; the check further down reads
 # this very file, extracts every meios_declare_resource NAME, and FATALs if any
 # lacks its annotation — so a future fetch added without a recorded license fails
-# configure rather than shipping an undetermined license into CI.
+# configure rather than shipping an undetermined license into CI. The line's leading
+# token is the canonical identifier and the parenthetical after it is provenance; an
+# upstream whose manifest declares some other spelling records that spelling in the
+# parenthetical too, and states it at its check call.
 #
 # # license[kuka_experimental]: Apache-2.0 (ros-industrial/kuka_experimental, root LICENSE)
 # # license[ur_description]: BSD-3-Clause (UniversalRobots/Universal_Robots_ROS2_Description, root LICENSE)
 # # license[lbr_med14_r820_description]: Apache-2.0 (lbr-stack/med14_r820_description, package.xml <license>, no root LICENSE)
+# # license[franka_description]: Apache-2.0 (frankarobotics/franka_description, package.xml <license> declares "Apache 2.0")
 # # license[corpus_faulty]: crafted in-repo fixture (project-owned)
 
 # lbr_fri_ros2_stack is deliberately not fetched and not listed, so it carries no
@@ -82,7 +86,8 @@ meios_declare_resource(
     HASH SHA256=3532a25c9942bedcdfe41c845be6d144bbbbcd76f179f14a53a3e7b6972ae72d
     STRIP_TOP_LEVEL
     OUT_DIR MEIOS_CORPUS_UR_DIR)  # ur_description 4.3.1
-meios_corpus_check_license(ur_description "${MEIOS_CORPUS_UR_DIR}/package.xml" "${_corpus_self}")
+meios_corpus_check_license(ur_description "${MEIOS_CORPUS_UR_DIR}/package.xml" "${_corpus_self}"
+    "BSD-3-Clause")
 
 meios_declare_resource(
     NAME lbr_med14_r820_description
@@ -91,75 +96,31 @@ meios_declare_resource(
     STRIP_TOP_LEVEL
     OUT_DIR MEIOS_CORPUS_LBR_DIR)  # lbr_med14_r820_description 2.5.0
 meios_corpus_check_license(lbr_med14_r820_description "${MEIOS_CORPUS_LBR_DIR}/package.xml"
-    "${_corpus_self}")
+    "${_corpus_self}" "Apache-2.0")
+
+# frankaemika/franka_description 301-redirects to frankarobotics/franka_description; the
+# canonical name is what the fetch NAME, the license annotation and the package-root copy carry.
+meios_declare_resource(
+    NAME franka_description
+    URL  https://github.com/frankarobotics/franka_description/archive/refs/tags/2.8.1.tar.gz
+    HASH SHA256=4adcc45f83fd05a5d3d422e1a067fc97bb1d7e28033217debcbe7daba4ab1fd0
+    STRIP_TOP_LEVEL
+    OUT_DIR MEIOS_CORPUS_FRANKA_DIR)  # franka_description 2.8.1
+meios_corpus_check_license(franka_description "${MEIOS_CORPUS_FRANKA_DIR}/package.xml"
+    "${_corpus_self}" "Apache 2.0")
 
 # The resolver's containment guard rejects a package root reached through a symlink, so
 # every self-contained fetch is copied under the name it resolves itself by. The copy is
 # scratch belonging to whichever build tree is running, which is why it is anchored at the
-# top of the build rather than under meios's own binary directory. Three packages anchor
-# here now: ur_description, lbr_med14_r820_description, and kuka_experimental — whose own
-# kr6r900sixx document below keeps resolving against the raw fetch directory, unchanged.
+# top of the build rather than under meios's own binary directory. Four packages anchor
+# here: ur_description, lbr_med14_r820_description, franka_description, and kuka_experimental
+# — whose own kr6r900sixx document keeps resolving against the raw fetch directory, unchanged.
 set(MEIOS_CORPUS_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/_meios_corpus_packages")
 file(COPY "${MEIOS_CORPUS_UR_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description")
 file(COPY "${MEIOS_CORPUS_LBR_DIR}/"
      DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/lbr_med14_r820_description")
+file(COPY "${MEIOS_CORPUS_FRANKA_DIR}/"
+     DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description")
 file(COPY "${MEIOS_CORPUS_KUKA_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/kuka_experimental")
 
-# Every corpus document is named outright rather than found by globbing an extension.
-# A glob over ".urdf" made the tier look broader than it was, and pointing it at the
-# macro extension instead loads fragments as documents: twenty-one of them carry a
-# <robot> root with no name and no links, so every refusal would be a false one.
-# A record is four fields — absolute path, space-separated key=value expansion
-# arguments, the evaluator the document needs, and a package root or nothing — and
-# the records are joined with the "|" the resource paths already travel under.
-# The evaluator vocabulary is closed at three spellings, of which the corpus names two:
-# core for a document that needs no expression evaluation, and native for one the
-# built-in evaluator must handle alone. The third selects the CPython backend and no
-# record here needs it. Any other spelling fails the document rather than falling
-# through to a default backend.
-set(MEIOS_CORPUS_DOCUMENTS "")
-macro(meios_corpus_document _path _args _eval _root)
-    list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}")
-endmacro()
-
-if(MEIOS_CORPUS_BREADTH)
-    foreach(_doc IN ITEMS
-            kuka_kr120_support/urdf/kr120r2500pro.urdf
-            kuka_kr16_support/urdf/kr16_2.urdf
-            kuka_kr210_support/urdf/kr210l150.urdf
-            kuka_lbr_iiwa_support/urdf/lbr_iiwa_14_r820.urdf)
-        meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/${_doc}" "" core "")
-    endforeach()
-endif()
-
-# The only corpus document resolving $(find) across two sibling packages. The fetched
-# tarball root already holds both under the names the description resolves them by, so
-# it serves as the package root directly and no copy is needed.
-meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/kuka_kr6_support/urdf/kr6r900sixx.xacro"
-    "" native "${MEIOS_CORPUS_KUKA_DIR}")
-
-# The shipped ur_type default is deliberately invalid, so a variant must be named. ur3e's
-# third wrist has no position limits, so a boolean read out of the auxiliary document drives
-# the branch that types the joint continuous, flowing through a string comparison into a
-# limit element carrying no position keys — a path ur5e cannot reach. safety_limits guards
-# one <safety_controller> element per joint and force_abs_paths changes only mesh-URI
-# spelling, so each branch keeps every row plain ur5e's record already covers.
-meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur7e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e safety_limits=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e force_abs_paths=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-
-# Both of its xacro:arg declarations default, so the entry point loads with no key=value
-# override at all.
-meios_corpus_document(
-    "${MEIOS_CORPUS_PACKAGE_ROOT}/lbr_med14_r820_description/urdf/lbr_med14_r820.urdf.xacro"
-    "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
-
-list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
-math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")
+include("${CMAKE_CURRENT_LIST_DIR}/corpus_documents.cmake")
