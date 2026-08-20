@@ -44,6 +44,7 @@ void value_builder::OnAlias(const YAML::Mark &mark, YAML::anchor_t anchor)
         throw stopped("an alias to an anchor that is not yet complete", mark,
                       yaml_failure::refused);
     charge_alias(source->denoted);
+    exercised(evaluator_construct::alias);
     share(*source, mark);
 }
 
@@ -65,6 +66,7 @@ void value_builder::OnSequenceStart(const YAML::Mark &mark, const std::string &t
         throw stopped("a sequence as a mapping key", mark, yaml_failure::refused);
     if(tag != "?" && tag != "!")
         throw stopped("an unsupported tag '" + tag + '\'', mark, yaml_failure::refused);
+    exercised(evaluator_construct::document_sequence);
     m_frames.push_back(frame{ .listing = true, .at = mark, .anchor = anchor });
 }
 
@@ -90,12 +92,21 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag,
 // Merged entries lead and the entries the document wrote follow, which is all the precedence
 // this builder states: the mapping constructor's first-position, last-value rule turns that
 // order into the resolution upstream produces.
+//
+// A mapping holding fewer entries than were placed into it is that rule having fired, read off
+// the extent rather than searched for, so the constructor stays the only resolver. A merge whose
+// key the document also writes reaches the same rule by the same route and is reported the same
+// way, because it is the same resolution and not a second one.
 void value_builder::OnMapEnd()
 {
     frame done = std::move(m_frames.back());
     m_frames.pop_back();
+    const std::size_t placed = done.merged.size() + done.entries.size();
     done.merged.insert(done.merged.end(), done.entries.begin(), done.entries.end());
-    deliver(value::make_mapping(std::move(done.merged)), done.denoted + 1, done.anchor, done.at);
+    value made = value::make_mapping(std::move(done.merged));
+    if(made.size() != placed)
+        exercised(evaluator_construct::duplicate_key);
+    deliver(std::move(made), done.denoted + 1, done.anchor, done.at);
 }
 
 // An empty document raises no event, so the null it stands for is made here rather than

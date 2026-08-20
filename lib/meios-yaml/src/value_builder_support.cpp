@@ -35,6 +35,11 @@ bool value_builder::expecting_key() const
         && !m_frames.back().key.has_value();
 }
 
+void value_builder::exercised(evaluator_construct one)
+{
+    m_counters.constructs.mark(one);
+}
+
 void value_builder::charge_node()
 {
     if(m_counters.yaml_nodes >= m_limits.yaml_nodes)
@@ -121,6 +126,10 @@ value value_builder::resolved(const std::string &text, const std::string &tag,
     const scalar_result made = resolve_scalar(text, tag);
     if(!made.resolved)
         throw stopped(made.refusal, mark, made.failure);
+    // The two non-specific tags are how a scalar says it carries no tag at all, so what is left
+    // here is the closed unit-tag table having converted the quantity.
+    if(tag != "?" && tag != "!")
+        exercised(evaluator_construct::unit_tag);
     return *made.resolved;
 }
 

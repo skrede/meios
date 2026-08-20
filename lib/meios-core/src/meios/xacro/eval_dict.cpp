@@ -37,6 +37,7 @@ value built_or_repeated(parser &p, std::vector<value::entry> entries)
     const value built = value::make_mapping(std::move(entries));
     if(built.size() != named)
         return p.fail("a keyword argument is repeated in the mapping constructor");
+    p.exercised(evaluator_construct::mapping_literal);
     return built;
 }
 

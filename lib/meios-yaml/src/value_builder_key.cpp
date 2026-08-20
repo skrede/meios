@@ -36,6 +36,8 @@ scalar_key key_of(const value &one)
 
 void value_builder::admit_key(scalar_key key)
 {
+    if(key.kind() != value_kind::string)
+        exercised(evaluator_construct::non_string_key);
     m_frames.back().key = std::move(key);
 }
 
@@ -49,6 +51,7 @@ void value_builder::take_key(const std::string &text, const std::string &tag,
     remember(anchor, made.with_yaml_origin(), 1);
     if(tag == "?" && name && *name == "<<")
     {
+        exercised(evaluator_construct::merge_key);
         m_frames.back().merging = true;
         return;
     }

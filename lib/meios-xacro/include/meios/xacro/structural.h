@@ -4,6 +4,7 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/evaluator_constructs.h"
 
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/expansion_error.h"
@@ -24,6 +25,9 @@ class evaluator_handle;
 struct expansion
 {
     std::string document;
+    // Which constructs the load exercised, marked where each was exercised rather than declared
+    // anywhere; a load that exercised none leaves it empty.
+    construct_set exercised;
 };
 
 // Expands a xacro document into a flat URDF string using only pugixml: recursive
@@ -33,8 +37,8 @@ struct expansion
 // and diagnostics. eval_policy and an optional injected backend govern how an
 // unsupported ${}/$(eval) construct is resolved; the delegating overload uses fail
 // policy and the core evaluator. A terminal failure is reported once through the
-// supplied sink and returned on the error arm; a successful result carries the
-// expanded document and nothing else.
+// supplied sink and returned on the error arm; on the value arm the flattened text
+// arrives beside the observation of what this one load exercised.
 expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
                                             source_stack &sources,
                                             const std::filesystem::path &document,

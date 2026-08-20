@@ -1,6 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_EVALUATOR_LIMITS_H
 #define HPP_GUARD_MEIOS_XACRO_EVALUATOR_LIMITS_H
 
+#include "meios/xacro/evaluator_constructs.h"
+
 #include <cstddef>
 
 namespace meios
@@ -97,11 +99,16 @@ private:
     }
 };
 
+// The ten axes a load charges against the ceilings above, and beside them the set of constructs
+// that load exercised. The set is not an eleventh axis: nothing is charged against it and no
+// ceiling bounds it. It rides here because it is per load for the same reason the counters are,
+// and because both layers that mark a construct already hold this one reference.
 struct evaluator_counters
 {
     evaluator_counters()
         : yaml_nodes(0), yaml_depth(0), bytes(0), tokens(0), steps(0), expression_depth(0),
-          alias_expansion(0), numeric_magnitude(0), expression_tokens(0), string_length(0)
+          alias_expansion(0), numeric_magnitude(0), expression_tokens(0), string_length(0),
+          constructs()
     {
     }
 
@@ -115,6 +122,7 @@ struct evaluator_counters
     std::size_t numeric_magnitude;
     std::size_t expression_tokens;
     std::size_t string_length;
+    construct_set constructs;
 };
 
 }

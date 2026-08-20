@@ -76,7 +76,7 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
         return refuse(ctx, document);
     std::ostringstream out;
     result.save(out, "", pugi::format_raw);
-    const expansion expanded{ out.str() };
+    const expansion expanded{ out.str(), ctx.session.counters.constructs };
     return expanded;
 }
 

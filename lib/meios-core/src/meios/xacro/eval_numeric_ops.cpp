@@ -38,7 +38,10 @@ value concatenate(parser &p, const value &a, const value &b)
     const std::optional<std::string> left = a.text();
     const std::optional<std::string> right = b.text();
     if(left && right)
+    {
+        p.exercised(evaluator_construct::string_concatenation);
         return text_result(p, *left + *right);
+    }
     return p.fail_unsupported("a string concatenates only with another string operand, not with a "
                               + std::string(kind_name(left ? b.kind() : a.kind()))
                               + " — use eval-python");
@@ -87,10 +90,14 @@ double need_double(parser &p, const value &v)
 bool need_truth(parser &p, const value &v)
 {
     std::optional<bool> truth = truthy(v);
-    if(truth)
-        return *truth;
-    refuse_kind(p, v);
-    return false;
+    if(!truth)
+    {
+        refuse_kind(p, v);
+        return false;
+    }
+    if(v.kind() == value_kind::string)
+        p.exercised(evaluator_construct::string_truth);
+    return *truth;
 }
 
 // The public contract admits finite floating-point only, so an overflowing or undefined

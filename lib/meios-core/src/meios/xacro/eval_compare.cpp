@@ -64,6 +64,7 @@ value substring_of(parser &p, const value &needle, const std::string &haystack)
     if(!text)
         return p.fail("only a string is contained in a string, not a "
                       + std::string(kind_name(needle.kind())));
+    p.exercised(evaluator_construct::string_membership);
     return value{ haystack.find(*text) != std::string::npos };
 }
 

@@ -468,14 +468,16 @@ the reason given above.
 ## What an expansion hands back
 
 Expansion is a result, never a flag beside a document. `meios::expand` returns either an `expansion`
-carrying the expanded document and nothing else, or an `expansion_error` carrying the failing
-location, a `diagnostic_code`, a message and — where a refused system operation caused it — that
-operation's native cause. A terminal failure is reported exactly once through the sink you supplied
-and returned on the error arm, so you neither log it again nor risk seeing it twice. Warnings, the
-environment-read note and every other nonterminal diagnostic keep travelling that same sink,
-unaffected. A span the active policy declines to resolve is a **success** whose span is left
-verbatim; [what refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which
-failures are terminal at all. `meios::substitute` publishes the same two arms over the same record.
+carrying the expanded document beside a record of which constructs that one load exercised — marked
+where each was exercised rather than declared anywhere, and read through `exercised` — or an
+`expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a
+refused system operation caused it — that operation's native cause. A terminal failure is reported
+exactly once through the sink you supplied and returned on the error arm, so you neither log it
+again nor risk seeing it twice. Warnings, the environment-read note and every other nonterminal
+diagnostic keep travelling that same sink, unaffected. A span the active policy declines to resolve
+is a **success** whose span is left verbatim;
+[what refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which failures
+are terminal at all. `meios::substitute` publishes the same two arms over the same record.
 
 <!-- meios:snippet name=expansion-result tu -->
 ```cpp

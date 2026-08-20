@@ -43,6 +43,9 @@ struct parser
     bool enter_level();
     void leave_level() { --nesting; }
     bool refuse_exhausted();
+    // Marked where the construct is exercised and nowhere else, so what a load reports is
+    // what it did rather than what a reader believed it would do.
+    void exercised(evaluator_construct one) { session.counters.constructs.mark(one); }
 
     const std::vector<token> &tokens;
     token_spans spans;

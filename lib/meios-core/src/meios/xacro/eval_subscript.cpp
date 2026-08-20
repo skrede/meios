@@ -42,6 +42,9 @@ value position_into(parser &p, const value &container, const value &key)
     if(at < 0 || at >= extent)
         return p.fail("index " + std::to_string(asked) + " is outside the sequence",
                       diagnostic_code::undefined_property);
+    p.exercised(evaluator_construct::sequence_subscript);
+    if(asked < 0)
+        p.exercised(evaluator_construct::negative_index);
     return *container.at(static_cast<std::size_t>(at));
 }
 

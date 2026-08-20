@@ -89,6 +89,7 @@ private:
 
     bool expecting_key() const;
     void charge_node();
+    void exercised(evaluator_construct one);
     void charge_alias(std::size_t denoted);
     void admit_depth(std::size_t depth);
     void place(frame &top, value produced);

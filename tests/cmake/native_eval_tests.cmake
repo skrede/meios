@@ -88,7 +88,8 @@ foreach(stem IN ITEMS native_value native_render native_expression native_member
 endforeach()
 
 foreach(stem IN ITEMS native_yaml native_yaml_resolver native_yaml_seam native_yaml_alias
-                      native_yaml_merge native_load_yaml native_sequence native_sequence_edge)
+                      native_yaml_merge native_load_yaml native_sequence native_sequence_edge
+                      native_constructs)
     meios_add_native_test(${stem} yaml)
 endforeach()
 

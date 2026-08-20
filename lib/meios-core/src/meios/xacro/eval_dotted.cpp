@@ -54,6 +54,7 @@ value split_text(parser &p, const std::string &text, const std::string &separato
     fields.push_back(text_result(p, text.substr(at)));
     if(!p.ok)
         return value{};
+    p.exercised(evaluator_construct::named_split);
     return value::make_sequence(std::move(fields));
 }
 
@@ -121,6 +122,7 @@ value member_of(parser &p, const value &base, std::string_view member)
         return p.fail_unsupported("'" + std::string(member) + "' names a mapping operation "
                                   "upstream rather than a key — write it as ['"
                                   + std::string(member) + "'] — use eval-python");
+    p.exercised(evaluator_construct::dotted_member);
     return index_into(p, base, value{ std::string(member) });
 }
 

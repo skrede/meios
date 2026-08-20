@@ -14,6 +14,7 @@
 #include "meios/xacro/evaluator_handle.h"
 #include "meios/xacro/evaluator_concept.h"
 #include "meios/xacro/yaml_parser_handle.h"
+#include "meios/xacro/evaluator_constructs.h"
 #include "meios/xacro/text_resource_loader.h"
 #include "meios/xacro/detail/numeric.h"
 

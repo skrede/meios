@@ -94,6 +94,7 @@ TEST_CASE("a session starts every counter at zero and charges before the work", 
     REQUIRE(session.counters.numeric_magnitude == 0);
     REQUIRE(session.counters.expression_tokens == 0);
     REQUIRE(session.counters.string_length == 0);
+    REQUIRE(session.counters.constructs.empty());
     REQUIRE(session.failure == meios::eval_failure_kind::none);
 
     REQUIRE(session.charge_tokens(4, silent, {}));
