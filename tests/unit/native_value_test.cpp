@@ -13,9 +13,12 @@
 #include <utility>
 #include <optional>
 #include <functional>
+#include <string_view>
 
 namespace
 {
+
+using key = meios::detail::scalar_key;
 
 meios::value integer_value(std::int64_t number)
 {
@@ -36,7 +39,7 @@ meios::value string_value(std::string text)
 
 meios::value sample_mapping()
 {
-    std::vector<std::pair<std::string, meios::value>> entries;
+    std::vector<meios::value::entry> entries;
     entries.emplace_back("zulu", integer_value(1));
     entries.emplace_back("alpha", integer_value(2));
     entries.emplace_back("mike", integer_value(3));
@@ -155,9 +158,9 @@ TEST_CASE("a mapping iterates in source order and looks up regardless of it", "[
 
     REQUIRE(table.kind() == meios::value_kind::mapping);
     REQUIRE(table.size() == 3);
-    REQUIRE(table.key_at(0) == std::optional<std::string>("zulu"));
-    REQUIRE(table.key_at(1) == std::optional<std::string>("alpha"));
-    REQUIRE(table.key_at(2) == std::optional<std::string>("mike"));
+    REQUIRE(table.key_at(0) == key{ "zulu" });
+    REQUIRE(table.key_at(1) == key{ "alpha" });
+    REQUIRE(table.key_at(2) == key{ "mike" });
 
     REQUIRE(table.at("alpha") == std::optional<meios::value>(integer_value(2)));
     REQUIRE(table.at("zulu") == std::optional<meios::value>(integer_value(1)));
@@ -167,15 +170,87 @@ TEST_CASE("a mapping iterates in source order and looks up regardless of it", "[
 
 TEST_CASE("a duplicate mapping key keeps the last value in the first position", "[native][value]")
 {
-    std::vector<std::pair<std::string, meios::value>> entries;
+    std::vector<meios::value::entry> entries;
     entries.emplace_back("dof", integer_value(6));
     entries.emplace_back("name", string_value("arm"));
     entries.emplace_back("dof", integer_value(7));
     const meios::value table = meios::value::make_mapping(std::move(entries));
 
     REQUIRE(table.size() == 2);
-    REQUIRE(table.key_at(0) == std::optional<std::string>("dof"));
+    REQUIRE(table.key_at(0) == key{ "dof" });
     REQUIRE(table.at("dof") == std::optional<meios::value>(integer_value(7)));
+}
+
+TEST_CASE("a key compares the way Python compares the key object", "[native][value]")
+{
+    CHECK(key{ "dof" } == key{ "dof" });
+    CHECK_FALSE(key{ "dof" } == key{ "name" });
+    CHECK(key{} == key{});
+    CHECK_FALSE(key{} == key{ std::string() });
+    CHECK_FALSE(key{} == key{ "null" });
+    CHECK(key{ std::int64_t{ 1 } } == key{ true });
+    CHECK(key{ std::int64_t{ 0 } } == key{ false });
+    CHECK(key{ std::int64_t{ 1 } } == key{ 1.0 });
+    CHECK(key{ true } == key{ 1.0 });
+    CHECK_FALSE(key{ std::int64_t{ 1 } } == key{ "1" });
+}
+
+// A bare int64_t == double would convert the integer to double first and lose every
+// distinction above 2^53, folding two keys a document wrote apart into one.
+TEST_CASE("an integer key compares against a real without losing precision", "[native][value]")
+{
+    CHECK(key{ std::int64_t{ 9007199254740992 } } == key{ 9007199254740992.0 });
+    CHECK_FALSE(key{ std::int64_t{ 9007199254740993 } } == key{ 9007199254740992.0 });
+    CHECK_FALSE(key{ INT64_MAX } == key{ 9223372036854775808.0 });
+    CHECK_FALSE(key{ std::int64_t{ 1 } } == key{ 1.5 });
+}
+
+TEST_CASE("a key written in a second scalar kind resolves the way upstream resolves it",
+          "[native][value]")
+{
+    struct collision
+    {
+        std::size_t entries;
+        meios::value_kind kept;
+        std::string_view shape;
+        key first;
+        key second;
+    };
+    const collision measured[] = {
+        { 1, meios::value_kind::integer, "1 then true", key{ std::int64_t{ 1 } }, key{ true } },
+        { 1, meios::value_kind::integer, "1 then 1.0", key{ std::int64_t{ 1 } }, key{ 1.0 } },
+        { 1, meios::value_kind::boolean, "true then 1", key{ true }, key{ std::int64_t{ 1 } } },
+        { 1, meios::value_kind::integer, "0 then false", key{ std::int64_t{ 0 } }, key{ false } },
+        { 2, meios::value_kind::null, "null then 'null'", key{}, key{ "null" } },
+        { 2, meios::value_kind::string, "'1' then 1", key{ "1" }, key{ std::int64_t{ 1 } } },
+    };
+    for(const collision &one : measured)
+    {
+        INFO("keys [" << one.shape << ']');
+        std::vector<meios::value::entry> entries;
+        entries.emplace_back(one.first, string_value("a"));
+        entries.emplace_back(one.second, string_value("b"));
+        const meios::value table = meios::value::make_mapping(std::move(entries));
+
+        REQUIRE(table.size() == one.entries);
+        CHECK(table.key_at(0)->kind() == one.kept);
+        CHECK(table.at(std::size_t{ 0 })
+              == std::optional<meios::value>(string_value(one.entries == 1 ? "b" : "a")));
+    }
+}
+
+TEST_CASE("a lookup by text finds the text key and not a number spelled the same",
+          "[native][value]")
+{
+    std::vector<meios::value::entry> entries;
+    entries.emplace_back(key{ "1" }, string_value("quoted"));
+    entries.emplace_back(key{ std::int64_t{ 1 } }, string_value("plain"));
+    const meios::value table = meios::value::make_mapping(std::move(entries));
+
+    REQUIRE(table.size() == 2);
+    CHECK(table.at("1") == std::optional<meios::value>(string_value("quoted")));
+    CHECK(table.at(key{ std::int64_t{ 1 } }) == std::optional<meios::value>(string_value("plain")));
+    CHECK(table.at(key{ true }) == std::optional<meios::value>(string_value("plain")));
 }
 
 TEST_CASE("keyed lookup is total over every kind", "[native][value]")

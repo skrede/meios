@@ -1,6 +1,7 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_VALUE_ACCESS_H
 #define HPP_GUARD_MEIOS_XACRO_VALUE_ACCESS_H
 
+#include "meios/xacro/detail/value_key.h"
 #include "meios/xacro/detail/value_node.h"
 
 #include "meios/xacro/value.h"
@@ -39,11 +40,12 @@ inline value value::make_sequence(std::vector<value> items)
 // mapping resolves upstream.
 inline value value::make_mapping(std::vector<entry> entries)
 {
-    std::vector<std::string> keys;
+    std::vector<detail::scalar_key> keys;
     std::vector<value> items;
     for(entry &incoming : entries)
     {
-        const std::vector<std::string>::iterator seen = std::ranges::find(keys, incoming.first);
+        const std::vector<detail::scalar_key>::iterator seen =
+            std::ranges::find(keys, incoming.first);
         if(seen == keys.end())
         {
             keys.push_back(std::move(incoming.first));
@@ -88,11 +90,17 @@ inline std::optional<value> value::at(std::string_view key) const
     return table == nullptr ? std::nullopt : copied(table->find(key));
 }
 
-inline std::optional<std::string> value::key_at(std::size_t index) const
+inline std::optional<value> value::at(const detail::scalar_key &key) const
 {
     const detail::mapping_node *table = node_or_null<detail::mapping_node>();
-    const std::string *key = table == nullptr ? nullptr : table->key_at(index);
-    return key == nullptr ? std::nullopt : std::optional<std::string>(*key);
+    return table == nullptr ? std::nullopt : copied(table->find(key));
+}
+
+inline std::optional<detail::scalar_key> value::key_at(std::size_t index) const
+{
+    const detail::mapping_node *table = node_or_null<detail::mapping_node>();
+    const detail::scalar_key *key = table == nullptr ? nullptr : table->key_at(index);
+    return key == nullptr ? std::nullopt : std::optional<detail::scalar_key>(*key);
 }
 
 inline bool value::operator==(const value &other) const

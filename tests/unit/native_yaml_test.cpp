@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -189,9 +190,9 @@ TEST_CASE("a mapping keeps its source order and reads by key", "[native][yaml]")
     REQUIRE(out.parsed.has_value());
     REQUIRE(out.parsed->kind() == meios::value_kind::mapping);
     REQUIRE(out.parsed->size() == 3);
-    CHECK(out.parsed->key_at(0).value_or("") == "zulu");
-    CHECK(out.parsed->key_at(1).value_or("") == "alpha");
-    CHECK(out.parsed->key_at(2).value_or("") == "mike");
+    CHECK(out.parsed->key_at(0) == "zulu");
+    CHECK(out.parsed->key_at(1) == "alpha");
+    CHECK(out.parsed->key_at(2) == "mike");
     CHECK(out.parsed->at("alpha")->integer().value_or(0) == 2);
 }
 
@@ -214,7 +215,7 @@ TEST_CASE("a construct outside the read surface refuses by name", "[native][yaml
         { "a: &anchor 1\nb: *anchor\n", "an alias" },
         { "base: &b\n  x: 1\na:\n  <<: *b\n", "a merge key" },
         { "? [1, 2]\n: 3\n", "a sequence as a mapping key" },
-        { "1: one\n", "a non-string mapping key" },
+        { "? {a: 1}\n: 3\n", "a mapping as a mapping key" },
         { "a: 1\na: 2\n", "a duplicate key" },
     };
     for(const std::pair<std::string_view, std::string_view> &one : refusals)
@@ -226,6 +227,90 @@ TEST_CASE("a construct outside the read surface refuses by name", "[native][yaml
         CHECK(out.messages.front().find(one.second) != std::string::npos);
         CHECK(out.messages.front().find("line") != std::string::npos);
     }
+}
+
+TEST_CASE("a key is read in any of the scalar kinds a document can write", "[native][yaml]")
+{
+    const std::pair<std::string_view, meios::value_kind> written[] = {
+        { "null: n\n", meios::value_kind::null },
+        { "true: t\n", meios::value_kind::boolean },
+        { "1: i\n", meios::value_kind::integer },
+        { "1.5: r\n", meios::value_kind::real },
+        { "'1': s\n", meios::value_kind::string },
+    };
+    for(const std::pair<std::string_view, meios::value_kind> &one : written)
+    {
+        INFO("document [" << one.first << ']');
+        const probe out = read(one.first);
+        REQUIRE(out.parsed.has_value());
+        REQUIRE(out.parsed->size() == 1);
+        CHECK(out.parsed->key_at(0)->kind() == one.second);
+        CHECK(out.parsed->at(std::size_t{ 0 }).has_value());
+    }
+}
+
+// The builder's own duplicate check and the mapping constructor's search run over the same key
+// comparison, so a document that writes one key in two scalar kinds is refused here rather than
+// being admitted and then silently folded into one entry.
+TEST_CASE("a key repeated in a second scalar kind is the duplicate both halves see",
+          "[native][yaml]")
+{
+    const probe out = read("1: one\ntrue: two\n");
+
+    CHECK_FALSE(out.parsed.has_value());
+    REQUIRE(out.messages.size() == 1);
+    CHECK(out.messages.front().find("a duplicate key 'True'") != std::string::npos);
+}
+
+TEST_CASE("every value a document produces reports its origin at every depth", "[native][yaml]")
+{
+    const probe out = read("a:\n  b:\n    c: 1\n  d:\n    - 2\n");
+
+    REQUIRE(out.parsed.has_value());
+    CHECK(out.parsed->from_yaml());
+    CHECK(out.parsed->at("a")->from_yaml());
+    CHECK(out.parsed->at("a")->at("b")->from_yaml());
+    CHECK(out.parsed->at("a")->at("b")->at("c")->from_yaml());
+    CHECK(out.parsed->at("a")->at("d")->from_yaml());
+    CHECK(out.parsed->at("a")->at("d")->at(std::size_t{ 0 })->from_yaml());
+}
+
+TEST_CASE("an empty document reads as a null that still reports its origin", "[native][yaml]")
+{
+    const probe out = read("");
+
+    REQUIRE(out.parsed.has_value());
+    CHECK(out.parsed->kind() == meios::value_kind::null);
+    CHECK(out.parsed->from_yaml());
+}
+
+TEST_CASE("a child taken out of a document-built value carries the origin unaided",
+          "[native][yaml]")
+{
+    const probe out = read("a:\n  - 1\n");
+
+    REQUIRE(out.parsed.has_value());
+    CHECK(out.parsed->at("a")->from_yaml());
+    CHECK(out.parsed->at(std::size_t{ 0 })->from_yaml());
+    CHECK(out.parsed->at("a")->at(std::size_t{ 0 })->from_yaml());
+}
+
+// Marking the whole tree is what makes the origin sound wherever a value is extracted, and the
+// intended consequence is that a loaded mapping no longer equals the same mapping an author
+// wrote: they disagree about where they came from, at the root and at every child.
+TEST_CASE("a document-built mapping compares unequal to an identically shaped authored one",
+          "[native][yaml]")
+{
+    const probe out = read("a: 1\n");
+    std::vector<meios::value::entry> entries;
+    entries.emplace_back("a", meios::value{ std::int64_t{ 1 } });
+    const meios::value authored = meios::value::make_mapping(std::move(entries));
+
+    REQUIRE(out.parsed.has_value());
+    CHECK_FALSE(authored.from_yaml());
+    CHECK_FALSE(authored.at("a")->from_yaml());
+    CHECK_FALSE(*out.parsed == authored);
+    CHECK_FALSE(*out.parsed == authored.with_yaml_origin());
 }
 
 TEST_CASE("a malformed document reports a parse fault rather than a partial value",

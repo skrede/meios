@@ -68,6 +68,14 @@ inline meios::eval_scope seeded_scope(meios::log_sink &log)
     return scope;
 }
 
+// A key spells itself the way Python spells the key object: quoted when it is text, and by the
+// shared scalar spelling otherwise, so a numeric or null key is not dressed up as a string.
+inline std::string key_repr(const meios::detail::scalar_key &key)
+{
+    const std::optional<std::string> text = key.text();
+    return text ? '\'' + *text + '\'' : meios::render_scalar(key);
+}
+
 // Python's own spelling of a value, matching upstream's str()/repr() of an evaluated
 // expression -- built only so a fresh render can be compared verbatim.
 inline std::string repr(const meios::value &one)
@@ -78,7 +86,7 @@ inline std::string repr(const meios::value &one)
         return meios::render_scalar(one).value_or("<no scalar spelling>");
     std::string out = "{";
     for(std::size_t at = 0; at < one.size(); ++at)
-        out += (at == 0 ? "" : ", ") + ('\'' + *one.key_at(at) + "': ") + repr(*one.at(at));
+        out += (at == 0 ? "" : ", ") + key_repr(*one.key_at(at)) + ": " + repr(*one.at(at));
     return out + '}';
 }
 

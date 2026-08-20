@@ -1,7 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_VALUE_NODE_H
 #define HPP_GUARD_MEIOS_XACRO_VALUE_NODE_H
 
-#include <string>
+#include "meios/xacro/detail/value_key.h"
+
 #include <vector>
 #include <cstddef>
 #include <string_view>
@@ -39,21 +40,22 @@ private:
 class mapping_node
 {
 public:
-    mapping_node(std::vector<std::string> keys, std::vector<value> items);
+    mapping_node(std::vector<scalar_key> keys, std::vector<value> items);
 
     std::size_t size() const { return m_keys.size(); }
 
     const value *at(std::size_t index) const;
 
-    const std::string *key_at(std::size_t index) const
+    const scalar_key *key_at(std::size_t index) const
     {
         return index < m_keys.size() ? &m_keys[index] : nullptr;
     }
 
+    const value *find(const scalar_key &key) const;
     const value *find(std::string_view key) const;
 
 private:
-    std::vector<std::string> m_keys;
+    std::vector<scalar_key> m_keys;
     std::vector<value> m_items;
 };
 

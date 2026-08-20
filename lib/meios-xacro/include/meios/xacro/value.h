@@ -1,6 +1,9 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_VALUE_H
 #define HPP_GUARD_MEIOS_XACRO_VALUE_H
 
+#include "meios/xacro/value_kind.h"
+
+#include "meios/xacro/detail/value_key.h"
 #include "meios/xacro/detail/value_node.h"
 
 #include <memory>
@@ -15,17 +18,6 @@
 
 namespace meios
 {
-
-enum class value_kind
-{
-    null,
-    boolean,
-    integer,
-    real,
-    string,
-    sequence,
-    mapping,
-};
 
 // Immutable after construction, so a copy shares its collection storage instead of
 // duplicating it; that is what lets a mapping cross a property, a macro argument and a
@@ -43,7 +35,7 @@ public:
     // turn an authored literal into a boolean.
     value(const char *) = delete;
 
-    using entry = std::pair<std::string, value>;
+    using entry = std::pair<detail::scalar_key, value>;
 
     static std::optional<value> make_real(double number);
     static value make_sequence(std::vector<value> items);
@@ -63,7 +55,8 @@ public:
     std::size_t size() const;
     std::optional<value> at(std::size_t index) const;
     std::optional<value> at(std::string_view key) const;
-    std::optional<std::string> key_at(std::size_t index) const;
+    std::optional<value> at(const detail::scalar_key &key) const;
+    std::optional<detail::scalar_key> key_at(std::size_t index) const;
 
     bool operator==(const value &other) const;
 

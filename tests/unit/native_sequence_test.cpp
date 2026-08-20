@@ -85,15 +85,19 @@ TEST_CASE("a sequence loaded from a document crosses a property, a macro and a n
     CHECK(scope.lookup("inner_lower") == bounds.at(std::size_t{ 0 }));
 }
 
-// The auxiliary origin is carried by the loaded document itself; a member read out of it is a
-// plain value until whole-tree marking lands, so the mapping is what the flag is asserted on.
-TEST_CASE("the document the sequence came from reports its auxiliary origin", "[native][sequence]")
+// The origin is set where each value is built, so it is on the members as well as on the
+// document they were read out of, and it survives the whole path a description carries them.
+TEST_CASE("the document the sequence came from reports its auxiliary origin at every depth",
+          "[native][sequence]")
 {
     meios::log_sink silent;
     const meios::eval_scope scope = expand_arm(silent);
 
     REQUIRE(scope.lookup("limits").has_value());
     CHECK(scope.lookup("limits")->from_yaml());
+    CHECK(scope.lookup("limits")->at("elbow")->from_yaml());
+    CHECK(scope.lookup("limits")->at("elbow")->at("bounds")->from_yaml());
+    CHECK(scope.lookup("limits")->at("elbow")->at("bounds")->at(std::size_t{ 0 })->from_yaml());
     CHECK(scope.lookup("inner_limits") == scope.lookup("limits"));
     CHECK(scope.lookup("limits")->at("elbow")->at("bounds")->size() == 2);
 }

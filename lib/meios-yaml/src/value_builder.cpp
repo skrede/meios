@@ -3,6 +3,8 @@
 
 #include "meios/xacro/value.h"
 
+#include "meios/xacro/detail/value_key.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -45,7 +47,7 @@ void value_builder::OnNull(const YAML::Mark &mark, YAML::anchor_t)
 {
     charge_node();
     if(expecting_key())
-        throw stopped("a non-string mapping key", mark, yaml_failure::unsupported);
+        return admit_key(scalar_key{}, mark);
     deliver(value{}, mark);
 }
 
@@ -88,7 +90,7 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag, Y
     charge_node();
     admit_depth(m_frames.size() + 1);
     if(expecting_key())
-        throw stopped("a non-string mapping key", mark, yaml_failure::unsupported);
+        throw stopped("a mapping as a mapping key", mark, yaml_failure::unsupported);
     if(tag != "?" && tag != "!")
         throw stopped("an unsupported tag '" + tag + '\'', mark, yaml_failure::unsupported);
     m_frames.push_back(frame{ .listing = false, .at = mark });
@@ -101,9 +103,11 @@ void value_builder::OnMapEnd()
     deliver(value::make_mapping(std::move(done.entries)), done.at);
 }
 
+// An empty document raises no event, so the null it stands for is made here rather than
+// delivered; it is still the value that parse produced and carries the same origin.
 value value_builder::result() const
 {
-    return m_root.value_or(value{});
+    return m_root.value_or(value{}.with_yaml_origin());
 }
 
 bool value_builder::expecting_key() const
@@ -128,16 +132,20 @@ void value_builder::admit_depth(std::size_t depth)
         m_counters.yaml_depth = depth;
 }
 
+// Every value this builder produces passes through here, so marking the origin at this one
+// seam marks the whole tree: a child later extracted out of a mapping or a sequence carries
+// the mark by construction rather than by an extraction site remembering to apply it.
 void value_builder::deliver(value produced, const YAML::Mark &mark)
 {
+    value marked = produced.with_yaml_origin();
     if(m_frames.empty())
     {
         if(m_root)
             throw stopped("more than one root", mark, yaml_failure::refused);
-        m_root = std::move(produced);
+        m_root = std::move(marked);
         return;
     }
-    place(m_frames.back(), std::move(produced));
+    place(m_frames.back(), std::move(marked));
 }
 
 void value_builder::place(frame &top, value produced)
@@ -149,20 +157,6 @@ void value_builder::place(frame &top, value produced)
     }
     top.entries.emplace_back(std::move(*top.key), std::move(produced));
     top.key.reset();
-}
-
-void value_builder::take_key(const std::string &text, const std::string &tag,
-                             const YAML::Mark &mark)
-{
-    const std::optional<std::string> name = resolved(text, tag, mark).text();
-    if(!name)
-        throw stopped("a non-string mapping key", mark, yaml_failure::unsupported);
-    if(*name == "<<")
-        throw stopped("a merge key", mark, yaml_failure::unsupported);
-    frame &top = m_frames.back();
-    if(!top.seen.insert(*name).second)
-        throw stopped("a duplicate key '" + *name + '\'', mark, yaml_failure::refused);
-    top.key = *name;
 }
 
 value value_builder::resolved(const std::string &text, const std::string &tag,

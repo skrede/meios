@@ -40,7 +40,7 @@ yaml_outcome read_events(std::istream &in, value_builder &builder, log_sink &log
 {
     YAML::Parser reader(in);
     if(!reader.HandleNextDocument(builder))
-        return yaml_outcome{ value{}, yaml_failure::none };
+        return yaml_outcome{ builder.result(), yaml_failure::none };
     if(reader)
         return refused(log, at, "the auxiliary document holds more than one document");
     return yaml_outcome{ builder.result(), yaml_failure::none };

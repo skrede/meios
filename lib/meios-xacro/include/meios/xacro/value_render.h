@@ -2,7 +2,9 @@
 #define HPP_GUARD_MEIOS_XACRO_VALUE_RENDER_H
 
 #include "meios/xacro/value.h"
+
 #include "meios/xacro/detail/numeric.h"
+#include "meios/xacro/detail/value_key.h"
 
 #include <string>
 #include <optional>
@@ -24,6 +26,20 @@ inline std::optional<std::string> render_scalar(const value &subject)
         case value_kind::real:    return detail::print_double(*subject.real());
         case value_kind::string:  return *subject.text();
         default:                  return std::nullopt;
+    }
+}
+
+// A key is always one of the five scalar kinds, so it always has a spelling; the value
+// overload's absent result exists for a collection, which a key cannot hold.
+inline std::string render_scalar(const detail::scalar_key &key)
+{
+    switch(key.kind())
+    {
+        case value_kind::null:    return std::string("None");
+        case value_kind::boolean: return *key.boolean() ? "True" : "False";
+        case value_kind::integer: return std::to_string(*key.integer());
+        case value_kind::real:    return detail::print_double(*key.real());
+        default:                  return *key.text();
     }
 }
 

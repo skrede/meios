@@ -60,7 +60,7 @@ value load_yaml_value(parser &p, std::string_view argument)
         p.scope.parse_yaml(*bytes, p.session.limits, p.session.counters, p.log, p.anchor);
     if(!parsed.parsed)
         return refuse_parsed(p, parsed.failure);
-    return parsed.parsed->with_yaml_origin();
+    return *parsed.parsed;
 }
 
 value parse_load_yaml(parser &p)

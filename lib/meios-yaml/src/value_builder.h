@@ -5,6 +5,8 @@
 #include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/yaml_parser_handle.h"
 
+#include "meios/xacro/detail/value_key.h"
+
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/source_location.h"
 
@@ -18,7 +20,6 @@
 #include <cstddef>
 #include <optional>
 #include <string_view>
-#include <unordered_set>
 
 namespace meios::detail
 {
@@ -38,9 +39,9 @@ class value_builder final : public YAML::EventHandler
         bool listing;
         YAML::Mark at;
         std::vector<value> items;
-        std::optional<std::string> key;
+        std::vector<scalar_key> seen;
+        std::optional<scalar_key> key;
         std::vector<value::entry> entries;
-        std::unordered_set<std::string> seen;
     };
 
 public:
@@ -75,6 +76,7 @@ private:
     void admit_depth(std::size_t depth);
     void deliver(value produced, const YAML::Mark &mark);
     void place(frame &top, value produced);
+    void admit_key(scalar_key key, const YAML::Mark &mark);
     void take_key(const std::string &text, const std::string &tag, const YAML::Mark &mark);
     value resolved(const std::string &text, const std::string &tag, const YAML::Mark &mark);
     parse_stopped stopped(const std::string &construct, const YAML::Mark &mark, yaml_failure why);
