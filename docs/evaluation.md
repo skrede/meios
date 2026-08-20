@@ -144,12 +144,15 @@ boundary and reaches a macro intact, but is not indexable here. The two refusals
 kind: `x in list` is `unsupported`, so a lenient policy may leave the span verbatim, while `list[0]`
 is an `error` and terminal under every policy — as is a key that is not text, on either construct.
 
-**Six ceilings bound the evaluator.** They are the auxiliary document's node count (100 000) and
-nesting depth (64), and the bytes read (8 000 000), tokens lexed (1 000 000), evaluation steps
-(10 000 000) and expression nesting depth (256). Four of them accumulate across every expression in
-one load rather than resetting per expression, so a document cannot spend a bounded budget an
-unbounded number of times; the two depth axes are high-water marks instead, because reaching a
-nesting level is what they bound and not how often it is reached. A ceiling requested as zero is
+**Ten ceilings bound the evaluator.** They are the auxiliary document's node count (100 000),
+nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 000), tokens lexed
+(1 000 000) and evaluation steps (10 000 000) over the whole load; and, for any one expression, its
+nesting depth (256), its token count (10 000), the magnitude of an exponentiation's operands
+(1 000 000 000 000) and the length in bytes of a string it produces (1 000 000). Five of them
+accumulate across every expression in one load rather than resetting per expression, so a document
+cannot spend a bounded budget an unbounded number of times; the other five are high-water marks
+instead, because what they bound is the most any one expression reaches and not how often it is
+reached. A ceiling requested as zero is
 refused and takes its default, so there is no spelling that means unbounded. Crossing one is terminal
 and stops the load at the position that crossed it: a load continuing past its own ceiling would
 report a partial answer as a whole one.
@@ -158,7 +161,7 @@ Expansion carries two more that are not the evaluator's: a work count (1 000 000
 visited, macro instantiations and substitutions, and an emitted-node count (100 000). They bound a
 shallow-but-wide macro fan-out that no expression ceiling would catch, and they report under the same
 `expansion_budget_exceeded` code — so a crossed ceiling naming a work limit is one of these two
-rather than one of the six. None of the eight is reachable through `load()`; that entry point always
+rather than one of the ten. None of the twelve is reachable through `load()`; that entry point always
 runs them at their defaults, and only the `meios::xacro` seam takes different ones.
 
 ## What this costs
@@ -505,7 +508,7 @@ the built-in evaluator, so the helper's containment holds under all three; what 
 class widens is the expression itself, which is enough to reach the filesystem directly, `open`
 included.
 
-Resource exhaustion is unbounded under this backend, where the built-in evaluator's six ceilings do
+Resource exhaustion is unbounded under this backend, where the built-in evaluator's ten ceilings do
 not apply: `${10**10**10}` and `${[0]*10**12}` are refused by nothing there and will burn processor
 time and memory. A real bound needs a per-expression watchdog against an embedded interpreter holding
 the interpreter lock, portable across all three supported platforms, and there is none.
@@ -525,7 +528,7 @@ in-tree and it works.
 ## Explicit non-goals
 
 **Duration is not one of the ceilings.** The step ceiling bounds how much work an expression may do,
-not how long that work takes, and none of the six adapts to the machine it runs on. There is no
+not how long that work takes, and none of the ten adapts to the machine it runs on. There is no
 per-expression timeout, and a load whose expressions all stay inside their budgets has no
 wall-clock guarantee of any kind.
 

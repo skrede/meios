@@ -101,19 +101,11 @@ std::string_view leading_command(std::string_view inner)
     return inner.substr(start, end - start);
 }
 
-// Each level of the descent is several stack frames, so the nesting is charged before it is
-// entered; the ceiling it answers to is the one the expression grammar's own descent answers to.
-// The session reports a crossed ceiling against the real sink rather than through the latch, so
-// the cause is copied here to keep the refusal from reaching the caller unnamed.
+// The ceiling this level answers to is the one the expression grammar's own descent answers to.
 bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::size_t base)
 {
-    ++ctx.span_depth;
-    const bool admitted = ctx.session.admits_expression_depth(ctx.span_depth, ctx.log, ctx.at);
-    const bool resolved = admitted && scan(ctx, inner, out, base);
-    --ctx.span_depth;
-    if(!admitted && ctx.session.terminal)
-        record_terminal(ctx, *ctx.session.terminal);
-    return resolved;
+    const span_level level(ctx, nested_scan_cost);
+    return level.admitted() && scan(ctx, inner, out, base);
 }
 
 // Upstream resolves a substitution as safe_eval(eval_text(body)): a span's inner text is

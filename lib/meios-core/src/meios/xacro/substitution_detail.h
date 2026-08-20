@@ -78,7 +78,7 @@ struct subst_ctx
               const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), session(load), core(load), document(doc),
           at(anchor), node_anchor(anchor), mode(policy), backend(inject),
-          last_kind(eval_failure_kind::none), span_depth(0), terminal()
+          last_kind(eval_failure_kind::none), terminal()
     {
     }
 
@@ -95,10 +95,6 @@ struct subst_ctx
     eval_policy mode;
     std::shared_ptr<evaluator_handle> backend;
     eval_failure_kind last_kind;
-    // How many spans the scan currently stands inside. Each level is several stack frames, so
-    // it is charged against the expression-depth ceiling before the descent rather than left
-    // to exhaust the stack.
-    std::size_t span_depth;
     // The first terminal failure, kept so one refusal reports one structured cause; a
     // later refusal neither replaces it nor emits a second error-level diagnostic.
     std::optional<expansion_error> terminal;
@@ -119,6 +115,38 @@ inline void record_terminal(subst_ctx &ctx, diagnostic_code code, const std::str
 {
     record_terminal(ctx, expansion_error{ ctx.at, message, code, std::nullopt });
 }
+
+// The expression-depth axis counts stack frames in units of one recursive entry into the
+// expression grammar, so a level costing more than one entry is charged what it costs. Measured
+// on a 512 KiB thread by driving each shape until the process died: 2 424 grammar entries, 870
+// nested scans and 228 nested substitutions survive, where 2 448, 880 and 229 do not. A nested
+// scan re-enters the scanner alone; a nested substitution builds a context of its own and runs
+// the whole dispatch beneath it. So charged, the one ceiling leaves each shape ninefold headroom.
+inline constexpr std::size_t nested_scan_cost = 3;
+inline constexpr std::size_t nested_substitution_cost = 11;
+
+// One level of span nesting, released by the same unwind that abandons it. A crossed ceiling is
+// reported by the session against the real sink, so its cause is copied here for the caller.
+struct span_level
+{
+    span_level(subst_ctx &owner, std::size_t weight)
+        : ctx(owner), cost(weight), entered(owner.session.enter_span(weight, owner.log, owner.at))
+    {
+        if(!entered && ctx.session.terminal)
+            record_terminal(ctx, *ctx.session.terminal);
+    }
+
+    span_level(const span_level &) = delete;
+
+    ~span_level() { if(entered) ctx.session.leave_span(cost); }
+
+    bool admitted() const { return entered; }
+
+private:
+    subst_ctx &ctx;
+    std::size_t cost;
+    bool entered;
+};
 
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression);
 

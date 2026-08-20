@@ -227,7 +227,7 @@ traverses no attribute and touches no file — and will burn processor time and 
 restriction above is about authority (the filesystem, the network, the process), never about
 availability. A real bound needs a per-expression watchdog against an embedded interpreter holding
 the interpreter lock, portable across macOS, Linux and Windows; there is none today. The built-in
-evaluator, which is the default path, does not share this: six finite ceilings bound one load, and
+evaluator, which is the default path, does not share this: ten finite ceilings bound one load, and
 both expressions above fail loudly there — the first on an integer range check, the second because
 the grammar has no list literal to multiply.
 

@@ -92,6 +92,9 @@ expected<substitution, expansion_error> substitute_refined(
 
 expected<substitution, expansion_error> substitute_in(subst_ctx &ctx, std::string_view raw)
 {
+    const span_level level(ctx, nested_substitution_cost);
+    if(!level.admitted())
+        return refuse(ctx);
     return substitute_refined(raw, ctx.scope, ctx.sources, ctx.document, ctx.mode, ctx.backend,
                               ctx.session, ctx.log, ctx.at);
 }

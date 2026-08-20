@@ -84,4 +84,47 @@ bool eval_session::admits_expression_depth(std::size_t depth, log_sink &log,
                   log, at);
 }
 
+bool eval_session::admits_expression_tokens(std::size_t count, log_sink &log,
+                                            const source_location &at)
+{
+    return admits(counters.expression_tokens, limits.expression_tokens, count, "expression token",
+                  log, at);
+}
+
+bool eval_session::admits_string_length(std::size_t length, log_sink &log,
+                                        const source_location &at)
+{
+    return admits(counters.string_length, limits.string_length, length, "string length", log, at);
+}
+
+// The operand is compared as a real against the ceiling widened to one: narrowing it to a whole
+// number first would truncate a magnitude just above the bound into admission. Only a magnitude
+// already known to be within the bound reaches the counter, and a not-a-number widens neither.
+bool eval_session::admits_numeric_magnitude(double magnitude, log_sink &log,
+                                            const source_location &at)
+{
+    if(failure == eval_failure_kind::exhausted
+       || magnitude > static_cast<double>(limits.numeric_magnitude))
+    {
+        latch_exhausted(*this, "numeric magnitude", log, at);
+        return false;
+    }
+    if(magnitude > static_cast<double>(counters.numeric_magnitude))
+        counters.numeric_magnitude = static_cast<std::size_t>(magnitude);
+    return true;
+}
+
+bool eval_session::enter_span(std::size_t cost, log_sink &log, const source_location &at)
+{
+    if(!admits_expression_depth(span_depth + cost, log, at))
+        return false;
+    span_depth += cost;
+    return true;
+}
+
+void eval_session::leave_span(std::size_t cost)
+{
+    span_depth -= cost;
+}
+
 }

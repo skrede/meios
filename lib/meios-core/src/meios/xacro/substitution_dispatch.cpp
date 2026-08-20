@@ -63,33 +63,41 @@ std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
     return hit->path().string();
 }
 
+// A collection has no text form, so the argument is reported unresolved rather than written into
+// the document as its own contents.
+std::optional<std::string> bound_arg(subst_ctx &ctx, std::string_view name, const value &bound)
+{
+    std::optional<std::string> text = render_scalar(bound);
+    if(text)
+        return text;
+    return fail(ctx, diagnostic_code::unresolved_arg,
+                "$(arg " + std::string(name) + ") holds a " + std::string(kind_name(bound.kind()))
+                    + ", which has no text form");
+}
+
+// The default is resolved only on the unset branch, and through the enclosing substitution so it
+// is charged to the same load: a default that names an argument of its own nests here.
+std::optional<std::string> arg_default(subst_ctx &ctx, std::string_view written)
+{
+    const expected<substitution, expansion_error> resolved = substitute_in(ctx, written);
+    if(!resolved)
+    {
+        record_terminal(ctx, resolved.error());
+        return std::nullopt;
+    }
+    return resolved->text;
+}
+
 std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
 {
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
         return fail(ctx, diagnostic_code::unresolved_arg, "$(arg) requires an argument name");
-    std::optional<value> bound = ctx.scope.lookup(parts.first);
+    const std::optional<value> bound = ctx.scope.lookup(parts.first);
     if(bound)
-    {
-        // A collection has no text form, so the argument is reported unresolved rather than
-        // written into the document as its own contents.
-        std::optional<std::string> text = render_scalar(*bound);
-        if(text)
-            return text;
-        return fail(ctx, diagnostic_code::unresolved_arg,
-                    "$(arg " + std::string(parts.first) + ") holds a "
-                        + std::string(kind_name(bound->kind())) + ", which has no text form");
-    }
+        return bound_arg(ctx, parts.first, *bound);
     if(!parts.second.empty())
-    {
-        const expected<substitution, expansion_error> resolved = substitute_in(ctx, parts.second);
-        if(!resolved)
-        {
-            record_terminal(ctx, resolved.error());
-            return std::nullopt;
-        }
-        return resolved->text;
-    }
+        return arg_default(ctx, parts.second);
     return fail(ctx, diagnostic_code::unresolved_arg,
                 "$(arg " + std::string(parts.first) + ") is unset and has no default");
 }

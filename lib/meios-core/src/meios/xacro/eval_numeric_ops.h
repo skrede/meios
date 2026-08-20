@@ -6,6 +6,7 @@
 
 #include "meios/xacro/value.h"
 
+#include <string>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -20,6 +21,16 @@ std::int64_t need_int(parser &p, const value &v);
 double need_double(parser &p, const value &v);
 bool need_truth(parser &p, const value &v);
 value real_result(parser &p, double number);
+
+// Every string this evaluator produces is built here, so the ceiling on a produced string has one
+// charge site rather than one per producer: a producer added later that does not come through
+// here is visible as the one that skipped the bound.
+value text_result(parser &p, std::string text);
+
+// Answers whether an exponentiation's base magnitude and exponent are within the numeric ceiling,
+// asked before the exponentiation runs. The overflow refusal below fires on a result, and a check
+// that fires on a result cannot bound the work that produced it.
+bool admits_power(parser &p, const value &a, const value &b);
 
 // Each yields no value when the result is not representable, so the operator above it can
 // refuse with a located diagnostic instead of wrapping, trapping or aborting the process.

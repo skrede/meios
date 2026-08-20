@@ -8,7 +8,7 @@
 
 TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]")
 {
-    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0, 0, 0 };
+    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     REQUIRE(zeroed.yaml_nodes == meios::default_yaml_node_ceiling);
     REQUIRE(zeroed.yaml_depth == meios::default_yaml_depth_ceiling);
@@ -17,12 +17,18 @@ TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]"
     REQUIRE(zeroed.steps == meios::default_step_ceiling);
     REQUIRE(zeroed.expression_depth == meios::default_expression_depth_ceiling);
     REQUIRE(zeroed.alias_expansion == meios::default_alias_expansion_ceiling);
+    REQUIRE(zeroed.numeric_magnitude == meios::default_numeric_magnitude_ceiling);
+    REQUIRE(zeroed.expression_tokens == meios::default_expression_token_ceiling);
+    REQUIRE(zeroed.string_length == meios::default_string_length_ceiling);
 
-    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11, 12, 13 };
+    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
     REQUIRE(raised.yaml_nodes == 7);
     REQUIRE(raised.steps == 11);
     REQUIRE(raised.expression_depth == 12);
     REQUIRE(raised.alias_expansion == 13);
+    REQUIRE(raised.numeric_magnitude == 14);
+    REQUIRE(raised.expression_tokens == 15);
+    REQUIRE(raised.string_length == 16);
 }
 
 // The measured sizes of the pinned acceptance target: 640 auxiliary nodes per load across
@@ -85,6 +91,9 @@ TEST_CASE("a session starts every counter at zero and charges before the work", 
     REQUIRE(session.counters.yaml_depth == 0);
     REQUIRE(session.counters.expression_depth == 0);
     REQUIRE(session.counters.alias_expansion == 0);
+    REQUIRE(session.counters.numeric_magnitude == 0);
+    REQUIRE(session.counters.expression_tokens == 0);
+    REQUIRE(session.counters.string_length == 0);
     REQUIRE(session.failure == meios::eval_failure_kind::none);
 
     REQUIRE(session.charge_tokens(4, silent, {}));

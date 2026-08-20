@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
@@ -40,17 +41,19 @@ bool collides(std::string_view member)
 // The separator form splits on every occurrence and keeps the field between two adjacent
 // separators and at either end, so the field count is one more than the separator count. The
 // no-argument form collapses runs of whitespace instead, which is a different algorithm.
-value split_text(const std::string &text, const std::string &separator)
+value split_text(parser &p, const std::string &text, const std::string &separator)
 {
     std::vector<value> fields;
     std::size_t at = 0;
     for(std::size_t found = text.find(separator); found != std::string::npos;
         found = text.find(separator, at))
     {
-        fields.push_back(value{ text.substr(at, found - at) });
+        fields.push_back(text_result(p, text.substr(at, found - at)));
         at = found + separator.size();
     }
-    fields.push_back(value{ text.substr(at) });
+    fields.push_back(text_result(p, text.substr(at)));
+    if(!p.ok)
+        return value{};
     return value::make_sequence(std::move(fields));
 }
 
@@ -71,7 +74,7 @@ value parse_split(parser &p, const std::string &text)
                       + std::string(kind_name(argument.kind())));
     if(separator->empty())
         return p.fail("an empty separator does not split a string");
-    return split_text(text, *separator);
+    return split_text(p, text, *separator);
 }
 
 // Text, not privilege: the origin mark does not gate this, because upstream reads the same

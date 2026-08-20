@@ -27,7 +27,8 @@ value core_evaluator::eval(std::string_view expression, const eval_scope &scope,
                            const source_location &at, detail::eval_session &session)
 {
     std::vector<detail::token> tokens = detail::tokenize(expression);
-    if(!session.charge_tokens(tokens.size(), log, at))
+    if(!session.charge_tokens(tokens.size(), log, at)
+       || !session.admits_expression_tokens(tokens.size(), log, at))
     {
         m_failed = true;
         m_kind = eval_failure_kind::exhausted;

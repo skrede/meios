@@ -6,7 +6,7 @@
 namespace meios
 {
 
-// Seven independent axes because no single number separates a deep auxiliary document from a
+// Ten independent axes because no single number separates a deep auxiliary document from a
 // wide one, or a long expression from a long-running one or a deeply nested one; each
 // ceiling bounds a different way author-supplied input grows. A ceiling given as zero is
 // refused and takes its default instead, so there is no spelling that means unbounded.
@@ -27,6 +27,32 @@ inline constexpr std::size_t default_expression_depth_ceiling = 256;
 // admits five and refuses six. The auxiliary-node ceiling charges events, of which those two
 // documents raise 45 and 54, and is therefore blind to the growth this bounds.
 inline constexpr std::size_t default_alias_expansion_ceiling = 1'000'000;
+// Bounds an exponentiation's base magnitude and its exponent before the work rather than its
+// result after it. Defensive rather than remedial: exponentiation here is binary over checked
+// fixed-width integers and refuses on the first squaring that overflows, so the spelling that
+// grows without bound against arbitrary-precision integers upstream already terminates in a few
+// dozen iterations here and no unbounded numeric growth exists in the current surface. Because
+// it is defensive, the number is set where it refuses nothing the arithmetic beneath it accepts
+// today: it is chosen rather than measured, at ten times the 99 999 999 999 that is the largest
+// magnitude any recorded expression drives through exponentiation. A magnitude past it is a
+// refusal where upstream would answer, which is why it sits so far above the surface.
+inline constexpr std::size_t default_numeric_magnitude_ceiling = 1'000'000'000'000;
+// The per-expression token count, which is the axis a tree-shaped evaluator would size by its
+// tree. This evaluator builds no tree -- every precedence level computes its result immediately --
+// so the one per-expression allocation is the token span index, one fixed-size row per token, and
+// bounding the count bounds it directly. It is not the cumulative token ceiling in smaller
+// clothing -- a session of many short expressions crosses that one without any single expression
+// being wide, and one wide expression crosses this one without the session being long. The number
+// is chosen rather than measured, against a longest measured expression of 29 tokens.
+inline constexpr std::size_t default_expression_token_ceiling = 10'000;
+// Any single string the evaluator produces, counted in bytes rather than code points. Defensive
+// too: this evaluator renders no collection to text, so until concatenation and the named split
+// there was no long-string producer at all, and both are linear in an expression the token
+// ceilings already bound. The cumulative byte ceiling counts the same productions summed over a
+// load, so a load that never builds one oversized string is still bounded in what it builds
+// altogether. The number is chosen rather than measured, against a longest measured produced
+// string of under a hundred bytes.
+inline constexpr std::size_t default_string_length_ceiling = 1'000'000;
 
 struct evaluator_limits
 {
@@ -36,14 +62,20 @@ struct evaluator_limits
                      std::size_t token_ceiling = default_token_ceiling,
                      std::size_t step_ceiling = default_step_ceiling,
                      std::size_t expression_depth_ceiling = default_expression_depth_ceiling,
-                     std::size_t alias_expansion_ceiling = default_alias_expansion_ceiling)
+                     std::size_t alias_expansion_ceiling = default_alias_expansion_ceiling,
+                     std::size_t numeric_magnitude_ceiling = default_numeric_magnitude_ceiling,
+                     std::size_t expression_token_ceiling = default_expression_token_ceiling,
+                     std::size_t string_length_ceiling = default_string_length_ceiling)
         : yaml_nodes(finite(yaml_node_ceiling, default_yaml_node_ceiling)),
           yaml_depth(finite(yaml_depth_ceiling, default_yaml_depth_ceiling)),
           bytes(finite(byte_ceiling, default_byte_ceiling)),
           tokens(finite(token_ceiling, default_token_ceiling)),
           steps(finite(step_ceiling, default_step_ceiling)),
           expression_depth(finite(expression_depth_ceiling, default_expression_depth_ceiling)),
-          alias_expansion(finite(alias_expansion_ceiling, default_alias_expansion_ceiling))
+          alias_expansion(finite(alias_expansion_ceiling, default_alias_expansion_ceiling)),
+          numeric_magnitude(finite(numeric_magnitude_ceiling, default_numeric_magnitude_ceiling)),
+          expression_tokens(finite(expression_token_ceiling, default_expression_token_ceiling)),
+          string_length(finite(string_length_ceiling, default_string_length_ceiling))
     {
     }
 
@@ -54,6 +86,9 @@ struct evaluator_limits
     std::size_t steps;
     std::size_t expression_depth;
     std::size_t alias_expansion;
+    std::size_t numeric_magnitude;
+    std::size_t expression_tokens;
+    std::size_t string_length;
 
 private:
     static std::size_t finite(std::size_t requested, std::size_t fallback)
@@ -66,7 +101,7 @@ struct evaluator_counters
 {
     evaluator_counters()
         : yaml_nodes(0), yaml_depth(0), bytes(0), tokens(0), steps(0), expression_depth(0),
-          alias_expansion(0)
+          alias_expansion(0), numeric_magnitude(0), expression_tokens(0), string_length(0)
     {
     }
 
@@ -77,6 +112,9 @@ struct evaluator_counters
     std::size_t steps;
     std::size_t expression_depth;
     std::size_t alias_expansion;
+    std::size_t numeric_magnitude;
+    std::size_t expression_tokens;
+    std::size_t string_length;
 };
 
 }

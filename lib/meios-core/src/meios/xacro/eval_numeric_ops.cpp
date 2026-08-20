@@ -38,7 +38,7 @@ value concatenate(parser &p, const value &a, const value &b)
     const std::optional<std::string> left = a.text();
     const std::optional<std::string> right = b.text();
     if(left && right)
-        return value{ *left + *right };
+        return text_result(p, *left + *right);
     return p.fail_unsupported("a string concatenates only with another string operand, not with a "
                               + std::string(kind_name(left ? b.kind() : a.kind()))
                               + " — use eval-python");
@@ -170,6 +170,8 @@ value modulo(parser &p, const value &a, const value &b)
 
 value power(parser &p, const value &a, const value &b)
 {
+    if(!admits_power(p, a, b))
+        return value{};
     if(is_int(a) && is_int(b) && need_int(p, b) >= 0)
     {
         const std::optional<std::int64_t> made = checked_power(need_int(p, a), need_int(p, b));
