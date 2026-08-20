@@ -41,6 +41,7 @@ enum class token_kind
     greater_equal,
     equal_equal,
     not_equal,
+    assign,
     end,
     error,
     unsupported,

@@ -1,11 +1,10 @@
 # case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
 # non-trivial form in the closure of the Universal Robots document,
-# followed by the authored subscript spellings no pinned description
-# reaches -- an index into a sequence, and a key the mapping wrapper
-# answers itself -- each driven through a minimized document seeding the
-# names it
-# reads. A refusing row renders REFUSED and carries the failure's first
-# line.
+# followed by the authored spellings no pinned description reaches -- an
+# index into a sequence, a key the mapping wrapper answers itself, and
+# the keyword-argument mapping constructor -- each driven through a
+# minimized document seeding the names it reads. A refusing row renders
+# REFUSED and carries the failure's first line.
 e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
 e02	shoulder_pan_upper_limit - safety_pos_margin	5.85	
 e03	shoulder_lift_lower_limit + safety_pos_margin	-6.85	
@@ -37,3 +36,13 @@ s05	sec_bounds['0']	REFUSED	list indices must be integers or slices, not str
 c01	sec_collisions['keys']	5	
 c02	sec_collisions['values']	6	
 c03	sec_collisions['plain']	7	
+d01	dict(a=1, b=2)	{'a': 1, 'b': 2}	
+d02	dict(a=1, b=2)['a']	1	
+d03	dict()	{}	
+d04	dict(radius=radius, length=length)['radius']	0.06	
+d05	dict(a=dict(b=2)['b'])	{'a': 2}	
+d06	dict(mesh=sec_mesh_files['base'])	{'mesh': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}	
+d07	'a' in dict(a=1)	True	
+d08	dict()['missing']	REFUSED	'missing' 
+d09	dict(a=1, a=2)	REFUSED	keyword argument repeated: a (<expression>, line 1) 
+d10	dict(a=)	REFUSED	expected argument value expression (<expression>, line 1) 

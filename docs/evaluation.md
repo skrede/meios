@@ -95,17 +95,26 @@ namespaced call the grammar carries; every other namespaced spelling, `math.pi` 
 refused by name. A dot after a value is a member read, and it resolves only for a value that came
 out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
 `${config['joint_limits']['wrist_3']['effort']}` reads, chains with a subscript in either order, and
-survives a property, a macro argument and a nested scope. A mapping a description built itself has
-no member path at all, and neither does a loaded sequence or a loaded scalar. Two member spellings
+survives a property, a macro argument and a nested scope. A mapping a description built itself —
+what the mapping constructor below returns — has no member path at all, and neither does a loaded
+sequence or a loaded scalar. Two member spellings
 are refused on a loaded mapping as well: a name the reference's own mapping wrapper answers before
 it consults the document (`clear`, `copy`, `fromkeys`, `get`, `items`, `keys`, `pop`, `popitem`,
 `setdefault`, `update`, `values`), and any name written with a leading `__`. Both point at the
 subscript spelling instead, because a description that means something here other than what it
 means upstream is worse than a description that will not load.
 
-**The Python constructors are refused by name.** `dict(...)`, `list(...)`, `set(...)` and
-`tuple(...)` are named outright, so the diagnostic says which constructor was reached for instead of
-reporting an unrecognized function.
+**The mapping constructor builds a mapping; every other constructor is refused by name.**
+`dict(a=1, b=2)` takes keyword arguments and nothing else, and builds a mapping the grammar can
+subscript, test membership on and nest inside another one. A positional argument, a pair-sequence
+argument and a mixture of the two each refuse naming what was met instead, and a repeated keyword
+name refuses the way the reference refuses it rather than resolving to one of its values. What it
+builds is an authored mapping, so it has no member path: `dict(a=1)['a']` reads, `dict(a=1).a` does
+not. `list(...)`, `set(...)` and `tuple(...)` are named outright, so the diagnostic says which
+constructor was reached for instead of reporting an unrecognized function; a set and a tuple have no
+representable kind here at all. Brace-literal and bracket-literal container syntax stays refused —
+the reference's own substitution scanner closes the span at the first `}`, so a brace literal never
+reaches its interpreter either.
 
 **Membership and subscripting both require a mapping.** `list[0]` and `x in list` are refused, and so
 is a subscript key that is not text. An auxiliary document's sequence therefore crosses a property
@@ -164,9 +173,9 @@ about from its source.
 
 **Tighter, by construction rather than by restriction.** The reference hands an expression to an
 interpreter alongside a symbol table; there is no interpreter here and no table to widen.
-Comprehensions, generator expressions, lambdas, f-strings, string methods, the constructors,
-attribute access and the import machinery are not restricted — they are absent from the grammar, and
-an expression reaching for one is refused with a located diagnostic. Nothing in the grammar can name
+Comprehensions, generator expressions, lambdas, f-strings, string methods, the sequence and set
+constructors, attribute access and the import machinery are not restricted — they are absent from
+the grammar, and an expression reaching for one is refused with a located diagnostic. Nothing in the grammar can name
 the filesystem, the network or the process: the one route to a file is the resource helper, where C++
 resolves the spec, enforces containment and reads the bytes.
 
@@ -175,6 +184,13 @@ upstream; `${2 and 3}` renders `True` here and `3`. This is measured and deliber
 grammar's logical operators produce booleans, and the measured descriptions use them in conditions
 rather than for their operand. It is recorded as a reviewed divergence, which means the comparison
 fails if it stops reproducing exactly as much as it fails if a new one appears.
+
+**The mapping constructor takes keyword arguments where the reference takes more.** The reference
+also builds a mapping from a sequence of pairs and from a mixture of a positional argument and
+keyword ones; `${dict([('a', 1)])}` renders there and refuses here. Only the keyword spelling was
+measured and admitted, so the wider shapes refuse rather than taking a meaning nothing measured.
+Both are recorded as reviewed divergences, which means the comparison fails if either stops
+reproducing exactly as much as it fails if a new one appears.
 
 **A member name the reference's mapping wrapper answers itself is refused, not answered.** The
 reference hands a loaded mapping back inside a wrapper that tries ordinary attribute lookup before

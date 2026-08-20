@@ -164,9 +164,11 @@ struct probe
     std::string_view expression;
 };
 
-inline constexpr std::array<probe, 3> divergence_probes{
+inline constexpr std::array<probe, 5> divergence_probes{
     probe{ false, "div_or_operand", "1 or 2" }, probe{ false, "div_and_operand", "2 and 3" },
-    probe{ true, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" }
+    probe{ true, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" },
+    probe{ false, "div_dict_pair_sequence", "dict([('a', 1)])" },
+    probe{ false, "div_dict_mixed_arguments", "dict([('a', 1)], b=2)" }
 };
 
 inline std::string observed_value(const probe &one)

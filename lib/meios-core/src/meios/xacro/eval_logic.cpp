@@ -65,7 +65,7 @@ value call_unary(parser &p, std::string_view name, const value &arg)
 
 bool is_constructor(std::string_view name)
 {
-    return name == "dict" || name == "list" || name == "set" || name == "tuple";
+    return name == "list" || name == "set" || name == "tuple";
 }
 
 value parse_call(parser &p, std::string_view name)
@@ -87,6 +87,7 @@ value parse_name(parser &p)
     std::string_view name = p.peek().text;
     ++p.pos;
     if(p.accept(token_kind::dot)) return parse_dotted(p, name);
+    if(p.at(token_kind::lparen) && name == "dict") return parse_dict(p);
     if(p.at(token_kind::lparen) && is_constructor(name))
         return p.fail_unsupported("the Python constructor '" + std::string(name)
                                   + "()' — use eval-python");

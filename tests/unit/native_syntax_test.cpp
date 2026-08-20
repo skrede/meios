@@ -1,10 +1,13 @@
 #include "branch_probe.h"
 
+#include "meios/xacro/lexer.h"
+
 #include <meios/io/source_stack.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 #include <functional>
 #include <string_view>
 
@@ -41,6 +44,14 @@ struct quoted_at
     std::string_view text;
     std::string_view lexeme;
 };
+
+std::vector<meios::detail::token_kind> kinds_of(std::string_view source)
+{
+    std::vector<meios::detail::token_kind> kinds;
+    for(const meios::detail::token &one : meios::detail::tokenize(source))
+        kinds.push_back(one.kind);
+    return kinds;
+}
 }
 
 TEST_CASE("a malformed tail refuses whichever way the condition goes", "[native][syntax]")
@@ -197,4 +208,66 @@ TEST_CASE("a construct the parser owns keeps its own verdict whichever way the d
         CHECK(ran.messages.front().find("unsupported expression at " + std::string(owned.lexeme))
               != std::string::npos);
     }
+}
+
+TEST_CASE("a bare assignment character scans as its own kind and the scan carries on",
+          "[native][syntax]")
+{
+    using kind = meios::detail::token_kind;
+
+    CHECK(kinds_of("a = 1")
+          == std::vector<kind>{ kind::name, kind::assign, kind::number, kind::end });
+    CHECK(kinds_of("dict(a=1, b=2)")
+          == std::vector<kind>{ kind::name, kind::lparen, kind::name, kind::assign, kind::number,
+                                kind::comma, kind::name, kind::assign, kind::number, kind::rparen,
+                                kind::end });
+}
+
+// The two-character probe runs before the one-character table, and that ordering is what keeps
+// the equality operator whole now that its character also stands alone. Reversing the two would
+// scan every "==" as a pair of assignments, which these cases refuse.
+TEST_CASE("the equality operator still scans as exactly one token wherever it stands",
+          "[native][syntax]")
+{
+    using kind = meios::detail::token_kind;
+
+    CHECK(kinds_of("a == b")
+          == std::vector<kind>{ kind::name, kind::equal_equal, kind::name, kind::end });
+    CHECK(kinds_of("1==2")
+          == std::vector<kind>{ kind::number, kind::equal_equal, kind::number, kind::end });
+    CHECK(kinds_of("a==1")
+          == std::vector<kind>{ kind::name, kind::equal_equal, kind::number, kind::end });
+    CHECK(kinds_of("'a'=='b'")
+          == std::vector<kind>{ kind::string, kind::equal_equal, kind::string, kind::end });
+    CHECK(kinds_of("a === b")
+          == std::vector<kind>{ kind::name, kind::equal_equal, kind::assign, kind::name,
+                                kind::end });
+    CHECK(kinds_of("a != b")
+          == std::vector<kind>{ kind::name, kind::not_equal, kind::name, kind::end });
+    CHECK(kinds_of("a <= b >= c")
+          == std::vector<kind>{ kind::name, kind::less_equal, kind::name, kind::greater_equal,
+                                kind::name, kind::end });
+    CHECK(probe::evaluate("1 == 1").rendered == "True");
+}
+
+TEST_CASE("an assignment no constructor call consumes still refuses", "[native][syntax]")
+{
+    const probe::outcome loose = probe::evaluate("1 = 2");
+
+    CHECK(loose.failed);
+    REQUIRE_FALSE(loose.messages.empty());
+    CHECK(loose.messages.front().find("trailing tokens") != std::string::npos);
+    CHECK(probe::evaluate("= 1").failed);
+    CHECK(probe::evaluate("max(1 = 2)").failed);
+}
+
+// A container literal refuses as unsupported rather than as a fault, so a lenient policy may
+// leave the span verbatim; the strict policy is where the refusal is observable as a failed load.
+TEST_CASE("a container written in a substitution span still refuses", "[native][syntax]")
+{
+    CHECK_FALSE(loads("${ {'a': 1} }", meios::eval_policy::fail));
+    CHECK_FALSE(loads("${[1, 2]}", meios::eval_policy::fail));
+    for(meios::eval_policy policy :
+        { meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip })
+        CHECK(loads("${dict(a=1)['a']}", policy));
 }

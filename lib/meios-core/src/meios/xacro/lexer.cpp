@@ -67,6 +67,9 @@ token_kind one_char_kind(char c)
         case '.': return token_kind::dot;
         case '<': return token_kind::less;
         case '>': return token_kind::greater;
+        // The two-character probe in push_symbol runs before this table, which is what keeps
+        // "==" one token now that a bare "=" is one of its own.
+        case '=': return token_kind::assign;
     }
     return token_kind::error;
 }

@@ -56,6 +56,15 @@ SEQUENCE_PROBES = ("sec_bounds[0]", "sec_bounds[-1]", "sec_bounds[3]", "sec_boun
 # address and does not reproduce between runs.
 COLLISION_PROBES = ("sec_collisions['keys']", "sec_collisions['values']",
                     "sec_collisions['plain']")
+# The keyword-argument mapping constructor, driven through a minimized document rather than read
+# out of a description: the two pinned files carrying the form are macro fragments, and loading a
+# fragment as a document turns every refusal into a false one. The refusing probes are the ones
+# whose refusal upstream names something an independent implementation can also name -- a repeated
+# keyword, an absent key, an argument owing its value.
+CONSTRUCTOR_PROBES = ("dict(a=1, b=2)", "dict(a=1, b=2)['a']", "dict()",
+                      "dict(radius=radius, length=length)['radius']", "dict(a=dict(b=2)['b'])",
+                      "dict(mesh=sec_mesh_files['base'])", "'a' in dict(a=1)",
+                      "dict()['missing']", "dict(a=1, a=2)", "dict(a=)")
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -258,8 +267,12 @@ def collision_cases():
     return [("c{:02d}".format(at + 1), one) for at, one in enumerate(COLLISION_PROBES)]
 
 
+def constructor_cases():
+    return [("d{:02d}".format(at + 1), one) for at, one in enumerate(CONSTRUCTOR_PROBES)]
+
+
 def authored_cases():
-    return sequence_cases() + collision_cases()
+    return sequence_cases() + collision_cases() + constructor_cases()
 
 
 def expression_cases(share):
@@ -440,12 +453,11 @@ HEADERS = {
                         "probe in an attribute and reading the attribute back."],
     "expressions.cases": ["case <TAB> expression <TAB> upstream rendering <TAB> failure. Every",
                           "non-trivial form in the closure of the Universal Robots document,",
-                          "followed by the authored subscript spellings no pinned description",
-                          "reaches -- an index into a sequence, and a key the mapping wrapper",
-                          "answers itself -- each driven through a minimized document seeding the",
-                          "names it",
-                          "reads. A refusing row renders REFUSED and carries the failure's first",
-                          "line."],
+                          "followed by the authored spellings no pinned description reaches -- an",
+                          "index into a sequence, a key the mapping wrapper answers itself, and",
+                          "the keyword-argument mapping constructor -- each driven through a",
+                          "minimized document seeding the names it reads. A refusing row renders",
+                          "REFUSED and carries the failure's first line."],
     "unit_tags.cases": ["tag <TAB> operand <TAB> the text upstream renders the converted value",
                         "as. The operand is written after the tag exactly as recorded. Every",
                         "operand measured here is a decimal literal; upstream evaluates the tagged",

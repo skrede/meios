@@ -138,6 +138,7 @@ value parse_power(parser &p);
 value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
+value parse_dict(parser &p);
 value parse_dotted(parser &p, std::string_view head);
 value parse_member(parser &p, const value &base);
 value member_of(parser &p, const value &base, std::string_view member);
