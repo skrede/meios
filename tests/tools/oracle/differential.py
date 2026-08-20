@@ -14,24 +14,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import record_upstream as oracle  # noqa: E402
 
-# The evaluation targets a native-evaluator corpus document resolves against: a package share
-# name (as ament_index_python resolves it), the document's own path under that share, its
-# key=value arguments, and the id corpus::record_for() keys the same document by in C++ -- kept
-# in that order so a fetch-side rename shows up as a diff here rather than a silent mismatch.
-CORPUS_DOCS = (
-    ("ur_description", "urdf/ur.urdf.xacro", {"ur_type": "ur5e", "name": "ur"}, "ur_type=ur5e"),
-    ("ur_description", "urdf/ur.urdf.xacro", {"ur_type": "ur3e", "name": "ur"}, "ur_type=ur3e"),
-    ("ur_description", "urdf/ur.urdf.xacro", {"ur_type": "ur7e", "name": "ur"}, "ur_type=ur7e"),
-    ("ur_description", "urdf/ur.urdf.xacro",
-     {"ur_type": "ur5e", "name": "ur", "safety_limits": "true"}, "safety_limits=true ur_type=ur5e"),
-    ("ur_description", "urdf/ur.urdf.xacro",
-     {"ur_type": "ur5e", "name": "ur", "force_abs_paths": "true"},
-     "force_abs_paths=true ur_type=ur5e"),
-    ("kuka_kr6_support", "kuka_kr6_support/urdf/kr6r900sixx.xacro", {}, "kr6r900sixx.xacro"),
-    ("lbr_med14_r820_description", "urdf/lbr_med14_r820.urdf.xacro", {}, "lbr_med14_r820.urdf.xacro"),
-) + tuple(("franka_description", "robots/{}/{}.urdf.xacro".format(one, one), {},
-           "{}.urdf.xacro".format(one)) for one in oracle.FRANKA_DOCUMENTS)
-
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
 # itself, the two mapping-constructor argument shapes upstream accepts that are refused here, the
@@ -90,14 +72,15 @@ def render_divergence_probe(tmp, out, case_id, expression):
         write_refusal(out, case_id, ".txt", failure)
 
 
-def render_corpus_document(share, out, share_name, document, mappings, case_id):
+# The entry points are the recorder's own table, read rather than repeated: a second list of the
+# same descriptions is a rename away from rendering one document and comparing another.
+def render_corpus_document(share, out, one):
     import xacro
 
-    root = share(share_name)
-    if share_name == "kuka_kr6_support":
-        root = root.parent
+    case_id = oracle.key_of(one)
     try:
-        rendered = xacro.process_file(str(root / document), mappings=mappings)
+        rendered = xacro.process_file(str(oracle.document_root(share, one.share) / one.document),
+                                      mappings=one.mappings)
         write_text(out, case_id, ".xml", rendered.toxml())
     except Exception as failure:
         write_refusal(out, case_id, ".xml", failure)
@@ -111,8 +94,8 @@ def render_all(tmp, share, out):
         render_expression_case(tmp, out, seeds, case_id, expression)
     for case_id, expression in DIVERGENCE_PROBES:
         render_divergence_probe(tmp, out, case_id, expression)
-    for share_name, document, mappings, case_id in CORPUS_DOCS:
-        render_corpus_document(share, out, share_name, document, mappings, case_id)
+    for one in oracle.CORPUS_DOCUMENTS:
+        render_corpus_document(share, out, one)
 
 
 def worker(out):

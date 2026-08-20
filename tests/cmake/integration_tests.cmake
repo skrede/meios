@@ -63,6 +63,10 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
         MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         MEIOS_CORPUS_DOCUMENTS="${_differential_documents}"
         MEIOS_DIFFERENTIAL_RENDERS_DIR="${MEIOS_DIFFERENTIAL_RENDERS_DIR}")
+    # The document arm runs the expansion the load path runs, and the loader that path installs
+    # is core-private.
+    target_include_directories(native_differential_test PRIVATE
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
     # One divergence probe reads a document, so the comparator needs the module's own reader
     # rather than the seeded test double the expression probes run under.
     if(TARGET meios_yaml)
@@ -72,6 +76,34 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
     meios_enable_coverage(native_differential_test)
     meios_warnings(native_differential_test)
     catch_discover_tests(native_differential_test TEST_PREFIX "native_differential.")
+endif()
+
+# The compatibility ledger's enforcement: the ledger pairs both ways with the corpus records and
+# its construct column is compared against an observation of each document's own load, so it
+# registers beside the corpus test and under the same option. This stem alone reads the project's
+# own listfiles, so the module directory is defined for it and no other stem gains a coupling to a
+# directory it never opens; the expansion it observes needs the loader the load path installs,
+# which is core-private.
+set(compatibility_ledger_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/compatibility_ledger_test.cpp)
+if(MEIOS_FETCH_CORPUS AND EXISTS ${compatibility_ledger_src})
+    add_executable(compatibility_ledger_test ${compatibility_ledger_src})
+    target_link_libraries(compatibility_ledger_test
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+            Catch2::Catch2WithMain)
+    target_include_directories(compatibility_ledger_test PRIVATE
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
+    string(REPLACE ";" "|" _ledger_documents "${MEIOS_CORPUS_DOCUMENTS}")
+    target_compile_definitions(compatibility_ledger_test PRIVATE
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
+        MEIOS_CMAKE_MODULE_DIR="${meios_SOURCE_DIR}/cmake"
+        MEIOS_CORPUS_DOCUMENTS="${_ledger_documents}")
+    if(TARGET meios_yaml)
+        target_link_libraries(compatibility_ledger_test PRIVATE meios::yaml)
+        target_compile_definitions(compatibility_ledger_test PRIVATE MEIOS_TEST_HAS_YAML=1)
+    endif()
+    meios_enable_coverage(compatibility_ledger_test)
+    meios_warnings(compatibility_ledger_test)
+    catch_discover_tests(compatibility_ledger_test TEST_PREFIX "compatibility_ledger.")
 endif()
 
 # The flatten instrument asserts byte identity of flatten output against a

@@ -3,6 +3,7 @@
 
 #include "../model_facts.h"
 #include "../corpus_record.h"
+#include "../native_expansion.h"
 #include "../differential_verdict.h"
 
 #include <meios/urdf.h>
@@ -105,6 +106,20 @@ void compare_expression_case(const oracle::row &row, const std::vector<oracle::r
     require_reviewed_divergence(manifest, id, upstream_text, ran.rendered);
 }
 
+// Document-level agreement, on the project's own normalizer applied to both sides -- the same
+// normalizer, and the same structural comparison layered on its output, that the expression arm
+// already runs. Comparing unnormalized text would make attribute order and insignificant
+// whitespace a difference; comparing the model alone leaves every element the fact vocabulary has
+// no term for unasserted.
+void require_same_document(const std::string &upstream_text, const std::string &rendered)
+{
+    const std::string meios_canon    = meios::canonical_xml(rendered);
+    const std::string upstream_canon = meios::canonical_xml(upstream_text);
+    std::string mismatch;
+    if(!differential::canonical_matches(upstream_canon, meios_canon, mismatch))
+        FAIL("the rendered documents disagree: " << mismatch);
+}
+
 void compare_corpus_document(const corpus::document &doc, std::vector<std::string> &seen)
 {
     if(doc.backend != corpus::evaluator::native)
@@ -127,6 +142,9 @@ void compare_corpus_document(const corpus::document &doc, std::vector<std::strin
     const std::vector<oracle::row> facts_record = oracle::load_rows(record_file);
     facts::check_model(facts_record, own->robot, doc.package_root);
     check_fresh_render(doc, scratch, facts_record);
+    const std::optional<meios::expansion> rendered = corpus::expanded(doc);
+    REQUIRE(rendered.has_value());
+    require_same_document(upstream_text, rendered->document);
 }
 
 }

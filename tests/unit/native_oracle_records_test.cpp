@@ -13,6 +13,7 @@ namespace
 
 constexpr std::string_view measured[] = { "PINS",
                                           "collisions.cases",
+                                          "compatibility_ledger.cases",
                                           "differential_divergences.cases",
                                           "differential_inventory.cases",
                                           "expressions.cases",

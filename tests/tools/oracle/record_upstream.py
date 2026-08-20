@@ -11,6 +11,7 @@ import tempfile
 import subprocess
 import importlib.metadata
 from pathlib import Path
+from collections import namedtuple
 
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
 CORPUS_PIN = "4.3.1"
@@ -88,6 +89,49 @@ STRING_PROBES = ("'x' + 'y'", "'' + 'y'", "'x' + ''", "'' + ''", "name + '_' + t
 # each of these carries its own measurement rather than standing in for a sibling. The two absent
 # ones build an arm list with a bracket literal and slice it, which this grammar does not read.
 FRANKA_DOCUMENTS = ("fer", "fp3", "fr3", "fr3v2", "fr3v2_1", "tmrv0_2")
+
+# One entry point of the pinned corpus: the share its description resolves against, its path under
+# the root that share names, the arguments upstream is driven with, the arguments the corpus record
+# passes, the fetched upstream whose content digest pins its revision, and the record its measured
+# facts are written to. The two argument fields differ because upstream needs every argument named
+# outright while the corpus record passes only the ones that select a variant.
+entry_point = namedtuple("entry_point", "share document mappings arguments upstream record")
+
+UR = {"ur_type": "ur5e", "name": "ur"}
+# The fresh-render orchestrator beside this file drives these same entry points; it reads this
+# table rather than carrying its own, because two lists of the same descriptions drift apart.
+CORPUS_DOCUMENTS = (
+    entry_point("ur_description", "urdf/ur.urdf.xacro", UR, "ur_type=ur5e", "ur_description",
+                "ur5e_facts.cases"),
+    entry_point("ur_description", "urdf/ur.urdf.xacro", dict(UR, ur_type="ur3e"), "ur_type=ur3e",
+                "ur_description", "ur3e_facts.cases"),
+    entry_point("ur_description", "urdf/ur.urdf.xacro", dict(UR, ur_type="ur7e"), "ur_type=ur7e",
+                "ur_description", "ur7e_facts.cases"),
+    entry_point("ur_description", "urdf/ur.urdf.xacro", dict(UR, safety_limits="true"),
+                "safety_limits=true ur_type=ur5e", "ur_description", "ur5e_safety_facts.cases"),
+    entry_point("ur_description", "urdf/ur.urdf.xacro", dict(UR, force_abs_paths="true"),
+                "force_abs_paths=true ur_type=ur5e", "ur_description",
+                "ur5e_abs_paths_facts.cases"),
+    entry_point("kuka_kr6_support", "kuka_kr6_support/urdf/kr6r900sixx.xacro", {}, "",
+                "kuka_experimental", "kr6_facts.cases"),
+    entry_point("lbr_med14_r820_description", "urdf/lbr_med14_r820.urdf.xacro", {}, "",
+                "lbr_med14_r820_description", "lbr_med14_r820_facts.cases"),
+) + tuple(entry_point("franka_description", "robots/{}/{}.urdf.xacro".format(one, one), {}, "",
+                      "franka_description", "{}_facts.cases".format(one))
+          for one in FRANKA_DOCUMENTS)
+
+
+# The id every record, inventory row and ledger row keys this entry point by: the argument set
+# where one selects the variant, the document's own filename where every argument defaults.
+def key_of(one):
+    return one.arguments or Path(one.document).name
+
+
+# The KR6 resolves $(find) across two sibling packages, so the root it is named under is the
+# directory holding both rather than the share of either.
+def document_root(share, name):
+    root = share(name)
+    return root.parent if name == "kuka_kr6_support" else root
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -192,10 +236,10 @@ def facts_rows(doc, package_root):
     return rows
 
 
-def robot_facts(share, document, mappings):
+def robot_facts(root, document, mappings):
     import xacro
 
-    return facts_rows(xacro.process_file(str(share / document), mappings=mappings), share.parent)
+    return facts_rows(xacro.process_file(str(root / document), mappings=mappings), root.parent)
 
 
 def doubles_in(node, found):
@@ -469,6 +513,46 @@ def pin_rows(versions, share):
              package_digest(listfile, "franka_description"))]
 
 
+LEDGER_COLUMNS = 8
+LEDGER_CARRIED = 3
+LEDGER = "compatibility_ledger.cases"
+
+
+# The last three columns describe this project's own load, which nothing driving upstream can
+# observe. They are read back from the committed record and re-emitted unchanged, so a run that
+# measures upstream never invents them and never drops them; the test that reads the record is what
+# holds them to an actual load. A committed record with no row for an entry point yields empty
+# columns, and that row then fails its comparison rather than passing on a claim nobody made.
+def carried_columns():
+    path = REPO / "tests" / "golden" / "oracle" / LEDGER
+    carried = {}
+    if not path.is_file():
+        return carried
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.split("\t")
+        if not line.startswith("#") and len(fields) == LEDGER_COLUMNS:
+            carried[fields[0]] = fields[-LEDGER_CARRIED:]
+    return carried
+
+
+def shape_text(rows):
+    measured = dict(rows)
+    return "links={} joints={}".format(measured["link.count"], measured["joint.count"])
+
+
+def ledger_rows(measured):
+    listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
+    carried = carried_columns()
+    rows = []
+    for one in CORPUS_DOCUMENTS:
+        key = key_of(one)
+        rows.append((key, one.document,
+                     "{}@{}".format(one.upstream, package_digest(listfile, one.upstream)),
+                     one.arguments, shape_text(measured[key]))
+                    + tuple(carried.get(key, [""] * LEDGER_CARRIED)))
+    return rows
+
+
 def write_record(out, name, header, rows):
     text = "".join("# " + line + "\n" for line in header)
     text += "".join("\t".join(row) + "\n" for row in rows)
@@ -507,6 +591,24 @@ HEADERS = {
     "yaml_scalars.cases": ["source <TAB> resolved kind <TAB> rendered text. The source is the",
                            "scalar exactly as written after the key; an empty source column is a",
                            "key written with no value at all."],
+    LEDGER: ["entry point <TAB> document <TAB> revision <TAB> arguments <TAB> upstream result",
+             "<TAB> native result <TAB> exercised constructs <TAB> reviewed divergence. One row",
+             "per pinned entry point, keyed exactly as the measurement records are keyed. The",
+             "pairing is enforced both ways by the test that reads this file: a pinned entry point",
+             "with no row here fails, and a row here naming no pinned entry point fails. So is the",
+             "construct column, which is compared against the set observed by loading that",
+             "document -- a claimed construct the load does not exercise and an exercised",
+             "construct the row does not claim each fail, and a spelling the vocabulary does not",
+             "carry fails rather than resolving to anything. The first five columns are measured",
+             "against the pinned upstream by the run that writes this file. The last three",
+             "describe this project's own load, which no run driving upstream can observe: such a",
+             "run carries them forward from the committed record unchanged, and the test is what",
+             "holds them to an actual load. A row whose divergence column is empty claims the two",
+             "results agree and a row whose column is filled claims they do not, and both claims",
+             "are checked. What is recorded here is the whole of what this project claims about",
+             "somebody else's robot: an entry point absent from this file is not claimed, and the",
+             "listfile that names the corpus records which documents its pinned upstreams ship",
+             "that are not pinned here, and why."],
     "facts": ["fact <TAB> value, measured from the document upstream renders. A joint that",
               "declares no limit element carries no joint.limit row at all."],
 }
@@ -514,10 +616,10 @@ HEADERS = {
 
 def records(tmp, share, versions):
     ur = share("ur_description")
-    lbr = share("lbr_med14_r820_description")
-    kuka = share("kuka_kr6_support").parent
-    franka = share("franka_description")
     facts = HEADERS["facts"]
+    measured = {key_of(one): robot_facts(document_root(share, one.share), one.document,
+                                         one.mappings)
+                for one in CORPUS_DOCUMENTS}
     return {
         "PINS": (HEADERS["PINS"], pin_rows(versions, share)),
         "rendering.cases": (HEADERS["rendering.cases"], rendering_rows(tmp, ur / "config" / "ur5e")),
@@ -526,25 +628,8 @@ def records(tmp, share, versions):
         "unit_tags.cases": (HEADERS["unit_tags.cases"], unit_tag_rows(tmp)),
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
         "collisions.cases": (HEADERS["collisions.cases"], collision_rows(tmp)),
-        "ur5e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
-                                                {"ur_type": "ur5e", "name": "ur"})),
-        "ur3e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
-                                                {"ur_type": "ur3e", "name": "ur"})),
-        "ur7e_facts.cases": (facts, robot_facts(ur, "urdf/ur.urdf.xacro",
-                                                {"ur_type": "ur7e", "name": "ur"})),
-        "ur5e_safety_facts.cases": (facts, robot_facts(
-            ur, "urdf/ur.urdf.xacro",
-            {"ur_type": "ur5e", "name": "ur", "safety_limits": "true"})),
-        "ur5e_abs_paths_facts.cases": (facts, robot_facts(
-            ur, "urdf/ur.urdf.xacro",
-            {"ur_type": "ur5e", "name": "ur", "force_abs_paths": "true"})),
-        "kr6_facts.cases": (facts, robot_facts(kuka, "kuka_kr6_support/urdf/kr6r900sixx.xacro",
-                                               {})),
-        "lbr_med14_r820_facts.cases": (facts, robot_facts(lbr, "urdf/lbr_med14_r820.urdf.xacro",
-                                                          {})),
-        **{"{}_facts.cases".format(one): (facts, robot_facts(
-            franka, "robots/{}/{}.urdf.xacro".format(one, one), {}))
-           for one in FRANKA_DOCUMENTS},
+        LEDGER: (HEADERS[LEDGER], ledger_rows(measured)),
+        **{one.record: (facts, measured[key_of(one)]) for one in CORPUS_DOCUMENTS},
     }
 
 
