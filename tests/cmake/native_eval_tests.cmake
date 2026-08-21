@@ -77,7 +77,7 @@ function(meios_add_native_test stem kind)
 endfunction()
 
 foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_verdict
-                      accepted_forms)
+                      accepted_forms coverage_matrix)
     meios_add_native_test(${stem} record)
 endforeach()
 
@@ -106,6 +106,13 @@ endif()
 # archive dependency to a target that otherwise links only the records.
 if(TARGET accepted_forms_test)
     target_link_libraries(accepted_forms_test PRIVATE meios::xacro)
+endif()
+
+# This stem resolves the references its committed artifacts cite, so it reads sources and
+# listfiles across the whole checkout rather than one directory beneath it.
+if(TARGET coverage_matrix_test)
+    target_compile_definitions(coverage_matrix_test PRIVATE
+        MEIOS_REPOSITORY_ROOT="${meios_SOURCE_DIR}")
 endif()
 
 # The row total is what keeps a present-but-emptied record set from passing every downstream

@@ -1,0 +1,35 @@
+# One row per axis that bounds a resource, across both aggregates that declare one. The stem
+# reading this file extracts the members each aggregate declares and pairs them against these
+# rows in both directions, so an axis added to either aggregate without a row here fails.
+#
+# Why both aggregates and not the evaluator's alone: a file total against the evaluator's eleven
+# axes would be complete, would pass its own check, and would still omit the axis that bounds the
+# depth of the expansion walk -- the one whose absence let a self-instantiating macro take the
+# native stack with no diagnostic at all. A file that certifies a hole is worse than no file.
+#
+# reach is one of three words, and it is a measurement rather than an intent.
+#   crossed:   a committed input drives this axis past its ceiling and the refusal is observed.
+#   charged:   a committed input drives the axis and is admitted; the evidence says how far it
+#              got and what crossing would cost.
+#   unreached: no harness can charge the axis at all; the evidence says why, and no seed was
+#              written, because a seed that cannot fire is worse than a written reason.
+#
+# Any word beginning with tests/ is a repository-relative reference and is resolved against the
+# tree. A harness of none means no harness reaches the axis.
+#
+# The first row names the columns.
+aggregate	axis	harness	reach	evidence
+evaluator	yaml_nodes	none	unreached	no fuzz harness installs an auxiliary-document parser: both drive a bare scope, so the document load resolves nothing and no fuzzed input can charge this axis. The refusal is measured by tests/unit/native_limits_test.cpp instead
+evaluator	yaml_depth	none	unreached	unreachable for the same reason as the node count beside it, and charging depth needs a document, no harness supplies a reader that could build one, and the same case in tests/unit/native_limits_test.cpp measures the refusal
+evaluator	bytes	tests/fuzz/evaluator_fuzz.cpp tests/fuzz/structural_fuzz.cpp	charged	the cumulative bytes a load produces. The largest production a committed seed was measured to make is 10 000 bytes, from tests/fuzz/corpus/evaluator/edge-string-length, against a ceiling of 8 000 000
+evaluator	tokens	tests/fuzz/evaluator_fuzz.cpp tests/fuzz/structural_fuzz.cpp	charged	the cumulative token count over a load. tests/fuzz/corpus/evaluator/edge-expression-tokens was measured to lex to 10 000 tokens, and a harness builds one session per input, so the cumulative count equals the per-expression one against a ceiling of 1 000 000
+evaluator	steps	tests/fuzz/evaluator_fuzz.cpp tests/fuzz/structural_fuzz.cpp	charged	charged by every evaluated operation. No committed input approaches 10 000 000: an expression accrues no more steps than it has operations, and the largest committed seed is 10 029 bytes
+evaluator	expression_depth	tests/fuzz/evaluator_fuzz.cpp	charged	measured over all 85 committed evaluator seeds, the deepest is tests/fuzz/corpus/evaluator/edge-deep-nested-parens at ten bracket levels. A balanced bracket pair costs twelve recursive entries, so that seed stands at about 120 of a 256-entry ceiling. Mutation crosses this axis readily; no committed input does
+evaluator	alias_expansion	none	unreached	charged only while an auxiliary document is being built, and no harness installs a reader. Measured by tests/unit/native_yaml_alias_test.cpp instead
+evaluator	numeric_magnitude	tests/fuzz/evaluator_fuzz.cpp	charged	tests/fuzz/corpus/evaluator/edge-numeric-magnitude was measured at 999 999 999 999 of 1 000 000 000 000, one below the ceiling and admitted. One magnitude past it refuses, and that side is pinned by tests/unit/native_ceilings_test.cpp rather than by a seed
+evaluator	expression_tokens	tests/fuzz/evaluator_fuzz.cpp	charged	tests/fuzz/corpus/evaluator/edge-expression-tokens was measured at exactly 10 000 of 10 000 and is admitted; one term more lexes to 10 002 and refuses, pinned by tests/unit/native_ceilings_test.cpp. The seed reaches the ceiling without crossing it, which is what approaching a bound means: a seed that refuses on the first charge exercises the charge and nothing past it
+evaluator	string_length	tests/fuzz/evaluator_fuzz.cpp	charged	tests/fuzz/corpus/evaluator/edge-string-length was measured at 10 000 of 1 000 000, one percent. This evaluator has no string repetition operator, so a produced byte costs about 1.0005 input bytes and crossing the ceiling needs roughly a megabyte of input. A seed that large raises the campaign's implied maximum input length, which was measured to cost the campaign 28 times its throughput, so the corpus deliberately carries none
+evaluator	elements	tests/fuzz/evaluator_fuzz.cpp	charged	tests/fuzz/corpus/evaluator/edge-produced-elements was measured at 10 000 of 100 000, a tenth. A produced element costs about 1.0015 input bytes, so crossing the ceiling needs roughly 100 000 bytes of input, and the same measured 28-fold campaign cost is why the corpus carries no seed that size
+expansion	work	tests/fuzz/structural_fuzz.cpp	charged	charged by every node the walk visits. The self-instantiating seed was measured to exhaust a 512 KiB native stack at 522 levels, roughly two thousandths of the 1 000 000 ceiling, so the depth axis refuses first and no committed input crosses this one
+expansion	output_nodes	tests/fuzz/structural_fuzz.cpp	charged	charged by every emitted node. The largest committed structural seed is 441 bytes and the largest fixture the harness also seeds from is 1 398, neither within orders of magnitude of the 100 000 ceiling
+expansion	depth	tests/fuzz/structural_fuzz.cpp	crossed	tests/fuzz/corpus/structural/macro-self-instantiation crosses it: the built tool refuses that document with an expansion-depth diagnostic naming the 128-level ceiling, which only a document that reached the 129th recursive entry can raise. This is the one axis of the fourteen a committed input crosses, and it is the axis whose absence took the native stack -- which is why this file spans both aggregates rather than the evaluator's eleven alone
