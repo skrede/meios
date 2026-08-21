@@ -6,6 +6,7 @@
 
 import os
 import sys
+import shutil
 import argparse
 import tempfile
 import subprocess
@@ -35,6 +36,13 @@ DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"),
                      ("div_span_format_operator", "'%.3f' % 1.2345"),
                      ("div_span_nested_expression", "${'1 + 2'}"))
 RECURSIVE_YAML = "a: &a [1, *a]\n"
+
+# A difference needing a macro, a conditional and a call site has no expression to wrap, so its
+# probe is a whole committed document read from tests/fixtures/xacro/probes by both sides. Ids
+# only: the document is the fixture, and repeating it here is what a rename would silently defeat.
+DOCUMENT_PROBES = ("discarded_block", "overridden_default", "property_fallback",
+                   "non_text_mapping_key")
+PROBE_DIR = oracle.REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 
 def sanitize(case_id):
@@ -72,6 +80,25 @@ def render_divergence_probe(tmp, out, case_id, expression):
         write_refusal(out, case_id, ".txt", failure)
 
 
+# Every file sharing the probe's stem travels with it, so an auxiliary document beside the probe
+# resolves document-relative in the scratch directory exactly as it does in the fixture directory.
+def stage_probe(tmp, case_id):
+    for one in sorted(PROBE_DIR.glob(case_id + ".*")):
+        shutil.copy(one, tmp / one.name)
+    return tmp / (case_id + ".xacro")
+
+
+# Driven through process_file rather than render(), which wraps a body in its own <robot> and
+# would defeat the point of a document-level probe.
+def render_document_probe(tmp, out, case_id):
+    import xacro
+
+    try:
+        write_text(out, case_id, ".txt", xacro.process_file(str(stage_probe(tmp, case_id))).toxml())
+    except Exception as failure:
+        write_refusal(out, case_id, ".txt", failure)
+
+
 # The entry points are the recorder's own table, read rather than repeated: a second list of the
 # same descriptions is a rename away from rendering one document and comparing another.
 def render_corpus_document(share, out, one):
@@ -94,6 +121,8 @@ def render_all(tmp, share, out):
         render_expression_case(tmp, out, seeds, case_id, expression)
     for case_id, expression in DIVERGENCE_PROBES:
         render_divergence_probe(tmp, out, case_id, expression)
+    for case_id in DOCUMENT_PROBES:
+        render_document_probe(tmp, out, case_id)
     for one in oracle.CORPUS_DOCUMENTS:
         render_corpus_document(share, out, one)
 

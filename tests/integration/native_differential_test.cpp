@@ -1,5 +1,6 @@
 #include "differential_xml.h"
 #include "differential_seed.h"
+#include "differential_document.h"
 
 #include "../model_facts.h"
 #include "../corpus_record.h"
@@ -13,7 +14,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <tuple>
 #include <string>
 #include <vector>
 #include <optional>
@@ -175,6 +175,33 @@ TEST_CASE("fresh upstream renders agree with meios on category, structure and fa
 // manifest it is meant to police.
 #ifdef MEIOS_TEST_HAS_YAML
 
+namespace
+{
+
+void compare_divergence_probe(const differential::probe &one,
+                              const std::vector<oracle::row> &manifest,
+                              differential::verdicts &observed)
+{
+    const std::string id(one.id);
+    INFO("probe " << id << ": " << one.expression);
+    const std::string rendered = differential::upstream_render(MEIOS_DIFFERENTIAL_RENDERS_DIR, id);
+    differential::record_divergence(manifest, id, differential::upstream_value(rendered),
+                                    differential::observed_value(one), observed);
+}
+
+void compare_document_probe(const differential::document_probe &one,
+                            const std::vector<oracle::row> &manifest,
+                            differential::verdicts &observed)
+{
+    const std::string id(one.id);
+    INFO("document probe " << id);
+    const std::string rendered = differential::upstream_render(MEIOS_DIFFERENTIAL_RENDERS_DIR, id);
+    differential::record_divergence(manifest, id, differential::upstream_document(rendered),
+                                    differential::observed_document(one), observed);
+}
+
+}
+
 TEST_CASE("the divergence manifest matches the measured divergences and no others",
           "[native_differential]")
 {
@@ -182,27 +209,11 @@ TEST_CASE("the divergence manifest matches the measured divergences and no other
         return skip_without_renders();
 
     const std::vector<oracle::row> manifest = oracle::load_rows("differential_divergences.cases");
-    std::vector<std::tuple<std::string, std::string, std::string>> observed;
+    differential::verdicts observed;
     for(const differential::probe &one : differential::divergence_probes)
-    {
-        const std::filesystem::path scratch =
-            differential::render_path(MEIOS_DIFFERENTIAL_RENDERS_DIR, std::string(one.id), ".txt");
-        REQUIRE(std::filesystem::exists(scratch));
-        const std::string rendered = differential::trimmed(differential::slurp(scratch));
-        // A refusing render carries upstream's own wording after the verdict, which no manifest
-        // column can hold: a tab is the column separator. Both sides therefore record the
-        // verdict, and the wording of a refusal is what expressions.cases exists to carry.
-        const std::string upstream_text =
-            differential::refused(rendered) ? std::string("REFUSED") : rendered;
-        INFO("probe " << one.id << ": " << one.expression);
-        const std::string meios_value = differential::observed_value(one);
-        REQUIRE(upstream_text != meios_value);
-        std::string detail;
-        if(!differential::matches_manifest(manifest, std::string(one.id), upstream_text,
-                                           meios_value, detail))
-            FAIL(detail);
-        observed.emplace_back(one.id, upstream_text, meios_value);
-    }
+        compare_divergence_probe(one, manifest, observed);
+    for(const differential::document_probe &one : differential::document_probes)
+        compare_document_probe(one, manifest, observed);
     for(const std::string &stale : differential::stale_manifest_entries(manifest, observed))
         FAIL("divergence manifest entry '" << stale << "' no longer reproduces");
 }

@@ -62,7 +62,8 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
     target_compile_definitions(native_differential_test PRIVATE
         MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
         MEIOS_CORPUS_DOCUMENTS="${_differential_documents}"
-        MEIOS_DIFFERENTIAL_RENDERS_DIR="${MEIOS_DIFFERENTIAL_RENDERS_DIR}")
+        MEIOS_DIFFERENTIAL_RENDERS_DIR="${MEIOS_DIFFERENTIAL_RENDERS_DIR}"
+        MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
     # The document arm runs the expansion the load path runs, and the loader that path installs
     # is core-private.
     target_include_directories(native_differential_test PRIVATE
