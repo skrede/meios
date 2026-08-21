@@ -26,6 +26,8 @@ option(MEIOS_CORPUS_BREADTH
 # # license[ur_description]: BSD-3-Clause (UniversalRobots/Universal_Robots_ROS2_Description, root LICENSE)
 # # license[lbr_med14_r820_description]: Apache-2.0 (lbr-stack/med14_r820_description, package.xml <license>, no root LICENSE)
 # # license[franka_description]: Apache-2.0 (frankarobotics/franka_description, package.xml <license> declares "Apache 2.0")
+# # license[kortex_description]: BSD-3-Clause (Kinovarobotics/ros2_kortex, root LICENSE;
+# #   kortex_description/package.xml declares "BSD")
 # # license[corpus_faulty]: crafted in-repo fixture (project-owned)
 
 # lbr_fri_ros2_stack is deliberately not fetched and not listed, so it carries no
@@ -108,6 +110,17 @@ meios_declare_resource(
     OUT_DIR MEIOS_CORPUS_FRANKA_DIR)  # franka_description 2.8.1
 meios_corpus_check_license(franka_description "${MEIOS_CORPUS_FRANKA_DIR}/package.xml"
     "${_corpus_self}" "Apache 2.0")
+
+# Multi-package, like kuka_experimental: the fetch root already holds kortex_description under the
+# name the description resolves it by, so it serves as the package root directly and takes no copy.
+meios_declare_resource(
+    NAME kortex_description
+    URL  https://github.com/Kinovarobotics/ros2_kortex/archive/c50057a02fb64e854b2759261994f43173bec703.tar.gz
+    HASH SHA256=74fe9eec328b69325fef2f4add58d80000028d799f2999c597904a0738d54fa0
+    STRIP_TOP_LEVEL
+    OUT_DIR MEIOS_CORPUS_KORTEX_DIR)  # kortex_description 0.2.5
+meios_corpus_check_license(kortex_description
+    "${MEIOS_CORPUS_KORTEX_DIR}/kortex_description/package.xml" "${_corpus_self}" "BSD")
 
 # The resolver's containment guard rejects a package root reached through a symlink, so
 # every self-contained fetch is copied under the name it resolves itself by. The copy is

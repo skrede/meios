@@ -17,6 +17,7 @@ PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
 CORPUS_PIN = "4.3.1"
 LBR_PIN = "2.5.0"
 FRANKA_PIN = "2.8.1"
+KORTEX_PIN = "0.2.5"
 MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
 HERE = Path(__file__).resolve().parent
@@ -118,7 +119,14 @@ CORPUS_DOCUMENTS = (
                 "lbr_med14_r820_description", "lbr_med14_r820_facts.cases"),
 ) + tuple(entry_point("franka_description", "robots/{}/{}.urdf.xacro".format(one, one), {}, "",
                       "franka_description", "{}_facts.cases".format(one))
-          for one in FRANKA_DOCUMENTS)
+          for one in FRANKA_DOCUMENTS) + (
+    entry_point("kortex_description", "robots/gen3.xacro", {"dof": "7"}, "dof=7",
+                "kortex_description", "gen3_facts.cases"),
+    # Driven with a distinguishing name as well as the variant: the variant alone would key this
+    # document identically to the plain ur.urdf.xacro entry point above.
+    entry_point("ur_description", "urdf/ur_mocked.urdf.xacro", dict(UR, name="ur_mocked"),
+                "name=ur_mocked ur_type=ur5e", "ur_description", "ur_mocked_facts.cases"),
+)
 
 
 # The id every record, inventory row and ledger row keys this entry point by: the argument set
@@ -214,9 +222,13 @@ def portable_mesh_uri(filename, package_root):
     return filename
 
 
+# The model is the link and joint children of the robot root and nothing else. A sweep of the whole
+# document also collects the <joint> elements an extension block declares -- a ros2_control interface
+# list names one per actuated joint, with no type and no limit -- which would record a joint twice
+# under contradicting values and count a model this project never builds.
 def facts_rows(doc, package_root):
-    links = doc.getElementsByTagName("link")
-    joints = doc.getElementsByTagName("joint")
+    links = children(doc.documentElement, "link")
+    joints = children(doc.documentElement, "joint")
     rows = [("link.count", str(len(links))), ("joint.count", str(len(joints)))]
     rows += [("link.name.{}".format(at), l.getAttribute("name")) for at, l in enumerate(links)]
     rows += [("joint.name.{}".format(at), j.getAttribute("name")) for at, j in enumerate(joints)]
@@ -226,10 +238,11 @@ def facts_rows(doc, package_root):
             rows.append(("joint.limit." + joint.getAttribute("name"),
                          attribute_text(limit, ("lower", "upper", "effort", "velocity"))))
     meshes = []
-    for mesh in doc.getElementsByTagName("mesh"):
-        filename = portable_mesh_uri(mesh.getAttribute("filename"), package_root)
-        if filename not in meshes:
-            meshes.append(filename)
+    for link in links:
+        for mesh in link.getElementsByTagName("mesh"):
+            filename = portable_mesh_uri(mesh.getAttribute("filename"), package_root)
+            if filename not in meshes:
+                meshes.append(filename)
     rows += [("mesh.filename.{}".format(at), m) for at, m in enumerate(meshes)]
     for link in links:
         rows += origin_rows(link)
@@ -510,7 +523,10 @@ def pin_rows(versions, share):
              package_version(share, "lbr_med14_r820_description", LBR_PIN),
              package_digest(listfile, "lbr_med14_r820_description")),
             ("franka_description", package_version(share, "franka_description", FRANKA_PIN),
-             package_digest(listfile, "franka_description"))]
+             package_digest(listfile, "franka_description")),
+            ("kortex_description",
+             package_version(share, "kortex_description", KORTEX_PIN),
+             package_digest(listfile, "kortex_description"))]
 
 
 LEDGER_COLUMNS = 8

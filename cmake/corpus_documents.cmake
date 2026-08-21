@@ -89,5 +89,20 @@ meios_corpus_document(
     "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description/robots/tmrv0_2/tmrv0_2.urdf.xacro"
     "" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 
+# Multi-package, so the fetch directory is its own package root, as kr6r900sixx above already is.
+# The dof argument selects the seven-degree arm; gripper defaults empty, and the two references to
+# an out-of-repository package sit behind <xacro:unless value="${not gripper}">, which that default
+# does not open -- a load reaching one would refuse, since no such package is in the tarball.
+meios_corpus_document("${MEIOS_CORPUS_KORTEX_DIR}/kortex_description/robots/gen3.xacro"
+    "dof=7" native "${MEIOS_CORPUS_KORTEX_DIR}")
+
+# A second top-level document of the Universal Robots package above, driven with a distinguishing
+# name because ur_type alone would key it identically to the plain ur.urdf.xacro entry point and a
+# shared key pairs one document with another's measured facts. The name is also the rendered robot
+# name. It reaches the keyword-argument mapping constructor through a macro-parameter default its
+# own call overrides, and declares a property fallback where ur.urdf.xacro declares a value.
+meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur_mocked.urdf.xacro"
+    "name=ur_mocked ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
 math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")

@@ -88,3 +88,5 @@ fr3.urdf.xacro	document
 fr3v2.urdf.xacro	document
 fr3v2_1.urdf.xacro	document
 tmrv0_2.urdf.xacro	document
+dof=7	document
+name=ur_mocked ur_type=ur5e	document

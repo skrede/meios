@@ -22,6 +22,7 @@ constexpr std::string_view measured[] = { "PINS",
                                           "fr3_facts.cases",
                                           "fr3v2_1_facts.cases",
                                           "fr3v2_facts.cases",
+                                          "gen3_facts.cases",
                                           "kr6_facts.cases",
                                           "lbr_med14_r820_facts.cases",
                                           "rendering.cases",
@@ -32,6 +33,7 @@ constexpr std::string_view measured[] = { "PINS",
                                           "ur5e_facts.cases",
                                           "ur5e_safety_facts.cases",
                                           "ur7e_facts.cases",
+                                          "ur_mocked_facts.cases",
                                           "yaml_scalars.cases" };
 
 std::string value_of(std::string_view file, std::string_view key)
