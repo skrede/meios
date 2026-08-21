@@ -90,7 +90,7 @@ TEST_CASE("a nested arg default resolves at declaration", "[xacro][arg]")
     const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
     const std::string located =
-        std::filesystem::weakly_canonical(root / "pkg").string() + "/config/cfg/f.yaml";
+        std::filesystem::weakly_canonical(root / "pkg").generic_string() + "/config/cfg/f.yaml";
     std::filesystem::remove_all(root);
 
     REQUIRE(out.has_value());
