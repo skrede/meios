@@ -116,6 +116,11 @@ struct expand_ctx
     eval_policy mode;
     std::shared_ptr<evaluator_handle> backend;
     expansion_counters counters;
+    // How many recursive entries into the walk are live; the counter beside it keeps the
+    // high-water mark. It is carried here rather than passed down because the walk's arms
+    // are mutually recursive across four files, and a depth threaded through their
+    // parameters is one any of them may forget to pass on.
+    std::size_t depth;
     std::map<std::string, macro_def> macros;
     std::map<std::string, block_arg> blocks;
     std::vector<std::filesystem::path> include_stack;
@@ -134,7 +139,27 @@ struct expand_ctx
 
     bool charge_work(pugi::xml_node in);
     bool charge_output(pugi::xml_node in);
+    bool enter_node(pugi::xml_node in);
+    void leave_node();
     pugi::xml_document &park();
+};
+
+// Charges one recursive entry into the walk for as long as it lives. Every arm of the walk
+// answers bool on several paths, so the matching leave is tied to a scope rather than written
+// out at each of them, where one would eventually be missed and the depth would never unwind.
+class depth_guard
+{
+public:
+    depth_guard(expand_ctx &ctx, pugi::xml_node in);
+    depth_guard(const depth_guard &) = delete;
+    depth_guard &operator=(const depth_guard &) = delete;
+    ~depth_guard();
+
+    bool admitted() const { return m_admitted; }
+
+private:
+    expand_ctx &m_ctx;
+    bool m_admitted;
 };
 
 bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,

@@ -207,12 +207,18 @@ refused and takes its default, so there is no spelling that means unbounded. Cro
 terminal and stops the load at the position that crossed it: a load continuing past its own ceiling
 would report a partial answer as a whole one.
 
-Expansion carries two more that are not the evaluator's: a work count (1 000 000) over nodes
-visited, macro instantiations and substitutions, and an emitted-node count (100 000). They bound a
-shallow-but-wide macro fan-out that no expression ceiling would catch, and they report under the same
-`expansion_budget_exceeded` code — so a crossed ceiling naming a work limit is one of these two
-rather than one of the eleven. None of the thirteen is reachable through `load()`; that entry point
-always runs them at their defaults, and only the `meios::xacro` seam takes different ones.
+Expansion carries three more that are not the evaluator's: a work count (1 000 000) over nodes
+visited, macro instantiations and substitutions, an emitted-node count (100 000), and the depth of
+the walk itself (128). The first two bound a shallow-but-wide macro fan-out that no expression
+ceiling would catch; the third bounds the opposite shape, a macro that instantiates itself or a
+document nested without end, which takes the native stack some five hundred levels in and long
+before either volume count accrues — so its number is set from the depth at which that stack was
+measured to give out rather than chosen. All three report under the same
+`expansion_budget_exceeded` code — so a crossed ceiling naming a work, output-node or
+expansion-depth limit is one of these three rather than one of the eleven. These three do not take
+the zero rule the eleven do: a zero there is a ceiling already crossed, not an absent one. None of
+the fourteen is reachable through `load()`; that entry point always runs them at their defaults,
+and only the `meios::xacro` seam takes different ones.
 
 ## What this costs
 

@@ -9,7 +9,9 @@
 #include <string>
 #include <memory>
 #include <utility>
+#include <algorithm>
 #include <filesystem>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -55,7 +57,7 @@ expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits 
                        eval_policy policy, const std::shared_ptr<evaluator_handle> &inject,
                        log_sink &lg)
     : scope(s), sources(src), limits(lim), eval_limits(), session(eval_limits), observer(lg),
-      log(observer), mode(policy), backend(inject), counters(), macros(), blocks(),
+      log(observer), mode(policy), backend(inject), counters(), depth(0), macros(), blocks(),
       include_stack(), owned(), owned_text(), origins(), prop_frames(), param_saves(), terminal(),
       ok(true)
 {
@@ -84,21 +86,24 @@ expansion_error terminal_of(const expand_ctx &ctx, const std::filesystem::path &
                             diagnostic_code::xacro_structural_error, std::nullopt };
 }
 
+namespace
+{
+
+std::string crossed(std::string_view axis, std::size_t ceiling, std::string_view unit)
+{
+    return "expansion budget exceeded: " + std::string(axis) + " limit of "
+         + std::to_string(ceiling) + ' ' + std::string(unit) + " reached";
+}
+
+}
+
 bool expand_ctx::charge_work(pugi::xml_node in)
 {
     if(!ok)
         return false;
     if(++counters.work > limits.work)
-    {
-        const std::string message = "expansion budget exceeded: work limit of "
-                                  + std::to_string(limits.work) + " units reached";
-        record_terminal(*this, locate(*this, in), diagnostic_code::expansion_budget_exceeded,
-                        message);
-        log.log(level::error, diagnostic_code::expansion_budget_exceeded, locate(*this, in),
-                message);
-        ok = false;
-        return false;
-    }
+        return fail(*this, in, diagnostic_code::expansion_budget_exceeded,
+                    crossed("work", limits.work, "units"));
     return true;
 }
 
@@ -107,17 +112,38 @@ bool expand_ctx::charge_output(pugi::xml_node in)
     if(!ok)
         return false;
     if(++counters.output_nodes > limits.output_nodes)
-    {
-        const std::string message = "expansion budget exceeded: output-node limit of "
-                                  + std::to_string(limits.output_nodes) + " nodes reached";
-        record_terminal(*this, locate(*this, in), diagnostic_code::expansion_budget_exceeded,
-                        message);
-        log.log(level::error, diagnostic_code::expansion_budget_exceeded, locate(*this, in),
-                message);
-        ok = false;
-        return false;
-    }
+        return fail(*this, in, diagnostic_code::expansion_budget_exceeded,
+                    crossed("output-node", limits.output_nodes, "nodes"));
     return true;
+}
+
+// The level is taken before it is admitted and given back by the guard either way, so the
+// entry that crosses the ceiling unwinds through the same path as one that does not.
+bool expand_ctx::enter_node(pugi::xml_node in)
+{
+    ++depth;
+    if(!ok)
+        return false;
+    if(depth > limits.depth)
+        return fail(*this, in, diagnostic_code::expansion_budget_exceeded,
+                    crossed("expansion-depth", limits.depth, "levels"));
+    counters.depth = std::max(counters.depth, depth);
+    return true;
+}
+
+void expand_ctx::leave_node()
+{
+    --depth;
+}
+
+depth_guard::depth_guard(expand_ctx &ctx, pugi::xml_node in)
+    : m_ctx(ctx), m_admitted(ctx.enter_node(in))
+{
+}
+
+depth_guard::~depth_guard()
+{
+    m_ctx.leave_node();
 }
 
 pugi::xml_document &expand_ctx::park()

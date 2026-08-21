@@ -126,7 +126,8 @@ std::string strip_authored_markers(std::string text)
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document)
 {
-    if(!ctx.charge_work(in))
+    depth_guard level(ctx, in);
+    if(!level.admitted() || !ctx.charge_work(in))
         return false;
     pugi::xml_node_type kind = in.type();
     if(kind == pugi::node_pcdata || kind == pugi::node_cdata)
