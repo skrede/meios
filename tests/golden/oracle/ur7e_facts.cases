@@ -1,5 +1,9 @@
 # fact <TAB> value, measured from the document upstream renders. A joint that
-# declares no limit element carries no joint.limit row at all.
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
 link.count	13
 joint.count	12
 link.name.0	world

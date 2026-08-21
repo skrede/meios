@@ -87,6 +87,22 @@ TEST_CASE("the calibration reader tells an absent attribute from an unreadable o
     REQUIRE_FALSE(loud.robot.joints.at(0).calib->rising.has_value());
 }
 
+// The guard the Universal Robots macro writes for a continuous joint names two of the four, and
+// the record names exactly what the element declared. The reader must keep such a guard rather
+// than drop it for incompleteness, or the record's row and the load disagree on its presence.
+TEST_CASE("a guard declaring some of its attributes is kept rather than dropped", "[urdf][fields]")
+{
+    const outcome out = walk(one_joint("type=\"continuous\"",
+                                       "    <safety_controller k_position=\"20\" "
+                                       "k_velocity=\"0.0\"/>\n"),
+                             meios::strictness::fail);
+
+    REQUIRE(out.notes.empty());
+    REQUIRE(out.robot.joints.at(0).safety.has_value());
+    CHECK(out.robot.joints.at(0).safety->k_position == 20.0);
+    CHECK(out.robot.joints.at(0).safety->k_velocity == 0.0);
+}
+
 TEST_CASE("a non-finite value is refused under a code rather than under none", "[urdf][fields]")
 {
     const outcome out =

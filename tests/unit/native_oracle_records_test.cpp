@@ -1,5 +1,7 @@
 #include "oracle_records.h"
 
+#include "../fact_rows.h"
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
@@ -82,6 +84,28 @@ TEST_CASE("upstream leaves a wrist joint without position limits its effort and 
     CHECK(limit.find("lower=") == std::string::npos);
     CHECK(limit.find("upper=") == std::string::npos);
     CHECK(limit.find("effort=") != std::string::npos);
+}
+
+// The safety branch of the Universal Robots document exists to produce these elements. Until the
+// fact vocabulary carried a term for them its record was byte-identical to the plain branch's, so
+// the branch cost a build and proved nothing on every platform the live comparison does not run on.
+TEST_CASE("the guarded elements tell the safety branch's record from the plain one", "[oracle]")
+{
+    CHECK(facts::rows_under(oracle::load_rows("ur5e_facts.cases"), "joint.safety.") == 0);
+    CHECK(facts::rows_under(oracle::load_rows("ur5e_safety_facts.cases"), "joint.safety.") == 6);
+    CHECK(value_of("ur5e_safety_facts.cases", "joint.safety.elbow_joint")
+          == "soft_lower_limit=-2.991592653589793 soft_upper_limit=2.991592653589793 "
+             "k_position=20 k_velocity=0.0");
+}
+
+// Two vendors write a guard's soft bounds as the hard bounds themselves. Both are recorded as they
+// render: coinciding is not a reason to drop either, and the comparison that reads them is exact.
+TEST_CASE("a guard whose soft bounds coincide with its hard bounds records both", "[oracle]")
+{
+    CHECK(value_of("fr3_facts.cases", "joint.limit.fr3_joint1")
+          == "lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62");
+    CHECK(value_of("fr3_facts.cases", "joint.safety.fr3_joint1")
+          == "soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0");
 }
 
 // The one case the refusal set turns on: a name the wrapper answers itself reads as a bound

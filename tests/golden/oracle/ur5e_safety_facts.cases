@@ -1,5 +1,9 @@
 # fact <TAB> value, measured from the document upstream renders. A joint that
-# declares no limit element carries no joint.limit row at all.
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
 link.count	13
 joint.count	12
 link.name.0	world
@@ -31,16 +35,22 @@ joint.type.base_joint	fixed
 joint.type.base_link-base_link_inertia	fixed
 joint.type.shoulder_pan_joint	revolute
 joint.limit.shoulder_pan_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=150.0 velocity=3.141592653589793
+joint.safety.shoulder_pan_joint	soft_lower_limit=-6.133185307179586 soft_upper_limit=6.133185307179586 k_position=20 k_velocity=0.0
 joint.type.shoulder_lift_joint	revolute
 joint.limit.shoulder_lift_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=150.0 velocity=3.141592653589793
+joint.safety.shoulder_lift_joint	soft_lower_limit=-6.133185307179586 soft_upper_limit=6.133185307179586 k_position=20 k_velocity=0.0
 joint.type.elbow_joint	revolute
 joint.limit.elbow_joint	lower=-3.141592653589793 upper=3.141592653589793 effort=150.0 velocity=3.141592653589793
+joint.safety.elbow_joint	soft_lower_limit=-2.991592653589793 soft_upper_limit=2.991592653589793 k_position=20 k_velocity=0.0
 joint.type.wrist_1_joint	revolute
 joint.limit.wrist_1_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.safety.wrist_1_joint	soft_lower_limit=-6.133185307179586 soft_upper_limit=6.133185307179586 k_position=20 k_velocity=0.0
 joint.type.wrist_2_joint	revolute
 joint.limit.wrist_2_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.safety.wrist_2_joint	soft_lower_limit=-6.133185307179586 soft_upper_limit=6.133185307179586 k_position=20 k_velocity=0.0
 joint.type.wrist_3_joint	revolute
 joint.limit.wrist_3_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.safety.wrist_3_joint	soft_lower_limit=-6.133185307179586 soft_upper_limit=6.133185307179586 k_position=20 k_velocity=0.0
 joint.type.wrist_3_link-ft_frame	fixed
 joint.type.base_link-base_fixed_joint	fixed
 joint.type.wrist_3-flange	fixed

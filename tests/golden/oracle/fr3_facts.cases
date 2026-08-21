@@ -1,5 +1,9 @@
 # fact <TAB> value, measured from the document upstream renders. A joint that
-# declares no limit element carries no joint.limit row at all.
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
 link.count	26
 joint.count	25
 link.name.0	base
@@ -60,26 +64,33 @@ joint.type.fr3_link1_accelerometer_top_joint	fixed
 joint.type.fr3_link1_accelerometer_bottom_joint	fixed
 joint.type.fr3_joint1	revolute
 joint.limit.fr3_joint1	lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62
+joint.safety.fr3_joint1	soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0
 joint.type.fr3_link2_accelerometer_top_joint	fixed
 joint.type.fr3_link2_accelerometer_bottom_joint	fixed
 joint.type.fr3_joint2	revolute
 joint.limit.fr3_joint2	lower=-1.8361 upper=1.8361 effort=87.0 velocity=2.62
+joint.safety.fr3_joint2	soft_lower_limit=-1.8361 soft_upper_limit=1.8361 k_position=100.0 k_velocity=40.0
 joint.type.fr3_link3_accelerometer_top_joint	fixed
 joint.type.fr3_link3_accelerometer_bottom_joint	fixed
 joint.type.fr3_joint3	revolute
 joint.limit.fr3_joint3	lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62
+joint.safety.fr3_joint3	soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0
 joint.type.fr3_link4_accelerometer_top_joint	fixed
 joint.type.fr3_link4_accelerometer_bottom_joint	fixed
 joint.type.fr3_joint4	revolute
 joint.limit.fr3_joint4	lower=-3.077 upper=-0.1169 effort=87.0 velocity=2.62
+joint.safety.fr3_joint4	soft_lower_limit=-3.077 soft_upper_limit=-0.1169 k_position=100.0 k_velocity=40.0
 joint.type.fr3_link5_accelerometer_top_joint	fixed
 joint.type.fr3_link5_accelerometer_bottom_joint	fixed
 joint.type.fr3_joint5	revolute
 joint.limit.fr3_joint5	lower=-2.8763 upper=2.8763 effort=12.0 velocity=5.26
+joint.safety.fr3_joint5	soft_lower_limit=-2.8763 soft_upper_limit=2.8763 k_position=100.0 k_velocity=40.0
 joint.type.fr3_joint6	revolute
 joint.limit.fr3_joint6	lower=0.4398 upper=4.6216 effort=12.0 velocity=4.18
+joint.safety.fr3_joint6	soft_lower_limit=0.4398 soft_upper_limit=4.6216 k_position=100.0 k_velocity=40.0
 joint.type.fr3_joint7	revolute
 joint.limit.fr3_joint7	lower=-3.0508 upper=3.0508 effort=12.0 velocity=5.26
+joint.safety.fr3_joint7	soft_lower_limit=-3.0508 soft_upper_limit=3.0508 k_position=100.0 k_velocity=40.0
 joint.type.fr3_joint8	fixed
 joint.type.fr3_hand_joint	fixed
 joint.type.fr3_hand_tcp_joint	fixed

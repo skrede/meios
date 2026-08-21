@@ -1,5 +1,9 @@
 # fact <TAB> value, measured from the document upstream renders. A joint that
-# declares no limit element carries no joint.limit row at all.
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
 link.count	9
 joint.count	8
 link.name.0	lbr_link_0
@@ -21,18 +25,25 @@ joint.name.6	lbr_A7
 joint.name.7	lbr_joint_ee
 joint.type.lbr_A1	revolute
 joint.limit.lbr_A1	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=1.4835298641951802
+joint.safety.lbr_A1	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=17.0 k_velocity=10
 joint.type.lbr_A2	revolute
 joint.limit.lbr_A2	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=1.4835298641951802
+joint.safety.lbr_A2	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=17.0 k_velocity=10
 joint.type.lbr_A3	revolute
 joint.limit.lbr_A3	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=1.7453292519943295
+joint.safety.lbr_A3	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=20.0 k_velocity=10
 joint.type.lbr_A4	revolute
 joint.limit.lbr_A4	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=1.3089969389957472
+joint.safety.lbr_A4	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=15.0 k_velocity=10
 joint.type.lbr_A5	revolute
 joint.limit.lbr_A5	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=2.2689280275926285
+joint.safety.lbr_A5	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=26.0 k_velocity=10
 joint.type.lbr_A6	revolute
 joint.limit.lbr_A6	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=2.356194490192345
+joint.safety.lbr_A6	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=27.0 k_velocity=10
 joint.type.lbr_A7	revolute
 joint.limit.lbr_A7	lower=-3.0543261909900763 upper=3.0543261909900763 effort=200 velocity=2.356194490192345
+joint.safety.lbr_A7	soft_lower_limit=-3.0543261909900763 soft_upper_limit=3.0543261909900763 k_position=27.0 k_velocity=10
 joint.type.lbr_joint_ee	fixed
 mesh.filename.0	package://lbr_med14_r820_description/meshes/visual/link_0.dae
 mesh.filename.1	package://lbr_med14_r820_description/meshes/collision/link_0.stl

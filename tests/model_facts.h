@@ -46,21 +46,30 @@ inline void check_names(const std::vector<oracle::row> &rows, const std::string 
     }
 }
 
-inline void check_limit(const std::string &owner, const std::string &recorded,
-                        const meios::joint_limits<double> &limits)
+// Presence is paired in both directions here and below, which is what makes a description
+// declaring none of these elements assert their absence rather than skip past it.
+inline void check_limit(const std::vector<oracle::row> &rows, const meios::joint<double> &one)
 {
-    const std::map<std::string, double> loaded{ { "lower", limits.lower },
-                                                { "upper", limits.upper },
-                                                { "effort", limits.effort },
-                                                { "velocity", limits.velocity } };
-    for(const std::pair<const std::string, std::vector<double>> &field : keyed_numbers(recorded))
-    {
-        REQUIRE(loaded.count(field.first) == 1);
-        REQUIRE(field.second.size() == 1);
-        INFO("joint " << owner << " limit " << field.first << ": recorded " << field.second.front()
-                      << ", loaded " << loaded.at(field.first));
-        CHECK(loaded.at(field.first) == field.second.front());
-    }
+    const std::optional<oracle::row> found = oracle::lookup(rows, "joint.limit." + one.name);
+    CHECK(found.has_value() == one.limits.has_value());
+    if(!found.has_value() || !one.limits.has_value())
+        return;
+    check_numbers(one.name, "limit", found->fields.at(1),
+                  { { "lower", one.limits->lower }, { "upper", one.limits->upper },
+                    { "effort", one.limits->effort }, { "velocity", one.limits->velocity } });
+}
+
+inline void check_guard(const std::vector<oracle::row> &rows, const meios::joint<double> &one)
+{
+    const std::optional<oracle::row> found = oracle::lookup(rows, "joint.safety." + one.name);
+    CHECK(found.has_value() == one.safety.has_value());
+    if(!found.has_value() || !one.safety.has_value())
+        return;
+    check_numbers(one.name, "safety", found->fields.at(1),
+                  { { "soft_lower_limit", one.safety->soft_lower_limit },
+                    { "soft_upper_limit", one.safety->soft_upper_limit },
+                    { "k_position", one.safety->k_position },
+                    { "k_velocity", one.safety->k_velocity } });
 }
 
 inline void check_joints(const std::vector<oracle::row> &rows, const meios::model<double> &robot)
@@ -70,10 +79,8 @@ inline void check_joints(const std::vector<oracle::row> &rows, const meios::mode
     {
         INFO("joint: " << one.name);
         CHECK(kind_text(one.kind) == value_of(rows, "joint.type." + one.name));
-        const std::optional<oracle::row> limit = oracle::lookup(rows, "joint.limit." + one.name);
-        CHECK(limit.has_value() == one.limits.has_value());
-        if(limit.has_value() && one.limits.has_value())
-            check_limit(one.name, limit->fields.at(1), *one.limits);
+        check_limit(rows, one);
+        check_guard(rows, one);
     }
 }
 

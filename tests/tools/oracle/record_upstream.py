@@ -241,6 +241,23 @@ def portable_mesh_uri(filename, package_root):
     return filename
 
 
+# Only the attributes the element declares are recorded, so a guard naming two of the four is
+# recorded as naming two rather than as naming four of which two are zero.
+def joint_rows(joints):
+    rows = []
+    for joint in joints:
+        name = joint.getAttribute("name")
+        rows.append(("joint.type." + name, joint.getAttribute("type")))
+        for limit in children(joint, "limit"):
+            rows.append(("joint.limit." + name,
+                         attribute_text(limit, ("lower", "upper", "effort", "velocity"))))
+        for guard in children(joint, "safety_controller"):
+            rows.append(("joint.safety." + name,
+                         attribute_text(guard, ("soft_lower_limit", "soft_upper_limit",
+                                                "k_position", "k_velocity"))))
+    return rows
+
+
 # The model is the link and joint children of the robot root and nothing else. A sweep of the whole
 # document also collects the <joint> elements an extension block declares -- a ros2_control interface
 # list names one per actuated joint, with no type and no limit -- which would record a joint twice
@@ -251,11 +268,7 @@ def facts_rows(doc, package_root):
     rows = [("link.count", str(len(links))), ("joint.count", str(len(joints)))]
     rows += [("link.name.{}".format(at), l.getAttribute("name")) for at, l in enumerate(links)]
     rows += [("joint.name.{}".format(at), j.getAttribute("name")) for at, j in enumerate(joints)]
-    for joint in joints:
-        rows.append(("joint.type." + joint.getAttribute("name"), joint.getAttribute("type")))
-        for limit in children(joint, "limit"):
-            rows.append(("joint.limit." + joint.getAttribute("name"),
-                         attribute_text(limit, ("lower", "upper", "effort", "velocity"))))
+    rows += joint_rows(joints)
     meshes = []
     for link in links:
         for mesh in link.getElementsByTagName("mesh"):
@@ -661,7 +674,11 @@ HEADERS = {
              "load exercising it would exercise a dead end rather than a construct. Its evidence",
              "is a unit case and a divergence-manifest row, deliberately not a row here."],
     "facts": ["fact <TAB> value, measured from the document upstream renders. A joint that",
-              "declares no limit element carries no joint.limit row at all."],
+              "declares no limit element carries no joint.limit row at all, and one that declares",
+              "no safety_controller carries no joint.safety row -- an absence the comparison",
+              "asserts rather than skips, because presence is paired in both directions. A row",
+              "carries only the attributes its element declares, so a guard naming two of the",
+              "four is recorded as naming two."],
 }
 
 

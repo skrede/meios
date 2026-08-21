@@ -53,6 +53,24 @@ inline std::map<std::string, std::vector<double>> keyed_numbers(const std::strin
     return out;
 }
 
+// Exactly, not within a tolerance: the record holds what upstream rendered, and a value this
+// project rounded or reformatted on the way in is a divergence rather than a near miss. Only the
+// keys the row carries are compared, so an element declaring some of its attributes is held to
+// the ones it declared rather than to defaults for the rest.
+inline void check_numbers(const std::string &owner, const std::string &what,
+                          const std::string &recorded,
+                          const std::map<std::string, double> &loaded)
+{
+    for(const std::pair<const std::string, std::vector<double>> &field : keyed_numbers(recorded))
+    {
+        REQUIRE(loaded.count(field.first) == 1);
+        REQUIRE(field.second.size() == 1);
+        INFO("joint " << owner << " " << what << " " << field.first << ": recorded "
+                      << field.second.front() << ", loaded " << loaded.at(field.first));
+        CHECK(loaded.at(field.first) == field.second.front());
+    }
+}
+
 inline std::string value_of(const std::vector<oracle::row> &rows, const std::string &key)
 {
     INFO("record fact: " << key);
