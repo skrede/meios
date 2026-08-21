@@ -28,6 +28,11 @@ struct eval_session
     {
     }
 
+    // The ceilings are stored by reference and read for the whole load, so a temporary bound
+    // here is already dead at the first charge. Deleted rather than documented: the spelling is
+    // silent at compile time and undefined at run time.
+    eval_session(const evaluator_limits &&) = delete;
+
     const evaluator_limits &limits;
     evaluator_counters counters;
     // How many substitution spans the scan currently stands inside. It is carried here rather

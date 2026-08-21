@@ -128,7 +128,8 @@ TEST_CASE("a zero-length produced string is admitted and an empty expression is 
     CHECK_FALSE(empty_text.failed);
     CHECK(empty_text.rendered.empty());
 
-    meios::detail::eval_session session{ meios::evaluator_limits{} };
+    const meios::evaluator_limits defaults;
+    meios::detail::eval_session session(defaults);
     const ceiling::outcome nothing = ceiling::evaluate("", session);
 
     CHECK(nothing.failed);
