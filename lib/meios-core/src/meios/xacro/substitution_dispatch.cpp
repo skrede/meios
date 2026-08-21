@@ -60,7 +60,7 @@ std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
     if(!hit)
         return fail(ctx, diagnostic_code::unresolved_find,
                     "$(find " + std::string(parts.first) + ") did not resolve");
-    return hit->path().string();
+    return hit->path().generic_string();
 }
 
 // A collection has no text form, so the argument is reported unresolved rather than written into
@@ -140,7 +140,7 @@ std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner)
     if(cmd == "eval")
         return eval_expr(ctx, parts.second);
     if(cmd == "dirname")
-        return ctx.document.parent_path().string();
+        return ctx.document.parent_path().generic_string();
     if(cmd == "env")
         return cmd_env(ctx, parts.second);
     if(cmd == "optenv")

@@ -314,6 +314,16 @@ reference's own comparison would have it collide. What no expression has is a sp
 every subscript key is text, and a dotted member is a name. So such an entry is present and unreadable
 rather than refused at the parse, and a description that needs one needs the explicit backend.
 
+**A located path is written with forward separators on every platform, where the reference writes the
+platform's own.** `$(find)` and `$(dirname)` render the path they resolve in the generic spelling, so a
+document reads the same separator on Windows as it does elsewhere. The reference writes the native one,
+which on Windows puts a backslash inside the document text — and where the command sits inside an
+expression span, that text is resolved before the expression is lexed, so the backslash lands inside a
+string literal. A backslash in a literal is refused here rather than given the escape meaning nothing
+measured, so the native spelling would make a description that loads everywhere else refuse on Windows
+alone. The generic spelling is accepted by the platform's own filesystem interfaces and is what a mesh
+URI carries in any case.
+
 **The string operations compare and count by bytes where the reference counts code points.** Substring
 containment, the named split, the addition of two strings and a string's truth value all work over
 bytes. The two agree over the ASCII text every measured description carries. Whether any real

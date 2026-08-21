@@ -42,7 +42,7 @@ TEST_CASE("an expression span resolves its inner text before the expression is e
     meios::source_stack sources{ std::move(on_disk) };
     meios::eval_scope scope;
     const std::filesystem::path document = root / "sub" / "robot.xacro";
-    const std::string located = std::filesystem::weakly_canonical(root / "pkg").string();
+    const std::string located = std::filesystem::weakly_canonical(root / "pkg").generic_string();
 
     SECTION("a package-locating command inside a quoted literal resolves to a path")
     {
