@@ -38,8 +38,7 @@ bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document);
 bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document);
-bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
-                  const std::filesystem::path &document);
+bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out);
 
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                     const std::filesystem::path &document);

@@ -3,7 +3,7 @@
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
-        xacro_macro_defaults xacro_include_read xacro_subst
+        xacro_macro_defaults xacro_block xacro_include_read xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
         xacro_budget xacro_arg xacro_arg_domain xacro_unsupported xacro_corpus forward_scan
         yaml_resource yaml_grammar yaml_verdict io_concept io_source_stack io_sources)
@@ -18,9 +18,10 @@ foreach(stem IN ITEMS
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         endif()
-        # Two probe documents left the differential's tables when the sides they measured
+        # Three probe documents left the differential's tables when the sides they measured
         # stopped differing; the stems that pin those behaviors read them where they still live.
-        if(stem STREQUAL "xacro_property" OR stem STREQUAL "xacro_macro_defaults")
+        if(stem STREQUAL "xacro_property" OR stem STREQUAL "xacro_macro_defaults"
+                OR stem STREQUAL "xacro_block")
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()

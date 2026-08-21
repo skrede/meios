@@ -40,7 +40,7 @@ RECURSIVE_YAML = "a: &a [1, *a]\n"
 # A difference needing a macro, a conditional and a call site has no expression to wrap, so its
 # probe is a whole committed document read from tests/fixtures/xacro/probes by both sides. Ids
 # only: the document is the fixture, and repeating it here is what a rename would silently defeat.
-DOCUMENT_PROBES = ("discarded_block", "non_text_mapping_key")
+DOCUMENT_PROBES = ("non_text_mapping_key",)
 PROBE_DIR = oracle.REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 

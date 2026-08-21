@@ -103,16 +103,28 @@ bool bind_params(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     return true;
 }
 
-void bind_blocks(const macro_def &def, pugi::xml_node call, std::map<std::string, block_arg> &blocks,
-                 const emit_origin &origin)
+// The reference evaluates the whole call node in the caller's own macros and symbols before it
+// captures a single block, so a block argument means what it means where the caller wrote it and
+// is evaluated whether or not the receiving macro ever inserts it. That is also what terminates a
+// forwarded insert: the callee binds a literal subtree rather than an insert command that would
+// resolve again against the binding which produced it. The order below is the contract -- expand
+// while the caller's blocks are still installed, then move them aside, then bind.
+bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
+                 const std::filesystem::path &document, std::map<std::string, block_arg> &outer)
 {
+    pugi::xml_node root = ctx.park().append_child("blocks");
+    if(!process_children(ctx, call, root, document))
+        return false;
     std::vector<pugi::xml_node> kids;
-    for(pugi::xml_node child : call.children())
+    for(pugi::xml_node child : root.children())
         if(child.type() == pugi::node_element)
             kids.push_back(child);
+    outer = std::move(ctx.blocks);
+    ctx.blocks.clear();
     for(std::size_t i = 0; i < def.block_params.size() && i < kids.size(); ++i)
-        blocks.insert_or_assign(def.block_params[i],
-                                block_arg{ def.block_children[i], kids[i], origin });
+        ctx.blocks.insert_or_assign(def.block_params[i],
+                                    block_arg{ def.block_children[i], kids[i] });
+    return true;
 }
 
 void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
@@ -158,10 +170,10 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
 {
     if(!ctx.charge_work(call))
         return false;
+    std::map<std::string, block_arg> outer_blocks;
+    if(!bind_blocks(ctx, def, call, document, outer_blocks))
+        return false;
     std::vector<saved_binding> saved;
-    std::map<std::string, block_arg> outer_blocks = std::move(ctx.blocks);
-    ctx.blocks.clear();
-    bind_blocks(def, call, ctx.blocks, ctx.origins.empty() ? emit_origin{} : ctx.origins.back());
     ctx.prop_frames.emplace_back();
     ctx.param_saves.push_back(&saved);
     ctx.origins.push_back(def.origin);

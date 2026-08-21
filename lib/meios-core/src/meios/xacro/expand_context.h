@@ -51,11 +51,12 @@ struct macro_def
     emit_origin origin;
 };
 
+// The bound subtree is the caller's block argument already expanded, parked in the context's
+// owned documents; the flag selects the node itself or only its children, as `*` and `**` do.
 struct block_arg
 {
     bool children;
     pugi::xml_node source;
-    emit_origin origin;
 };
 
 // A macro parameter's outer value, captured on entry and restored on exit.

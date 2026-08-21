@@ -41,8 +41,7 @@ struct document_probe
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 2> document_probes{
-    document_probe{ false, "discarded_block" },
+inline constexpr std::array<document_probe, 1> document_probes{
     document_probe{ true, "non_text_mapping_key" }
 };
 
