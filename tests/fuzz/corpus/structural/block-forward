@@ -1,0 +1,1 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:macro name="inner" params="*origin"><link name="a"><xacro:insert_block name="origin"/></link></xacro:macro><xacro:macro name="outer" params="*origin"><xacro:inner><xacro:insert_block name="origin"/></xacro:inner></xacro:macro><xacro:outer><origin xyz="1 2 3"/></xacro:outer></robot>
