@@ -4,9 +4,14 @@
 # index into a sequence, a key the mapping wrapper answers itself, the
 # keyword-argument mapping constructor, and the string meanings a vendor
 # description evaluates: two strings added, a string's truth value,
-# substring containment and the named split -- each driven through a
-# minimized document seeding the names it reads. A refusing row renders
-# REFUSED and carries the failure's first line.
+# substring containment and the named split -- then the arithmetic,
+# comparison and logical spellings, the mathematics called by bare name
+# and the dotted read of a loaded key. Each is driven through a minimized
+# document seeding the names it reads. A refusing row renders REFUSED and
+# carries the failure's first line. Which accepted form each family
+# measures is stated in tests/unit/accepted_forms_coverage.h and paired
+# against these rows in both directions: a form no row measures fails, and
+# a row no form names fails.
 e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
 e02	shoulder_pan_upper_limit - safety_pos_margin	5.85	
 e03	shoulder_lift_lower_limit + safety_pos_margin	-6.85	
@@ -81,3 +86,56 @@ t30	'a b c'.split(' ')[3]	REFUSED	list index out of range
 t31	'abc'.split('')	REFUSED	empty separator 
 t32	'a b'.split(1)	REFUSED	must be str or None, not int 
 t33	sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]	base.dae	
+n01	42	42	
+n02	3.5	3.5	
+n03	'x'	x	
+n04	True	True	
+n05	False	False	
+n06	radius	0.06	
+n07	pi	3.141592653589793	
+n08	(1 + 2) * 3	9	
+n09	-42	-42	
+n10	+42	42	
+n11	+3.5	3.5	
+n12	2 + 3	5	
+n13	5 - 3	2	
+n14	3 * 4	12	
+n15	7 / 2	3.5	
+n16	7 // 2	3	
+n17	-7 // 2	-4	
+n18	7.5 // 2	3.0	
+n19	7 % 2	1	
+n20	-7 % 2	1	
+n21	7.5 % 2	1.5	
+n22	2 ** 10	1024	
+n23	2 ** -1	0.5	
+n24	1 < 2	True	
+n25	1 <= 1	True	
+n26	2 > 1	True	
+n27	1 >= 2	False	
+n28	1 == 1	True	
+n29	1 != 2	True	
+n30	1 < 2 < 3	True	
+n31	1 < 3 < 2	False	
+n32	True and False	False	
+n33	False and undefined_probe_name	False	
+n34	True or False	True	
+n35	True or undefined_probe_name	True	
+n36	1 / 0	REFUSED	division by zero 
+m01	acos(1)	0.0	
+m02	asin(0)	0.0	
+m03	atan(1)	0.7853981633974483	
+m04	atan2(1, 1)	0.7853981633974483	
+m05	ceil(1.2)	2	
+m06	cos(0)	1.0	
+m07	degrees(pi)	180.0	
+m08	floor(1.8)	1	
+m09	max(1, 2, 3)	3	
+m10	min(1, 2, 3)	1	
+m11	radians(180)	3.141592653589793	
+m12	sin(0)	0.0	
+m13	sqrt(4)	2.0	
+m14	tan(0)	0.0	
+p01	sec_mesh_files.base	{'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}	
+p02	sec_mesh_files.base.visual	{'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}	
+p03	sec_mesh_files.missing	REFUSED	The yaml dictionary has no key 'missing' 

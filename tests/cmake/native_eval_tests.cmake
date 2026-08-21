@@ -76,7 +76,8 @@ function(meios_add_native_test stem kind)
     catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
 endfunction()
 
-foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_verdict)
+foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_verdict
+                      accepted_forms)
     meios_add_native_test(${stem} record)
 endforeach()
 
@@ -98,6 +99,13 @@ endforeach()
 if(TARGET native_corpus_record_test)
     target_compile_definitions(native_corpus_record_test PRIVATE
         MEIOS_CMAKE_MODULE_DIR="${meios_SOURCE_DIR}/cmake")
+endif()
+
+# This stem alone reads the closed construct vocabulary, which is a header of the xacro module
+# rather than of the core; the module is INTERFACE, so the edge is header visibility and adds no
+# archive dependency to a target that otherwise links only the records.
+if(TARGET accepted_forms_test)
+    target_link_libraries(accepted_forms_test PRIVATE meios::xacro)
 endif()
 
 # The row total is what keeps a present-but-emptied record set from passing every downstream

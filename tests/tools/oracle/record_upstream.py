@@ -85,6 +85,34 @@ STRING_PROBES = ("'x' + 'y'", "'' + 'y'", "'x' + ''", "'' + ''", "name + '_' + t
                  "'ab'.split('b')", "'a b c'.split(' ')[3]", "'abc'.split('')",
                  "'a b'.split(1)",
                  "sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]")
+# The arithmetic, comparison and logical spellings the grammar admits that no pinned description
+# writes and no family above reaches, each reduced to the smallest expression exercising one of
+# them. Three groups earn their place beyond the bare spelling: an integer operation whose result
+# stays an integer beside a division whose result does not, a floor and a remainder taken over a
+# negative operand, and a logical operator whose second operand names nothing -- the last being
+# the only spelling that says out loud whether the operand was evaluated.
+GRAMMAR_PROBES = ("42", "3.5", "'x'", "True", "False", "radius", "pi", "(1 + 2) * 3",
+                  "-42", "+42", "+3.5",
+                  "2 + 3", "5 - 3", "3 * 4", "7 / 2",
+                  "7 // 2", "-7 // 2", "7.5 // 2",
+                  "7 % 2", "-7 % 2", "7.5 % 2",
+                  "2 ** 10", "2 ** -1",
+                  "1 < 2", "1 <= 1", "2 > 1", "1 >= 2", "1 == 1", "1 != 2",
+                  "1 < 2 < 3", "1 < 3 < 2",
+                  "True and False", "False and undefined_probe_name",
+                  "True or False", "True or undefined_probe_name",
+                  "1 / 0")
+# The mathematics the grammar calls by bare name. `abs` is not here: upstream's expression
+# globals carry the mathematics module and the two reducers and no builtins at all, so `abs`
+# refuses there and renders here. That is a difference in what each side accepts rather than in
+# what either renders, so it is carried by the divergence manifest and not by a row here.
+MATH_PROBES = ("acos(1)", "asin(0)", "atan(1)", "atan2(1, 1)", "ceil(1.2)", "cos(0)",
+               "degrees(pi)", "floor(1.8)", "max(1, 2, 3)", "min(1, 2, 3)", "radians(180)",
+               "sin(0)", "sqrt(4)", "tan(0)")
+# The dotted read of a key in a loaded document. Every other document read recorded here is
+# spelled as a subscript, so without these the one spelling upstream answers through its wrapper's
+# attribute lookup rather than through its subscript would be unmeasured.
+MEMBER_PROBES = ("sec_mesh_files.base", "sec_mesh_files.base.visual", "sec_mesh_files.missing")
 # Every top-level document the pinned Franka tree ships whose stem names its own directory and
 # whose renders this project reproduces. All eight were rendered and compared: no two are alike, so
 # each of these carries its own measurement rather than standing in for a sibling. The two absent
@@ -387,8 +415,21 @@ def string_cases():
     return [("t{:02d}".format(at + 1), one) for at, one in enumerate(STRING_PROBES)]
 
 
+def grammar_cases():
+    return [("n{:02d}".format(at + 1), one) for at, one in enumerate(GRAMMAR_PROBES)]
+
+
+def math_cases():
+    return [("m{:02d}".format(at + 1), one) for at, one in enumerate(MATH_PROBES)]
+
+
+def member_cases():
+    return [("p{:02d}".format(at + 1), one) for at, one in enumerate(MEMBER_PROBES)]
+
+
 def authored_cases():
-    return sequence_cases() + collision_cases() + constructor_cases() + string_cases()
+    return (sequence_cases() + collision_cases() + constructor_cases() + string_cases()
+            + grammar_cases() + math_cases() + member_cases())
 
 
 def expression_cases(share):
@@ -626,9 +667,14 @@ HEADERS = {
                           "index into a sequence, a key the mapping wrapper answers itself, the",
                           "keyword-argument mapping constructor, and the string meanings a vendor",
                           "description evaluates: two strings added, a string's truth value,",
-                          "substring containment and the named split -- each driven through a",
-                          "minimized document seeding the names it reads. A refusing row renders",
-                          "REFUSED and carries the failure's first line."],
+                          "substring containment and the named split -- then the arithmetic,",
+                          "comparison and logical spellings, the mathematics called by bare name",
+                          "and the dotted read of a loaded key. Each is driven through a minimized",
+                          "document seeding the names it reads. A refusing row renders REFUSED and",
+                          "carries the failure's first line. Which accepted form each family",
+                          "measures is stated in tests/unit/accepted_forms_coverage.h and paired",
+                          "against these rows in both directions: a form no row measures fails, and",
+                          "a row no form names fails."],
     "unit_tags.cases": ["tag <TAB> operand <TAB> the text upstream renders the converted value",
                         "as. The operand is written after the tag exactly as recorded. Every",
                         "operand measured here is a decimal literal; upstream evaluates the tagged",
