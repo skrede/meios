@@ -29,6 +29,12 @@ option(MEIOS_CORPUS_BREADTH
 # # license[kortex_description]: BSD-3-Clause (Kinovarobotics/ros2_kortex, root LICENSE;
 # #   kortex_description/package.xml declares "BSD")
 # # license[corpus_faulty]: crafted in-repo fixture (project-owned)
+# # license[corpus_merged]: authored in-repo description (project-owned)
+#
+# An in-repo fixture is pinned by its own bytes rather than by a fetch digest, so the one
+# below records what those bytes are and the gate at the foot of this file recomputes it.
+#
+# # digest[corpus_merged]: SHA256=e1756e490c2e17e98c7605e462ee714bcc893eb946fef54df1a624ae1ccc8459
 
 # lbr_fri_ros2_stack is deliberately not fetched and not listed, so it carries no
 # determination above. Its published tarball ships no robot description of any kind:
@@ -135,5 +141,31 @@ file(COPY "${MEIOS_CORPUS_LBR_DIR}/"
 file(COPY "${MEIOS_CORPUS_FRANKA_DIR}/"
      DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/franka_description")
 file(COPY "${MEIOS_CORPUS_KUKA_DIR}/" DESTINATION "${MEIOS_CORPUS_PACKAGE_ROOT}/kuka_experimental")
+
+# A description this project authored rather than a vendor's, because no surveyed vendor writes a
+# merge key into a file a description loads. Two self-contained files: the entry point and the
+# configuration it loads by name, which the auxiliary reader resolves relative to the document
+# loading it -- so the pair needs neither a package reference nor a package root.
+meios_declare_resource(
+    NAME corpus_merged
+    SOURCE_DIR "${meios_SOURCE_DIR}/tests/fixtures/urdf/corpus_merged"
+    OUT_DIR MEIOS_CORPUS_MERGED_DIR)
+
+# Its ledger row names an immutable revision the way every fetched row does, and this is what makes
+# that name a fact: the digest is recomputed from the files themselves and disagreement FATALs, so
+# the document cannot drift away from the measurements taken of it.
+set(_merged_digests "")
+foreach(_merged_file IN ITEMS gantry.urdf.xacro joint_limits.yaml)
+    file(SHA256 "${MEIOS_CORPUS_MERGED_DIR}/${_merged_file}" _merged_one)
+    string(APPEND _merged_digests "${_merged_one}")
+endforeach()
+string(SHA256 _merged_digest "${_merged_digests}")
+string(REGEX MATCH "# digest\\[corpus_merged\\]:[ \t]*SHA256=([0-9a-f]+)"
+       _merged_recorded "${_corpus_self}")
+if(NOT _merged_digest STREQUAL "${CMAKE_MATCH_1}")
+    message(FATAL_ERROR
+        "corpus: fetch entry 'corpus_merged' records the content digest ${CMAKE_MATCH_1}, but its "
+        "files hash to ${_merged_digest}. Rerun the oracle and record both.")
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/corpus_documents.cmake")

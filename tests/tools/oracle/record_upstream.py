@@ -99,6 +99,12 @@ FRANKA_DOCUMENTS = ("fer", "fp3", "fr3", "fr3v2", "fr3v2_1", "tmrv0_2")
 entry_point = namedtuple("entry_point", "share document mappings arguments upstream record")
 
 UR = {"ur_type": "ur5e", "name": "ur"}
+# The one entry point this project wrote rather than pinned. It is in this repository instead of a
+# fetched tree, so it resolves from the repository rather than through the package index, and the
+# two files that are the whole of it are named here as the listfile names them.
+AUTHORED = "corpus_merged"
+AUTHORED_FILES = ("gantry.urdf.xacro", "joint_limits.yaml")
+AUTHORED_DIR = REPO / "tests" / "fixtures" / "urdf" / AUTHORED
 # The fresh-render orchestrator beside this file drives these same entry points; it reads this
 # table rather than carrying its own, because two lists of the same descriptions drift apart.
 CORPUS_DOCUMENTS = (
@@ -126,6 +132,7 @@ CORPUS_DOCUMENTS = (
     # document identically to the plain ur.urdf.xacro entry point above.
     entry_point("ur_description", "urdf/ur_mocked.urdf.xacro", dict(UR, name="ur_mocked"),
                 "name=ur_mocked ur_type=ur5e", "ur_description", "ur_mocked_facts.cases"),
+    entry_point(AUTHORED, "gantry.urdf.xacro", {}, "", AUTHORED, "gantry_facts.cases"),
 )
 
 
@@ -138,8 +145,20 @@ def key_of(one):
 # The KR6 resolves $(find) across two sibling packages, so the root it is named under is the
 # directory holding both rather than the share of either.
 def document_root(share, name):
+    if name == AUTHORED:
+        return AUTHORED_DIR
     root = share(name)
     return root.parent if name == "kuka_kr6_support" else root
+
+
+# What pins an in-repo document, standing where a fetched one's archive digest stands: the same
+# hash of hashes the corpus listfile recomputes at configure, so the two agree or configure fails.
+def content_digest():
+    joined = "".join(hashlib.sha256((AUTHORED_DIR / one).read_bytes()).hexdigest()
+                     for one in AUTHORED_FILES)
+    return hashlib.sha256(joined.encode()).hexdigest()
+
+
 LIMIT_SEEDS = ("shoulder_pan", "shoulder_lift", "elbow_joint", "wrist_1", "wrist_2", "wrist_3")
 
 
@@ -517,6 +536,7 @@ def package_digest(listfile, name):
 def pin_rows(versions, share):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
     return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-"),
+            (AUTHORED, "in-repo", content_digest()),
             ("ur_description", package_version(share, "ur_description", CORPUS_PIN),
              package_digest(listfile, "ur_description")),
             ("lbr_med14_r820_description",
@@ -551,6 +571,14 @@ def carried_columns():
     return carried
 
 
+# A fetched document is pinned by the archive digest the listfile names; the authored one is in
+# this repository and is pinned by its own bytes instead.
+def revision_of(one, listfile):
+    digest = content_digest() if one.upstream == AUTHORED \
+        else package_digest(listfile, one.upstream)
+    return "{}@{}".format(one.upstream, digest)
+
+
 def shape_text(rows):
     measured = dict(rows)
     return "links={} joints={}".format(measured["link.count"], measured["joint.count"])
@@ -562,9 +590,8 @@ def ledger_rows(measured):
     rows = []
     for one in CORPUS_DOCUMENTS:
         key = key_of(one)
-        rows.append((key, one.document,
-                     "{}@{}".format(one.upstream, package_digest(listfile, one.upstream)),
-                     one.arguments, shape_text(measured[key]))
+        rows.append((key, one.document, revision_of(one, listfile), one.arguments,
+                     shape_text(measured[key]))
                     + tuple(carried.get(key, [""] * LEDGER_CARRIED)))
     return rows
 
@@ -622,9 +649,17 @@ HEADERS = {
              "holds them to an actual load. A row whose divergence column is empty claims the two",
              "results agree and a row whose column is filled claims they do not, and both claims",
              "are checked. What is recorded here is the whole of what this project claims about",
-             "somebody else's robot: an entry point absent from this file is not claimed, and the",
-             "listfile that names the corpus records which documents its pinned upstreams ship",
-             "that are not pinned here, and why."],
+             "the descriptions it loads: an entry point absent from this file is not claimed, and",
+             "the listfile that names the corpus records which documents its pinned upstreams",
+             "ship that are not pinned here, and why. Every row but one is a vendor's own",
+             "document. The exception is a description this project authored, because no surveyed",
+             "vendor writes a merge key into a file a description loads, and a row whose revision",
+             "names corpus_merged is that document rather than somebody else's robot. One member",
+             "of the construct vocabulary is supported and witnessed by no load at all: a mapping",
+             "keyed by something other than text. Such a key is admitted and takes its place in",
+             "the mapping, but every subscript spelling here is text, so nothing reaches it and a",
+             "load exercising it would exercise a dead end rather than a construct. Its evidence",
+             "is a unit case and a divergence-manifest row, deliberately not a row here."],
     "facts": ["fact <TAB> value, measured from the document upstream renders. A joint that",
               "declares no limit element carries no joint.limit row at all."],
 }

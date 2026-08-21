@@ -113,7 +113,8 @@ inline std::string record_for(const document &doc)
         { "fr3v2_1.urdf.xacro", "fr3v2_1_facts.cases" },
         { "tmrv0_2.urdf.xacro", "tmrv0_2_facts.cases" },
         { "dof=7", "gen3_facts.cases" },
-        { "name=ur_mocked ur_type=ur5e", "ur_mocked_facts.cases" }
+        { "name=ur_mocked ur_type=ur5e", "ur_mocked_facts.cases" },
+        { "gantry.urdf.xacro", "gantry_facts.cases" }
     };
     const std::map<std::string, std::string>::const_iterator found = measured.find(document_key(doc));
     return found == measured.end() ? std::string{} : found->second;

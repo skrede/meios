@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot name="gantry" xmlns:xacro="http://wiki.ros.org/xacro">
+
+  <xacro:property name="axes" value="${xacro.load_yaml('joint_limits.yaml')['axes']}"/>
+
+  <xacro:macro name="stage" params="name parent child">
+    <xacro:property name="limits" value="${axes[name]}"/>
+    <link name="${child}"/>
+    <joint name="${name}" type="prismatic">
+      <parent link="${parent}"/>
+      <child link="${child}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="${limits['axis'][0]} ${limits['axis'][1]} ${limits['axis'][2]}"/>
+      <limit lower="${limits['travel'][0]}" upper="${limits['travel'][-1]}"
+             effort="${limits['effort']}" velocity="${limits['velocity']}"/>
+    </joint>
+  </xacro:macro>
+
+  <link name="frame"/>
+  <xacro:stage name="x_axis" parent="frame" child="bridge"/>
+  <xacro:stage name="y_axis" parent="bridge" child="carriage"/>
+  <xacro:stage name="z_axis" parent="carriage" child="tool_mount"/>
+</robot>

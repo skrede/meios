@@ -1,0 +1,20 @@
+# Limits for a three-axis cartesian gantry. Every axis runs on the same drive, so its rating is
+# stated once and merged into each entry; an axis that departs from it overrides the merged field.
+drive: &drive
+  effort: 240.0
+  velocity: 1.5
+
+axes:
+  x_axis:
+    <<: *drive
+    travel: [-0.85, 0.85]
+    axis: [1, 0, 0]
+  y_axis:
+    <<: *drive
+    travel: [-0.6, 0.6]
+    axis: [0, 1, 0]
+  z_axis:
+    <<: *drive
+    velocity: 0.4
+    travel: [0.0, 0.55]
+    axis: [0, 0, 1]

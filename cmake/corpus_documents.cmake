@@ -104,5 +104,10 @@ meios_corpus_document("${MEIOS_CORPUS_KORTEX_DIR}/kortex_description/robots/gen3
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur_mocked.urdf.xacro"
     "name=ur_mocked ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
 
+# The one entry point here this project wrote rather than pinned. Its configuration is loaded by
+# name and resolved relative to the document loading it, so the pair is self-contained and its
+# record names no package root -- the only record here that does not.
+meios_corpus_document("${MEIOS_CORPUS_MERGED_DIR}/gantry.urdf.xacro" "" native "")
+
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
 math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")
