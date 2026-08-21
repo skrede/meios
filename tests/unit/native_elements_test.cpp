@@ -36,7 +36,8 @@ TEST_CASE("a separator-heavy split refuses at the element bound, not after the i
     constexpr std::size_t bound = 100;
     constexpr std::size_t separators = 1'000'000;
 
-    meios::detail::eval_session session(collection(bound));
+    const meios::evaluator_limits ceilings = collection(bound);
+    meios::detail::eval_session session(ceilings);
     const ceiling::outcome refused = ceiling::evaluate(separator_only(separators), session);
 
     CHECK(separators + 1 > 1000 * bound);
@@ -69,7 +70,8 @@ TEST_CASE("the mapping constructor charges one element for each keyword entry it
 TEST_CASE("the element budget accumulates across the expressions of one load",
           "[native][elements]")
 {
-    meios::detail::eval_session session(collection(4));
+    const meios::evaluator_limits ceilings = collection(4);
+    meios::detail::eval_session session(ceilings);
 
     CHECK(ceiling::evaluate("'a,b'.split(',')[0]", session).rendered == "a");
     CHECK(session.counters.elements == 2);
