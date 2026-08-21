@@ -1,5 +1,5 @@
 foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation
-        load_policy_refusal load_report)
+        load_policy_refusal load_report load_arg_domain)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})
         add_executable(${stem}_test ${load_test_src})

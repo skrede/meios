@@ -290,6 +290,23 @@ meios can carry a defect in a discarded block that the reference will refuse. Th
 reviewed manifest — it was measured after that record was last written — and the direction is the
 permissive one, which is why it is written down here rather than left to be met.
 
+**An argument is readable by its bare name in an expression, where upstream has no such name.** This
+evaluator keeps one symbol table; the reference keeps two, an argument table the `$(arg n)` command
+reads and a property table an expression reads. So `${flag}` naming an argument resolves here and
+raises an undefined-name error there, for the whole spelling — a description written against meios
+can therefore carry a read the reference will refuse. The permissive direction is the older of the
+two facts here; what such a name binds is the second. An argument binds the characters its author
+wrote, so a bare name reading one reads text: `${not flag}` over a `false`-spelled default answers
+the truth of a non-empty string, not the truth of a boolean. Reach an argument through the `$(arg n)`
+command, or bind it to a property first, and both implementations agree.
+
+**A `$(arg n)` standing above its own declaration resolves here and refuses upstream.** The main
+expansion pass is single-forward, so a pre-pass seeds every literal default a document declares
+before the pass begins; a use written above its own `<xacro:arg>` element therefore resolves. The
+reference reads its argument table in document order and refuses the whole document with an
+undefined-substitution-argument diagnostic. The acceptance is deliberate and is pinned by cases, but
+the direction is the permissive one: a description that relies on it loads here and fails there.
+
 **A mapping key an auxiliary document did not write as text loads, and nothing can read it.** A
 document may key a mapping by a number, a boolean or an empty scalar, and it parses — the key is
 admitted, it counts toward the mapping's extent, and it collides with another key exactly as the

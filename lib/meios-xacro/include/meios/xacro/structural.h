@@ -58,8 +58,9 @@ std::string canonical_xml(std::string_view xml);
 namespace detail
 {
 
-// Parses a raw argument or property string into a numeric value when it reads as an
-// integer or a real, otherwise keeps it as a string.
+// Parses a raw property or macro-parameter string into a numeric or boolean value when it
+// reads as one, otherwise keeps it as a string. An argument does not come through here: it is
+// bound in the substitution domain, and the reading site classifies it.
 value classify(std::string_view text);
 
 // Only the evaluator may mint a container marker, so a marker present in text an author wrote is a

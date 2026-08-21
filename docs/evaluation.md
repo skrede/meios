@@ -51,14 +51,28 @@ description needing Python behavior the grammar does not carry; it has
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
   are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
 
-**What a bound value is, before an expression ever reads it.** A property, an argument default and
-a macro parameter each bind a *value*, not the text the author wrote. The text is read as an
-integer, then as a real, then as one of `true`, `True`, `false` and `False`, and it stays a string
-only if none of those fit — the order is what leaves `1` an integer rather than a true, and
-`yes` and `no` strings rather than booleans. So `<xacro:property name="hand" value="false"/>`
+**What a bound value is, before an expression ever reads it.** A property and a macro parameter each
+bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
+as one of `true`, `True`, `false` and `False`, and it stays a string only if none of those fit — the
+order is what leaves `1` an integer rather than a true, and `yes` and `no` strings rather than
+booleans. So `<xacro:property name="hand" value="false"/>`
 followed by `${'' if hand else prefix}` takes the branch a reader expects; a non-empty string would
 take the other one. The same reading is applied to whatever an expression evaluates to, so
 `${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
+
+**An argument binds the text, and the site that reads it is where that reading happens.** An
+argument — a declared default, or an override a caller hands the load — binds the characters that
+were written; the conversion above is not applied to it. Only a default that is itself one whole
+expression binds that expression's value, exactly as an attribute of the same shape does, so
+`default="${1+1}"` binds the integer `2`. Everything else stays as written, which is what leaves
+`$(arg flag)` of a `false`-spelled default rendering `false` into a flattened document rather than
+the `False` a boolean spells, and what leaves a `0.10` default its trailing zero. The conversion
+happens instead where the argument is read into something that does bind a value:
+`<xacro:m flag="$(arg flag)"/>` hands text to the parameter, the parameter binds it by the reading
+above, and `${flag}` inside that macro is a boolean. The reference draws the same line, keeping two
+tables where this evaluator has one — an argument table its `$(arg n)` command reads, and a property
+table its expressions read. That one table is why an expression here can name an argument at all,
+and what it names is text; [known limitations](known-limitations.md) records that read.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
 bound, so one argument never sees a sibling's new value: a call passing both

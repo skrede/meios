@@ -118,7 +118,8 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
             pugi::xml_attribute fallback = child.attribute("default");
             if(name && fallback && !scope.contains(name.value())
                && !has_substitution(fallback.value()))
-                scope.set(name.value(), classify(strip_authored_markers(fallback.value())));
+                scope.set(name.value(),
+                          value{ strip_authored_markers(fallback.value()) });
         }
         seed_declared_args(scope, child);
     }
@@ -154,7 +155,7 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
     bool ok = true;
     const std::string authored = strip_authored_markers(fallback.value());
     const value resolved =
-        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
+        substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
     if(!ok)
         return false;
     ctx.scope.set(name, resolved);
