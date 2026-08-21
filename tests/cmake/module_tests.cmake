@@ -2,7 +2,8 @@
 # moment its source drops in, with no further CMake edit. meios::model is linked
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
-        xacro_eval xacro_scope xacro_structural xacro_macro_params xacro_include_read xacro_subst
+        xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
+        xacro_macro_defaults xacro_include_read xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
         xacro_budget xacro_arg xacro_arg_domain xacro_unsupported xacro_corpus forward_scan
         yaml_resource yaml_grammar yaml_verdict io_concept io_source_stack io_sources)
@@ -16,6 +17,12 @@ foreach(stem IN ITEMS
                 OR stem STREQUAL "xacro_include_read")
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        endif()
+        # Two probe documents left the differential's tables when the sides they measured
+        # stopped differing; the stems that pin those behaviors read them where they still live.
+        if(stem STREQUAL "xacro_property" OR stem STREQUAL "xacro_macro_defaults")
+            target_compile_definitions(${stem}_test PRIVATE
+                MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()
         # The forward-scan helper and the yaml resolver are compiled core-private symbols,
         # so these stems alone reach into meios-core/src; only forward-scan's helper takes

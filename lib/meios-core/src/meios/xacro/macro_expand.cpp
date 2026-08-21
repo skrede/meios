@@ -61,6 +61,28 @@ bool bind_one(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, std::s
                 : bind_default(ctx, call, name, *def.defaults[at], document, bound);
 }
 
+// The reference clones the definition element and evaluates the clone before discarding the
+// wrapper, so every parameter default is evaluated once per instantiation, in the invocation's
+// own scope, whether or not the caller supplied that parameter, and the result is thrown away.
+// A default naming an unbound property therefore refuses there even where the call supplied the
+// parameter -- measured against xacro 2.1.1, which renders `^` and `^|text` unchanged in the same
+// position, so what runs here is the substitution of the authored text and not a second reading
+// of the inheritance arms.
+bool substitute_defaults(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
+                         const std::filesystem::path &document)
+{
+    bool ok = true;
+    for(const std::optional<std::string> &written : def.defaults)
+    {
+        if(!written)
+            continue;
+        substitute_attr_value(ctx, call, strip_authored_markers(*written), document, ok);
+        if(!ok)
+            return false;
+    }
+    return true;
+}
+
 // Every argument is evaluated before any of them is bound, because the reference evaluates a
 // call's arguments in the caller's own symbol table and writes them into a table the body
 // alone reads. Binding as it went would let one argument read a sibling's new value -- which
@@ -144,6 +166,7 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
     ctx.param_saves.push_back(&saved);
     ctx.origins.push_back(def.origin);
     bool ok = bind_params(ctx, def, call, document, saved)
+           && substitute_defaults(ctx, def, call, document)
            && process_children(ctx, def.body, out, document);
     ctx.origins.pop_back();
     ctx.param_saves.pop_back();

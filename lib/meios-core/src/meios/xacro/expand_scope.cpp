@@ -125,15 +125,28 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
     }
 }
 
+// The reference's grab_property treats the written value and the fallback as mutually exclusive
+// and binds a fallback only where the name is still unbound, so the same spelling means the same
+// thing on both sides. A property carrying neither attribute keeps binding the empty string,
+// which is measured behavior this function does not change.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
+    pugi::xml_attribute written = in.attribute("value");
+    pugi::xml_attribute fallback = in.attribute("default");
+    if(written && fallback)
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "<xacro:property> writes a value attribute and a default attribute together, "
+                    "which are mutually exclusive");
+    std::string_view name = in.attribute("name").value();
+    if(fallback && ctx.scope.contains(name))
+        return true;
+    const char *chosen = fallback ? "default" : "value";
     bool ok = true;
-    const std::string authored = strip_authored_markers(in.attribute("value").value());
+    const std::string authored = strip_authored_markers(in.attribute(chosen).value());
     const value bound =
-        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, "value"));
+        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, chosen));
     if(!ok)
         return false;
-    std::string_view name = in.attribute("name").value();
     record_scoped(ctx, in.attribute("scope").value(), name);
     ctx.scope.set(name, bound);
     return true;
