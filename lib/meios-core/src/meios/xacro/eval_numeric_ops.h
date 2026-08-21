@@ -27,6 +27,12 @@ value real_result(parser &p, double number);
 // here is visible as the one that skipped the bound.
 value text_result(parser &p, std::string text);
 
+// Answers whether one more element may be built into a collection the evaluator is producing,
+// asked before that element is built. The byte and string-length axes charge an element's
+// contents, so an element with no contents costs nothing on either; this is what bounds how many
+// of them one expression may produce.
+bool admits_element(parser &p);
+
 // Answers whether an exponentiation's base magnitude and exponent are within the numeric ceiling,
 // asked before the exponentiation runs. The overflow refusal below fires on a result, and a check
 // that fires on a result cannot bound the work that produced it.

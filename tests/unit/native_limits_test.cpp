@@ -8,7 +8,7 @@
 
 TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]")
 {
-    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    const meios::evaluator_limits zeroed{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     REQUIRE(zeroed.yaml_nodes == meios::default_yaml_node_ceiling);
     REQUIRE(zeroed.yaml_depth == meios::default_yaml_depth_ceiling);
@@ -20,15 +20,22 @@ TEST_CASE("no evaluator ceiling can be spelled as disabled", "[native][session]"
     REQUIRE(zeroed.numeric_magnitude == meios::default_numeric_magnitude_ceiling);
     REQUIRE(zeroed.expression_tokens == meios::default_expression_token_ceiling);
     REQUIRE(zeroed.string_length == meios::default_string_length_ceiling);
+    REQUIRE(zeroed.elements == meios::default_element_ceiling);
 
-    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    // Every position is read back, not only the ones a case once needed: a parameter appended to
+    // the end is proven to have disturbed none of the ones before it only if each is asserted.
+    const meios::evaluator_limits raised{ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 };
     REQUIRE(raised.yaml_nodes == 7);
+    REQUIRE(raised.yaml_depth == 8);
+    REQUIRE(raised.bytes == 9);
+    REQUIRE(raised.tokens == 10);
     REQUIRE(raised.steps == 11);
     REQUIRE(raised.expression_depth == 12);
     REQUIRE(raised.alias_expansion == 13);
     REQUIRE(raised.numeric_magnitude == 14);
     REQUIRE(raised.expression_tokens == 15);
     REQUIRE(raised.string_length == 16);
+    REQUIRE(raised.elements == 17);
 }
 
 // The measured sizes of the pinned acceptance target: 640 auxiliary nodes per load across
@@ -94,6 +101,7 @@ TEST_CASE("a session starts every counter at zero and charges before the work", 
     REQUIRE(session.counters.numeric_magnitude == 0);
     REQUIRE(session.counters.expression_tokens == 0);
     REQUIRE(session.counters.string_length == 0);
+    REQUIRE(session.counters.elements == 0);
     REQUIRE(session.counters.constructs.empty());
     REQUIRE(session.failure == meios::eval_failure_kind::none);
 

@@ -83,7 +83,7 @@ endforeach()
 foreach(stem IN ITEMS native_value native_render native_expression native_member native_session
                       native_budget native_branch native_arith native_string native_split
                       native_syntax native_syntax_table native_limits native_ceilings
-                      native_span_depth)
+                      native_span_depth native_elements)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 

@@ -43,6 +43,7 @@ struct eval_session
     bool charge_tokens(std::size_t amount, log_sink &log, const source_location &at);
     bool charge_steps(std::size_t amount, log_sink &log, const source_location &at);
     bool charge_yaml_nodes(std::size_t amount, log_sink &log, const source_location &at);
+    bool charge_elements(std::size_t amount, log_sink &log, const source_location &at);
     bool admits_yaml_depth(std::size_t depth, log_sink &log, const source_location &at);
     bool admits_expression_depth(std::size_t depth, log_sink &log, const source_location &at);
     bool admits_expression_tokens(std::size_t count, log_sink &log, const source_location &at);

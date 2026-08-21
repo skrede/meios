@@ -8,7 +8,7 @@
 namespace meios
 {
 
-// Ten independent axes because no single number separates a deep auxiliary document from a
+// Eleven independent axes because no single number separates a deep auxiliary document from a
 // wide one, or a long expression from a long-running one or a deeply nested one; each
 // ceiling bounds a different way author-supplied input grows. A ceiling given as zero is
 // refused and takes its default instead, so there is no spelling that means unbounded.
@@ -49,12 +49,21 @@ inline constexpr std::size_t default_numeric_magnitude_ceiling = 1'000'000'000'0
 inline constexpr std::size_t default_expression_token_ceiling = 10'000;
 // Any single string the evaluator produces, counted in bytes rather than code points. Defensive
 // too: this evaluator renders no collection to text, so until concatenation and the named split
-// there was no long-string producer at all, and both are linear in an expression the token
-// ceilings already bound. The cumulative byte ceiling counts the same productions summed over a
-// load, so a load that never builds one oversized string is still bounded in what it builds
-// altogether. The number is chosen rather than measured, against a longest measured produced
-// string of under a hundred bytes.
+// there was no long-string producer at all. Concatenation is linear in an expression the token
+// ceilings already bound; the named split is not, being linear in the separator count of its
+// input, and the element ceiling below is what bounds that rather than this one. The cumulative
+// byte ceiling counts the same productions summed over a load, so a load that never builds one
+// oversized string is still bounded in what it builds altogether. The number is chosen rather
+// than measured, against a longest measured produced string of under a hundred bytes.
 inline constexpr std::size_t default_string_length_ceiling = 1'000'000;
+// The elements of a collection the evaluator itself builds. A loaded collection is bounded by the
+// auxiliary-node ceiling, one charge per event, but a produced one was bounded by nothing: the
+// byte and string-length axes charge a field's contents, and a field between two adjacent
+// separators is empty, so it costs zero on both while still occupying a value. The number is
+// chosen rather than measured, at the auxiliary-node ceiling so a produced collection cannot
+// outgrow a loaded one, against a longest measured produced collection of six entries -- a
+// mapping constructor's -- and a longest measured produced sequence of three.
+inline constexpr std::size_t default_element_ceiling = 100'000;
 
 struct evaluator_limits
 {
@@ -67,7 +76,8 @@ struct evaluator_limits
                      std::size_t alias_expansion_ceiling = default_alias_expansion_ceiling,
                      std::size_t numeric_magnitude_ceiling = default_numeric_magnitude_ceiling,
                      std::size_t expression_token_ceiling = default_expression_token_ceiling,
-                     std::size_t string_length_ceiling = default_string_length_ceiling)
+                     std::size_t string_length_ceiling = default_string_length_ceiling,
+                     std::size_t element_ceiling = default_element_ceiling)
         : yaml_nodes(finite(yaml_node_ceiling, default_yaml_node_ceiling)),
           yaml_depth(finite(yaml_depth_ceiling, default_yaml_depth_ceiling)),
           bytes(finite(byte_ceiling, default_byte_ceiling)),
@@ -77,7 +87,8 @@ struct evaluator_limits
           alias_expansion(finite(alias_expansion_ceiling, default_alias_expansion_ceiling)),
           numeric_magnitude(finite(numeric_magnitude_ceiling, default_numeric_magnitude_ceiling)),
           expression_tokens(finite(expression_token_ceiling, default_expression_token_ceiling)),
-          string_length(finite(string_length_ceiling, default_string_length_ceiling))
+          string_length(finite(string_length_ceiling, default_string_length_ceiling)),
+          elements(finite(element_ceiling, default_element_ceiling))
     {
     }
 
@@ -91,6 +102,7 @@ struct evaluator_limits
     std::size_t numeric_magnitude;
     std::size_t expression_tokens;
     std::size_t string_length;
+    std::size_t elements;
 
 private:
     static std::size_t finite(std::size_t requested, std::size_t fallback)
@@ -99,8 +111,8 @@ private:
     }
 };
 
-// The ten axes a load charges against the ceilings above, and beside them the set of constructs
-// that load exercised. The set is not an eleventh axis: nothing is charged against it and no
+// The eleven axes a load charges against the ceilings above, and beside them the set of constructs
+// that load exercised. The set is not a twelfth axis: nothing is charged against it and no
 // ceiling bounds it. It rides here because it is per load for the same reason the counters are,
 // and because both layers that mark a construct already hold this one reference.
 struct evaluator_counters
@@ -108,7 +120,7 @@ struct evaluator_counters
     evaluator_counters()
         : yaml_nodes(0), yaml_depth(0), bytes(0), tokens(0), steps(0), expression_depth(0),
           alias_expansion(0), numeric_magnitude(0), expression_tokens(0), string_length(0),
-          constructs()
+          elements(0), constructs()
     {
     }
 
@@ -122,6 +134,7 @@ struct evaluator_counters
     std::size_t numeric_magnitude;
     std::size_t expression_tokens;
     std::size_t string_length;
+    std::size_t elements;
     construct_set constructs;
 };
 

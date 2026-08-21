@@ -40,7 +40,7 @@ the work that would close it.
   named split, a keyword-argument mapping constructor, a dotted read of a loaded document's key, a
   fixed set of mathematics functions, and `xacro.load_yaml` for an auxiliary configuration document;
   a construct outside it is refused with a located diagnostic naming what it
-  met, and ten finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
+  met, and eleven finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
   the network or the process — the one route to a file is `xacro.load_yaml`, where C++ resolves the
   spec, enforces containment and reads the bytes before the evaluator sees one. A trusted description needing
   comprehensions, f-strings or string methods can opt into a

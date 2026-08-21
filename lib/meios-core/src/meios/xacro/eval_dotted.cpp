@@ -38,6 +38,14 @@ bool collides(std::string_view member)
     return std::ranges::find(colliding, member) != std::ranges::end(colliding);
 }
 
+bool push_field(parser &p, std::vector<value> &fields, std::string text)
+{
+    if(!admits_element(p))
+        return false;
+    fields.push_back(text_result(p, std::move(text)));
+    return p.ok;
+}
+
 // The separator form splits on every occurrence and keeps the field between two adjacent
 // separators and at either end, so the field count is one more than the separator count. The
 // no-argument form collapses runs of whitespace instead, which is a different algorithm.
@@ -48,11 +56,11 @@ value split_text(parser &p, const std::string &text, const std::string &separato
     for(std::size_t found = text.find(separator); found != std::string::npos;
         found = text.find(separator, at))
     {
-        fields.push_back(text_result(p, text.substr(at, found - at)));
+        if(!push_field(p, fields, text.substr(at, found - at)))
+            return value{};
         at = found + separator.size();
     }
-    fields.push_back(text_result(p, text.substr(at)));
-    if(!p.ok)
+    if(!push_field(p, fields, text.substr(at)))
         return value{};
     p.exercised(evaluator_construct::named_split);
     return value::make_sequence(std::move(fields));

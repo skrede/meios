@@ -27,6 +27,13 @@ value text_result(parser &p, std::string text)
     return value{ std::move(text) };
 }
 
+bool admits_element(parser &p)
+{
+    if(p.session.charge_elements(1, p.log, p.anchor))
+        return true;
+    return p.refuse_exhausted();
+}
+
 // An operand with no arithmetic meaning is admitted here and refuses below, where the diagnostic
 // names its kind rather than a ceiling it never reached.
 bool admits_power(parser &p, const value &a, const value &b)

@@ -102,7 +102,9 @@ written into a document; a sequence and a mapping have none, so one reaching a d
 located, typed failure naming the kind rather than an invented serialization. Those last two reach an
 expression two ways: out of an auxiliary document, and out of the grammar itself — the mapping
 constructor builds a mapping and the named split builds a sequence. Which of the two an expression is
-holding still matters, because only a document's mapping answers a dotted member read.
+holding still matters, because only a document's mapping answers a dotted member read. A collection
+the grammar builds is charged one element before each of its elements is built, so a produced
+collection cannot outgrow a loaded one.
 
 **A string is text, and the operations on it are the ones a real description evaluates.** String
 literals evaluate, compare for equality against another string, and serve as mapping keys. Two
@@ -178,25 +180,25 @@ but which no subscript spelling reaches. `x in list` refuses too, and the refusa
 kind: `x in list` is `unsupported`, so a lenient policy may leave the span verbatim, while a
 wrong-kind subscript key is an `error` and terminal under every policy.
 
-**Ten ceilings bound the evaluator.** They are the auxiliary document's node count (100 000),
+**Eleven ceilings bound the evaluator.** They are the auxiliary document's node count (100 000),
 nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 000), tokens lexed
-(1 000 000) and evaluation steps (10 000 000) over the whole load; and, for any one expression, its
-nesting depth (256), its token count (10 000), the magnitude of an exponentiation's operands
-(1 000 000 000 000) and the length in bytes of a string it produces (1 000 000). Five of them
-accumulate across every expression in one load rather than resetting per expression, so a document
-cannot spend a bounded budget an unbounded number of times; the other five are high-water marks
-instead, because what they bound is the most any one expression reaches and not how often it is
-reached. A ceiling requested as zero is
-refused and takes its default, so there is no spelling that means unbounded. Crossing one is terminal
-and stops the load at the position that crossed it: a load continuing past its own ceiling would
-report a partial answer as a whole one.
+(1 000 000), evaluation steps (10 000 000) and elements built into a collection the grammar
+produces (100 000) over the whole load; and, for any one expression, its nesting depth (256), its
+token count (10 000), the magnitude of an exponentiation's operands (1 000 000 000 000) and the
+length in bytes of a string it produces (1 000 000). Six of them accumulate across every expression
+in one load rather than resetting per expression, so a document cannot spend a bounded budget an
+unbounded number of times; the other five are high-water marks instead, because what they bound is
+the most any one expression reaches and not how often it is reached. A ceiling requested as zero is
+refused and takes its default, so there is no spelling that means unbounded. Crossing one is
+terminal and stops the load at the position that crossed it: a load continuing past its own ceiling
+would report a partial answer as a whole one.
 
 Expansion carries two more that are not the evaluator's: a work count (1 000 000) over nodes
 visited, macro instantiations and substitutions, and an emitted-node count (100 000). They bound a
 shallow-but-wide macro fan-out that no expression ceiling would catch, and they report under the same
 `expansion_budget_exceeded` code — so a crossed ceiling naming a work limit is one of these two
-rather than one of the ten. None of the twelve is reachable through `load()`; that entry point always
-runs them at their defaults, and only the `meios::xacro` seam takes different ones.
+rather than one of the eleven. None of the thirteen is reachable through `load()`; that entry point
+always runs them at their defaults, and only the `meios::xacro` seam takes different ones.
 
 ## What this costs
 
@@ -560,7 +562,7 @@ carrying the expanded document beside a record of which constructs that one load
 vocabulary of fourteen, six the auxiliary-document reader marks and eight the expression evaluator
 marks, each at the point the construct actually resolves rather than declared anywhere, and read
 through `exercised`. A spelling outside the vocabulary resolves to nothing, and nothing is charged
-against the record: it is an observation, not an eleventh ceiling. The other arm is an
+against the record: it is an observation, not a twelfth ceiling. The other arm is an
 `expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a
 refused system operation caused it — that operation's native cause. A terminal failure is reported
 exactly once through the sink you supplied and returned on the error arm, so you neither log it
@@ -622,7 +624,7 @@ the built-in evaluator, so the helper's containment holds under all three; what 
 class widens is the expression itself, which is enough to reach the filesystem directly, `open`
 included.
 
-Resource exhaustion is unbounded under this backend, where the built-in evaluator's ten ceilings do
+Resource exhaustion is unbounded under this backend, where the built-in evaluator's eleven ceilings do
 not apply: `${10**10**10}` and `${[0]*10**12}` are refused by nothing there and will burn processor
 time and memory. A real bound needs a per-expression watchdog against an embedded interpreter holding
 the interpreter lock, portable across all three supported platforms, and there is none.
@@ -642,7 +644,7 @@ in-tree and it works.
 ## Explicit non-goals
 
 **Duration is not one of the ceilings.** The step ceiling bounds how much work an expression may do,
-not how long that work takes, and none of the ten adapts to the machine it runs on. There is no
+not how long that work takes, and none of the eleven adapts to the machine it runs on. There is no
 per-expression timeout, and a load whose expressions all stay inside their budgets has no
 wall-clock guarantee of any kind.
 

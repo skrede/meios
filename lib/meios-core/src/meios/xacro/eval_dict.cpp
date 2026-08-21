@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
 
@@ -58,6 +59,8 @@ value parse_dict(parser &p)
         {
             if(!at_keyword(p))
                 return refuse_shape(p);
+            if(!admits_element(p))
+                return value{};
             const std::string name(p.peek().text);
             p.pos += 2;
             entries.emplace_back(scalar_key(name), parse_ternary(p));

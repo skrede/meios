@@ -8,8 +8,9 @@
 namespace
 {
 
-// The three axes this stem drives, each set one unit under what its case needs: the numeric
-// magnitude, the per-expression token count and the length of a produced string.
+// The four axes this stem drives, each set one unit under what its case needs: the numeric
+// magnitude, the per-expression token count, the length of a produced string and the element
+// count of a produced collection.
 meios::evaluator_limits numeric(std::size_t magnitude)
 {
     return meios::evaluator_limits{ 0, 0, 0, 0, 0, 0, 0, magnitude };
@@ -23,6 +24,11 @@ meios::evaluator_limits per_expression(std::size_t tokens)
 meios::evaluator_limits produced(std::size_t bytes)
 {
     return meios::evaluator_limits{ 0, 0, 0, 0, 0, 0, 0, 0, 0, bytes };
+}
+
+meios::evaluator_limits collection(std::size_t elements)
+{
+    return meios::evaluator_limits{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, elements };
 }
 
 ceiling::outcome once(std::string_view expression, const meios::evaluator_limits &ceilings)
@@ -135,6 +141,7 @@ TEST_CASE("each new ceiling is terminal under every evaluation policy", "[native
     const meios::evaluator_limits magnitude = numeric(1000);
     const meios::evaluator_limits width = per_expression(8);
     const meios::evaluator_limits length = produced(4);
+    const meios::evaluator_limits fields = collection(2);
 
     for(meios::eval_policy policy :
         { meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip })
@@ -142,13 +149,16 @@ TEST_CASE("each new ceiling is terminal under every evaluation policy", "[native
         meios::detail::eval_session over_magnitude(magnitude);
         meios::detail::eval_session over_width(width);
         meios::detail::eval_session over_length(length);
+        meios::detail::eval_session over_fields(fields);
 
         CHECK_FALSE(ceiling::substitute("v ${1 ** 1001}", policy, over_magnitude).survived);
         CHECK_FALSE(ceiling::substitute("v ${1+1+1+1+1}", policy, over_width).survived);
         CHECK_FALSE(ceiling::substitute("v ${'ab' + 'cde'}", policy, over_length).survived);
+        CHECK_FALSE(ceiling::substitute("v ${'a,b,c'.split(',')[0]}", policy, over_fields).survived);
         CHECK(over_magnitude.failure == meios::eval_failure_kind::exhausted);
         CHECK(over_width.failure == meios::eval_failure_kind::exhausted);
         CHECK(over_length.failure == meios::eval_failure_kind::exhausted);
+        CHECK(over_fields.failure == meios::eval_failure_kind::exhausted);
     }
 }
 

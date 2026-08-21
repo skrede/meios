@@ -57,6 +57,11 @@ bool eval_session::charge_yaml_nodes(std::size_t amount, log_sink &log, const so
     return charge(counters.yaml_nodes, limits.yaml_nodes, amount, "auxiliary node", log, at);
 }
 
+bool eval_session::charge_elements(std::size_t amount, log_sink &log, const source_location &at)
+{
+    return charge(counters.elements, limits.elements, amount, "collection element", log, at);
+}
+
 // Depth is a high-water mark rather than a running total: reaching a nesting level is what
 // the ceiling bounds, not how many times it is reached.
 bool eval_session::admits(std::size_t &counter, std::size_t ceiling, std::size_t depth,
