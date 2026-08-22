@@ -1,0 +1,300 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [master, develop, 'milestone/**']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  # Advisory sanitizer job: asan/ubsan is where the value is, tsan is kept for
+  # the record on a single-threaded library. Flags are injected globally at
+  # configure via CMAKE_CXX_FLAGS/CMAKE_C_FLAGS so instrumentation reaches
+  # meios_core and the in-tree pugixml (FETCH_DEPS=ON builds it from source under
+  # the same flags), not just the harness translation units. continue-on-error
+  # keeps every finding advisory; promotion to a required gate is a deliberate,
+  # visible deferral recorded here in prose.
+  sanitize:
+    name: sanitize (${{ matrix.label }})
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: asan-ubsan
+            flags: "-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+            corpus: "OFF"
+          - label: tsan
+            flags: "-fsanitize=thread -fno-omit-frame-pointer -g"
+            corpus: "ON"
+
+    env:
+      CC: clang-18
+      CXX: clang++-18
+      UBSAN_OPTIONS: print_stacktrace=1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Only the thread-sanitizer leg fetches the pinned corpus, so its sweep for
+      # unnamed races drives real robot descriptions through the loader instead of
+      # the unit suite alone. The address/undefined leg leaves it off: its findings
+      # come from cases it already builds, and the fetch would buy it nothing but
+      # four tarballs and a longer job.
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_FETCH_CORPUS=${{ matrix.corpus }} \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" \
+            -DCMAKE_C_FLAGS="${{ matrix.flags }}"
+
+      # The correctness constraint: the instrumentation must reach the library,
+      # not only the tests. Prove it against the compile database before building
+      # by asserting the compiled library TU carries -fsanitize; a job that fails
+      # here is coverage-blind and its green result would mean nothing.
+      - name: Assert the library TU carries sanitizer instrumentation
+        run: |
+          if grep -F 'lib/meios-core/src/meios/version.cpp' build/compile_commands.json | grep -q -- '-fsanitize'; then
+            echo "confirmed: lib/meios-core/src/meios/version.cpp compiled with -fsanitize"
+          else
+            echo "FAIL: lib/meios-core/src/meios/version.cpp is not instrumented in the compile database" >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: cd build && ctest --output-on-failure
+
+      # The library installs no concurrency primitive of its own, and the grep is
+      # the falsifier for that one claim: if it ever finds one under lib/ or tools/
+      # the step fails so the assumption can be reconsidered. What does not follow
+      # is that the sanitizer has nothing to watch. This job builds the tests and
+      # runs the whole suite over the pinned corpus, and two cases already drive two
+      # threads through the library over a single shared handle — one through an
+      # evaluator handle in tests/unit/native_session_test.cpp, one through an
+      # auxiliary-document parser handle in tests/unit/native_constructs_test.cpp.
+      # The grep deliberately stops at lib/ and tools/: extending it over tests/
+      # would fail the job on the two cases that make running it worthwhile.
+      - name: Record tsan scope
+        if: matrix.label == 'tsan'
+        run: |
+          pattern='std::thread|std::mutex|std::atomic|std::async|std::jthread|<thread>|<mutex>|<atomic>|<future>|condition_variable'
+          hits=$(grep -rIE "$pattern" lib tools | wc -l)
+          if [ "$hits" -ne 0 ]; then
+            echo "Unexpected concurrency primitives found ($hits); the library-installs-none assumption is stale:" >&2
+            grep -rInE "$pattern" lib tools >&2
+            exit 1
+          fi
+          echo "Zero concurrency primitives under lib/ and tools/: the library installs none of its own."
+          echo "The concurrent traffic this job watches comes from the tests: native_session_test.cpp and native_constructs_test.cpp each drive two threads through one shared handle, and this leg runs the suite over the pinned corpus."
+          echo "The job stays advisory (continue-on-error), so a cell citing it says so rather than citing it as a passing gate."
+
+  # Advisory fuzz job: clang only, because the CMake guard builds zero harnesses
+  # under gcc and would leave a gcc cell green while fuzzing nothing. Global
+  # fuzzer-no-link,address instrumentation reaches meios_core and the in-tree
+  # pugixml (the harness itself pulls in libFuzzer's main via its own link
+  # driver); each harness is bounded so an unbounded libFuzzer run cannot hang to
+  # the job timeout, which continue-on-error would not interrupt.
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    env:
+      CC: clang-18
+      CXX: clang++-18
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DMEIOS_BUILD_FUZZERS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CXX_FLAGS="-fsanitize=fuzzer-no-link,address -fno-omit-frame-pointer -g" \
+            -DCMAKE_C_FLAGS="-fsanitize=fuzzer-no-link,address -fno-omit-frame-pointer -g"
+
+      # The "fuzzes nothing" defect lives here: a coverage-blind library would run
+      # green forever. Prove the library, not just the harness, is instrumented by
+      # asserting the compiled library TU carries -fsanitize in the compile
+      # database before any fuzzing starts.
+      - name: Assert the library TU carries sanitizer instrumentation
+        run: |
+          if grep -F 'lib/meios-core/src/meios/version.cpp' build/compile_commands.json | grep -q -- '-fsanitize'; then
+            echo "confirmed: lib/meios-core/src/meios/version.cpp compiled with -fsanitize"
+          else
+            echo "FAIL: lib/meios-core/src/meios/version.cpp is not instrumented in the compile database" >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build build
+
+      # The fuzz CMakeLists globs *_fuzz.cpp, so a deleted harness silently drops
+      # the count. Assert all four by exact name so a missing binary fails the job
+      # instead of quietly fuzzing fewer entry points.
+      - name: Assert all four fuzz harnesses were built
+        run: |
+          for n in bundle_writer_fuzz evaluator_fuzz structural_fuzz urdf_reader_fuzz; do
+            matches=$(find build -type f -name "$n" -perm -u+x)
+            count=$(printf '%s' "$matches" | grep -c .)
+            if [ "$count" -ne 1 ]; then
+              echo "FAIL: expected exactly one $n executable, found $count" >&2
+              exit 1
+            fi
+            echo "found $n: $matches"
+          done
+
+      # libFuzzer writes a crash unit under -artifact_prefix and nothing else in
+      # this repository uploads an artifact, so a directory has to exist before the
+      # first harness runs or the finding is written into a workspace that is
+      # destroyed with the runner.
+      - name: Prepare work directories
+        run: mkdir -p work/artifacts work/logs work/bundle_writer work/evaluator work/structural work/urdf_reader
+
+      # The committed corpus was only ever a mutation seed set: nothing replayed it,
+      # so an input committed as a reproducer after a crash guarded nothing. Each
+      # replay runs its harness over the committed inputs once (-runs=0 replays and
+      # exits rather than mutating) and asserts the directory is non-empty first, in
+      # the shape the harness-count check above uses: a leg that replays an empty
+      # directory reports success having asserted nothing. Each step runs even after
+      # an earlier one failed, so four harnesses report four results instead of the
+      # first failure standing for all of them; pipefail is set because the run is
+      # piped to tee and would otherwise be reported by tee's exit status.
+      - name: Replay the committed corpus (evaluator)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name evaluator_fuzz -perm -u+x | head -n1)
+          units=$(find tests/fuzz/corpus/evaluator -type f | wc -l)
+          if [ "$units" -eq 0 ]; then
+            echo "FAIL: tests/fuzz/corpus/evaluator is empty; replaying it would assert nothing" >&2
+            exit 1
+          fi
+          echo "replaying $units committed inputs through evaluator_fuzz"
+          "$bin" tests/fuzz/corpus/evaluator -runs=0 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/evaluator-replay.log
+
+      - name: Replay the committed corpus (structural)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name structural_fuzz -perm -u+x | head -n1)
+          units=$(find tests/fuzz/corpus/structural tests/fixtures/urdf -type f | wc -l)
+          if [ "$units" -eq 0 ]; then
+            echo "FAIL: the structural seed set is empty; replaying it would assert nothing" >&2
+            exit 1
+          fi
+          echo "replaying $units committed inputs through structural_fuzz"
+          "$bin" tests/fuzz/corpus/structural tests/fixtures/urdf -runs=0 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/structural-replay.log
+
+      - name: Replay the committed corpus (urdf_reader)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name urdf_reader_fuzz -perm -u+x | head -n1)
+          units=$(find tests/fixtures/urdf -type f | wc -l)
+          if [ "$units" -eq 0 ]; then
+            echo "FAIL: tests/fixtures/urdf is empty; replaying it would assert nothing" >&2
+            exit 1
+          fi
+          echo "replaying $units committed inputs through urdf_reader_fuzz"
+          "$bin" tests/fixtures/urdf -runs=0 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/urdf_reader-replay.log
+
+      - name: Replay the committed corpus (bundle_writer)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name bundle_writer_fuzz -perm -u+x | head -n1)
+          units=$(find tests/fixtures/urdf -type f | wc -l)
+          if [ "$units" -eq 0 ]; then
+            echo "FAIL: tests/fixtures/urdf is empty; replaying it would assert nothing" >&2
+            exit 1
+          fi
+          echo "replaying $units committed inputs through bundle_writer_fuzz"
+          "$bin" tests/fixtures/urdf -runs=0 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/bundle_writer-replay.log
+
+      # Each harness gets a fresh writable work corpus as its first positional arg
+      # and a read-only seed directory as the second. evaluator_fuzz consumes bare
+      # expression strings so it seeds from the dedicated corpus; the other three
+      # consume whole documents so they seed from the URDF/xacro fixtures, which
+      # libFuzzer reads recursively. -max_total_time=60 bounds the mutation budget,
+      # but only -timeout=25 bounds a SINGLE input: without it one pathological unit
+      # runs to libFuzzer's 1200s default and blows the whole leg's wall-clock. Both
+      # are required for the run to be genuinely bounded. structural_fuzz takes a
+      # second read-only directory as well: a dedicated corpus of documents forging
+      # the container marker and reaching macro instantiation and block insertion,
+      # which no fixture would ever contain.
+      # The campaign mutates from seeds at most 4 KiB, which is libFuzzer's own
+      # floor for -max_len: without a limit it raises max_len to the largest seed,
+      # and the boundary seeds aimed at the per-expression token, produced-string
+      # and produced-collection ceilings are each about 10 KiB because those ceilings
+      # cannot be approached by anything smaller. Measured over 60 s on one machine,
+      # seeding from the whole directory ran 22 850 inputs at 374 exec/s against
+      # 631 354 at 10 350 for the directory without them -- a 28x loss of throughput
+      # for the campaign that found the expansion stack overflow. The oversized seeds
+      # are not dropped: the replay leg above runs every one of them on every push,
+      # which is where a committed reproducer has to assert.
+      - name: Fuzz evaluator_fuzz (advisory, 60s)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name evaluator_fuzz -perm -u+x | head -n1)
+          mkdir -p work/seeds/evaluator
+          find tests/fuzz/corpus/evaluator -type f -size -4097c -exec cp {} work/seeds/evaluator/ \;
+          echo "mutating from $(find work/seeds/evaluator -type f | wc -l) of $(find tests/fuzz/corpus/evaluator -type f | wc -l) committed inputs"
+          "$bin" work/evaluator work/seeds/evaluator -max_total_time=60 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/evaluator-campaign.log
+
+      - name: Fuzz structural_fuzz (advisory, 60s)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name structural_fuzz -perm -u+x | head -n1)
+          "$bin" work/structural tests/fixtures/urdf tests/fuzz/corpus/structural \
+            -max_total_time=60 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/structural-campaign.log
+
+      - name: Fuzz urdf_reader_fuzz (advisory, 60s)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name urdf_reader_fuzz -perm -u+x | head -n1)
+          "$bin" work/urdf_reader tests/fixtures/urdf -max_total_time=60 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/urdf_reader-campaign.log
+
+      - name: Fuzz bundle_writer_fuzz (advisory, 60s)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          bin=$(find build -type f -name bundle_writer_fuzz -perm -u+x | head -n1)
+          "$bin" work/bundle_writer tests/fixtures/urdf -max_total_time=60 -timeout=25 \
+            -artifact_prefix=work/artifacts/ 2>&1 | tee work/logs/bundle_writer-campaign.log
+
+      # Without this the answer to "can a finding be reproduced" is no, permanently
+      # and for every future finding: the crash unit lives in the workspace and the
+      # workspace goes with the runner. The log travels with it, because a unit
+      # without the run that produced it does not say which harness found it or
+      # under what arguments.
+      - name: Retain crash units and run logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-findings-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            work/artifacts/
+            work/logs/
+          retention-days: 30
+          if-no-files-found: warn

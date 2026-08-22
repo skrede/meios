@@ -58,7 +58,7 @@ meios::tree<double> parse_fixture(const std::string &name, meios::log_sink &log)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp(name), rec);
@@ -138,27 +138,27 @@ TEST_CASE("a dropped robot-level ros2_control child raises a loud WARN naming it
     parse_fixture("robot_control_child.urdf", capture);
 
     bool named = false;
-    int unhandled = 0;
+    int dropped = 0;
     for(const std::pair<meios::level, std::string> &entry : entries)
     {
         if(entry.first != meios::level::warn)
             continue;
-        if(entry.second.find("unhandled robot-level") != std::string::npos)
-            ++unhandled;
+        if(entry.second.find("dropping ") != std::string::npos)
+            ++dropped;
         if(entry.second.find("ros2_control") != std::string::npos
            && entry.second.find("system_hw") != std::string::npos)
             named = true;
     }
     REQUIRE(named);
-    REQUIRE(unhandled == 3);
+    REQUIRE(dropped == 3);
 }
 
-TEST_CASE("a robot with only material/link children raises no unhandled-element WARN", "[urdf][material]")
+TEST_CASE("a robot with only material/link children drops nothing", "[urdf][material]")
 {
     std::vector<std::pair<meios::level, std::string>> entries;
     meios::log_sink_f capture{ msg_recorder{ entries } };
     parse_fixture("named_material.urdf", capture);
 
     for(const std::pair<meios::level, std::string> &entry : entries)
-        REQUIRE(entry.second.find("unhandled robot-level") == std::string::npos);
+        REQUIRE(entry.second.find("dropping ") == std::string::npos);
 }

@@ -13,8 +13,9 @@ enum class material_policy
 
 enum class strictness
 {
-    strict,
-    lenient,
+    fail,
+    warn,
+    skip,
 };
 
 }

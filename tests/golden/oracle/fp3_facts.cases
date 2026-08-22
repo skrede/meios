@@ -1,0 +1,128 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	26
+joint.count	25
+link.name.0	base
+link.name.1	fp3_link0
+link.name.2	fp3_link0_accelerometer_top
+link.name.3	fp3_link0_accelerometer_bottom
+link.name.4	fp3_link1
+link.name.5	fp3_link1_accelerometer_top
+link.name.6	fp3_link1_accelerometer_bottom
+link.name.7	fp3_link2
+link.name.8	fp3_link2_accelerometer_top
+link.name.9	fp3_link2_accelerometer_bottom
+link.name.10	fp3_link3
+link.name.11	fp3_link3_accelerometer_top
+link.name.12	fp3_link3_accelerometer_bottom
+link.name.13	fp3_link4
+link.name.14	fp3_link4_accelerometer_top
+link.name.15	fp3_link4_accelerometer_bottom
+link.name.16	fp3_link5
+link.name.17	fp3_link5_accelerometer_top
+link.name.18	fp3_link5_accelerometer_bottom
+link.name.19	fp3_link6
+link.name.20	fp3_link7
+link.name.21	fp3_link8
+link.name.22	fp3_hand
+link.name.23	fp3_hand_tcp
+link.name.24	fp3_leftfinger
+link.name.25	fp3_rightfinger
+joint.name.0	fp3_base_joint
+joint.name.1	fp3_link0_accelerometer_top_joint
+joint.name.2	fp3_link0_accelerometer_bottom_joint
+joint.name.3	fp3_link1_accelerometer_top_joint
+joint.name.4	fp3_link1_accelerometer_bottom_joint
+joint.name.5	fp3_joint1
+joint.name.6	fp3_link2_accelerometer_top_joint
+joint.name.7	fp3_link2_accelerometer_bottom_joint
+joint.name.8	fp3_joint2
+joint.name.9	fp3_link3_accelerometer_top_joint
+joint.name.10	fp3_link3_accelerometer_bottom_joint
+joint.name.11	fp3_joint3
+joint.name.12	fp3_link4_accelerometer_top_joint
+joint.name.13	fp3_link4_accelerometer_bottom_joint
+joint.name.14	fp3_joint4
+joint.name.15	fp3_link5_accelerometer_top_joint
+joint.name.16	fp3_link5_accelerometer_bottom_joint
+joint.name.17	fp3_joint5
+joint.name.18	fp3_joint6
+joint.name.19	fp3_joint7
+joint.name.20	fp3_joint8
+joint.name.21	fp3_hand_joint
+joint.name.22	fp3_hand_tcp_joint
+joint.name.23	fp3_finger_joint1
+joint.name.24	fp3_finger_joint2
+joint.type.fp3_base_joint	fixed
+joint.type.fp3_link0_accelerometer_top_joint	fixed
+joint.type.fp3_link0_accelerometer_bottom_joint	fixed
+joint.type.fp3_link1_accelerometer_top_joint	fixed
+joint.type.fp3_link1_accelerometer_bottom_joint	fixed
+joint.type.fp3_joint1	revolute
+joint.limit.fp3_joint1	lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62
+joint.safety.fp3_joint1	soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0
+joint.type.fp3_link2_accelerometer_top_joint	fixed
+joint.type.fp3_link2_accelerometer_bottom_joint	fixed
+joint.type.fp3_joint2	revolute
+joint.limit.fp3_joint2	lower=-1.8361 upper=1.8361 effort=87.0 velocity=2.62
+joint.safety.fp3_joint2	soft_lower_limit=-1.8361 soft_upper_limit=1.8361 k_position=100.0 k_velocity=40.0
+joint.type.fp3_link3_accelerometer_top_joint	fixed
+joint.type.fp3_link3_accelerometer_bottom_joint	fixed
+joint.type.fp3_joint3	revolute
+joint.limit.fp3_joint3	lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62
+joint.safety.fp3_joint3	soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0
+joint.type.fp3_link4_accelerometer_top_joint	fixed
+joint.type.fp3_link4_accelerometer_bottom_joint	fixed
+joint.type.fp3_joint4	revolute
+joint.limit.fp3_joint4	lower=-3.077 upper=-0.1169 effort=87.0 velocity=2.62
+joint.safety.fp3_joint4	soft_lower_limit=-3.077 soft_upper_limit=-0.1169 k_position=100.0 k_velocity=40.0
+joint.type.fp3_link5_accelerometer_top_joint	fixed
+joint.type.fp3_link5_accelerometer_bottom_joint	fixed
+joint.type.fp3_joint5	revolute
+joint.limit.fp3_joint5	lower=-2.8763 upper=2.8763 effort=12.0 velocity=5.26
+joint.safety.fp3_joint5	soft_lower_limit=-2.8763 soft_upper_limit=2.8763 k_position=100.0 k_velocity=40.0
+joint.type.fp3_joint6	revolute
+joint.limit.fp3_joint6	lower=0.4398 upper=4.6216 effort=12.0 velocity=4.18
+joint.safety.fp3_joint6	soft_lower_limit=0.4398 soft_upper_limit=4.6216 k_position=100.0 k_velocity=40.0
+joint.type.fp3_joint7	revolute
+joint.limit.fp3_joint7	lower=-3.0508 upper=3.0508 effort=12.0 velocity=5.26
+joint.safety.fp3_joint7	soft_lower_limit=-3.0508 soft_upper_limit=3.0508 k_position=100.0 k_velocity=40.0
+joint.type.fp3_joint8	fixed
+joint.type.fp3_hand_joint	fixed
+joint.type.fp3_hand_tcp_joint	fixed
+joint.type.fp3_finger_joint1	prismatic
+joint.limit.fp3_finger_joint1	lower=0.0 upper=0.04 effort=100 velocity=0.2
+joint.type.fp3_finger_joint2	prismatic
+joint.limit.fp3_finger_joint2	lower=0.0 upper=0.04 effort=100 velocity=0.2
+mesh.filename.0	package://franka_description/meshes/robots/fp3/visual/link0.dae
+mesh.filename.1	package://franka_description/meshes/robots/fp3/collision/link0.stl
+mesh.filename.2	package://franka_description/meshes/robots/fp3/visual/link1.dae
+mesh.filename.3	package://franka_description/meshes/robots/fp3/collision/link1.stl
+mesh.filename.4	package://franka_description/meshes/robots/fp3/visual/link2.dae
+mesh.filename.5	package://franka_description/meshes/robots/fp3/collision/link2.stl
+mesh.filename.6	package://franka_description/meshes/robots/fp3/visual/link3.dae
+mesh.filename.7	package://franka_description/meshes/robots/fp3/collision/link3.stl
+mesh.filename.8	package://franka_description/meshes/robots/fp3/visual/link4.dae
+mesh.filename.9	package://franka_description/meshes/robots/fp3/collision/link4.stl
+mesh.filename.10	package://franka_description/meshes/robots/fp3/visual/link5.dae
+mesh.filename.11	package://franka_description/meshes/robots/fp3/collision/link5.stl
+mesh.filename.12	package://franka_description/meshes/robots/fp3/visual/link6.dae
+mesh.filename.13	package://franka_description/meshes/robots/fp3/collision/link6.stl
+mesh.filename.14	package://franka_description/meshes/robots/fp3/visual/link7.dae
+mesh.filename.15	package://franka_description/meshes/robots/fp3/collision/link7.stl
+mesh.filename.16	package://franka_description/meshes/robot_ee/franka_hand_black/visual/hand.dae
+mesh.filename.17	package://franka_description/meshes/robot_ee/franka_hand_black/collision/hand.stl
+mesh.filename.18	package://franka_description/meshes/robot_ee/franka_hand_black/visual/finger.dae
+origin.fp3_leftfinger.collision	xyz=0 18.5e-3 11e-3 rpy=0 0 0
+origin.fp3_leftfinger.collision.1	xyz=0 6.8e-3 2.2e-3 rpy=0 0 0
+origin.fp3_leftfinger.collision.2	xyz=0 15.9e-3 28.35e-3 rpy=0.5235987755982988 0 0
+origin.fp3_leftfinger.collision.3	xyz=0 7.58e-3 45.25e-3 rpy=0 0 0
+origin.fp3_rightfinger.visual	xyz=0 0 0 rpy=0 0 0
+origin.fp3_rightfinger.collision	xyz=0 18.5e-3 11e-3 rpy=0 0 0
+origin.fp3_rightfinger.collision.1	xyz=0 6.8e-3 2.2e-3 rpy=0 0 0
+origin.fp3_rightfinger.collision.2	xyz=0 15.9e-3 28.35e-3 rpy=-0.5235987755982988 0 3.141592653589793
+origin.fp3_rightfinger.collision.3	xyz=0 7.58e-3 45.25e-3 rpy=0 0 0

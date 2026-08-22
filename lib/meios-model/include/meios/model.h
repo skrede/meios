@@ -1,6 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_MODEL_MODEL_H
 #define HPP_GUARD_MEIOS_MODEL_MODEL_H
 
+#include "meios/expected.h"
+
 #include "meios/math/inertia.h"
 #include "meios/math/vector3.h"
 #include "meios/math/rotations.h"
@@ -30,9 +32,13 @@
 #include "meios/sink/world_recorder.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/claims.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/load_error.h"
+#include "meios/diagnostic/completeness.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/topology_policy.h"
+#include "meios/diagnostic/captured_diagnostic.h"
 
 #endif

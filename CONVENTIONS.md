@@ -192,8 +192,9 @@ initialization-order constraint in **Construction**.
 - Distinguish three things and never conflate them: **required** (no default),
   **required-with-default** (the override is optional), and **`std::optional`** (absence is
   itself meaningful). Do not use `std::optional` as a stand-in for a default.
-- Pre-release, there is no `[[deprecated]]`. Delete a superseded type outright — there are no
-  external users to cushion.
+- Pre-release, there is no `[[deprecated]]`. Delete a superseded type outright — adopters are
+  cushioned by the declared instability they accepted, not by an absence of adopters, and this
+  rule holds to the `v1.0.0` boundary.
 
 ## Lifetimes and ownership
 
@@ -267,3 +268,28 @@ Test, Build, WIP**. Use `WIP` when the commit does not compile.
 The no-planning-artifacts rule applies to commit messages too: never reference a phase number,
 plan or task ID, requirement or invariant label, or any other planning-tool artifact in a commit
 message.
+
+## Continuous integration evidence
+
+A workflow conclusion is not evidence. When a change has to be proven on a platform this machine
+cannot run, read the run's transcript — never its badge, in either direction. A red workflow can
+carry a green job that proves the point, and a green workflow can carry a selector that matched
+nothing.
+
+Long-lived branches receive `push` runs; only pull requests into `master` receive `pull_request`
+runs. So the authoritative run for a commit is its `pull_request` run when one exists at that exact
+SHA, and otherwise the `push` run for the branch carrying it. Work on a milestone branch is proved
+by its push run; the merge itself is proved by the pull request into `master`, which is the only run
+that builds the merge result rather than the branch alone.
+
+Accept a run only when every one of these holds:
+
+- workflow name, event, and head SHA match the commit under review;
+- the run is completed and successful, and every job the change depends on is successful;
+- each focused selector prints its discovery command, reports a nonzero match count, and executes
+  with `--no-tests=error` before that job's unfiltered suite;
+- no case the change relies on reports a skip.
+
+A run at a different SHA, a run of the other event standing in for the one that applies, or a status
+reported without its transcript satisfies none of this. When the branch has moved past the commit
+that was proved, say so and re-prove it rather than reasoning about the difference.

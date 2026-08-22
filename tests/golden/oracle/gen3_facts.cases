@@ -1,0 +1,70 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	11
+joint.count	10
+link.name.0	world
+link.name.1	base_link
+link.name.2	shoulder_link
+link.name.3	half_arm_1_link
+link.name.4	half_arm_2_link
+link.name.5	forearm_link
+link.name.6	spherical_wrist_1_link
+link.name.7	spherical_wrist_2_link
+link.name.8	bracelet_link
+link.name.9	end_effector_link
+link.name.10	tool_frame
+joint.name.0	base_joint
+joint.name.1	joint_1
+joint.name.2	joint_2
+joint.name.3	joint_3
+joint.name.4	joint_4
+joint.name.5	joint_5
+joint.name.6	joint_6
+joint.name.7	joint_7
+joint.name.8	end_effector
+joint.name.9	tool_frame_joint
+joint.type.base_joint	fixed
+joint.type.joint_1	continuous
+joint.limit.joint_1	effort=39 velocity=1.3963
+joint.type.joint_2	revolute
+joint.limit.joint_2	lower=-2.24 upper=2.24 effort=39 velocity=1.3963
+joint.type.joint_3	continuous
+joint.limit.joint_3	effort=39 velocity=1.3963
+joint.type.joint_4	revolute
+joint.limit.joint_4	lower=-2.57 upper=2.57 effort=39 velocity=1.3963
+joint.type.joint_5	continuous
+joint.limit.joint_5	effort=9 velocity=1.2218
+joint.type.joint_6	revolute
+joint.limit.joint_6	lower=-2.09 upper=2.09 effort=9 velocity=1.2218
+joint.type.joint_7	continuous
+joint.limit.joint_7	effort=9 velocity=1.2218
+joint.type.end_effector	fixed
+joint.type.tool_frame_joint	fixed
+mesh.filename.0	package://kortex_description/arms/gen3/7dof/meshes/base_link.dae
+mesh.filename.1	package://kortex_description/arms/gen3/7dof/meshes/shoulder_link.dae
+mesh.filename.2	package://kortex_description/arms/gen3/7dof/meshes/half_arm_1_link.dae
+mesh.filename.3	package://kortex_description/arms/gen3/7dof/meshes/half_arm_2_link.dae
+mesh.filename.4	package://kortex_description/arms/gen3/7dof/meshes/forearm_link.dae
+mesh.filename.5	package://kortex_description/arms/gen3/7dof/meshes/spherical_wrist_1_link.dae
+mesh.filename.6	package://kortex_description/arms/gen3/7dof/meshes/spherical_wrist_2_link.dae
+mesh.filename.7	package://kortex_description/arms/gen3/7dof/meshes/bracelet_no_vision_link.dae
+origin.base_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.base_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.shoulder_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.shoulder_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.half_arm_1_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.half_arm_1_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.half_arm_2_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.half_arm_2_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.forearm_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.forearm_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.spherical_wrist_1_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.spherical_wrist_1_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.spherical_wrist_2_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.spherical_wrist_2_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.bracelet_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.bracelet_link.collision	xyz=0 0 0 rpy=0 0 0

@@ -2,20 +2,25 @@
 
 #include "meios/completion.h"
 
-#include "meios/xacro/arg_scan.h"
+#include "meios/urdf/policy.h"
+#include "meios/urdf/asset_uri.h"
+#include "meios/urdf/parse_context.h"
 
-#include "meios/io/resolved_asset.h"
+#include "meios/xacro/arg_scan.h"
+#include "meios/xacro/core_evaluator.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/completeness.h"
+#include "meios/diagnostic/missing_asset.h"
+#include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/topology_policy.h"
 
 #include <string>
 #include <vector>
-#include <cstddef>
 #include <iostream>
 #include <optional>
 #include <filesystem>
-#include <string_view>
 
 namespace meios::cli
 {
@@ -23,21 +28,23 @@ namespace meios::cli
 namespace
 {
 
-// Splits a `package://<pkg>/<rel>` (or bare `<pkg>/<rel>`) reference into its two
-// tokens. This only parses the argument; the containment guard that keeps the
-// resolved path inside its root stays in directory_source, reached via locate().
-bool split_reference(const std::string &target, std::string &pkg, std::string &rel)
+// resolve_asset_uri reads the sources, the log, the missing-asset setting, the document and
+// the configured roots, and nothing else; the topology, material and strictness settings
+// belong to a parse this verb never runs, so their values here are inert.
+parse_context resolution_context(source_stack &sources, core_evaluator &eval, log_sink &log,
+                                 const verb_context &ctx,
+                                 const std::vector<std::filesystem::path> &roots)
 {
-    std::string_view ref = target;
-    constexpr std::string_view scheme = "package://";
-    if(ref.substr(0, scheme.size()) == scheme)
-        ref.remove_prefix(scheme.size());
-    const std::size_t slash = ref.find('/');
-    if(slash == std::string_view::npos || slash == 0 || slash + 1 >= ref.size())
-        return false;
-    pkg = std::string(ref.substr(0, slash));
-    rel = std::string(ref.substr(slash + 1));
-    return true;
+    return parse_context{ sources,
+                          eval,
+                          log,
+                          missing_asset::fail,
+                          topology_policy::fail,
+                          material_policy::fail,
+                          strictness::fail,
+                          positional(ctx, 0),
+                          completeness::none,
+                          roots };
 }
 
 }
@@ -45,19 +52,22 @@ bool split_reference(const std::string &target, std::string &pkg, std::string &r
 int run_resolve(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
-    std::string pkg;
-    std::string rel;
-    if(!split_reference(positional(ctx, 1), pkg, rel))
+    // Nothing marks a position required, so a single argument binds to the model and leaves
+    // the reference empty; saying so beats resolving "" and reporting it as an absent asset.
+    if(positional(ctx, 1).empty())
     {
-        log.log(level::error, "resolve target must be package://<pkg>/<rel>");
+        log.log(level::error, "resolve takes a model document and an asset reference");
         return 1;
     }
-    source_stack sources = build_sources(to_paths(ctx.package_paths), log);
-    const std::optional<resolved_asset> hit = sources.locate(pkg, rel, log);
-    if(!hit)
+    const std::vector<std::filesystem::path> roots = to_paths(ctx.package_paths);
+    source_stack sources = build_sources(roots, log);
+    core_evaluator eval;
+    parse_context resolution = resolution_context(sources, eval, log, ctx, roots);
+    const std::optional<std::string> path =
+        detail::resolve_asset_uri(positional(ctx, 1), resolution, source_location{});
+    if(!path)
         return 1;
-    if(hit->holds_path())
-        std::cout << hit->path().string() << '\n';
+    std::cout << *path << '\n';
     return 0;
 }
 

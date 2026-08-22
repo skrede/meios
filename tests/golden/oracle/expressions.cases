@@ -1,0 +1,141 @@
+# case <TAB> expression <TAB> upstream rendering <TAB> failure. Every
+# non-trivial form in the closure of the Universal Robots document,
+# followed by the authored spellings no pinned description reaches -- an
+# index into a sequence, a key the mapping wrapper answers itself, the
+# keyword-argument mapping constructor, and the string meanings a vendor
+# description evaluates: two strings added, a string's truth value,
+# substring containment and the named split -- then the arithmetic,
+# comparison and logical spellings, the mathematics called by bare name
+# and the dotted read of a loaded key. Each is driven through a minimized
+# document seeding the names it reads. A refusing row renders REFUSED and
+# carries the failure's first line. Which accepted form each family
+# measures is stated in tests/unit/accepted_forms_coverage.h and paired
+# against these rows in both directions: a form no row measures fails, and
+# a row no form names fails.
+e01	shoulder_pan_lower_limit + safety_pos_margin	-5.85	
+e02	shoulder_pan_upper_limit - safety_pos_margin	5.85	
+e03	shoulder_lift_lower_limit + safety_pos_margin	-6.85	
+e04	shoulder_lift_upper_limit - safety_pos_margin	6.85	
+e05	elbow_joint_lower_limit + safety_pos_margin	-7.85	
+e06	elbow_joint_upper_limit - safety_pos_margin	7.85	
+e07	wrist_1_lower_limit + safety_pos_margin	-8.85	
+e08	wrist_1_upper_limit - safety_pos_margin	8.85	
+e09	wrist_2_lower_limit + safety_pos_margin	-9.85	
+e10	wrist_2_upper_limit - safety_pos_margin	9.85	
+e11	wrist_3_joint_type != 'continuous'	False	
+e12	wrist_3_lower_limit + safety_pos_margin	-10.85	
+e13	wrist_3_upper_limit - safety_pos_margin	10.85	
+e14	-pi/2.0	-1.5707963267948966	
+e15	pi/2.0	1.5707963267948966	
+e16	0.0833333 * mass * (3 * radius * radius + length * length)	0.007769996892	
+e17	0.5 * mass * radius * radius	0.00666	
+e18	type in sec_mesh_files[name]	True	
+e19	sec_mesh_files[name][type]	{'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}	
+e20	xacro.load_yaml(joint_limits_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e21	xacro.load_yaml(kinematics_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e22	xacro.load_yaml(physical_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+e23	xacro.load_yaml(visual_parameters_file)	{'mesh_files': {'base': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}, 'joint_limits': {'shoulder_pan': {'min': -6.28}}}	
+s01	sec_bounds[0]	-6.28	
+s02	sec_bounds[-1]	6.28	
+s03	sec_bounds[3]	REFUSED	list index out of range 
+s04	sec_bounds[-4]	REFUSED	list index out of range 
+s05	sec_bounds['0']	REFUSED	list indices must be integers or slices, not str 
+c01	sec_collisions['keys']	5	
+c02	sec_collisions['values']	6	
+c03	sec_collisions['plain']	7	
+d01	dict(a=1, b=2)	{'a': 1, 'b': 2}	
+d02	dict(a=1, b=2)['a']	1	
+d03	dict()	{}	
+d04	dict(radius=radius, length=length)['radius']	0.06	
+d05	dict(a=dict(b=2)['b'])	{'a': 2}	
+d06	dict(mesh=sec_mesh_files['base'])	{'mesh': {'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}}	
+d07	'a' in dict(a=1)	True	
+d08	dict()['missing']	REFUSED	'missing' 
+d09	dict(a=1, a=2)	REFUSED	keyword argument repeated: a (<expression>, line 1) 
+d10	dict(a=)	REFUSED	expected argument value expression (<expression>, line 1) 
+t01	'x' + 'y'	xy	
+t02	'' + 'y'	y	
+t03	'x' + ''	x	
+t04	'' + ''		
+t05	name + '_' + type	base_visual	
+t06	'x' + 1	REFUSED	can only concatenate str (not "int") to str 
+t07	1 + 'x'	REFUSED	unsupported operand type(s) for +: 'int' and 'str' 
+t08	'x' - 'y'	REFUSED	unsupported operand type(s) for -: 'str' and 'str' 
+t09	'x' / 'y'	REFUSED	unsupported operand type(s) for /: 'str' and 'str' 
+t10	'x' // 'y'	REFUSED	unsupported operand type(s) for //: 'str' and 'str' 
+t11	'x' % 'y'	REFUSED	not all arguments converted during string formatting 
+t12	'x' ** 'y'	REFUSED	unsupported operand type(s) for ** or pow(): 'str' and 'str' 
+t13	not ''	True	
+t14	not 'a'	False	
+t15	'' if '' else name + type + '_'	basevisual_	
+t16	name + '_' if name else ''	base_	
+t17	'' if name else name + type + '_'		
+t18	'x' in 'axb'	True	
+t19	'' in 'abc'	True	
+t20	'z' in 'abc'	False	
+t21	1 in 'abc'	REFUSED	'in <string>' requires string as left operand, not int 
+t22	'a b c'.split(' ')	['a', 'b', 'c']	
+t23	'a b c'.split(' ')[0]	a	
+t24	'a b c'.split(' ')[-1]	c	
+t25	'a  b'.split(' ')	['a', '', 'b']	
+t26	' a '.split(' ')	['', 'a', '']	
+t27	''.split(' ')	['']	
+t28	'abc'.split('x')	['abc']	
+t29	'ab'.split('b')	['a', '']	
+t30	'a b c'.split(' ')[3]	REFUSED	list index out of range 
+t31	'abc'.split('')	REFUSED	empty separator 
+t32	'a b'.split(1)	REFUSED	must be str or None, not int 
+t33	sec_mesh_files['base']['visual']['mesh']['path'].split('/')[-1]	base.dae	
+n01	42	42	
+n02	3.5	3.5	
+n03	'x'	x	
+n04	True	True	
+n05	False	False	
+n06	radius	0.06	
+n07	pi	3.141592653589793	
+n08	(1 + 2) * 3	9	
+n09	-42	-42	
+n10	+42	42	
+n11	+3.5	3.5	
+n12	2 + 3	5	
+n13	5 - 3	2	
+n14	3 * 4	12	
+n15	7 / 2	3.5	
+n16	7 // 2	3	
+n17	-7 // 2	-4	
+n18	7.5 // 2	3.0	
+n19	7 % 2	1	
+n20	-7 % 2	1	
+n21	7.5 % 2	1.5	
+n22	2 ** 10	1024	
+n23	2 ** -1	0.5	
+n24	1 < 2	True	
+n25	1 <= 1	True	
+n26	2 > 1	True	
+n27	1 >= 2	False	
+n28	1 == 1	True	
+n29	1 != 2	True	
+n30	1 < 2 < 3	True	
+n31	1 < 3 < 2	False	
+n32	True and False	False	
+n33	False and undefined_probe_name	False	
+n34	True or False	True	
+n35	True or undefined_probe_name	True	
+n36	1 / 0	REFUSED	division by zero 
+m01	acos(1)	0.0	
+m02	asin(0)	0.0	
+m03	atan(1)	0.7853981633974483	
+m04	atan2(1, 1)	0.7853981633974483	
+m05	ceil(1.2)	2	
+m06	cos(0)	1.0	
+m07	degrees(pi)	180.0	
+m08	floor(1.8)	1	
+m09	max(1, 2, 3)	3	
+m10	min(1, 2, 3)	1	
+m11	radians(180)	3.141592653589793	
+m12	sin(0)	0.0	
+m13	sqrt(4)	2.0	
+m14	tan(0)	0.0	
+p01	sec_mesh_files.base	{'visual': {'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}}	
+p02	sec_mesh_files.base.visual	{'mesh': {'package': 'ur_description', 'path': 'meshes/base.dae'}}	
+p03	sec_mesh_files.missing	REFUSED	The yaml dictionary has no key 'missing' 

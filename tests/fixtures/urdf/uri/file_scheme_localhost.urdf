@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="file_scheme_localhost">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="file://localhost@ROOTURI@/meshes/base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

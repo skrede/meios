@@ -1,0 +1,57 @@
+# subject <TAB> expr <TAB> verdict <TAB> expect <TAB> note. Five tab-separated fields, so every data
+# row carries exactly four tabs and ends in a note; a row that lost a field loads short and reddens
+# the vocabulary case rather than skipping quietly. A line with # in column 0 is a comment.
+# The verdict is exactly accept or refuse and there is no third spelling. A shadowed key is not a
+# distinct outcome under the closed serializable-result set -- it simply refuses -- so a verdict for
+# it would carry no assertion the other two do not. The shadowing claim is written as a row pair
+# instead: the dotted spelling refuses, the subscript spelling accepts and renders.
+# For an accepting row, expect is the exact rendered leaf text. For a refusing row it is a fragment
+# that must appear in a diagnostic.
+# subject is the text bound to a property named subject before the expression is read, or a bare -
+# for none. It is the only field carrying an escape: \xNN with exactly two lowercase hex digits
+# expands to that byte, and \\ is a literal backslash. The escape exists so a forged control
+# character is spellable without committing a raw control byte, which no diff and no editor handles.
+# Why the mapping-method rows refuse: get, values, items and keys are C-level dict methods that
+# bypass the item hook, so the compatibility target does not wrap their results either. Closing that
+# gap here would accept a spelling the target rejects, which is the one divergence direction a
+# consumer cannot notice.
+#
+# The fixed configuration every row is read against:
+#   limits: {shoulder: {max: 42, min: -1.5}}, joints: [{name: alpha}, {name: beta}],
+#   items: 7, empty:
+# bound as config at the load site, section as config['limits'], joint as section['shoulder'].
+#
+# Dotted access on a yaml-sourced mapping.
+-	config.limits.shoulder.max	accept	42	A mapping straight off the load site answers a dotted read.
+-	section.shoulder.max	accept	42	The load site was crossed by subscript, so a subscript hop carries provenance as far as a dotted one does.
+-	joint.max	accept	42	Three properties from the load site; provenance reaches exactly as far as the wrapper type does, so there is no hop limit to exceed.
+# Sequences propagate rather than gaining access of their own.
+-	config['joints'][0].name	accept	alpha	A mapping inside a sequence, reached by index and then by dot.
+-	[j.name for j in config['joints']][1]	accept	beta	Iterating a wrapped sequence yields wrapped elements, so a comprehension over it can still read them by dot.
+-	config['joints'][0:2][1].name	accept	beta	A slice comes back wrapped too, so indexing it yields a mapping that answers a dotted read.
+# A key whose name collides with a mapping method, as a pair.
+-	config['items']	accept	7	Subscript is the item hook and nothing shadows it, so the key is reachable.
+-	config.items	refuse	a builtin_function_or_method is not a serializable expression result	Normal attribute lookup finds the method first, so the key is shadowed under a dot exactly as it is on the compatibility target.
+# A key written with no value.
+-	config['empty']	accept	None	A yaml key with nothing after it parses to a null, which serializes as the text None and warns at its position.
+# A key that is not there at all.
+-	config.nope	refuse	has no key 'nope'; keys are: empty, items, joints, limits	A missing key names itself and the keys that do exist, which is the whole question a bare lookup failure leaves unanswered.
+-	config['nope']	refuse	has no key 'nope'; keys are: empty, items, joints, limits	Subscript and dot are one operation, so the same diagnostic reaches both spellings.
+# What does not gain dotted access, which is the fork this table exists to hold.
+{'a': 1}	subject.a	refuse	'str' object has no attribute 'a'	An author writing a mapping literal gets a string; accepting it would run a description that the compatibility target rejects.
+${dict(a=1)}	subject.a	refuse	'dict' object has no attribute 'a'	A container the evaluator minted crosses the boundary and is still a container, but only a yaml load grants dotted access.
+-	dict(config['limits']).shoulder	refuse	'dict' object has no attribute 'shoulder'	A container an expression rebuilds comes back plain.
+-	config.get('limits').shoulder	refuse	'dict' object has no attribute 'shoulder'	A mapping method's result is not wrapped; the gap is the compatibility target's and is reproduced rather than closed.
+# A control character an author writes cannot buy what a yaml load buys.
+\x01[1, 2]\x01	subject.a	refuse	'str' object has no attribute 'a'	A hand-written plain marker is erased before the value becomes a binding; were it honored the subject would be a list and the diagnostic would say so.
+\x02{'a': 1}\x02	subject.a	refuse	'str' object has no attribute 'a'	A hand-written provenance marker buys nothing; were it honored the read would render 1.
+&#x02;{'a': 1}&#x02;	subject.a	refuse	'str' object has no attribute 'a'	The character-reference spelling of the same byte, which the XML parser resolves before any of this code sees the text.
+# Results that cannot be serialized at all.
+-	config.values()	refuse	a dict_values is not a serializable expression result	Refusing by type name keeps the configuration's own keys and values out of the message.
+-	set([1, 2])	refuse	a set is not a serializable expression result	Rendered as text it looks like a container, but it round-trips across a property boundary as a string.
+-	zip([1], [2])	refuse	a zip is not a serializable expression result	Rendering it would write a live heap address into a document a consumer commits and diffs.
+-	enumerate([1])	refuse	enumerate is not a serializable expression result	The same address in a second spelling.
+-	range(3)	refuse	a range is not a serializable expression result	Readable when rendered, and still not a value a description can carry across a boundary.
+-	sqrt	refuse	a builtin_function_or_method is not a serializable expression result	A mathematics name that was never called.
+# The expression guard still runs in front of a wrapped container.
+-	config.limits.__class__	refuse	dunder-identifier	A dunder reached through a wrapped mapping is refused before evaluation, so the wrapper opens no new road to the interpreter.

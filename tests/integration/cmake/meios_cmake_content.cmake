@@ -1,0 +1,62 @@
+cmake_minimum_required(VERSION 3.28)
+
+include_guard(GLOBAL)
+
+include("${CMAKE_CURRENT_LIST_DIR}/meios_cmake_harness.cmake")
+
+# What a run wrote is judged by reading it back, and the root differs by what is being judged: a
+# build tree for what a configure recorded about itself, a prefix for what a package hands on.
+function(_meios_harness_split_pair root pair out_path out_needle)
+    string(REPLACE "," ";" _parts "${pair}")
+    list(GET _parts 0 _rel)
+    list(GET _parts 1 _needle)
+    meios_harness_require_file("${root}/${_rel}")
+    set(${out_path} "${root}/${_rel}" PARENT_SCOPE)
+    set(${out_needle} "${_needle}" PARENT_SCOPE)
+endfunction()
+
+function(meios_harness_require_contains root pair)
+    _meios_harness_split_pair("${root}" "${pair}" _path _needle)
+    file(READ "${_path}" _text)
+    if(NOT _text MATCHES "${_needle}")
+        meios_harness_failed_assertion("${_path} does not carry '${_needle}'")
+    endif()
+endfunction()
+
+function(meios_harness_require_lacks root pair)
+    _meios_harness_split_pair("${root}" "${pair}" _path _needle)
+    file(READ "${_path}" _text)
+    if(_text MATCHES "${_needle}")
+        meios_harness_failed_assertion("${_path} carries '${_needle}' and should not")
+    endif()
+endfunction()
+
+function(_meios_harness_first_difference left right out)
+    list(LENGTH left _count)
+    foreach(_at RANGE 1 ${_count})
+        math(EXPR _index "${_at} - 1")
+        list(GET left ${_index} _one)
+        list(GET right ${_index} _other)
+        if(NOT _one STREQUAL _other)
+            set(${out} "line ${_at}: '${_one}' against '${_other}'" PARENT_SCOPE)
+            return()
+        endif()
+    endforeach()
+    set(${out} "" PARENT_SCOPE)
+endfunction()
+
+# An empty pair is refused rather than reported equal: a comparison of two files neither of which
+# was written would otherwise be the quietest way for a case to assert nothing.
+function(meios_harness_require_same_files first second)
+    file(STRINGS "${first}" _left)
+    file(STRINGS "${second}" _right)
+    list(LENGTH _left _count)
+    list(LENGTH _right _other_count)
+    if(_count EQUAL 0 OR NOT _count EQUAL _other_count)
+        meios_harness_failed_assertion("${first} has ${_count} lines, ${second} ${_other_count}")
+    endif()
+    _meios_harness_first_difference("${_left}" "${_right}" _where)
+    if(_where)
+        meios_harness_failed_assertion("${first} and ${second} differ at ${_where}")
+    endif()
+endfunction()

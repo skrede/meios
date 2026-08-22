@@ -1,0 +1,1 @@
+<robot xmlns:xacro="http://ros.org/wiki/xacro"><xacro:property name="fake" value="&#x01;[1, 2]&#x01;"/><l>${fake[0]}</l></robot>

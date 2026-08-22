@@ -33,6 +33,11 @@ bool needs_axis(int kind)
     return kind == 1 || kind == 2 || kind == 3 || kind == 5;
 }
 
+bool needs_limit(int kind)
+{
+    return kind == 1 || kind == 3;
+}
+
 std::string emit_urdf(int links, const std::vector<int> &parent, const std::vector<int> &kind)
 {
     std::string out = "<robot name=\"gen\">\n";
@@ -47,6 +52,8 @@ std::string emit_urdf(int links, const std::vector<int> &parent, const std::vect
         out += "    <origin xyz=\"0 0 0.1\" rpy=\"0 0 0\"/>\n";
         if(needs_axis(k))
             out += "    <axis xyz=\"0 0 1\"/>\n";
+        if(needs_limit(k))
+            out += "    <limit effort=\"10\" velocity=\"1\"/>\n";
         out += "  </joint>\n";
     }
     return out + "</robot>\n";
@@ -58,7 +65,7 @@ meios::tree<double> parse(const std::string &text, meios::log_sink &log)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, "gen.urdf" };
+                              meios::strictness::fail, "gen.urdf" };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(text, rec);
@@ -101,6 +108,6 @@ TEST_CASE("a generated well-formed branched tree parses and round-trips", "[urdf
         const meios::topology_result topo =
             meios::reconstruct_topology(robot.links, robot.joints, silent, meios::topology_policy::fail);
         RC_ASSERT(topo.ok);
-        RC_ASSERT(root_count(topo.parent_of) == 1);
+        RC_ASSERT(root_count(topo.topo.parent_of) == 1);
     }));
 }

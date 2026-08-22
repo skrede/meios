@@ -1,0 +1,64 @@
+# fixture <TAB> verdict <TAB> code <TAB> rule <TAB> note. The fixture resolves under the profile
+# subdirectory of the URDF fixture directory. The verdict vocabulary is exactly refuse, drop, accept;
+# a non-refusing row's code column is a bare -. The code column carries the exact to_string spelling
+# of the diagnostic_code enumerator the refusal reports, and the rule column carries the bare slug the
+# published profile document names for that rule. The note column is free text the loader discards.
+origin_xyz_short.urdf	refuse	vector_arity	origin-xyz-arity	A two-component offset was silently completed to a third zero.
+origin_xyz_long.urdf	refuse	vector_arity	origin-xyz-arity	A four-component offset was silently truncated to three.
+origin_xyz_ok.urdf	accept	-	origin-xyz-arity	Three components, and an absent rpy keeping its documented default.
+visual_origin_short.urdf	refuse	vector_arity	origin-xyz-arity	The same rule on a visual, whose containing element is dropped under a permissive setting rather than refused.
+mesh_scale_short.urdf	refuse	vector_arity	mesh-scale-arity	A two-component scale used to reach the consumer as three zeros, a mesh scaled to nothing.
+color_rgba_short.urdf	refuse	vector_arity	material-rgba-arity	A three-component color used to reach the consumer as opaque black, which is neither the authored color nor an absent one.
+unknown_element_robot.urdf	drop	unknown_element	unknown-element	The element sits directly under <robot>.
+unknown_element_link.urdf	drop	unknown_element	unknown-element	The element sits inside a <link>, a level that was silent before this rule.
+unknown_element_joint.urdf	drop	unknown_element	unknown-element	The element sits inside a <joint>, the other level that was silent.
+unknown_attribute_joint.urdf	drop	unknown_attribute	unknown-attribute	A misspelled joint type attribute, now named rather than left to its downstream effect.
+extension_block.urdf	drop	extension_ignored	extension-disclosed	A simulation block: disclosed, dropped, and the parse claim still stands.
+version_supported.urdf	accept	-	robot-version	The one supported value, recognized rather than reported as an unknown attribute.
+version_unsupported.urdf	refuse	unsupported_version	robot-version	Any other value asserts a format this library does not implement.
+link_name_absent.urdf	refuse	empty_name	link-name-required	A link element carrying no name attribute at all.
+link_name_blank.urdf	refuse	empty_name	link-name-required	A name of nothing but spaces, which is not a name a joint can reference.
+joint_name_absent.urdf	refuse	empty_name	joint-name-required	The same rule on the other element that carries an identity.
+duplicate_link_name.urdf	refuse	duplicate_name	link-name-unique	Two links sharing a name; the wiki states this for joints only.
+duplicate_joint_name.urdf	refuse	duplicate_name	joint-name-unique	Two joints sharing a name, which the wiki does state.
+case_distinct_names.urdf	accept	-	name-exact-bytes	Names differing only in case or in trailing space are distinct, so this loads clean.
+undeclared_parent_link.urdf	refuse	undeclared_link	link-reference-declared	A joint naming a link the document never declares.
+parent_link_attr_absent.urdf	refuse	empty_name	link-attribute-required	A parent element with no link attribute, which would otherwise reference the empty name.
+dangling_mimic.urdf	refuse	dangling_mimic	mimic-target-declared	A mimic naming a joint the document never declares.
+self_mimic.urdf	refuse	dangling_mimic	mimic-target-declared	A mimic naming its own joint, which no evaluation order can satisfy.
+duplicate_material_name.urdf	refuse	duplicate_name	material-name-unique	Two robot-level materials sharing a name, so a reference to it names two colors.
+zero_links.urdf	refuse	no_links	robot-has-links	A robot element declaring no link at all.
+visual_material_unnamed.urdf	refuse	empty_name	visual-material-named	A visual material that neither names one nor defines one.
+mass_value_not_a_number.urdf	refuse	invalid_number	numeric-value-finite	Text that is not a number was kept as whatever the field already held.
+inertial_mass_absent.urdf	refuse	missing_required_field	mass-required	An inertial with no mass child; the mass used to stay at an invented zero.
+mass_value_absent.urdf	refuse	missing_required_field	mass-value-required	A mass element carrying no value attribute.
+inertia_absent.urdf	refuse	missing_required_field	inertia-required	An inertial with no inertia child; all six components used to stay zero.
+inertia_component_absent.urdf	refuse	missing_required_field	inertia-component-required	One of the six tensor components is absent, and the message names it.
+inertial_absent.urdf	accept	-	inertial-optional	No inertial element at all, which the wiki marks optional.
+joint_type_absent.urdf	refuse	missing_joint_type	joint-type-required	A joint with no type attribute used to become a rigid connection.
+joint_type_unknown.urdf	refuse	unknown_joint_type	joint-type-known	A misspelled type used to become a rigid connection; the message names the declared set.
+geometry_absent.urdf	refuse	missing_geometry	geometry-required	A visual with no geometry child, which the wiki marks required.
+geometry_shape_absent.urdf	refuse	missing_geometry	geometry-shape-required	A geometry element with no shape child used to become an empty mesh.
+geometry_shape_unknown.urdf	refuse	unknown_geometry_shape	geometry-shape-known	An unrecognized shape used to become an empty mesh.
+mesh_filename_absent.urdf	refuse	missing_required_field	mesh-filename-required	A mesh with no filename used to resolve nothing, silently.
+box_size_absent.urdf	refuse	missing_required_field	box-size-required	A box with no size used to become a zero-volume box.
+sphere_radius_absent.urdf	refuse	missing_required_field	sphere-radius-required	A sphere with no radius used to become a zero-radius sphere.
+cylinder_dimension_absent.urdf	refuse	missing_required_field	cylinder-dimension-required	A cylinder missing one of its two dimensions.
+joint_limit_absent.urdf	refuse	missing_limit	limit-required-bounded	A bounded joint with no limit, a rule only the command-line verb used to apply.
+limit_effort_absent.urdf	refuse	missing_required_field	limit-effort-required	A limit element with no effort attribute.
+limit_velocity_absent.urdf	refuse	missing_required_field	limit-velocity-required	A limit element with no velocity attribute.
+wiki_defaults.urdf	accept	-	wiki-defaults-preserved	An absent origin, an absent axis and an absent mimic offset keep the defaults the wiki states.
+mimic_multiplier_default.urdf	accept	-	mimic-multiplier-default	A mimic with no multiplier keeps one, which this profile decides on its own authority.
+zero_axis_revolute.urdf	refuse	zero_axis	axis-nonzero-when-used	A revolute joint told to turn about no direction at all.
+zero_axis_prismatic.urdf	refuse	zero_axis	axis-nonzero-when-used	The same on the sliding kind, whose axis is the direction of travel.
+zero_axis_fixed.urdf	accept	-	axis-not-used-on-fixed-floating	A fixed joint carrying a zero axis, which the wiki says the kind does not use; real shipped descriptions carry exactly this.
+non_unit_axis.urdf	accept	-	axis-passthrough-non-unit	An axis of length two is stored as authored; rescaling it on read would invent a value.
+axis_no_xyz.urdf	refuse	missing_required_field	axis-xyz-required	An axis element with no coordinates, which used to leave a silently zero axis.
+inertia_negative_mass.urdf	refuse	invalid_mass	mass-non-negative	A body of negative mass, which no rigid body has.
+inertia_negative_diagonal.urdf	refuse	invalid_inertia	inertia-semidefinite	ixx is -1 while the scale is 1, so the order-one minor fails by the whole scale.
+inertia_not_semidefinite.urdf	refuse	invalid_inertia	inertia-semidefinite	ixx=0 ixy=0 ixz=0 iyy=1 iyz=2 izz=1: every leading minor is 0 and passes, and only the non-leading minor iyy*izz-iyz^2 = 1-4 = -3 catches it.
+inertia_triangle_violation.urdf	refuse	invalid_inertia	inertia-triangle	Diagonal 1,1,3: ixx+iyy-izz = -1 against a scale of 3, so the margin is a third of the scale.
+inertia_degenerate_scale.urdf	refuse	invalid_inertia	inertia-degenerate-scale	Every diagonal component is zero while ixy is 0.5, so the tensor is malformed rather than massless.
+inertia_zero_massless.urdf	accept	-	inertia-massless-frame	Six exact zeros and a zero mass: the documented convention for a frame-only link.
+inertia_within_tolerance.urdf	accept	-	inertia-semidefinite	ixy = 1.0000000000005, so ixx*iyy-ixy^2 = 1 - 1.000000000001 = -1.0e-12 against a tolerance of 1e-9 times a scale of 1; the margin is a thousandth of the tolerance.
+inertia_outside_tolerance.urdf	refuse	invalid_inertia	inertia-semidefinite	ixy = 1.0000005, so ixx*iyy-ixy^2 = 1 - 1.00000100000025 = -1.0e-6 against the same 1e-9 tolerance; the margin is a thousand times the tolerance.

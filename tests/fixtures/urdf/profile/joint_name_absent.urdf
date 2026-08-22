@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="joint_name_absent">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint type="fixed">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+  </joint>
+</robot>

@@ -28,8 +28,8 @@ struct reference_record
     bool is_texture;
 };
 
-// Move-only type-erased rewrite hook (std::move_only_function is C++23; this
-// mirrors byte_reader's C++20-clean unique_ptr-behind-a-vtable idiom). It maps the
+// Move-only type-erased rewrite hook: a unique_ptr to an implementor rather than a
+// stored callable, because std::move_only_function is C++23. It maps the
 // accumulated reference set to an old-URI->new-URI table, so the buffered rewrite is
 // deferred to finish() once the full asset set is known; its signature names no
 // pugixml type, preserving the single PRIVATE edge.

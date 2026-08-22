@@ -1,0 +1,102 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	22
+joint.count	21
+link.name.0	base_link
+link.name.1	base_inertia
+link.name.2	caster_front_left_fixed_link
+link.name.3	caster_front_left_steering_link
+link.name.4	caster_front_left_link
+link.name.5	argo_drive_front_fixed_link
+link.name.6	argo_drive_front_steering_link
+link.name.7	argo_drive_front_link
+link.name.8	rocker_arm_link
+link.name.9	caster_rear_right_fixed_link
+link.name.10	caster_rear_right_steering_link
+link.name.11	caster_rear_right_link
+link.name.12	argo_drive_rear_fixed_link
+link.name.13	argo_drive_rear_steering_link
+link.name.14	argo_drive_rear_link
+link.name.15	imu_mounting_point
+link.name.16	front_mounting_point
+link.name.17	rear_mounting_point
+link.name.18	right_mounting_point
+link.name.19	left_mounting_point
+link.name.20	lidar_front_mounting_point
+link.name.21	lidar_rear_mounting_point
+joint.name.0	base_inertia_joint
+joint.name.1	caster_front_left_fixed_joint
+joint.name.2	caster_front_left_steering_joint
+joint.name.3	caster_front_left_joint
+joint.name.4	argo_drive_front_fixed_joint
+joint.name.5	tmrv0_2_joint_0
+joint.name.6	tmrv0_2_joint_1
+joint.name.7	rocker_arm_joint
+joint.name.8	caster_rear_right_fixed_joint
+joint.name.9	caster_rear_right_steering_joint
+joint.name.10	caster_rear_right_joint
+joint.name.11	argo_drive_rear_fixed_joint
+joint.name.12	tmrv0_2_joint_2
+joint.name.13	tmrv0_2_joint_3
+joint.name.14	imu_mounting_point_joint
+joint.name.15	front_mounting_point_joint
+joint.name.16	rear_mounting_point_joint
+joint.name.17	right_mounting_point_joint
+joint.name.18	left_mounting_point_joint
+joint.name.19	lidar_front_mounting_point_joint
+joint.name.20	lidar_rear_mounting_point_joint
+joint.type.base_inertia_joint	fixed
+joint.type.caster_front_left_fixed_joint	fixed
+joint.type.caster_front_left_steering_joint	continuous
+joint.limit.caster_front_left_steering_joint	effort=500 velocity=20
+joint.type.caster_front_left_joint	continuous
+joint.limit.caster_front_left_joint	effort=500 velocity=20
+joint.type.argo_drive_front_fixed_joint	fixed
+joint.type.tmrv0_2_joint_0	continuous
+joint.limit.tmrv0_2_joint_0	effort=500 velocity=20
+joint.type.tmrv0_2_joint_1	continuous
+joint.limit.tmrv0_2_joint_1	effort=500 velocity=20
+joint.type.rocker_arm_joint	revolute
+joint.limit.rocker_arm_joint	lower=-0.16 upper=0.18 effort=500 velocity=20
+joint.type.caster_rear_right_fixed_joint	fixed
+joint.type.caster_rear_right_steering_joint	continuous
+joint.limit.caster_rear_right_steering_joint	effort=500 velocity=20
+joint.type.caster_rear_right_joint	continuous
+joint.limit.caster_rear_right_joint	effort=500 velocity=20
+joint.type.argo_drive_rear_fixed_joint	fixed
+joint.type.tmrv0_2_joint_2	continuous
+joint.limit.tmrv0_2_joint_2	effort=500 velocity=20
+joint.type.tmrv0_2_joint_3	continuous
+joint.limit.tmrv0_2_joint_3	effort=500 velocity=20
+joint.type.imu_mounting_point_joint	fixed
+joint.type.front_mounting_point_joint	fixed
+joint.type.rear_mounting_point_joint	fixed
+joint.type.right_mounting_point_joint	fixed
+joint.type.left_mounting_point_joint	fixed
+joint.type.lidar_front_mounting_point_joint	fixed
+joint.type.lidar_rear_mounting_point_joint	fixed
+mesh.filename.0	package://franka_description/meshes/robots/tmrv0_2/visual/tmrv0_2.dae
+mesh.filename.1	package://franka_description/meshes/robots/tmrv0_2/collision/tmrv0_2.stl
+origin.base_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.base_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.caster_front_left_fixed_link.visual	xyz=0 0 -0.0015
+origin.caster_front_left_fixed_link.collision	xyz=0 0 -0.0015
+origin.caster_front_left_link.visual	rpy=1.5707963267948966 0 0
+origin.caster_front_left_link.collision	rpy=1.5707963267948966 0 0
+origin.argo_drive_front_fixed_link.visual	xyz=0 0.039999999999999994 0.0345
+origin.argo_drive_front_fixed_link.collision	xyz=0 0.039999999999999994 0.0345
+origin.argo_drive_front_link.visual	rpy=1.5707963267948966 0 0
+origin.argo_drive_front_link.collision	rpy=1.5707963267948966 0 0
+origin.rocker_arm_link.visual	rpy=1.5707963267948966 0 1.5707963267948966
+origin.caster_rear_right_fixed_link.visual	xyz=0 0 -0.0015
+origin.caster_rear_right_fixed_link.collision	xyz=0 0 -0.0015
+origin.caster_rear_right_link.visual	rpy=1.5707963267948966 0 0
+origin.caster_rear_right_link.collision	rpy=1.5707963267948966 0 0
+origin.argo_drive_rear_fixed_link.visual	xyz=0 -0.039999999999999994 0.0345
+origin.argo_drive_rear_fixed_link.collision	xyz=0 -0.039999999999999994 0.0345
+origin.argo_drive_rear_link.visual	rpy=1.5707963267948966 0 0
+origin.argo_drive_rear_link.collision	rpy=1.5707963267948966 0 0

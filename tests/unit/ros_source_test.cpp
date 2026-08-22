@@ -1,26 +1,25 @@
+#include "ros_package_fixture.h"
+
 #include <meios/ros/ros_package_source.h>
 
 #include <meios/io/source_stack.h>
 #include <meios/io/package_source.h>
-#include <meios/io/directory_source.h>
 #include <meios/io/resolved_asset.h>
+#include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <atomic>
 #include <string>
 #include <vector>
-#include <cstdlib>
 #include <fstream>
-#include <utility>
 #include <iterator>
 #include <optional>
 #include <algorithm>
 #include <filesystem>
-#include <string_view>
 
 static_assert(meios::package_source<meios::ros_package_source>);
 static_assert(meios::provides_path<meios::ros_package_source>);
@@ -28,176 +27,95 @@ static_assert(meios::enumerates_packages<meios::ros_package_source>);
 
 namespace
 {
-
-struct capture
-{
-    std::vector<std::pair<meios::level, std::string>> &entries;
-
-    void operator()(meios::level lvl, const std::string &message) { entries.push_back({ lvl, message }); }
-
-    void operator()(meios::level, const meios::source_location &, const std::string &) {}
-};
-
-struct temp_tree
-{
-    std::filesystem::path root;
-
-    temp_tree()
-    {
-        static std::atomic<int> counter{ 0 };
-        root = std::filesystem::temp_directory_path()
-             / ("meios_ros_" + std::to_string(counter.fetch_add(1)) + '_' + std::to_string(::rand()));
-        std::filesystem::remove_all(root);
-        std::filesystem::create_directories(root);
-    }
-
-    ~temp_tree()
-    {
-        std::error_code ec;
-        std::filesystem::remove_all(root, ec);
-    }
-};
-
-void write_file(const std::filesystem::path &path, std::string_view content)
-{
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream stream(path);
-    stream << content;
+using acquisition_test::make_tree;
+using acquisition_test::record;
+using acquisition_test::recorder;
+using ros_test::ament_package;
+using ros_test::has_package;
+using ros_test::mesh;
+using ros_test::require_authorized;
+using ros_test::ros1_package;
+using ros_test::write_file;
 }
 
-void make_ament_package(const std::filesystem::path &prefix, std::string_view pkg)
+TEST_CASE("a ROS2 ament prefix resolves a share file and authorizes it", "[ros]")
 {
-    write_file(prefix / "share" / "ament_index" / "resource_index" / "packages" / pkg, "");
-    write_file(prefix / "share" / pkg / "meshes" / "x.stl", "solid\n");
-}
+    const meios::scratch_dir tree    = make_tree();
+    const std::filesystem::path base = ament_package(tree.path(), "arm");
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({}, {tree.path()}, log);
 
-bool has_package(const std::vector<std::string> &names, std::string_view wanted)
-{
-    return std::find(names.begin(), names.end(), std::string(wanted)) != names.end();
-}
-
-}
-
-TEST_CASE("a ROS2 ament prefix resolves package://arm/meshes and reports capabilities", "[ros]")
-{
-    temp_tree tree;
-    make_ament_package(tree.root, "arm");
-
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({}, { tree.root }, log);
-
-    const meios::capability_descriptor caps = source.capabilities();
-    REQUIRE(caps.kind == meios::source_kind::directory);
-    REQUIRE(caps.path_backed);
-    REQUIRE(caps.package_enumerable);
-
-    std::optional<meios::resolved_asset> asset = source.locate("arm", "meshes/x.stl");
-    REQUIRE(asset.has_value());
-    REQUIRE(asset->holds_path());
-    REQUIRE(std::filesystem::exists(asset->path()));
+    REQUIRE(source.capabilities().kind == meios::source_kind::directory);
+    REQUIRE(source.capabilities().package_enumerable);
     REQUIRE(has_package(source.packages(), "arm"));
+    require_authorized(source.locate("arm", mesh), base);
 }
 
 TEST_CASE("a relative that escapes the resolved share dir is rejected", "[ros]")
 {
-    temp_tree tree;
-    make_ament_package(tree.root, "arm");
-
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({}, { tree.root }, log);
+    const meios::scratch_dir tree = make_tree();
+    ament_package(tree.path(), "arm");
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({}, {tree.path()}, log);
+    const auto refused = [](const record &noted) { return noted.level == meios::level::error && noted.code == meios::diagnostic_code::uncontained_asset; };
 
     REQUIRE_FALSE(source.locate("arm", "../../../etc/passwd").has_value());
-    const bool rejected = std::any_of(log_entries.begin(), log_entries.end(),
-        [](const auto &e) { return e.first == meios::level::error; });
-    REQUIRE(rejected);
+    REQUIRE(std::any_of(records.begin(), records.end(), refused));
 }
 
-TEST_CASE("ROS1 crawl names packages from the manifest and skips CATKIN_IGNORE", "[ros]")
+TEST_CASE("a ROS1 crawl names packages from the manifest and authorizes the hit", "[ros]")
 {
-    temp_tree tree;
-    write_file(tree.root / "gripper" / "package.xml",
-        "<package><name>gripper_pkg</name></package>");
-    write_file(tree.root / "gripper" / "meshes" / "g.stl", "solid\n");
-    write_file(tree.root / "hidden" / "package.xml",
-        "<package><name>hidden_pkg</name></package>");
-    write_file(tree.root / "hidden" / "CATKIN_IGNORE", "");
-
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({ tree.root }, {}, log);
+    const meios::scratch_dir tree      = make_tree();
+    const std::filesystem::path nested = ros1_package(tree.path() / "a" / "b" / "arm_description_dir", "arm_description");
+    write_file(tree.path() / "hidden" / "package.xml", "<package><name>hidden_pkg</name></package>");
+    write_file(tree.path() / "hidden" / "CATKIN_IGNORE", "");
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({tree.path()}, {}, log);
 
     const std::vector<std::string> names = source.packages();
-    REQUIRE(has_package(names, "gripper_pkg"));
+    REQUIRE(has_package(names, "arm_description"));
     REQUIRE_FALSE(has_package(names, "hidden_pkg"));
-    REQUIRE(source.locate("gripper_pkg", "meshes/g.stl").has_value());
-}
-
-TEST_CASE("a deeply nested package whose folder differs from its manifest name resolves", "[ros]")
-{
-    temp_tree tree;
-    write_file(tree.root / "a" / "b" / "arm_description_dir" / "package.xml",
-        "<package><name>arm_description</name></package>");
-    write_file(tree.root / "a" / "b" / "arm_description_dir" / "meshes" / "x.stl", "solid\n");
-
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({ tree.root }, {}, log);
-
-    REQUIRE(has_package(source.packages(), "arm_description"));
-    REQUIRE(source.locate("arm_description", "meshes/x.stl").has_value());
     REQUIRE(source.path_of("arm_description", "").has_value());
+    require_authorized(source.locate("arm_description", mesh), nested);
 }
 
 TEST_CASE("a colcon --symlink-install package dir resolves to the real files", "[ros]")
 {
-    temp_tree tree;
-    const std::filesystem::path outside = tree.root / "src" / "arm_pkg";
-    write_file(outside / "package.xml", "<package><name>arm_hardware</name></package>");
-    write_file(outside / "meshes" / "x.stl", "solid\n");
-
-    const std::filesystem::path ws = tree.root / "install";
+    const meios::scratch_dir tree       = make_tree();
+    const std::filesystem::path outside = tree.path() / "src" / "arm_pkg";
+    const std::filesystem::path real    = ros1_package(outside, "arm_hardware");
+    const std::filesystem::path ws      = tree.path() / "install";
     std::filesystem::create_directories(ws);
     std::error_code ec;
     std::filesystem::create_directory_symlink(outside, ws / "arm_hardware", ec);
-    if(ec)
-    {
-        SUCCEED("platform cannot create a directory symlink; skipping");
-        return;
-    }
+    REQUIRE_FALSE(ec);
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({ ws }, {}, log);
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({ws}, {}, log);
 
     REQUIRE(has_package(source.packages(), "arm_hardware"));
-    const std::optional<meios::resolved_asset> asset = source.locate("arm_hardware", "meshes/x.stl");
-    REQUIRE(asset.has_value());
-    REQUIRE(asset->holds_path());
-    REQUIRE(std::filesystem::exists(asset->path()));
-    REQUIRE(std::filesystem::equivalent(asset->path(), outside / "meshes" / "x.stl"));
+    require_authorized(source.locate("arm_hardware", mesh), real);
+    REQUIRE(std::filesystem::equivalent(source.locate("arm_hardware", mesh)->path(), outside / mesh));
 }
 
 TEST_CASE("an escaping in-root symlink with no manifest is never registered", "[ros]")
 {
-    temp_tree tree;
-    const std::filesystem::path outside = tree.root / "secret";
+    const meios::scratch_dir tree       = make_tree();
+    const std::filesystem::path outside = tree.path() / "secret";
     write_file(outside / "passwd", "secret-bytes");
-
-    const std::filesystem::path ws = tree.root / "ws";
+    const std::filesystem::path ws = tree.path() / "ws";
     std::filesystem::create_directories(ws);
     std::error_code ec;
     std::filesystem::create_directory_symlink(outside, ws / "evil", ec);
-    if(ec)
-    {
-        SUCCEED("platform cannot create a directory symlink; skipping");
-        return;
-    }
+    REQUIRE_FALSE(ec);
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
-    meios::ros_package_source source({ ws }, {}, log);
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({ws}, {}, log);
 
     REQUIRE_FALSE(has_package(source.packages(), "evil"));
     REQUIRE_FALSE(source.locate("evil", "passwd").has_value());
@@ -205,28 +123,20 @@ TEST_CASE("an escaping in-root symlink with no manifest is never registered", "[
 
 TEST_CASE("stack order encodes explicit-first precedence and shadows lower layers", "[ros]")
 {
-    temp_tree explicit_tree;
-    temp_tree ament_tree;
-    write_file(explicit_tree.root / "arm" / "meshes" / "x.stl", "explicit\n");
-    make_ament_package(ament_tree.root, "arm");
+    const meios::scratch_dir explicit_tree = make_tree();
+    const meios::scratch_dir ament_tree    = make_tree();
+    write_file(explicit_tree.path() / "arm" / mesh, "explicit\n");
+    ament_package(ament_tree.path(), "arm");
 
-    std::vector<std::pair<meios::level, std::string>> log_entries;
-    meios::log_sink_f log{ capture{ log_entries } };
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
     meios::log_sink &seam = log;
+    meios::source_stack stack{meios::directory_source{explicit_tree.path(), seam}, meios::ros_package_source{{}, {ament_tree.path()}, seam}};
 
-    meios::source_stack stack{
-        meios::directory_source{ explicit_tree.root, seam },
-        meios::ros_package_source{ {}, { ament_tree.root }, seam },
-    };
-
-    std::optional<meios::resolved_asset> hit = stack.locate("arm", "meshes/x.stl", seam);
+    const std::optional<meios::resolved_asset> hit = stack.locate("arm", mesh, seam);
     REQUIRE(hit.has_value());
     std::ifstream resolved(hit->path());
-    const std::string content((std::istreambuf_iterator<char>(resolved)),
-                              std::istreambuf_iterator<char>());
+    const std::string content((std::istreambuf_iterator<char>(resolved)), std::istreambuf_iterator<char>());
     REQUIRE(content == "explicit\n");
-
-    const bool shadowed = std::any_of(log_entries.begin(), log_entries.end(),
-        [](const auto &e) { return e.first == meios::level::info; });
-    REQUIRE(shadowed);
+    REQUIRE(std::any_of(records.begin(), records.end(), [](const record &noted) { return noted.level == meios::level::info; }));
 }

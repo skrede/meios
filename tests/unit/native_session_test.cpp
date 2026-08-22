@@ -1,0 +1,176 @@
+#include "meios/xacro/eval_session.h"
+#include "meios/xacro/substitution_detail.h"
+
+#include <meios/xacro.h>
+#include <meios/urdf/load.h>
+
+#include <meios/io/source_stack.h>
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+#include <cstddef>
+#include <fstream>
+#include <optional>
+#include <filesystem>
+#include <functional>
+#include <string_view>
+
+#ifndef MEIOS_URDF_FIXTURE_DIR
+    #error "MEIOS_URDF_FIXTURE_DIR must name the urdf fixture root"
+#endif
+
+namespace
+{
+
+// A backend with no failure-state accessor at all still satisfies the seam, which is the
+// property that removes the cross-load read. It answers only from the scope it is handed,
+// so a shared instance driving two loads at once must produce each load's own result.
+struct stateless_backend
+{
+    meios::text_outcome eval_to_text(std::string_view expr, const meios::eval_scope &scope,
+                                     meios::log_sink &)
+    {
+        const std::optional<meios::value> bound = scope.lookup(expr);
+        if(!bound)
+            return meios::text_outcome{ std::nullopt, meios::eval_failure_kind::error };
+        return meios::text_outcome{ meios::render_scalar(*bound), meios::eval_failure_kind::none };
+    }
+};
+
+static_assert(meios::text_evaluator<stateless_backend>);
+
+struct tally
+{
+    std::vector<std::string> messages;
+
+    void operator()(meios::level lvl, const std::string &message)
+    {
+        if(lvl == meios::level::error)
+            messages.push_back(message);
+    }
+
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
+    {
+        (*this)(lvl, message);
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
+                    const std::string &message)
+    {
+        (*this)(lvl, message);
+    }
+};
+
+bool substitution_survives(meios::eval_policy policy, std::size_t token_ceiling)
+{
+    const meios::evaluator_limits ceilings{ 0, 0, 0, token_ceiling, 0 };
+    meios::detail::eval_session session(ceilings);
+    meios::eval_scope scope;
+    meios::source_stack sources;
+    meios::log_sink silent;
+    return meios::detail::substitute_refined("value ${1+1}", scope, sources, "inline.xacro", policy,
+                                             {}, session, silent, {})
+        .has_value();
+}
+
+// The link name is driven through a numeric property, so the substitution layer cannot
+// answer it from the scope directly and the shared backend really does run on both threads.
+std::filesystem::path write_document(const std::filesystem::path &dir, std::string_view name,
+                                     int index)
+{
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / std::string(name);
+    std::ofstream out(path, std::ios::binary);
+    out << "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+        << "<xacro:property name=\"index\" value=\"" << index << "\"/>"
+        << "<link name=\"link${index}\"/></robot>";
+    return path;
+}
+
+std::filesystem::path scratch_root()
+{
+    return std::filesystem::temp_directory_path() / "meios-native-session";
+}
+
+}
+
+TEST_CASE("a crossed ceiling latches an exhausted failure that stays latched", "[native][session]")
+{
+    const meios::evaluator_limits ceilings{ 4, 2, 16, 8, 32, 3 };
+    meios::detail::eval_session session(ceilings);
+    tally counts;
+    meios::log_sink_f sink{ std::ref(counts) };
+
+    REQUIRE_FALSE(session.charge_tokens(9, sink, {}));
+    REQUIRE(session.failure == meios::eval_failure_kind::exhausted);
+    REQUIRE(session.terminal.has_value());
+    REQUIRE(session.terminal->code == meios::diagnostic_code::expansion_budget_exceeded);
+    REQUIRE(counts.messages.size() == 1);
+
+    REQUIRE_FALSE(session.charge_bytes(1, sink, {}));
+    REQUIRE_FALSE(session.admits_yaml_depth(1, sink, {}));
+    REQUIRE_FALSE(session.admits_expression_depth(1, sink, {}));
+    REQUIRE(counts.messages.size() == 1);
+}
+
+TEST_CASE("exhaustion is terminal under every evaluation policy", "[native][session]")
+{
+    REQUIRE(substitution_survives(meios::eval_policy::fail, 64));
+    REQUIRE(substitution_survives(meios::eval_policy::warn, 64));
+    REQUIRE(substitution_survives(meios::eval_policy::skip, 64));
+
+    REQUIRE_FALSE(substitution_survives(meios::eval_policy::fail, 1));
+    REQUIRE_FALSE(substitution_survives(meios::eval_policy::warn, 1));
+    REQUIRE_FALSE(substitution_survives(meios::eval_policy::skip, 1));
+}
+
+TEST_CASE("a scope with no installed parser names the missing capability", "[native][session]")
+{
+    const meios::evaluator_limits ceilings;
+    meios::evaluator_counters counters;
+    meios::eval_scope scope;
+    tally counts;
+    meios::log_sink_f sink{ std::ref(counts) };
+
+    const meios::yaml_outcome parsed = scope.parse_yaml("a: 1", ceilings, counters, sink, {});
+
+    REQUIRE_FALSE(parsed.parsed.has_value());
+    REQUIRE(parsed.failure == meios::yaml_failure::unavailable);
+    REQUIRE(counts.messages.size() == 1);
+    REQUIRE(counts.messages.front().find("resolves no auxiliary document format")
+            != std::string::npos);
+}
+
+TEST_CASE("two loads over one shared configuration stay independent", "[native][session]")
+{
+    const std::filesystem::path dir = scratch_root();
+    const std::filesystem::path first = write_document(dir, "alpha.xacro", 3);
+    const std::filesystem::path second = write_document(dir, "beta.xacro", 8);
+
+    meios::load_options shared;
+    shared.backend = std::make_shared<meios::evaluator_handle>(stateless_backend{});
+
+    std::optional<std::string> alpha_link;
+    std::optional<std::string> beta_link;
+    std::thread one([&] {
+        const auto loaded = meios::load(first, shared);
+        if(loaded && loaded->robot.links.size() == 1)
+            alpha_link = loaded->robot.links.front().name;
+    });
+    std::thread two([&] {
+        const auto loaded = meios::load(second, shared);
+        if(loaded && loaded->robot.links.size() == 1)
+            beta_link = loaded->robot.links.front().name;
+    });
+    one.join();
+    two.join();
+
+    REQUIRE(alpha_link == std::optional<std::string>("link3"));
+    REQUIRE(beta_link == std::optional<std::string>("link8"));
+
+    std::filesystem::remove_all(dir);
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot name="harness_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="a_"/>
+  <xacro:property name="link_length" value="0.4"/>
+
+  <xacro:macro name="segment" params="name length radius:=0.05">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 ${length / 2}"/>
+        <geometry>
+          <cylinder length="${length}" radius="${radius}"/>
+        </geometry>
+      </visual>
+      <inertial>
+        <mass value="${length * 2.5}"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <link name="$(arg prefix)base"/>
+  <xacro:segment name="$(arg prefix)upper" length="${link_length * 2}"/>
+
+  <joint name="$(arg prefix)shoulder" type="revolute">
+    <parent link="$(arg prefix)base"/>
+    <child link="$(arg prefix)upper"/>
+    <origin xyz="0 0 ${link_length}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+</robot>

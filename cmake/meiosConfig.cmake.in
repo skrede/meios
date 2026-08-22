@@ -15,11 +15,25 @@ endif()
 if(@MEIOS_ARCHIVE_ZIP_INSTALLED@)
     find_dependency(miniz)
 endif()
+if(@MEIOS_YAML_INSTALLED@)
+    find_dependency(yaml-cpp 0.9)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/meiosTargets.cmake")
 
+# One name, two writers, one reader: the CLI's own listfile records this in an
+# add_subdirectory tree, this line records it for an installed package, and the flatten
+# rule reads it. A global property rather than a variable, because a variable set here
+# would reach only the directory that called find_package.
+set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON @MEIOS_CLI_HAS_EVAL_PYTHON@)
+
+# The resource functions are consumer-facing API, not build-internal helpers, so they must reach
+# find_package() consumers too — the top-level CMakeLists only includes the module for the
+# add_subdirectory/FetchContent path. The module is installed beside this file.
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeclareResource.cmake")
+
 set(meios_meios_FOUND TRUE)
-foreach(_meios_component core model completion scan-obj scan-collada scan-stl scan-gltf archive-zip eval-python ros)
+foreach(_meios_component core model io urdf xacro bundle completion scan-obj scan-collada scan-stl scan-gltf archive-zip eval-python ros-package yaml cli)
     if(TARGET meios::${_meios_component})
         set(meios_${_meios_component}_FOUND TRUE)
     else()

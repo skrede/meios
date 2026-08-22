@@ -1,14 +1,18 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <cmath>
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -30,10 +34,11 @@ math_fn unary_math_fn(std::string_view name)
     return nullptr;
 }
 
-value math_abs(const value &v)
+value math_abs(parser &p, const value &v)
 {
-    if(std::holds_alternative<double>(v)) return value{ std::fabs(std::get<double>(v)) };
-    return value{ std::llabs(as_int(v)) };
+    if(v.kind() == value_kind::real)
+        return real_result(p, std::fabs(*v.real()));
+    return int_result(p, checked_abs(need_int(p, v)), "absolute value");
 }
 
 value math_reduce(parser &p, std::string_view name, const std::vector<value> &args)
@@ -42,41 +47,25 @@ value math_reduce(parser &p, std::string_view name, const std::vector<value> &ar
     value best = args[0];
     bool want_max = name == "max";
     for(std::size_t i = 1; i < args.size(); ++i)
-        if((as_double(args[i]) > as_double(best)) == want_max) best = args[i];
+        if((need_double(p, args[i]) > need_double(p, best)) == want_max) best = args[i];
     return best;
 }
 
 value call_unary(parser &p, std::string_view name, const value &arg)
 {
-    if(name == "abs")     return math_abs(arg);
-    if(name == "floor")   return value{ static_cast<long long>(std::floor(as_double(arg))) };
-    if(name == "ceil")    return value{ static_cast<long long>(std::ceil(as_double(arg))) };
-    if(name == "radians") return value{ as_double(arg) * (3.141592653589793 / 180.0) };
-    if(name == "degrees") return value{ as_double(arg) * (180.0 / 3.141592653589793) };
+    if(name == "abs")     return math_abs(p, arg);
+    if(name == "floor")   return int_from_real(p, std::floor(need_double(p, arg)));
+    if(name == "ceil")    return int_from_real(p, std::ceil(need_double(p, arg)));
+    if(name == "radians") return real_result(p, need_double(p, arg) * (3.141592653589793 / 180.0));
+    if(name == "degrees") return real_result(p, need_double(p, arg) * (180.0 / 3.141592653589793));
     math_fn fn = unary_math_fn(name);
-    if(fn != nullptr) return value{ fn(as_double(arg)) };
+    if(fn != nullptr) return real_result(p, fn(need_double(p, arg)));
     return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
-bool is_comparison(token_kind k)
+bool is_constructor(std::string_view name)
 {
-    return k == token_kind::less || k == token_kind::less_equal || k == token_kind::greater
-        || k == token_kind::greater_equal || k == token_kind::equal_equal || k == token_kind::not_equal;
-}
-
-bool compare_pair(token_kind op, const value &a, const value &b)
-{
-    double x = as_double(a), y = as_double(b);
-    switch(op)
-    {
-        case token_kind::less:          return x <  y;
-        case token_kind::less_equal:    return x <= y;
-        case token_kind::greater:       return x >  y;
-        case token_kind::greater_equal: return x >= y;
-        case token_kind::equal_equal:   return x == y;
-        case token_kind::not_equal:     return x != y;
-        default:                        return false;
-    }
+    return name == "list" || name == "set" || name == "tuple";
 }
 
 value parse_call(parser &p, std::string_view name)
@@ -93,77 +82,39 @@ value parse_call(parser &p, std::string_view name)
 
 value parse_name(parser &p)
 {
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
     std::string_view name = p.peek().text;
     ++p.pos;
+    if(p.accept(token_kind::dot)) return parse_dotted(p, name);
+    if(p.at(token_kind::lparen) && name == "dict") return parse_dict(p);
+    if(p.at(token_kind::lparen) && is_constructor(name))
+        return p.fail_unsupported("the Python constructor '" + std::string(name)
+                                  + "()' — use eval-python");
     if(p.at(token_kind::lparen)) return parse_call(p, name);
-    if(name == "pi") return value{ 3.141592653589793 };
-    std::optional<binding> bound = p.scope.lookup(name);
-    if(!bound) return p.fail("name '" + std::string(name) + "' is not defined");
-    if(std::holds_alternative<value>(*bound)) return std::get<value>(*bound);
-    return p.fail_unsupported("string value '" + std::string(name) + "' in expression — use eval-python");
+    if(name == "pi") return real_result(p, 3.141592653589793);
+    std::optional<value> bound = p.scope.lookup(name);
+    if(!bound)
+        return p.fail("name '" + std::string(name) + "' is not defined",
+                      diagnostic_code::undefined_property);
+    return *bound;
 }
 
 value call_math(parser &p, std::string_view name, const std::vector<value> &args)
 {
     if(name == "min" || name == "max") return math_reduce(p, name, args);
     if(name == "atan2" && args.size() == 2)
-        return value{ std::atan2(as_double(args[0]), as_double(args[1])) };
+        return real_result(p, std::atan2(need_double(p, args[0]), need_double(p, args[1])));
     if(args.size() == 1) return call_unary(p, name, args[0]);
     return p.fail_unsupported("unsupported function '" + std::string(name) + "' — use eval-python");
 }
 
-value parse_comparison(parser &p)
-{
-    value left = parse_add(p);
-    if(!is_comparison(p.peek().kind)) return left;
-    bool result = true;
-    while(is_comparison(p.peek().kind))
-    {
-        token_kind op = p.peek().kind;
-        ++p.pos;
-        value right = parse_add(p);
-        result = result && compare_pair(op, left, right);
-        left = right;
-    }
-    return value{ result };
-}
-
 value parse_not(parser &p)
 {
-    if(p.accept(token_kind::kw_not)) return value{ !truthy(parse_not(p)) };
-    return parse_comparison(p);
-}
-
-value parse_and(parser &p)
-{
-    value left = parse_not(p);
-    while(p.accept(token_kind::kw_and))
-    {
-        value right = parse_not(p);
-        left = value{ truthy(left) && truthy(right) };
-    }
-    return left;
-}
-
-value parse_or(parser &p)
-{
-    value left = parse_and(p);
-    while(p.accept(token_kind::kw_or))
-    {
-        value right = parse_and(p);
-        left = value{ truthy(left) || truthy(right) };
-    }
-    return left;
-}
-
-value parse_ternary(parser &p)
-{
-    value first = parse_or(p);
-    if(!p.accept(token_kind::kw_if)) return first;
-    value condition = parse_or(p);
-    if(!p.accept(token_kind::kw_else)) return p.fail("expected 'else' in conditional");
-    value second = parse_ternary(p);
-    return truthy(condition) ? first : second;
+    const level_guard level(p);
+    if(!level.admitted()) return value{};
+    if(p.accept(token_kind::kw_not)) return value{ !need_truth(p, parse_not(p)) };
+    return parse_membership(p);
 }
 
 }

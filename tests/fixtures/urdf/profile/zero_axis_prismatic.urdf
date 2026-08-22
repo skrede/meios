@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="zero_axis_prismatic">
+  <link name="base_link"/>
+  <link name="slide_link"/>
+  <joint name="rail" type="prismatic">
+    <parent link="base_link"/>
+    <child link="slide_link"/>
+    <axis xyz="0 0 0"/>
+    <limit effort="10" velocity="1" lower="0" upper="1"/>
+  </joint>
+</robot>

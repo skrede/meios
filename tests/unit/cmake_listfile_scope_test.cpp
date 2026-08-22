@@ -1,0 +1,141 @@
+#include "cmake_listfile_scan.h"
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <array>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <filesystem>
+#include <string_view>
+
+namespace
+{
+
+using cmake_listfile::listfile_scan;
+using cmake_listfile::occurrence;
+using cmake_listfile::scan_repository;
+
+// A tree configured where git could not be asked has no set to scan. Reporting that and skipping is
+// the honest outcome: an empty scan would satisfy every claim below and prove none of them.
+void require_manifest()
+{
+    if(!std::filesystem::exists(std::filesystem::path{ MEIOS_TRACKED_LISTFILES }))
+        SKIP("no tracked-listfile manifest was generated for this build tree");
+}
+
+enum class reach
+{
+    file,
+    subtree
+};
+
+struct exemption
+{
+    reach extent;
+    std::string_view path;
+    std::string_view variable;
+    std::string_view reason;
+};
+
+constexpr std::array<exemption, 5> allowlist{
+    { { reach::file, "tests/compile/pass/CMakeLists.txt", "CMAKE_BINARY_DIR",
+        "a generated build system exists only at the top of the build tree; the target and "
+        "configuration arguments are what narrow the build to one probe" },
+      { reach::file, "tests/compile/fail/CMakeLists.txt", "CMAKE_BINARY_DIR",
+        "a generated build system exists only at the top of the build tree; the target and "
+        "configuration arguments are what narrow the build to one probe" },
+      { reach::file, "cmake/MeiosResourceCache.cmake", "CMAKE_BINARY_DIR",
+        "one resource cache and one owner key per build tree is the unit the claim and prune "
+        "lifecycle rests on" },
+      { reach::file, "cmake/corpus.cmake", "CMAKE_BINARY_DIR",
+        "corpus scratch belongs to whichever build tree is running, not to meios's own binary "
+        "directory" },
+      { reach::subtree, "tests/integration/cmake/fixtures", "CMAKE_BINARY_DIR",
+        "a fixture under this tree calls project() itself, so the top of the build genuinely is "
+        "its own and the variable means there exactly what it says; excused by subtree because a "
+        "per-line list would churn on every fixture edit without excusing anything a reader "
+        "disputes" } }
+};
+
+bool under(std::string_view directory, const std::string &path)
+{
+    return path.size() > directory.size() && path.rfind(directory, 0) == 0
+        && path[directory.size()] == '/';
+}
+
+bool covers(const exemption &entry, const occurrence &at)
+{
+    if(entry.variable != at.variable)
+        return false;
+    return entry.extent == reach::subtree ? under(entry.path, at.path) : entry.path == at.path;
+}
+
+bool exempt(const occurrence &at)
+{
+    for(const exemption &entry : allowlist)
+        if(covers(entry, at))
+            return true;
+    return false;
+}
+
+bool still_occurs(const exemption &entry, const std::vector<occurrence> &occurrences)
+{
+    for(const occurrence &at : occurrences)
+        if(covers(entry, at))
+            return true;
+    return false;
+}
+
+}
+
+TEST_CASE("cmake_listfile_scope: the scan reads the repository's listfiles")
+{
+    require_manifest();
+    const listfile_scan found = scan_repository();
+    REQUIRE(found.files > 0);
+    REQUIRE_FALSE(found.occurrences.empty());
+}
+
+TEST_CASE("cmake_listfile_scope: no listfile outside the allowlist names the top of the build")
+{
+    require_manifest();
+    const listfile_scan found = scan_repository();
+    REQUIRE(found.files > 0);
+    for(const occurrence &at : found.occurrences)
+    {
+        INFO(at.path << ':' << at.line << " names " << at.variable);
+        CHECK(exempt(at));
+    }
+}
+
+// Twice the claim above was reddened by a listfile nobody here wrote: a dependency's source checked
+// out beside this repository's own, then this repository's own modules installed into a prefix
+// inside it. Both sat in the working copy and neither was tracked, which is the whole distinction
+// the scan now draws -- so a file placed in the tree by anything other than a commit is the case.
+TEST_CASE("cmake_listfile_scope: an untracked listfile in the working copy is not scanned")
+{
+    require_manifest();
+    const std::filesystem::path intruder = std::filesystem::path{ MEIOS_REPOSITORY_ROOT }
+        / "meios-listfile-scope-untracked.cmake";
+    std::ofstream{ intruder } << "set(anything ${CMAKE_BINARY_DIR})\n";
+
+    const listfile_scan found = scan_repository();
+    std::filesystem::remove(intruder);
+
+    for(const occurrence &at : found.occurrences)
+        CHECK(at.path != "meios-listfile-scope-untracked.cmake");
+}
+
+TEST_CASE("cmake_listfile_scope: every allowlist entry still excuses a live occurrence")
+{
+    require_manifest();
+    const listfile_scan found = scan_repository();
+    REQUIRE_FALSE(found.occurrences.empty());
+    for(const exemption &entry : allowlist)
+    {
+        INFO(entry.path << ' ' << entry.variable);
+        CHECK_FALSE(entry.reason.empty());
+        CHECK(still_occurs(entry, found.occurrences));
+    }
+}

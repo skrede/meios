@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="package_empty_segment">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://somepkg//"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

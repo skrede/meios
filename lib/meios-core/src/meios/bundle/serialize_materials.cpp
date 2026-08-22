@@ -35,7 +35,7 @@ void append_material(pugi::xml_node parent, const material<double> &mat,
     if(mat.texture)
     {
         node.append_child("texture").append_attribute("filename").set_value(mat.texture->c_str());
-        refs.push_back(reference_record{ *mat.texture, std::nullopt, true });
+        refs.push_back(reference_record{ *mat.texture, mat.resolved_texture, true });
     }
 }
 

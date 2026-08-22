@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="inertia_degenerate_scale">
+  <link name="base_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0.5" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+</robot>

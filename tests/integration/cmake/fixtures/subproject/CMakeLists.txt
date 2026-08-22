@@ -1,0 +1,54 @@
+cmake_minimum_required(VERSION 3.28)
+
+# CXX rather than NONE: meios declares CXX itself, and this project compiles a consumer translation
+# unit against meios's public headers. The project() call here is also the condition under test --
+# it retargets PROJECT_SOURCE_DIR, so meios's own listfiles have to name their own project variable.
+project(meios_cmake_subproject LANGUAGES CXX)
+
+# Two inputs rather than one plus a position flag: which side of the add_subdirectory a consumer's
+# setting lands on is the thing under test, so both sites have to be visible at once.
+if(DEFINED FX_PARENT_INSTALL AND NOT FX_PARENT_INSTALL STREQUAL "")
+    set(MEIOS_INSTALL ${FX_PARENT_INSTALL})
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/configuration_dump.cmake")
+if(FX_ORDER STREQUAL "early")
+    fx_declare_consumer_interface()
+endif()
+
+# FetchContent_MakeAvailable ends in add_subdirectory, so the semantics are identical, and the
+# working tree rather than a committed revision is what a run before a push has to validate.
+add_subdirectory("${FX_MEIOS_SOURCE_DIR}" meios-build)
+
+if(DEFINED FX_PARENT_INSTALL_LATE AND NOT FX_PARENT_INSTALL_LATE STREQUAL "")
+    set(MEIOS_INSTALL ${FX_PARENT_INSTALL_LATE})
+endif()
+
+# An include root that does not exist is a green configure and a doomed compile, and building the
+# core archive plus a fetched CLI11 inside every case is not affordable, so the roots are read back
+# instead. A generator expression is skipped: it resolves after this point.
+foreach(_target IN ITEMS meios_cli meios_core)
+    if(NOT TARGET ${_target})
+        continue()
+    endif()
+    get_target_property(_roots ${_target} INCLUDE_DIRECTORIES)
+    foreach(_root IN LISTS _roots)
+        if(_root MATCHES "\\$<")
+            continue()
+        endif()
+        if(NOT IS_DIRECTORY "${_root}")
+            message(FATAL_ERROR
+                "meios-fixture: ${_target} attaches '${_root}', which is not a directory")
+        endif()
+    endforeach()
+endforeach()
+
+if(FX_ORDER STREQUAL "late")
+    fx_declare_consumer_interface()
+endif()
+if(FX_CONFIG_DUMP)
+    fx_write_configuration("${FX_CONFIG_DUMP}")
+endif()
+
+add_executable(meios_subproject_consumer consumer.cpp)
+target_link_libraries(meios_subproject_consumer PRIVATE meios::urdf)

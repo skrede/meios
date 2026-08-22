@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="sphere_radius_absent">
+  <link name="base_link">
+    <collision>
+      <geometry>
+        <sphere/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

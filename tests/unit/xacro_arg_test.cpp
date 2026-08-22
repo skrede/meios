@@ -1,59 +1,6 @@
-#include <meios/xacro.h>
-
-#include <meios/io/source_stack.h>
-#include <meios/io/directory_source.h>
-
-#include <meios/diagnostic/log_sink.h>
+#include "xacro_arg_fixture.h"
 
 #include <catch2/catch_test_macros.hpp>
-
-#include <string>
-#include <utility>
-#include <functional>
-#include <filesystem>
-#include <string_view>
-
-namespace
-{
-
-struct recorder
-{
-    int errors{ 0 };
-    std::string last{};
-
-    void note(meios::level severity, const std::string &text)
-    {
-        last = text;
-        if(severity == meios::level::error)
-            ++errors;
-    }
-
-    void operator()(meios::level severity, const std::string &text) { note(severity, text); }
-
-    void operator()(meios::level severity, const meios::source_location &, const std::string &text)
-    {
-        note(severity, text);
-    }
-};
-
-meios::expansion run(std::string_view source, recorder &log)
-{
-    meios::source_stack sources;
-    meios::eval_scope scope;
-    meios::log_sink_f sink{ std::ref(log) };
-    return meios::expand(source, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
-}
-
-std::string flattened(std::string_view source)
-{
-    recorder log;
-    const meios::expansion out = run(source, log);
-    REQUIRE(out.ok);
-    REQUIRE(log.errors == 0);
-    return meios::canonical_xml(out.document);
-}
-
-}
 
 TEST_CASE("a declaration seen before its use resolves the default", "[xacro][arg]")
 {
@@ -93,13 +40,13 @@ TEST_CASE("a caller override beats the declared default while others keep theirs
     recorder log;
     meios::source_stack sources;
     meios::eval_scope scope;
-    scope.set("a", meios::binding{ std::string("override") });
+    scope.set("a", meios::value{ std::string("override") });
     meios::log_sink_f sink{ std::ref(log) };
-    const meios::expansion out =
+    const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
-    REQUIRE(out.ok);
+    REQUIRE(out.has_value());
     REQUIRE(log.errors == 0);
-    REQUIRE(meios::canonical_xml(out.document) ==
+    REQUIRE(meios::canonical_xml(out->document) ==
             meios::canonical_xml(R"XML(<robot name="r"><link name="override_db"/></robot>)XML"));
 }
 
@@ -140,15 +87,15 @@ TEST_CASE("a nested arg default resolves at declaration", "[xacro][arg]")
 </robot>)XML";
 
     meios::eval_scope scope;
-    const meios::expansion out =
+    const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
     const std::string located =
-        std::filesystem::weakly_canonical(root / "pkg").string() + "/config/cfg/f.yaml";
+        std::filesystem::weakly_canonical(root / "pkg").generic_string() + "/config/cfg/f.yaml";
     std::filesystem::remove_all(root);
 
-    REQUIRE(out.ok);
+    REQUIRE(out.has_value());
     REQUIRE(log.errors == 0);
-    REQUIRE(out.document.find(located) != std::string::npos);
+    REQUIRE(out->document.find(located) != std::string::npos);
 }
 
 TEST_CASE("a caller override wins over a resolvable nested default", "[xacro][arg]")
@@ -171,14 +118,14 @@ TEST_CASE("a caller override wins over a resolvable nested default", "[xacro][ar
 </robot>)XML";
 
     meios::eval_scope scope;
-    scope.set("path", meios::binding{ std::string("/override/f.yaml") });
-    const meios::expansion out =
+    scope.set("path", meios::value{ std::string("/override/f.yaml") });
+    const expansion_result out =
         meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
     std::filesystem::remove_all(root);
 
-    REQUIRE(out.ok);
+    REQUIRE(out.has_value());
     REQUIRE(log.errors == 0);
-    REQUIRE(meios::canonical_xml(out.document) ==
+    REQUIRE(meios::canonical_xml(out->document) ==
             meios::canonical_xml(R"XML(<robot name="r"><link name="/override/f.yaml"/></robot>)XML"));
 }
 
@@ -190,7 +137,7 @@ TEST_CASE("an undeclared arg with no default still loud-fails", "[xacro][arg]")
   <link name="root"/>
 </robot>)XML";
     recorder log;
-    const meios::expansion out = run(doc, log);
-    REQUIRE_FALSE(out.ok);
+    const expansion_result out = run(doc, log);
+    REQUIRE_FALSE(out.has_value());
     REQUIRE(log.errors >= 1);
 }

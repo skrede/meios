@@ -1,0 +1,15 @@
+add_executable(capture_diagnostics capture_diagnostics.cpp)
+target_link_libraries(capture_diagnostics PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(capture_diagnostics PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(capture_diagnostics)
+add_test(NAME example_capture_diagnostics COMMAND capture_diagnostics)
+
+add_executable(diagnostic_codes diagnostic_codes.cpp)
+target_link_libraries(diagnostic_codes PRIVATE meios::core meios::model meios::urdf)
+meios_warnings(diagnostic_codes)
+add_test(NAME example_diagnostic_codes COMMAND diagnostic_codes)
+
+add_executable(completeness_claims completeness_claims.cpp)
+target_link_libraries(completeness_claims PRIVATE meios::core meios::model meios::urdf)
+meios_warnings(completeness_claims)
+add_test(NAME example_completeness_claims COMMAND completeness_claims)

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="mimic_multiplier_default">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <link name="tool_link"/>
+  <joint name="shoulder" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+    <limit effort="10" velocity="1"/>
+  </joint>
+  <joint name="wrist" type="revolute">
+    <parent link="arm_link"/>
+    <child link="tool_link"/>
+    <limit effort="10" velocity="1"/>
+    <mimic joint="shoulder"/>
+  </joint>
+</robot>

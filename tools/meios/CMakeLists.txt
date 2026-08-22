@@ -11,6 +11,11 @@ meios_enable_coverage(meios_cli)
 meios_warnings(meios_cli)
 target_compile_features(meios_cli PUBLIC cxx_std_20)
 target_include_directories(meios_cli PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# The resolve verb answers for the same URI vocabulary the loader does, by calling the
+# loader's own resolver rather than carrying a second parser. That resolver is deliberately
+# not installed public API, so the tool reaches it through core's private source root the way
+# a test stem does, instead of the vocabulary being published to external consumers.
+target_include_directories(meios_cli PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
 target_link_libraries(meios_cli
     PUBLIC meios::urdf meios::bundle meios::completion
     PRIVATE CLI11::CLI11)
@@ -29,9 +34,12 @@ endforeach()
 # ROS package resolution composes as an ordinary source layer, gated the same way
 # a scanner is: only when the enrichment target is built does the CLI link it and
 # define the guard that folds a ros_package_source into build_sources.
-if(TARGET meios_ros)
-    target_link_libraries(meios_cli PRIVATE meios::ros)
+if(TARGET meios_ros-package)
+    target_link_libraries(meios_cli PRIVATE meios::ros-package)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_ROS)
+    # A global property for the same reason the python one is: the flatten call that reads it may be
+    # written in any directory, and a variable set here would reach only the parent.
+    set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_ROS TRUE)
 endif()
 
 # The Python evaluator backend links the same way an enrichment scanner does: only
@@ -40,14 +48,19 @@ endif()
 if(TARGET meios_eval-python)
     target_link_libraries(meios_cli PRIVATE meios::eval-python)
     target_compile_definitions(meios_cli PRIVATE MEIOS_CLI_HAS_EVAL_PYTHON)
+    # A global property, not a scoped variable: a value set here would reach only the
+    # parent directory, while the flatten call that reads it may be written in any
+    # directory of a consumer's tree.
+    set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON TRUE)
 endif()
 
 add_executable(meios main.cpp)
 meios_enable_coverage(meios)
 meios_warnings(meios)
 target_link_libraries(meios PRIVATE meios_cli)
-set_target_properties(meios PROPERTIES OUTPUT_NAME meios)
+set_target_properties(meios PROPERTIES OUTPUT_NAME meios EXPORT_NAME cli)
+add_executable(meios::cli ALIAS meios)
 
-if(MEIOS_ENABLE_INSTALL)
-    install(TARGETS meios RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+if(MEIOS_INSTALL)
+    install(TARGETS meios EXPORT meiosTargets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

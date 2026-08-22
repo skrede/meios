@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_MODEL_MODEL_MODEL_H
 
 #include "meios/model/structure.h"
+#include "meios/model/topology.h"
 
 #include "meios/records/link.h"
 #include "meios/records/joint.h"
@@ -30,6 +31,7 @@ struct model
     std::vector<loop_constraint<Scalar>> loops;
     std::unordered_map<std::string, int> link_index;
     std::unordered_map<std::string, int> joint_index;
+    robot_topology topo;
 };
 
 }

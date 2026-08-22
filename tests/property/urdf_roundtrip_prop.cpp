@@ -19,6 +19,8 @@ namespace
 
 struct capture_log : meios::log_sink
 {
+    using meios::log_sink::log;
+
     std::vector<meios::level> levels;
 
     void log(meios::level lvl, const std::string &) override
@@ -68,7 +70,7 @@ std::string flavor(int i)
 
 std::string link_name(int i)
 {
-    return i == 0 ? std::string() : flavor(i) + "link" + std::to_string(i);
+    return i == 0 ? std::string("base") : flavor(i) + "link" + std::to_string(i);
 }
 
 std::string joint_name(int i)
@@ -99,6 +101,7 @@ std::vector<meios::joint<double>> build_joints(const std::vector<int> &parent, c
         edge.parent = link_name(parent[static_cast<std::size_t>(i)]);
         edge.child = link_name(i);
         edge.axis = meios::vector3<double>{ 0.0, 0.0, 1.0 };
+        edge.limits = meios::joint_limits<double>{ -1.0, 1.0, 10.0, 1.0 };
         joints.push_back(edge);
     }
     return joints;
@@ -127,7 +130,7 @@ meios::tree<double> parse(const std::string &text, meios::log_sink &log)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, "gen.urdf" };
+                              meios::strictness::fail, "gen.urdf" };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(text, rec);
@@ -175,7 +178,7 @@ TEST_CASE("a generated model round-trips through the shared emitter", "[bundle][
         const meios::topology_result topo =
             meios::reconstruct_topology(round.links, round.joints, silent, meios::topology_policy::fail);
         RC_ASSERT(topo.ok);
-        RC_ASSERT(root_count(topo.parent_of) == 1);
+        RC_ASSERT(root_count(topo.topo.parent_of) == 1);
     }));
 }
 

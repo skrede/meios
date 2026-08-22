@@ -1,0 +1,70 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	10
+joint.count	9
+link.name.0	base_link
+link.name.1	link_1
+link.name.2	link_2
+link.name.3	link_3
+link.name.4	link_4
+link.name.5	link_5
+link.name.6	link_6
+link.name.7	flange
+link.name.8	base
+link.name.9	tool0
+joint.name.0	joint_a1
+joint.name.1	joint_a2
+joint.name.2	joint_a3
+joint.name.3	joint_a4
+joint.name.4	joint_a5
+joint.name.5	joint_a6
+joint.name.6	joint_a6-flange
+joint.name.7	base_link-base
+joint.name.8	flange-tool0
+joint.type.joint_a1	revolute
+joint.limit.joint_a1	lower=-2.9670597283903604 upper=2.9670597283903604 effort=0 velocity=6.283185307179586
+joint.type.joint_a2	revolute
+joint.limit.joint_a2	lower=-3.3161255787892263 upper=0.7853981633974483 effort=0 velocity=5.235987755982989
+joint.type.joint_a3	revolute
+joint.limit.joint_a3	lower=-2.0943951023931953 upper=2.722713633111154 effort=0 velocity=6.283185307179586
+joint.type.joint_a4	revolute
+joint.limit.joint_a4	lower=-3.2288591161895095 upper=3.2288591161895095 effort=0 velocity=6.649704450098396
+joint.type.joint_a5	revolute
+joint.limit.joint_a5	lower=-2.0943951023931953 upper=2.0943951023931953 effort=0 velocity=6.771877497737998
+joint.type.joint_a6	revolute
+joint.limit.joint_a6	lower=-6.1086523819801535 upper=6.1086523819801535 effort=0 velocity=10.733774899765127
+joint.type.joint_a6-flange	fixed
+joint.type.base_link-base	fixed
+joint.type.flange-tool0	fixed
+mesh.filename.0	package://kuka_kr6_support/meshes/kr6_agilus/visual/base_link.dae
+mesh.filename.1	package://kuka_kr6_support/meshes/kr6_agilus/collision/base_link.stl
+mesh.filename.2	package://kuka_kr6_support/meshes/kr6_agilus/visual/link_1.dae
+mesh.filename.3	package://kuka_kr6_support/meshes/kr6_agilus/collision/link_1.stl
+mesh.filename.4	package://kuka_kr6_support/meshes/kr6r900sixx/visual/link_2.dae
+mesh.filename.5	package://kuka_kr6_support/meshes/kr6r900sixx/collision/link_2.stl
+mesh.filename.6	package://kuka_kr6_support/meshes/kr6_agilus/visual/link_3.dae
+mesh.filename.7	package://kuka_kr6_support/meshes/kr6_agilus/collision/link_3.stl
+mesh.filename.8	package://kuka_kr6_support/meshes/kr6r900sixx/visual/link_4.dae
+mesh.filename.9	package://kuka_kr6_support/meshes/kr6r900sixx/collision/link_4.stl
+mesh.filename.10	package://kuka_kr6_support/meshes/kr6_agilus/visual/link_5.dae
+mesh.filename.11	package://kuka_kr6_support/meshes/kr6_agilus/collision/link_5.stl
+mesh.filename.12	package://kuka_kr6_support/meshes/kr6_agilus/visual/link_6.dae
+mesh.filename.13	package://kuka_kr6_support/meshes/kr6_agilus/collision/link_6.stl
+origin.base_link.visual	xyz=0 0 0 rpy=0 0 0
+origin.base_link.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_1.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_1.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_2.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_2.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_3.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_3.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_4.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_4.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_5.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_5.collision	xyz=0 0 0 rpy=0 0 0
+origin.link_6.visual	xyz=0 0 0 rpy=0 0 0
+origin.link_6.collision	xyz=0 0 0 rpy=0 0 0

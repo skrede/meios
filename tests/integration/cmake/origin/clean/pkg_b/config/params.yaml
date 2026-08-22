@@ -1,0 +1,7 @@
+arm_controller:
+  prefix: a_
+  joints:
+    - a_shoulder
+  limits:
+    effort: 10.0
+    velocity: 1.0

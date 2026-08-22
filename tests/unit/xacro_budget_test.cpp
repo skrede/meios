@@ -1,3 +1,5 @@
+#include "xacro_read_probe.h"
+
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
@@ -5,38 +7,18 @@
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 #include <vector>
 #include <utility>
-#include <filesystem>
-#include <string_view>
 
 namespace
 {
 
-struct captured_log
-{
-    std::vector<std::pair<meios::level, std::string>> &records;
-
-    void operator()(meios::level lvl, const std::string &message)
-    {
-        records.push_back({ lvl, message });
-    }
-
-    void operator()(meios::level, const meios::source_location &, const std::string &) {}
-};
-
-bool any_contains(const std::vector<std::pair<meios::level, std::string>> &records,
-                  std::string_view needle)
-{
-    for(const std::pair<meios::level, std::string> &entry : records)
-        if(entry.second.find(needle) != std::string::npos)
-            return true;
-    return false;
-}
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
 
 const char *fanout_doc()
 {
@@ -49,54 +31,52 @@ const char *fanout_doc()
 
 TEST_CASE("a shallow-but-wide macro fan-out trips the output-node budget", "[xacro][budget]")
 {
-    std::vector<std::pair<meios::level, std::string>> records;
-    meios::log_sink_f log{ captured_log{ records } };
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{ 1'000'000, 4 }, log);
 
-    REQUIRE_FALSE(out.ok);
-    REQUIRE(any_contains(records, "budget exceeded"));
-    REQUIRE(any_contains(records, "output-node limit"));
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
 TEST_CASE("a low work ceiling halts expansion with a resource diagnostic", "[xacro][budget]")
 {
-    std::vector<std::pair<meios::level, std::string>> records;
-    meios::log_sink_f log{ captured_log{ records } };
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{ 3, 1'000'000 }, log);
 
-    REQUIRE_FALSE(out.ok);
-    REQUIRE(any_contains(records, "budget exceeded"));
-    REQUIRE(any_contains(records, "work limit"));
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
 TEST_CASE("a generous budget lets an ordinary document expand", "[xacro][budget]")
 {
-    std::vector<std::pair<meios::level, std::string>> records;
-    meios::log_sink_f log{ captured_log{ records } };
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources;
     meios::eval_scope scope;
 
-    meios::expansion out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
+    const expansion_result out = meios::expand(fanout_doc(), scope, sources, "robot.xacro",
                                          meios::expansion_limits{}, log);
 
-    REQUIRE(out.ok);
-    REQUIRE_FALSE(any_contains(records, "budget exceeded"));
+    REQUIRE(out.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 0);
 }
 
 TEST_CASE("a mutual xacro:include chain is caught by the cycle guard", "[xacro][budget][cycle]")
 {
-    std::vector<std::pair<meios::level, std::string>> records;
-    meios::log_sink_f log{ captured_log{ records } };
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
 
-    meios::memory_source parts;
+    meios::memory_source parts{ log };
     parts.add("pkg", "a.xacro",
               "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
               "<xacro:include filename=\"$(find pkg)/b.xacro\"/></robot>");
@@ -108,28 +88,83 @@ TEST_CASE("a mutual xacro:include chain is caught by the cycle guard", "[xacro][
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"$(find pkg)/a.xacro\"/></robot>";
-    meios::expansion out =
+    const expansion_result out =
         meios::expand(top, scope, sources, "top.xacro", meios::expansion_limits{}, log);
 
-    REQUIRE_FALSE(out.ok);
-    REQUIRE(any_contains(records, "cycle detected"));
-    REQUIRE_FALSE(any_contains(records, "budget exceeded"));
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_structural_error) == 1);
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 0);
 }
 
 TEST_CASE("an xacro:include escaping the source root is rejected loudly", "[xacro][budget][root]")
 {
-    std::vector<std::pair<meios::level, std::string>> records;
-    meios::log_sink_f log{ captured_log{ records } };
-    meios::memory_source parts;
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::memory_source parts{ log };
     parts.add("pkg", "robot.xacro", "<robot/>");
     meios::source_stack sources{ std::move(parts) };
     meios::eval_scope scope;
 
     const char *top = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
                       "<xacro:include filename=\"$(find pkg)/../secret.xacro\"/></robot>";
-    meios::expansion out =
+    const expansion_result out =
         meios::expand(top, scope, sources, "top.xacro", meios::expansion_limits{}, log);
 
-    REQUIRE_FALSE(out.ok);
-    REQUIRE(any_contains(records, "escapes the source root"));
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_structural_error) == 1);
+}
+
+TEST_CASE("two independent budget-exhausting constructs still report exactly one failure",
+          "[xacro][budget][cardinality]")
+{
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources;
+    meios::eval_scope scope;
+
+    // Two sibling fan-outs each exceed the ceiling on their own; the already-failed
+    // short-circuit at the head of the charge is what keeps the second one silent.
+    const char *twice = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+                        "<xacro:macro name=\"trio\"><link/><link/><link/></xacro:macro>"
+                        "<a><xacro:trio/><xacro:trio/></a>"
+                        "<b><xacro:trio/><xacro:trio/></b></robot>";
+    const expansion_result out = meios::expand(twice, scope, sources, "robot.xacro",
+                                         meios::expansion_limits{ 1'000'000, 4 }, log);
+
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(xacro_probe::errors(records) == 1);
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
+}
+
+// One level of span nesting is several stack frames, so a span nested past the ceiling must
+// answer with the exhausted refusal rather than with the stack. Both openers descend through
+// the same inner scan and both must stop at the same depth.
+TEST_CASE("span nesting past the expression-depth ceiling refuses rather than descending",
+          "[xacro][budget]")
+{
+    meios::source_stack sources;
+    meios::eval_scope scope;
+
+    for(const std::pair<const char *, const char *> &pair :
+        { std::pair<const char *, const char *>{ "${", "}" },
+          std::pair<const char *, const char *>{ "$(", ")" } })
+    {
+        std::vector<xacro_probe::captured> records;
+        meios::log_sink_f log{ xacro_probe::recorder{ records } };
+        INFO("opener " << pair.first);
+        std::string raw;
+        for(int at = 0; at < 50'000; ++at)
+            raw += pair.first;
+        raw += "1";
+        for(int at = 0; at < 50'000; ++at)
+            raw += pair.second;
+
+        const meios::expected<meios::substitution, meios::expansion_error> out =
+            meios::substitute(raw, scope, sources, "robot.xacro", log);
+
+        REQUIRE_FALSE(out.has_value());
+        CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+        CHECK_FALSE(out.error().loc.file.empty());
+        CHECK(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
+    }
 }

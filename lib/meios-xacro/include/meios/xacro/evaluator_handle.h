@@ -7,24 +7,28 @@
 #include "meios/diagnostic/log_sink.h"
 
 #include <memory>
-#include <string>
 #include <cassert>
 #include <utility>
 #include <concepts>
-#include <optional>
 #include <string_view>
 
 namespace meios
 {
 
-// The value variant cannot carry strings, so an alternate backend is injected at
-// the string level: it renders an expression to text and reports why it declined.
+// An injected backend renders an expression to text while the built-in path answers with a
+// value, so the seam is spelled at the string level; the failure kind comes back inside the
+// outcome rather than through an accessor, which is what lets one handle be shared across
+// concurrent loads without either load reading the other's state.
+// The sink handed to eval_to_text anchors a diagnostic emitted through the message-only
+// log(level, message) overload at the node being expanded, and additionally types an error
+// as expression_error, since a terminal failure has to carry a code to be returned as the
+// structured cause. A warning is anchored and left uncoded. A backend wanting either to
+// carry a particular code must emit it through an overload that supplies one.
 template <typename E>
 concept text_evaluator = requires(E &backend, std::string_view expr,
                                   const eval_scope &scope, log_sink &log)
 {
-    { backend.eval_to_text(expr, scope, log) } -> std::convertible_to<std::optional<std::string>>;
-    { backend.last_failure_kind() } -> std::convertible_to<eval_failure_kind>;
+    { backend.eval_to_text(expr, scope, log) } -> std::convertible_to<text_outcome>;
 };
 
 // Move-only value type erasing any text_evaluator behind a manual vtable, mirroring
@@ -45,16 +49,10 @@ public:
 
     bool valid() const noexcept { return m_self != nullptr; }
 
-    std::optional<std::string> eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log)
+    text_outcome eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log)
     {
         assert(valid() && "eval_to_text() on a moved-from evaluator_handle");
         return m_self->do_eval(expr, scope, log);
-    }
-
-    eval_failure_kind last_failure_kind() const
-    {
-        assert(valid() && "last_failure_kind() on a moved-from evaluator_handle");
-        return m_self->do_kind();
     }
 
 private:
@@ -67,8 +65,7 @@ private:
         concept_t &operator=(concept_t &&) = default;
         virtual ~concept_t() = default;
 
-        virtual std::optional<std::string> do_eval(std::string_view, const eval_scope &, log_sink &) = 0;
-        virtual eval_failure_kind do_kind() const = 0;
+        virtual text_outcome do_eval(std::string_view, const eval_scope &, log_sink &) = 0;
     };
 
     template <text_evaluator E>
@@ -76,13 +73,10 @@ private:
     {
         explicit model(E backend) : m_backend(std::move(backend)) {}
 
-        std::optional<std::string> do_eval(std::string_view expr, const eval_scope &scope,
-                                           log_sink &log) override
+        text_outcome do_eval(std::string_view expr, const eval_scope &scope, log_sink &log) override
         {
             return m_backend.eval_to_text(expr, scope, log);
         }
-
-        eval_failure_kind do_kind() const override { return m_backend.last_failure_kind(); }
 
         E m_backend;
     };

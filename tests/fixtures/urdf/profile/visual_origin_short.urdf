@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="visual_origin_short">
+  <link name="base_link">
+    <visual>
+      <origin xyz="1 2"/>
+      <geometry>
+        <box size="1 1 1"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

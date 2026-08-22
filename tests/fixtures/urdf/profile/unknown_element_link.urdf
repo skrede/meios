@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="unknown_element_link">
+  <link name="base_link">
+    <collision_checking group="fast"/>
+  </link>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="fixed">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+  </joint>
+</robot>

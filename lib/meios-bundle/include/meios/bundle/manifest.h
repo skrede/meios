@@ -6,7 +6,6 @@
 #include "meios/bundle/scanner_registry.h"
 
 #include "meios/io/source_stack.h"
-#include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/log_sink.h"
 
@@ -45,10 +44,11 @@ struct collision_options
 
 // Turns the emitter's accumulated reference set into the self-contained bundle
 // manifest: each reference is parsed to its in-bundle layout and rewritten to a
-// package://<bundle>/... URI, textures the walk left unresolved are resolved
-// through the source stack, the extension-keyed scanner closure discovers
-// transitive sub-assets under a cycle guard, and cross-package name collisions
-// are handled per collision_options. It performs no disk writes.
+// package://<bundle>/... URI, the extension-keyed scanner closure discovers
+// transitive sub-assets under a cycle guard and resolves each newly discovered one
+// against the source stack, and cross-package name collisions are handled per
+// collision_options. A reference arriving with no resolved path is never resolved
+// here: the resolver already decided about it. It performs no disk writes.
 class manifest_builder
 {
 public:
@@ -76,14 +76,13 @@ private:
     std::string m_bundle_name;
     asset_manifest m_manifest;
     std::unordered_set<std::string> m_seen;
+    std::unordered_set<std::string> m_children;
     std::map<std::string, std::string> m_roots;
     std::map<std::string, std::string> m_rewrites;
-    std::vector<resolved_asset> m_retained;
 
-    std::filesystem::path path_of_asset(resolved_asset asset);
+    std::optional<std::filesystem::path> locate_source(const reference_record &ref);
 
-    std::optional<std::filesystem::path> locate_source(const reference_record &ref,
-                                                       const std::string &pkg, const std::string &rel);
+    std::optional<std::string> resolve_child(const std::string &child);
 
     std::optional<std::string> pkg_dir(const std::string &pkg, const std::filesystem::path &root);
 

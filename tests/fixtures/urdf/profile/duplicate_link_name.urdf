@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<robot name="duplicate_link_name">
+  <link name="base_link"/>
+  <link name="base_link"/>
+</robot>

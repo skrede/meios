@@ -51,101 +51,14 @@ meios_enable_coverage(integration_test)
 meios_warnings(integration_test)
 catch_discover_tests(integration_test)
 
-foreach(stem IN ITEMS urdf_diagnostics urdf_realfixture)
-    set(urdf_integration_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/${stem}_test.cpp)
-    if(EXISTS ${urdf_integration_src})
-        add_executable(${stem}_test ${urdf_integration_src})
-        target_link_libraries(${stem}_test
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-                Catch2::Catch2WithMain)
-        target_compile_definitions(${stem}_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        meios_enable_coverage(${stem}_test)
-        meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
-    endif()
-endforeach()
+include(cmake/integration_tests.cmake)
+include(cmake/core_tests.cmake)
+include(cmake/module_tests.cmake)
+include(cmake/urdf_tests.cmake)
+include(cmake/load_tests.cmake)
+include(cmake/native_eval_tests.cmake)
 
-foreach(stem IN ITEMS math diag records types sink)
-    set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
-    if(EXISTS ${model_test_src})
-        add_executable(model_${stem}_test ${model_test_src})
-        target_link_libraries(model_${stem}_test
-            PRIVATE meios::core meios::model Catch2::Catch2WithMain)
-        meios_enable_coverage(model_${stem}_test)
-        meios_warnings(model_${stem}_test)
-        catch_discover_tests(model_${stem}_test)
-    endif()
-endforeach()
-
-# The module unit stems are wired but guarded: a stem becomes a real test the
-# moment its source drops in, with no further CMake edit. meios::model is linked
-# so a stem reaching the diagnostic seam through a module header compiles.
-foreach(stem IN ITEMS
-        xacro_eval xacro_structural xacro_subst xacro_budget xacro_arg
-        xacro_unsupported xacro_corpus io_concept io_source_stack io_sources)
-    set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
-    if(EXISTS ${module_test_src})
-        add_executable(${stem}_test ${module_test_src})
-        target_link_libraries(${stem}_test
-            PRIVATE meios::core meios::model meios::xacro meios::io
-                Catch2::Catch2WithMain)
-        if(stem STREQUAL "xacro_corpus" OR stem STREQUAL "xacro_structural")
-            target_compile_definitions(${stem}_test PRIVATE
-                MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
-        endif()
-        meios_enable_coverage(${stem}_test)
-        meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
-    endif()
-endforeach()
-
-foreach(stem IN ITEMS urdf_walk urdf_material urdf_topology urdf_mesh urdf_strict)
-    set(urdf_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
-    if(EXISTS ${urdf_test_src})
-        add_executable(${stem}_test ${urdf_test_src})
-        target_link_libraries(${stem}_test
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-                Catch2::Catch2WithMain)
-        target_compile_definitions(${stem}_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        meios_enable_coverage(${stem}_test)
-        meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
-    endif()
-endforeach()
-
-foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner)
-    set(bundle_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
-    if(EXISTS ${bundle_test_src})
-        add_executable(${stem}_test ${bundle_test_src})
-        target_link_libraries(${stem}_test
-            PRIVATE meios::core meios::model meios::io meios::urdf meios::bundle
-                Catch2::Catch2WithMain)
-        target_compile_definitions(${stem}_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        meios_enable_coverage(${stem}_test)
-        meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
-    endif()
-endforeach()
-
-foreach(stem IN ITEMS urdf_load_sources)
-    set(load_sources_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/${stem}_test.cpp)
-    if(EXISTS ${load_sources_src})
-        add_executable(${stem}_test ${load_sources_src})
-        target_link_libraries(${stem}_test
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-                Catch2::Catch2WithMain)
-        target_compile_definitions(${stem}_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        meios_enable_coverage(${stem}_test)
-        meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
-    endif()
-endforeach()
-
-foreach(stem IN ITEMS arg_scan)
+foreach(stem IN ITEMS arg_scan cmake_listfile_scope)
     set(arg_scan_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${arg_scan_src})
         add_executable(${stem}_test ${arg_scan_src})
@@ -156,6 +69,37 @@ foreach(stem IN ITEMS arg_scan)
         catch_discover_tests(${stem}_test)
     endif()
 endforeach()
+
+# The listfiles this repository answers for are the ones it tracks. Asking git rather than walking
+# the working copy is what keeps a fetched dependency's source, an install prefix, or a configured
+# build tree out of the scan; each of those lives inside the checkout and none is a source of ours.
+# A tree with no git available still builds and still registers the case -- it reports the absent
+# manifest and skips, rather than passing on an empty scan.
+if(TARGET cmake_listfile_scope_test)
+    find_package(Git QUIET)
+    set(_listfile_manifest ${CMAKE_CURRENT_BINARY_DIR}/tracked_listfiles.txt)
+    set(_listfile_tracked "")
+    set(_listfile_rc 1)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} ls-files -- "*CMakeLists.txt" "*.cmake"
+            WORKING_DIRECTORY ${meios_SOURCE_DIR}
+            OUTPUT_VARIABLE _listfile_tracked
+            RESULT_VARIABLE _listfile_rc
+            ERROR_QUIET)
+    endif()
+    if(_listfile_rc EQUAL 0 AND NOT _listfile_tracked STREQUAL "")
+        file(WRITE ${_listfile_manifest} "${_listfile_tracked}")
+    else()
+        message(WARNING
+            "meios: no tracked-listfile manifest could be derived from git, so the listfile-scope "
+            "case will skip rather than scan an unknown set.")
+        file(REMOVE ${_listfile_manifest})
+    endif()
+    target_compile_definitions(cmake_listfile_scope_test PRIVATE
+        MEIOS_REPOSITORY_ROOT="${meios_SOURCE_DIR}"
+        MEIOS_TRACKED_LISTFILES="${_listfile_manifest}")
+endif()
 
 foreach(stem IN ITEMS completion_emit)
     set(completion_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
@@ -176,7 +120,8 @@ endforeach()
 # which carries CLI11 PRIVATE. The TARGET guard keeps a MEIOS_BUILD_TOOLS=OFF
 # configure green even once these sources land.
 if(TARGET meios_cli)
-    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift cli_eval_backend)
+    foreach(stem IN ITEMS cli_verbs cli_validate cli_tree cli_complete cli_table_drift cli_eval_backend
+            cmake_eval_vocabulary)
         set(cli_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
         if(EXISTS ${cli_test_src})
             add_executable(${stem}_test ${cli_test_src})
@@ -191,183 +136,37 @@ if(TARGET meios_cli)
             catch_discover_tests(${stem}_test)
         endif()
     endforeach()
-endif()
 
-# Enrichment unit stems. Each scanner/ros/zip/python stem is gated on both its
-# module TARGET and the EXISTS source guard, so a default (all enrichment options
-# OFF) configure adds none of them; a stem becomes a live test the moment its
-# implementing plan lands the module source and the test .cpp together. The
-# eval_policy stem drives the always-on core evaluator, so it carries no TARGET
-# guard — only the EXISTS guard keeps it dormant until its source lands.
-if(TARGET meios_scan-obj)
-    set(scan_obj_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scan_obj_test.cpp)
-    if(EXISTS ${scan_obj_src})
-        add_executable(scan_obj_test ${scan_obj_src})
-        target_link_libraries(scan_obj_test
-            PRIVATE meios::core meios::model meios::io meios::bundle meios::scan-obj
-                Catch2::Catch2WithMain)
-        target_compile_definitions(scan_obj_test PRIVATE
-            MEIOS_ASSET_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-        meios_enable_coverage(scan_obj_test)
-        meios_warnings(scan_obj_test)
-        catch_discover_tests(scan_obj_test)
-    endif()
-endif()
-
-if(TARGET meios_scan-stl)
-    set(scan_stl_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scan_stl_test.cpp)
-    if(EXISTS ${scan_stl_src})
-        add_executable(scan_stl_test ${scan_stl_src})
-        target_link_libraries(scan_stl_test
-            PRIVATE meios::core meios::model meios::io meios::bundle meios::scan-stl
-                Catch2::Catch2WithMain)
-        target_compile_definitions(scan_stl_test PRIVATE
-            MEIOS_ASSET_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-        meios_enable_coverage(scan_stl_test)
-        meios_warnings(scan_stl_test)
-        catch_discover_tests(scan_stl_test)
-    endif()
-endif()
-
-if(TARGET meios_scan-collada)
-    set(scan_collada_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scan_collada_test.cpp)
-    if(EXISTS ${scan_collada_src})
-        add_executable(scan_collada_test ${scan_collada_src})
-        target_link_libraries(scan_collada_test
-            PRIVATE meios::core meios::model meios::io meios::bundle meios::scan-collada
-                Catch2::Catch2WithMain)
-        target_compile_definitions(scan_collada_test PRIVATE
-            MEIOS_ASSET_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-        meios_enable_coverage(scan_collada_test)
-        meios_warnings(scan_collada_test)
-        catch_discover_tests(scan_collada_test)
-    endif()
-endif()
-
-if(TARGET meios_scan-gltf)
-    set(scan_gltf_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/scan_gltf_test.cpp)
-    if(EXISTS ${scan_gltf_src})
-        add_executable(scan_gltf_test ${scan_gltf_src})
-        target_link_libraries(scan_gltf_test
-            PRIVATE meios::core meios::model meios::io meios::bundle meios::scan-gltf
-                Catch2::Catch2WithMain)
-        target_compile_definitions(scan_gltf_test PRIVATE
-            MEIOS_ASSET_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-        meios_enable_coverage(scan_gltf_test)
-        meios_warnings(scan_gltf_test)
-        catch_discover_tests(scan_gltf_test)
-    endif()
-endif()
-
-if(TARGET meios_ros)
-    set(ros_source_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/ros_source_test.cpp)
-    if(EXISTS ${ros_source_src})
-        add_executable(ros_source_test ${ros_source_src})
-        target_link_libraries(ros_source_test
-            PRIVATE meios::core meios::model meios::io meios::ros
-                Catch2::Catch2WithMain)
-        meios_enable_coverage(ros_source_test)
-        meios_warnings(ros_source_test)
-        catch_discover_tests(ros_source_test)
-    endif()
-endif()
-
-if(TARGET meios_archive-zip)
-    set(zip_writer_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/zip_writer_test.cpp)
-    if(EXISTS ${zip_writer_src})
-        add_executable(zip_writer_test ${zip_writer_src})
-        target_link_libraries(zip_writer_test
-            PRIVATE meios::core meios::model meios::io meios::bundle meios::archive-zip
-                miniz Catch2::Catch2WithMain)
-        target_compile_definitions(zip_writer_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        meios_enable_coverage(zip_writer_test)
-        meios_warnings(zip_writer_test)
-        catch_discover_tests(zip_writer_test)
-    endif()
-endif()
-
-set(eval_policy_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_policy_test.cpp)
-if(EXISTS ${eval_policy_src})
-    add_executable(eval_policy_test ${eval_policy_src})
-    target_link_libraries(eval_policy_test
-        PRIVATE meios::core meios::model meios::xacro meios::urdf
-            Catch2::Catch2WithMain)
-    target_compile_definitions(eval_policy_test PRIVATE
-        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
-        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
-    meios_enable_coverage(eval_policy_test)
-    meios_warnings(eval_policy_test)
-    catch_discover_tests(eval_policy_test)
-endif()
-
-if(TARGET meios_eval-python)
-    set(eval_python_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_test.cpp)
-    if(EXISTS ${eval_python_src})
-        add_executable(eval_python_test ${eval_python_src})
-        target_link_libraries(eval_python_test
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
-                Catch2::Catch2WithMain)
-        target_compile_definitions(eval_python_test PRIVATE
-            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
-        meios_enable_coverage(eval_python_test)
-        meios_warnings(eval_python_test)
-        catch_discover_tests(eval_python_test)
-    endif()
-
-    set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
-    if(EXISTS ${urdf_yaml_flatten_src})
-        add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})
-        target_link_libraries(urdf_yaml_flatten_test
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::eval-python
-                Catch2::Catch2WithMain)
-        target_compile_definitions(urdf_yaml_flatten_test PRIVATE
-            MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+    # This stem alone reads the installed CMake modules and drives the built binary; the
+    # other CLI stems have no use for either and would gain a coupling to a directory they
+    # never open.
+    if(TARGET cmake_eval_vocabulary_test)
+        target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
+            MEIOS_CMAKE_MODULE_DIR="${meios_SOURCE_DIR}/cmake")
         if(TARGET meios)
-            target_compile_definitions(urdf_yaml_flatten_test PRIVATE
+            target_compile_definitions(cmake_eval_vocabulary_test PRIVATE
                 MEIOS_CLI_BINARY="$<TARGET_FILE:meios>")
         endif()
-        meios_enable_coverage(urdf_yaml_flatten_test)
-        meios_warnings(urdf_yaml_flatten_test)
-        catch_discover_tests(urdf_yaml_flatten_test)
     endif()
 endif()
 
-if(MEIOS_BUILD_PROPERTY_TESTS)
-    set(xacro_eval_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_eval_prop.cpp)
-    if(EXISTS ${xacro_eval_prop_src})
-        add_executable(xacro_eval_prop ${xacro_eval_prop_src})
-        target_link_libraries(xacro_eval_prop
-            PRIVATE meios::core meios::model meios::xacro
-                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
-        meios_enable_coverage(xacro_eval_prop)
-        meios_warnings(xacro_eval_prop)
-        catch_discover_tests(xacro_eval_prop)
-    endif()
-
-    set(urdf_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/urdf_prop.cpp)
-    if(EXISTS ${urdf_prop_src})
-        add_executable(urdf_prop ${urdf_prop_src})
-        target_link_libraries(urdf_prop
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
-        meios_enable_coverage(urdf_prop)
-        meios_warnings(urdf_prop)
-        catch_discover_tests(urdf_prop)
-    endif()
-
-    set(urdf_roundtrip_src ${CMAKE_CURRENT_SOURCE_DIR}/property/urdf_roundtrip_prop.cpp)
-    if(EXISTS ${urdf_roundtrip_src})
-        add_executable(urdf_roundtrip ${urdf_roundtrip_src})
-        target_link_libraries(urdf_roundtrip
-            PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
-                meios::bundle rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
-        meios_enable_coverage(urdf_roundtrip)
-        meios_warnings(urdf_roundtrip)
-        catch_discover_tests(urdf_roundtrip)
-    endif()
-endif()
+include(cmake/enrichment_tests.cmake)
+include(cmake/eval_python_tests.cmake)
+include(cmake/property_tests.cmake)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/fail)
     add_subdirectory(compile/fail)
 endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/pass)
+    add_subdirectory(compile/pass)
+endif()
+
+# The MEIOS_BUILD_TESTS conjunct is load-bearing: this directory is also entered under
+# MEIOS_BUILD_PROPERTY_TESTS alone, and those jobs must not pick up cases that each run a
+# sub-configure.
+if(MEIOS_BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/cmake)
+    add_subdirectory(integration/cmake)
+endif()
+
+include(cmake/acquisition_tests.cmake)

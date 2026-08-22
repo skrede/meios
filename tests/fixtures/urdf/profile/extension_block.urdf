@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="extension_block">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="fixed">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+  </joint>
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+</robot>

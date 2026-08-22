@@ -1,0 +1,1 @@
+[__import__('os').getcwd() for i in range(1)]

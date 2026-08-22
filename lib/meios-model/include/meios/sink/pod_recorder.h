@@ -59,7 +59,7 @@ public:
     void finish()
     {
         m_result.parent_of =
-            reconstruct_topology(m_result.links, m_result.joints, m_log, m_policy).parent_of;
+            reconstruct_topology(m_result.links, m_result.joints, m_log, m_policy).topo.parent_of;
     }
 
     const Topology &result() const

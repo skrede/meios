@@ -1,5 +1,6 @@
 #include "verbs.h"
 #include "tree.h"
+#include "deferred_error_sink.h"
 
 #include "meios/urdf/load.h"
 
@@ -82,10 +83,28 @@ int render_rooted(const model<double> &robot, const std::vector<int> &parent_of,
 int run_tree(const verb_context &ctx)
 {
     log_sink_s log(std::cerr);
+    deferred_error_sink sink(log);
+    capturing_log_sink capture(sink);
     load_options opts;
     opts.topology = topology_policy::warn;
+    // The tree renders kinematics and never an asset, so an unresolved mesh must not
+    // withhold the drawing the caller asked for; the library default would refuse.
+    opts.on_missing = missing_asset::warn;
     opts.package_roots = to_paths(ctx.package_paths);
-    const model<double> robot = load(positional(ctx, 0), opts, log);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    const expected<load_result, load_error> loaded =
+        load(positional(ctx, 0), opts, sources, capture);
+    if(!loaded)
+    {
+        log.log(level::error, loaded.error().code, loaded.error().loc, loaded.error().message);
+        return 1;
+    }
+    if(sink.errors() != 0)
+    {
+        sink.replay_first(log);
+        return 1;
+    }
+    const model<double> &robot = loaded->robot;
 
     log_sink quiet;
     const topology_result topo =
@@ -94,12 +113,12 @@ int run_tree(const verb_context &ctx)
     const bool dot = ctx.bool_flags.count("--dot") != 0 && ctx.bool_flags.at("--dot");
     const auto root = ctx.value_flags.find("--root");
     if(root != ctx.value_flags.end() && !root->second.empty())
-        return render_rooted(robot, topo.parent_of, root->second, dot, log);
+        return render_rooted(robot, topo.topo.parent_of, root->second, dot, log);
 
     if(dot)
         std::cout << render_dot(robot);
     else
-        std::cout << render_ascii(robot, build_children(robot, topo.parent_of), roots_of(topo.parent_of));
+        std::cout << render_ascii(robot, build_children(robot, topo.topo.parent_of), roots_of(topo.topo.parent_of));
     return 0;
 }
 

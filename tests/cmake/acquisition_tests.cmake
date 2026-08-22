@@ -1,0 +1,77 @@
+# The thread sanitizer's runtime defines the global allocation functions itself and links them
+# strongly, so a stem that replaces them to fail an allocation on demand cannot link against it —
+# the address sanitizer's are weak and coexist. The request is matched as a whole list because
+# thread is an ordinary non-leading member of it, and the per-config and directory-level options
+# carry the same request as the global flags.
+string(TOUPPER "${CMAKE_BUILD_TYPE}" meios_build_type)
+get_directory_property(meios_directory_options COMPILE_OPTIONS)
+set(meios_sanitizer_request
+    "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${meios_build_type}} ${meios_directory_options}")
+set(meios_thread_sanitized OFF)
+if(meios_sanitizer_request MATCHES "fsanitize=[A-Za-z0-9,_-]*thread")
+    set(meios_thread_sanitized ON)
+endif()
+
+function(meios_add_acquisition_test stem)
+    set(test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
+    if(NOT EXISTS ${test_src})
+        return()
+    endif()
+    # The source's own include is what decides the link outcome, so the exclusion reads it rather
+    # than a roster a new stem can be written without reaching.
+    file(STRINGS ${test_src} meios_replaces_allocation REGEX "allocation_window\\.h")
+    if(meios_replaces_allocation AND meios_thread_sanitized)
+        message(STATUS "meios: ${stem} is not registered under the thread sanitizer, which owns the allocation functions it replaces")
+        return()
+    endif()
+    add_executable(${stem}_test ${test_src})
+    target_include_directories(${stem}_test PRIVATE
+        ${meios_SOURCE_DIR}/lib/meios-core/src)
+    target_link_libraries(${stem}_test PRIVATE
+        meios::core meios::model meios::io meios::urdf meios::xacro
+        Catch2::Catch2WithMain)
+    meios_enable_coverage(${stem}_test)
+    meios_warnings(${stem}_test)
+    catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
+endfunction()
+
+foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_lookup
+                      load_acquisition yaml_acquisition scratch_setup scratch_publish
+                      scratch_replace scratch_alias scratch_exhaustion scratch_case_fold
+                      scratch_teardown scratch_foreign)
+    meios_add_acquisition_test(${stem})
+endforeach()
+
+# Windows models directory permissions as a read-only attribute that denies nothing, so there is
+# no denial to drive there; the registration carries the condition rather than the source, because
+# a stem registered anyway would build a binary with no cases in it.
+if(NOT WIN32)
+    meios_add_acquisition_test(scratch_denial)
+endif()
+
+if(TARGET load_acquisition_test)
+    target_compile_definitions(load_acquisition_test PRIVATE
+        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+endif()
+
+# The CLI acquisition stem drives the verb bodies, so it takes the tool support lib the
+# other CLI stems take; its own prefix keeps it selectable apart from them.
+set(cli_acquisition_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/cli_acquisition_test.cpp)
+if(TARGET meios_cli AND EXISTS ${cli_acquisition_src})
+    add_executable(cli_acquisition_test ${cli_acquisition_src})
+    target_link_libraries(cli_acquisition_test
+        PRIVATE meios_cli meios::urdf meios::bundle meios::completion
+            Catch2::Catch2WithMain)
+    target_compile_definitions(cli_acquisition_test PRIVATE
+        MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf"
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+    meios_enable_coverage(cli_acquisition_test)
+    meios_warnings(cli_acquisition_test)
+    catch_discover_tests(cli_acquisition_test TEST_PREFIX "cli_acquisition.")
+endif()
+
+if(TARGET yaml_acquisition_test AND TARGET meios_eval-python)
+    target_link_libraries(yaml_acquisition_test PRIVATE meios::eval-python)
+    target_compile_definitions(yaml_acquisition_test PRIVATE
+        MEIOS_TEST_HAS_EVAL_PYTHON=1)
+endif()

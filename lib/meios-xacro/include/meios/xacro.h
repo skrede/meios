@@ -8,9 +8,14 @@
 #include "meios/xacro/structural.h"
 #include "meios/xacro/eval_policy.h"
 #include "meios/xacro/substitution.h"
+#include "meios/xacro/value_render.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/evaluator_handle.h"
 #include "meios/xacro/evaluator_concept.h"
+#include "meios/xacro/yaml_parser_handle.h"
+#include "meios/xacro/evaluator_constructs.h"
+#include "meios/xacro/text_resource_loader.h"
 #include "meios/xacro/detail/numeric.h"
 
 #endif

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pkg_inner</name>
+  <version>1.0.0</version>
+  <description>Vendored package whose directory name is deliberately not its package name.</description>
+  <maintainer email="dev@example.invalid">meios</maintainer>
+  <license>Apache-2.0</license>
+</package>

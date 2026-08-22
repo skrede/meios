@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="harness_nested" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="package://pkg_inner/urdf/inner.xacro"/>
+
+  <link name="harness_outer_base"/>
+
+  <joint name="harness_vendored_joint" type="fixed">
+    <parent link="harness_outer_base"/>
+    <child link="harness_vendored_link"/>
+    <origin xyz="0 0 0.1"/>
+  </joint>
+</robot>

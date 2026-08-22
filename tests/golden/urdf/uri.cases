@@ -1,0 +1,41 @@
+# fixture <TAB> verdict <TAB> code <TAB> rule <TAB> note. The fixture resolves under the uri
+# subdirectory of the URDF fixture directory. The verdict vocabulary is exactly refuse, drop, accept;
+# a non-refusing row's code column is a bare -. The code column carries the exact to_string spelling
+# of the diagnostic_code enumerator the refusal reports, and the rule column carries the bare slug the
+# published URI document names for that rule. The note column is free text the loader discards.
+#
+# A fixture is a template, not a document: the harness substitutes @ROOT@ for a per-run directory it
+# registers as a package root and writes the document into, and @OUTSIDE@ for a per-run directory it
+# registers nowhere. Both stand for absolute paths, which is how an absolute-path row is committed
+# without a literal path off this machine. A file:// row spells its authority-less form as
+# file://@ROOT@/..., which expands to file:///... wherever the token begins with a separator.
+# @ROOTURI@ is the same root as a URI path component, with a leading separator wherever the native
+# spelling has none; a row that puts an authority ahead of the root needs it, because @ROOT@ would
+# otherwise run straight into the host name on a drive-letter host.
+#
+# A row is a texture row when its fixture filename begins with texture_. That is the whole partition;
+# the runner reads it from the fixture column rather than from a sixth column.
+package_resolves.urdf	accept	-	package-uri-resolves	The one form that already resolved before this contract existed, kept as the row every other row is measured against.
+package_no_slash.urdf	refuse	malformed_asset_uri	package-uri-names-a-path	A package name with nothing after it names no asset, so there is no relative path to look up.
+package_empty_name.urdf	refuse	malformed_asset_uri	package-uri-names-a-package	Three separators and a name: the package half is empty, and a lookup composed from it collapses onto a root's own top level.
+package_no_relative.urdf	refuse	malformed_asset_uri	package-uri-carries-a-relative-half	A package name and a separator with nothing after it; the only row where the asset layer refuses the spelling a source rooted at a directory answers with a package directory.
+package_empty_segment.urdf	refuse	malformed_asset_uri	package-reference-empty-segment	A reference whose segment below the package name is empty carries no relative path to look up, so its shape is decided before any source, containment rule or missing-asset policy is consulted.
+package_unbacked.urdf	refuse	unresolved_asset	package-uri-backed-by-a-source	No configured root holds this package; the refusal is the missing-asset one, graded by policy, not a containment one.
+relative_resolves.urdf	accept	-	relative-path-against-document-base	The base is the top-level input document's directory, not the included document the mesh was written in.
+relative_climb_out.urdf	refuse	uncontained_asset	relative-path-contained	The climb is spelled through a real subdirectory, so only normalization catches it; a textual prefix test would not.
+empty_reference.urdf	refuse	malformed_asset_uri	empty-reference-refused	The only row whose reference is no reference at all; joined onto the base it normalizes back to the base, which every later check then approves.
+directory_reference.urdf	refuse	unresolved_asset	reference-is-a-regular-file	The path exists and is contained; it is refused for being a directory rather than for being absent or unreachable.
+package_directory_reference.urdf	refuse	unresolved_asset	package-reference-is-a-regular-file	The same directory as the row above, spelled the way descriptions in the wild spell a reference; that spelling goes to the source stack, and the row above cannot hold this one because its own reference is relative and never travels that arm.
+package_directory_trailing_separator.urdf	refuse	unresolved_asset	package-reference-below-the-name	The same directory with a separator after it, which is past the depth the malformed guard looks at: that guard measures the separator immediately after the package name, so a reference naming a directory below the package and ending at a separator after it is decided by the regular-file rule instead.
+absolute_in_root.urdf	accept	-	absolute-path-inside-a-root	Authority is granted per-directory by configuration, so an absolute path a consumer registered is reachable.
+absolute_outside_root.urdf	refuse	uncontained_asset	absolute-path-contained	The file exists and is readable; it is refused for where it is, not for being absent.
+file_scheme_in_root.urdf	accept	-	file-uri-normalized	Normalized to a plain absolute path and then held to the identical containment check, so the scheme buys no authority.
+file_scheme_encoded_space.urdf	accept	-	file-uri-percent-decoded	The directory name really contains a space; an undecoded lookup names a directory that does not exist.
+file_scheme_authority.urdf	refuse	unsupported_uri_authority	file-uri-authority-refused	The only row whose refusal is about the host half of a URI rather than about a path; read as a path component instead it would be measured against wherever the process happens to sit.
+file_scheme_localhost.urdf	accept	-	file-uri-local-host-accepted	The one row proving the authority decision does not refuse everything: the explicit local host reaches the same path the authority-less spelling names.
+scheme_http.urdf	refuse	unsupported_uri_scheme	foreign-scheme-refused	Nothing here fetches over a network, and a silent non-resolution was the old answer.
+scheme_model.urdf	refuse	unsupported_uri_scheme	sdf-scheme-refused	The SDF spelling of a package reference; near enough to package:// to be worth its own row.
+texture_resolves.urdf	accept	-	texture-uri-resolves	A texture takes the same vocabulary as a mesh; the bundle closure already resolved textures that load did not.
+texture_climb_out.urdf	refuse	uncontained_asset	texture-path-contained	Containment is a property of the path, so the element that carries it cannot change the answer.
+texture_scheme_http.urdf	refuse	unsupported_uri_scheme	texture-foreign-scheme-refused	The scheme rule reaches textures too, which is the half of the vocabulary that had no reader at all.
+texture_empty_reference.urdf	refuse	malformed_asset_uri	texture-empty-reference-refused	The texture element carries no filename attribute at all, which reads as an empty reference rather than as no texture.

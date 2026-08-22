@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot name="resolved_assets">
+  <material name="skin">
+    <texture filename="textures/skin.png" />
+  </material>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+      <geometry>
+        <mesh filename="package://somepkg/meshes/base.stl" scale="1.0 1.0 1.0" />
+      </geometry>
+      <material name="skin" />
+    </visual>
+  </link>
+</robot>

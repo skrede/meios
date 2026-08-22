@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<robot name="entity_before_token" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="pre&amp;${undeclared}"/>
+</robot>

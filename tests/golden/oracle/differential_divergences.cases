@@ -1,0 +1,27 @@
+# id <TAB> upstream <TAB> meios <TAB> reason. The bidirectional reviewed divergence manifest:
+# a divergence not listed here fails the differential run, a listed entry whose divergence no
+# longer reproduces also fails it, and a listed entry present under the right id but with
+# drifted recorded text fails it too -- matched by exact text, never by id alone. A side that
+# refuses is recorded as REFUSED on that side; the wording of a refusal is carried by
+# expressions.cases, because a tab is this file's column separator.
+#
+# One measured difference is deliberately absent and is recorded here rather than as a row. A
+# refused disjunction carries its left operand in its rendered text where upstream carries the
+# null spelling, which is real and is pinned by a unit case. It cannot be a row: the comparison
+# returns as soon as either side refuses, so a refusal's rendered text is never read, and a row
+# for it would assert something this file's own mechanism never checks. The failure flag, not the
+# rendered text, is what marks a refusal on this side, and that is where the contract is stated.
+div_or_operand	1	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
+div_and_operand	3	True	and/or yield a boolean rather than the deciding operand (measured earlier, deliberately not changed)
+div_self_reference	[1, [1, [...]]]	REFUSED	a self-referential alias graph loads upstream as a value that contains itself; an immutable value with shared collection storage cannot denote one, so the alias arrives while its anchor is still incomplete and refuses there
+div_dict_pair_sequence	{'a': 1}	REFUSED	the mapping constructor is admitted in its keyword-argument spelling alone, so a pair-sequence argument refuses here rather than taking a meaning nothing measured
+div_dict_mixed_arguments	{'a': 1, 'b': 2}	REFUSED	a positional argument mixed with keyword arguments refuses for the same reason the pair-sequence argument does
+div_string_repetition	ababab	REFUSED	a string repeated by an integer renders upstream; only the addition of two strings was measured into this grammar, so the multiplication operator refuses a string rather than taking a meaning nothing measured
+div_string_ordering	True	REFUSED	upstream orders two strings by their code points; this grammar compares strings for equality alone, so an ordering operator against a string refuses rather than inventing a collation
+div_string_split_whitespace	['a', 'b']	REFUSED	the no-argument split collapses runs of whitespace and drops the leading and trailing fields, a different algorithm from the explicit-separator form admitted here, so it refuses rather than being approximated by a single-space separator
+div_string_split_limit	['a', 'b c']	REFUSED	a second argument bounds how many separators are consumed; one named operation taking one separator is admitted, so any further argument refuses
+div_absolute_value	REFUSED	3	upstream's expression globals carry the mathematics module and the two reducers and no builtins at all, so the absolute value refuses there by name while this grammar answers it; it runs in the direction where this side accepts what upstream refuses, and it is the only row in that direction whose cause is the evaluator's own function set -- the two span rows that run the same way refuse upstream because the reference's span pattern truncates the span before its evaluator ever reads it. It is recorded rather than removed because the function is documented, implemented and range-checked, and dropping it would break a description this project already loads
+div_span_closing_brace_in_literal	REFUSED	a}b	upstream's span pattern is quote-blind, so a closing brace inside a string literal ends the span there and the truncated fragment refuses as an unterminated literal; the close finder here folds over quotes and the whole literal renders, accepted by maintainer override on 2026-08-12, the day that fold landed
+div_span_format_operator	1.234	REFUSED	the remainder operator formats a string against its right operand upstream; only arithmetic remainder was measured into this grammar, so a string operand refuses rather than taking a meaning nothing measured
+div_span_nested_expression	REFUSED	3	upstream's span pattern never counts a nested brace, so an expression span written inside another ends at the inner brace and the truncated fragment refuses; the close finder here counts depth and the inner scan resolves the nested span before the outer expression is evaluated
+non_text_mapping_key	<robot name="probe"><link name="from_number"></link></robot>	REFUSED	a mapping an auxiliary document keys by a number or a boolean loads on both sides, and upstream subscripts such a key by writing the key itself; every subscript key here is text, so the number reaches no entry and the document refuses rather than reading one. The refusal is raised by the subscript, not by the document parse, so this row records that the key is admitted and unreadable rather than rejected

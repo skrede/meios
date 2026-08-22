@@ -1,22 +1,26 @@
 #include "structural_detail.h"
 
+#include "meios/io/text_reader.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 
+#include "meios/detail/text_location.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
-#include <array>
+#include <memory>
 #include <string>
 #include <vector>
 #include <cstddef>
-#include <fstream>
-#include <sstream>
+#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace meios::detail
 {
@@ -76,42 +80,77 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     return out;
 }
 
-std::optional<std::string> read_asset(resolved_asset &&hit)
+// meios::detail also declares two-argument readers of both these names, so an unqualified call
+// here would resolve to whichever declaration this translation unit happened to see first.
+text_read_result read_include(const resolved_asset &hit)
 {
-    if(hit.holds_path())
-    {
-        std::ifstream file(hit.path(), std::ios::binary);
-        if(!file)
-            return std::nullopt;
-        std::ostringstream buffer;
-        buffer << file.rdbuf();
-        return buffer.str();
-    }
-    std::string data;
-    std::array<std::byte, 4096> chunk{};
-    for(byte_reader &reader = hit.bytes();;)
-    {
-        std::size_t got = reader.read(chunk);
-        if(got == 0)
-            return data;
-        data.append(reinterpret_cast<const char *>(chunk.data()), got);
-    }
+    if(hit.source_root() && hit.source_relative())
+        return meios::read_text_file_under(*hit.source_root(), *hit.source_relative());
+    return meios::read_text_file(hit.path());
 }
 
-bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &key,
-            pugi::xml_node out)
+// The cycle identity is a package-relative spelling canonicalized against the process
+// directory, not a location: two spellings of one include must collapse onto one key.
+std::filesystem::path include_key(const std::string &package, const std::string &normalized)
 {
-    std::optional<std::string> bytes = read_asset(std::move(hit));
-    if(!bytes)
-        return fail(ctx, "xacro:include could not read \"" + key.string() + '"');
-    pugi::xml_document &doc = ctx.park();
-    pugi::xml_parse_result parsed = doc.load_buffer(bytes->data(), bytes->size());
-    if(!parsed)
-        return fail(ctx, std::string("xacro:include parse error: ") + parsed.description());
+    std::filesystem::path joined = std::filesystem::path(package) / normalized;
+    std::error_code canon_ec;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(joined, canon_ec);
+    return canon_ec ? joined : canonical;
+}
+
+bool reenters(const expand_ctx &ctx, const std::filesystem::path &key)
+{
+    for(const std::filesystem::path &seen : ctx.include_stack)
+        if(seen == key)
+            return true;
+    return false;
+}
+
+bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key,
+                    const text_read_failure &failure)
+{
+    return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, failure.cause,
+                "xacro:include could not read \"" + key.string() + "\": "
+                    + read_failure_reason(failure));
+}
+
+// The active document tracks the include stack, because a relative resource spec belongs
+// to the file it is written in rather than to the file that began the expansion. It is
+// not the stack's key: that key is a package-relative identity used for cycle detection,
+// not a location. A layer holding only bytes materializes them into a scratch area it owns,
+// so its location is the file it wrote and a relative spec beside it resolves.
+bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked,
+             const std::filesystem::path &key, std::filesystem::path located, pugi::xml_node out)
+{
     ctx.include_stack.push_back(key);
+    ctx.origins.push_back(emit_origin{ key, parked });
+    std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(located));
     bool ok = process_children(ctx, doc.first_child(), out, key);
+    ctx.scope.set_active_document(std::move(enclosing));
+    ctx.origins.pop_back();
     ctx.include_stack.pop_back();
     return ok;
+}
+
+bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit,
+            const std::filesystem::path &key, pugi::xml_node out)
+{
+    text_read_result text = read_include(hit);
+    if(!text)
+        return refuse_include(ctx, in, key, text.error());
+    // load_buffer copies into the document, but macro bodies defined in this include
+    // keep string_views onto the source text, so it must outlive this call; park it in
+    // owned_text alongside the parked document rather than in this local.
+    ctx.owned_text.push_back(std::make_unique<std::string>(std::move(*text)));
+    const std::string &parked = *ctx.owned_text.back();
+    pugi::xml_document &doc = ctx.park();
+    pugi::xml_parse_result parsed = doc.load_buffer(parked.data(), parked.size());
+    if(!parsed)
+        return fail(ctx, offset_location(parked, parsed.offset, key),
+                    diagnostic_code::xacro_parse_error,
+                    std::string("xacro:include parse error: ") + parsed.description());
+    return descend(ctx, doc, parked, key, hit.path(), out);
 }
 
 }
@@ -119,27 +158,27 @@ bool splice(expand_ctx &ctx, resolved_asset &&hit, const std::filesystem::path &
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                     const std::filesystem::path &document)
 {
-    if(!ctx.charge_work())
+    if(!ctx.charge_work(in))
         return false;
     include_target target = split_target(in.attribute("filename").value());
     bool ok = true;
-    std::string relative = substitute_attr(ctx, target.relative, document, ok);
+    std::string relative = substitute_attr(ctx, in, target.relative, document, ok);
     if(!ok)
         return false;
     bool escaped = false;
     std::string normalized = normalize_relative(relative, escaped);
     if(escaped)
-        return fail(ctx, "xacro:include target \"" + relative + "\" escapes the source root");
-    std::filesystem::path key =
-        std::filesystem::weakly_canonical(std::filesystem::path(target.package) / normalized);
-    for(const std::filesystem::path &seen : ctx.include_stack)
-        if(seen == key)
-            return fail(ctx, "xacro:include cycle detected re-entering \"" + key.string() + '"');
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:include target \"" + relative + "\" escapes the source root");
+    const std::filesystem::path key = include_key(target.package, normalized);
+    if(reenters(ctx, key))
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:include cycle detected re-entering \"" + key.string() + '"');
     std::optional<resolved_asset> hit = ctx.sources.locate(target.package, normalized, ctx.log);
     if(!hit)
-        return fail(ctx, "xacro:include could not resolve \"" + target.package + '/' + normalized
-                             + '"');
-    return splice(ctx, std::move(*hit), key, out);
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not resolve \"" + target.package + '/' + normalized + '"');
+    return splice(ctx, in, *hit, key, out);
 }
 
 }

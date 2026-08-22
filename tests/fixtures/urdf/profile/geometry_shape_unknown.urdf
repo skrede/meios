@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="geometry_shape_unknown">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <trapezoid/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

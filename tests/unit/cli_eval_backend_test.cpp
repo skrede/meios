@@ -1,11 +1,15 @@
 #include "verbs/verbs.h"
 
+#include "meios/completion/command_table.h"
+
 #include <catch2/catch_test_macros.hpp>
 
+#include <cctype>
 #include <string>
 #include <fstream>
 #include <ostream>
 #include <sstream>
+#include <utility>
 #include <iostream>
 #include <string_view>
 #include <filesystem>
@@ -39,12 +43,28 @@ constexpr std::string_view python_span_doc =
     "<robot name=\"probe_${['x']}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
     "<link name=\"base_link\"/></robot>";
 
-std::filesystem::path write_probe(const std::string &stem)
+// The name attribute reaches the process's own authority: the restricted evaluator refuses
+// it, and an unguarded one would interpolate the working directory into the emitted document.
+constexpr std::string_view reaching_span_doc =
+    "<robot name=\"probe_${__import__('os').getcwd()}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+    "<link name=\"base_link\"/></robot>";
+
+std::filesystem::path write_doc(const std::string &stem, std::string_view body)
 {
     const std::filesystem::path path =
         std::filesystem::temp_directory_path() / ("meios_cli_eval_" + stem + ".xacro");
-    std::ofstream(path) << python_span_doc;
+    std::ofstream(path) << body;
     return path;
+}
+
+std::filesystem::path write_probe(const std::string &stem) { return write_doc(stem, python_span_doc); }
+
+std::string lowered(std::string_view text)
+{
+    std::string out(text);
+    for(char &c : out)
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return out;
 }
 
 verb_context flatten_over(const std::filesystem::path &doc)
@@ -95,6 +115,65 @@ TEST_CASE("cli_eval_backend: --eval python resolves a python-only span when the 
 
     REQUIRE(code == 0);
     REQUIRE(out.str().find("probe_['x']") != std::string::npos);
+}
+
+TEST_CASE("cli_eval_backend: --eval python binds the restricted evaluator and refuses a reaching span")
+{
+    if(!cli::eval_python_linked())
+    {
+        SUCCEED("meios::eval-python not linked; the python backend is absent");
+        return;
+    }
+    const std::filesystem::path doc = write_doc("restricted", reaching_span_doc);
+    verb_context ctx = flatten_over(doc);
+    ctx.value_flags["--eval"] = "python";
+
+    cout_capture out;
+    const int code = cli::run_flatten(ctx);
+    std::filesystem::remove(doc);
+
+    REQUIRE(code != 0);
+    REQUIRE(out.str().find("<robot") == std::string::npos);
+}
+
+TEST_CASE("cli_eval_backend: no spelling of an unrestricted opt-out reaches an unguarded evaluator")
+{
+    const std::filesystem::path doc = write_doc("optout", reaching_span_doc);
+    const std::string cwd = std::filesystem::current_path().string();
+    const std::pair<const char *, const char *> spellings[] = {
+        { "--eval", "unrestricted" }, { "--eval", "python-unrestricted" }, { "--eval", "unrestricted-python" },
+        { "--eval-unrestricted", "true" }, { "--unrestricted", "true" }, { "--eval-python-unrestricted", "python" },
+    };
+    for(const std::pair<const char *, const char *> &spelling : spellings)
+    {
+        INFO(spelling.first << '=' << spelling.second);
+        verb_context ctx = flatten_over(doc);
+        ctx.value_flags["--eval"]       = "python";
+        ctx.value_flags[spelling.first] = spelling.second;
+
+        cout_capture out;
+        const int code = cli::run_flatten(ctx);
+
+        REQUIRE(code != 0);
+        REQUIRE(out.str().find("<robot") == std::string::npos);
+        REQUIRE(out.str().find(cwd) == std::string::npos);
+    }
+    std::filesystem::remove(doc);
+}
+
+TEST_CASE("cli_eval_backend: the generated command surface names no unrestricted backend")
+{
+    for(const command_spec &command : cli_table())
+    {
+        INFO(command.name);
+        REQUIRE(lowered(command.description).find("unrestricted") == std::string::npos);
+        for(const flag_spec &flag : command.flags)
+        {
+            INFO(flag.token);
+            REQUIRE(lowered(flag.token).find("unrestricted") == std::string::npos);
+            REQUIRE(lowered(flag.description).find("unrestricted") == std::string::npos);
+        }
+    }
 }
 
 TEST_CASE("cli_eval_backend: --eval python fails loudly when the backend is not linked")

@@ -1,16 +1,23 @@
+#include "eval_parser.h"
+#include "eval_session.h"
 #include "structural_detail.h"
+#include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
+#include "meios/xacro/structural.h"
 #include "meios/xacro/substitution.h"
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/container_marker.h"
+
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
 
 #include <map>
 #include <cctype>
 #include <string>
-#include <variant>
+#include <optional>
 #include <algorithm>
 #include <filesystem>
 #include <string_view>
@@ -20,47 +27,6 @@ namespace meios::detail
 
 namespace
 {
-
-bool is_true(const value &v)
-{
-    if(std::holds_alternative<bool>(v))
-        return std::get<bool>(v);
-    if(std::holds_alternative<long long>(v))
-        return std::get<long long>(v) != 0;
-    return std::get<double>(v) != 0.0;
-}
-
-bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
-{
-    bool ok = true;
-    std::string value_text = substitute_attr(ctx, in.attribute("value").value(), document, ok);
-    if(!ok)
-        return false;
-    std::string_view name = in.attribute("name").value();
-    record_scoped(ctx, in.attribute("scope").value(), name);
-    ctx.scope.set(name, classify(value_text));
-    return true;
-}
-
-// A declared default seeds the scope only when the name is still unbound, so a
-// caller override or an earlier binding wins; the declaration itself emits nothing.
-// The default is resolved through substitution first, so a nested
-// $(find)/$(arg)/${} default becomes real text rather than a raw literal.
-bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
-{
-    std::string_view name = in.attribute("name").value();
-    if(name.empty())
-        return fail(ctx, "<xacro:arg> requires a name attribute");
-    pugi::xml_attribute fallback = in.attribute("default");
-    if(!fallback || ctx.scope.contains(name))
-        return true;
-    bool ok = true;
-    std::string resolved = substitute_attr(ctx, fallback.value(), document, ok);
-    if(!ok)
-        return false;
-    ctx.scope.set(name, classify(resolved));
-    return true;
-}
 
 std::string lowered(std::string_view text)
 {
@@ -73,7 +39,7 @@ std::string lowered(std::string_view text)
 // xacro accepts the literal booleans true/false/1/0 (case-insensitive) as well as
 // a ${} expression; substitution resolves the expression, then the result is
 // coerced. An unrecognized non-empty string is evaluated as a fallback expression.
-bool condition_true(expand_ctx &ctx, const std::string &text)
+bool condition_true(expand_ctx &ctx, const std::string &text, const source_location &at)
 {
     std::string flag = lowered(text);
     if(flag == "true" || flag == "1")
@@ -81,10 +47,15 @@ bool condition_true(expand_ctx &ctx, const std::string &text)
     if(flag == "false" || flag == "0" || flag.empty())
         return false;
     core_evaluator evaluator;
-    value result = evaluator.eval(text, ctx.scope, ctx.log);
-    if(evaluator.failed())
+    const std::optional<bool> truth =
+        truthy(evaluator.eval(text, ctx.scope, ctx.log, at, ctx.session));
+    if(evaluator.failed() || !truth)
+    {
+        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
+                        "conditional test did not evaluate: " + text);
         ctx.ok = false;
-    return is_true(result);
+    }
+    return truth.value_or(false);
 }
 
 bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
@@ -92,14 +63,17 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 {
     // A structural conditional cannot be left half-expanded, so its test is always
     // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
-    substitution result = substitute(in.attribute("value").value(), ctx.scope, ctx.sources,
-                                     document, eval_policy::fail, ctx.backend, ctx.log);
-    if(!result.ok)
+    const source_location at = locate(ctx, in);
+    const expected<substitution, expansion_error> result =
+        substitute_refined(in.attribute("value").value(), ctx.scope, ctx.sources, document,
+                           eval_policy::fail, ctx.backend, ctx.session, ctx.log, at);
+    if(!result)
     {
+        record_terminal(ctx, result.error());
         ctx.ok = false;
         return false;
     }
-    bool truth = condition_true(ctx, result.text);
+    bool truth = condition_true(ctx, result->text, at);
     if(!ctx.ok)
         return false;
     bool wants_true = std::string_view(in.name()) == "xacro:if";
@@ -123,44 +97,43 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(name == "xacro:if" || name == "xacro:unless")
         return conditional(ctx, in, out, document);
     if(name == "xacro:insert_block")
-        return insert_block(ctx, in, out, document);
+        return insert_block(ctx, in, out);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
     auto found = ctx.macros.find(std::string(name.substr(6)));
     if(found != ctx.macros.end())
         return instantiate_macro(ctx, found->second, in, out, document);
-    return fail(ctx, "unknown xacro element <" + std::string(name) + '>');
+    return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                "unknown xacro element <" + std::string(name) + '>');
 }
 
 }
 
 std::string strip_container_marker(std::string text)
 {
-    text.erase(std::remove(text.begin(), text.end(), container_marker), text.end());
+    for(char marker : container_markers)
+        text.erase(std::remove(text.begin(), text.end(), marker), text.end());
     return text;
 }
 
-std::string substitute_attr(expand_ctx &ctx, std::string_view raw,
-                            const std::filesystem::path &document, bool &ok)
+std::string strip_authored_markers(std::string text)
 {
-    substitution result = substitute(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
-                                     ctx.log);
-    ok = result.ok;
-    if(!ok)
-        ctx.ok = false;
-    return result.text;
+    for(char marker : container_markers)
+        text.erase(std::remove(text.begin(), text.end(), marker), text.end());
+    return text;
 }
 
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document)
 {
-    if(!ctx.charge_work())
+    depth_guard level(ctx, in);
+    if(!level.admitted() || !ctx.charge_work(in))
         return false;
     pugi::xml_node_type kind = in.type();
     if(kind == pugi::node_pcdata || kind == pugi::node_cdata)
     {
         bool ok = true;
-        std::string text = strip_container_marker(substitute_attr(ctx, in.value(), document, ok));
+        std::string text = strip_container_marker(substitute_attr(ctx, in, in.value(), document, ok));
         if(!ok)
             return false;
         out.append_child(kind).set_value(text.c_str());

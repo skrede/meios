@@ -4,9 +4,14 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/evaluator_constructs.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/expansion_error.h"
 
+#include "meios/expected.h"
+
+#include <memory>
 #include <string>
 #include <filesystem>
 #include <string_view>
@@ -19,24 +24,32 @@ class evaluator_handle;
 
 struct expansion
 {
-    bool ok;
     std::string document;
+    // Which constructs the load exercised, marked where each was exercised rather than declared
+    // anywhere; a load that exercised none leaves it empty.
+    construct_set exercised;
 };
 
 // Expands a xacro document into a flat URDF string using only pugixml: recursive
 // xacro:include (resolved through sources), xacro:property, xacro:macro with
 // params and defaults, *block/**block insertion, and xacro:if/xacro:unless.
-// Bounded by limits and an include cycle guard; a failure loud-logs and yields
-// ok == false. The document path seeds $(dirname) and diagnostics. eval_policy and
-// an optional injected backend govern how an unsupported ${}/$(eval) construct is
-// resolved; the delegating overload uses fail policy and the core evaluator.
-expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
-                 const std::filesystem::path &document, const expansion_limits &limits,
-                 eval_policy policy, evaluator_handle *backend, log_sink &log);
+// Bounded by limits and an include cycle guard. The document path seeds $(dirname)
+// and diagnostics. eval_policy and an optional injected backend govern how an
+// unsupported ${}/$(eval) construct is resolved; the delegating overload uses fail
+// policy and the core evaluator. A terminal failure is reported once through the
+// supplied sink and returned on the error arm; on the value arm the flattened text
+// arrives beside the observation of what this one load exercised.
+expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
+                                            source_stack &sources,
+                                            const std::filesystem::path &document,
+                                            const expansion_limits &limits, eval_policy policy,
+                                            const std::shared_ptr<evaluator_handle> &backend,
+                                            log_sink &log);
 
-expansion expand(std::string_view source, eval_scope &scope, source_stack &sources,
-                 const std::filesystem::path &document, const expansion_limits &limits,
-                 log_sink &log);
+expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
+                                            source_stack &sources,
+                                            const std::filesystem::path &document,
+                                            const expansion_limits &limits, log_sink &log);
 
 // Reserializes XML into a canonical form (sorted attributes, collapsed
 // insignificant whitespace) so a golden comparison ignores trivial formatting.
@@ -45,9 +58,16 @@ std::string canonical_xml(std::string_view xml);
 namespace detail
 {
 
-// Parses a raw argument or property string into a numeric binding when it reads as
-// an integer or a real, otherwise keeps it as a string.
-binding classify(std::string_view text);
+// Parses a raw property or macro-parameter string into a numeric or boolean value when it
+// reads as one, otherwise keeps it as a string. An argument does not come through here: it is
+// bound in the substitution domain, and the reading site classifies it.
+value classify(std::string_view text);
+
+// Only the evaluator may mint a container marker, so a marker present in text an author wrote is a
+// forgery and is erased before that text can become a bound value. Apply this to raw authored text
+// only, never to a substitution result: that result legitimately carries the markers the evaluator
+// minted, and erasing them there would break the container round-trip.
+std::string strip_authored_markers(std::string text);
 
 }
 

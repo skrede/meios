@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="unsupported_scheme_asset">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="http://example.invalid/meshes/base.stl"/>
+      </geometry>
+    </visual>
+  </link>
+</robot>

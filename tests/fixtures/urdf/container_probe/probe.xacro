@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="container_probe">
+  <xacro:property name="config" value="${xacro.load_yaml('probe.yaml')}"/>
+
+  <probe loaded="${config}">${[1, 2]}</probe>
+</robot>

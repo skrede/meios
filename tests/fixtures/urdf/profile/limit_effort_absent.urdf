@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="limit_effort_absent">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+    <limit lower="-1" upper="1" velocity="1"/>
+  </joint>
+</robot>

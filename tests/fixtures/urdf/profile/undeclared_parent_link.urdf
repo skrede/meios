@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="undeclared_parent_link">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="fixed">
+    <parent link="ghost_link"/>
+    <child link="arm_link"/>
+  </joint>
+</robot>

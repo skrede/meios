@@ -1,0 +1,21 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	4
+joint.count	3
+link.name.0	frame
+link.name.1	bridge
+link.name.2	carriage
+link.name.3	tool_mount
+joint.name.0	x_axis
+joint.name.1	y_axis
+joint.name.2	z_axis
+joint.type.x_axis	prismatic
+joint.limit.x_axis	lower=-0.85 upper=0.85 effort=240.0 velocity=1.5
+joint.type.y_axis	prismatic
+joint.limit.y_axis	lower=-0.6 upper=0.6 effort=240.0 velocity=1.5
+joint.type.z_axis	prismatic
+joint.limit.z_axis	lower=0.0 upper=0.55 effort=240.0 velocity=0.4

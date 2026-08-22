@@ -13,22 +13,17 @@
 namespace meios
 {
 
-// Full-parity ${python}/$(eval)/comprehension/load_yaml backend over an embedded,
-// found (never fetched) CPython. It satisfies the string-level text_evaluator seam,
-// so it injects through load_options with no core dependency. The interpreter is a
-// process-lifetime lazy singleton (the GIL and interpreter are global process state);
-// a runtime Python throw is reported as an error and never masked by eval_policy.
+// Restricted ${python}/$(eval) backend over an embedded, found (never fetched) CPython;
+// docs/evaluation.md states the subset it evaluates and the rules that refuse the rest.
+// It satisfies the string-level text_evaluator seam, so it injects through load_options
+// with no core dependency. The interpreter is a process-lifetime lazy singleton (the GIL
+// and interpreter are global process state); a runtime Python throw is reported as an
+// error and a refused expression as a refusal, and eval_policy softens neither. The
+// evaluator itself carries no state, so one is safe to share across concurrent loads.
 class python_evaluator
 {
 public:
-    python_evaluator() : m_kind(eval_failure_kind::none) {}
-
-    std::optional<std::string> eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log);
-
-    eval_failure_kind last_failure_kind() const { return m_kind; }
-
-private:
-    eval_failure_kind m_kind;
+    text_outcome eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log);
 };
 
 }

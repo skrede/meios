@@ -13,7 +13,13 @@ foreach(source IN LISTS compile_fail_sources)
     endif()
     add_library(${stem} OBJECT EXCLUDE_FROM_ALL ${source})
     target_link_libraries(${stem} PRIVATE
-        meios::core meios::model meios::xacro meios::io meios::completion)
+        meios::core meios::model meios::xacro meios::io meios::completion meios::urdf)
+    # One case here pins a declaration that lives in the core's private sources, which no linked
+    # target puts on the include path. Given to every stem rather than to one: a case that cannot
+    # find its header fails for the wrong reason and WILL_FAIL scores it green.
+    target_include_directories(${stem} PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
+    # The top of the build tree is the only directory holding a generated build system; the
+    # target and configuration arguments are what narrow the build down to this one probe.
     add_test(NAME compile_fail_${stem}
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
             --target ${stem} --config $<CONFIG>)

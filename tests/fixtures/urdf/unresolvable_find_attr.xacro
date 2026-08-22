@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<robot name="unresolvable_find_attr" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="$(find nonexistent_package)"/>
+</robot>

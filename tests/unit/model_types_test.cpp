@@ -19,6 +19,7 @@ static_assert(std::is_aggregate_v<meios::model<float>>);
 static_assert(std::is_same_v<meios::tree<double>, meios::tree<double, meios::rpy<double>>>);
 static_assert(!std::is_same_v<meios::tree<double>, meios::tree<double, meios::quaternion<double>>>);
 static_assert(std::is_same_v<decltype(meios::tree<double>{}.parent_of), std::vector<int>>);
+static_assert(std::is_same_v<decltype(meios::model<double>{}.topo), meios::robot_topology>);
 
 TEST_CASE("structure enumerates the two kinematic topologies", "[model][types]")
 {
@@ -72,6 +73,30 @@ TEST_CASE("a dynamic model addresses links by name through the index map", "[mod
     REQUIRE(m.loops.empty());
     REQUIRE(m.link_index.at("link1") == 1);
     REQUIRE(m.links.at(static_cast<std::size_t>(m.link_index.at("base"))).name == "base");
+}
+
+TEST_CASE("a dynamic model pins its full aggregate field order including topo", "[model][types]")
+{
+    const meios::model<double> pinned{
+        .name = "pin",
+        .kind = meios::structure::tree,
+        .rotation = meios::rpy<double>{},
+        .links = { { .name = "base" } },
+        .joints = {},
+        .materials = {},
+        .loops = {},
+        .link_index = { { "base", 0 } },
+        .joint_index = {},
+        .topo = meios::robot_topology{ .parent_of = { -1 },
+                                       .joint_of = { -1 },
+                                       .roots = { 0 },
+                                       .order = { 0 } },
+    };
+
+    REQUIRE(pinned.name == "pin");
+    REQUIRE(pinned.link_index.at("base") == 0);
+    REQUIRE(pinned.topo.parent_of == std::vector<int>{ -1 });
+    REQUIRE(pinned.topo.order == std::vector<int>{ 0 });
 }
 
 TEST_CASE("a dynamic model's rotation variant defaults to rpy and is reassignable", "[model][types]")

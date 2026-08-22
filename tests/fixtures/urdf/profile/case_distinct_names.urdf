@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<robot name="case_distinct_names">
+  <link name="Base_Link"/>
+  <link name="base_link"/>
+  <link name="base_link "/>
+  <joint name="shoulder" type="fixed">
+    <parent link="Base_Link"/>
+    <child link="base_link"/>
+  </joint>
+  <joint name="elbow" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_link "/>
+  </joint>
+</robot>

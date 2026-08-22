@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<robot name="resolved_assets">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://somepkg/meshes/base.stl"/>
+      </geometry>
+      <material name="skin">
+        <texture filename="textures/skin.png"/>
+      </material>
+    </visual>
+  </link>
+</robot>

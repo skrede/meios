@@ -8,7 +8,7 @@ struct missing_locate
 {
     meios::capability_descriptor capabilities() const
     {
-        return { meios::source_kind::memory, false, false };
+        return { meios::source_kind::memory, false };
     }
 };
 

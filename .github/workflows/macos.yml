@@ -4,7 +4,7 @@ on:
   push:
     branches: [master, develop, 'milestone/**']
   pull_request:
-    branches: [master, develop]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -37,6 +37,151 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      # ctest reports success when a -R filter selects nothing, so each scratch stem is
+      # asserted to register before it runs; a stem that quietly stopped registering would
+      # otherwise pass as a green filtered run.
+      - name: Focus scratch setup tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_setup\.'"
+          registered=$(ctest -N -R '^scratch_setup\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_setup registered no tests"
+            exit 1
+          fi
+          echo "scratch_setup registered $registered test(s)"
+          ctest -R '^scratch_setup\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch publish tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_publish\.'"
+          registered=$(ctest -N -R '^scratch_publish\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_publish registered no tests"
+            exit 1
+          fi
+          echo "scratch_publish registered $registered test(s)"
+          ctest -R '^scratch_publish\.' --output-on-failure --no-tests=error
+
+      # Which branch this case takes is decided by the platform, so a run that only reports failures
+      # records nothing about which one it took. Verbose, so the branch is in the transcript.
+      - name: Record the held-open replacement branch
+        run: |
+          cd build
+          selector='held open'
+          echo "ctest -N -R '$selector'"
+          registered=$(ctest -N -R "$selector" | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "no held-open replacement case discovered"
+            exit 1
+          fi
+          echo "held-open replacement discovered $registered case(s)"
+          ctest -V -R "$selector" --no-tests=error
+
+      - name: Focus scratch replace tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_replace\.'"
+          registered=$(ctest -N -R '^scratch_replace\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_replace registered no tests"
+            exit 1
+          fi
+          echo "scratch_replace registered $registered test(s)"
+          ctest -R '^scratch_replace\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch alias tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_alias\.'"
+          registered=$(ctest -N -R '^scratch_alias\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_alias registered no tests"
+            exit 1
+          fi
+          echo "scratch_alias registered $registered test(s)"
+          ctest -R '^scratch_alias\.' --output-on-failure --no-tests=error
+
+      # The next two stems register only where symbolic links exist, so the Windows build job
+      # carries no step for either: a step that discovered nothing would fail it by design.
+      - name: Focus scratch denial tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_denial\.'"
+          registered=$(ctest -N -R '^scratch_denial\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_denial registered no tests"
+            exit 1
+          fi
+          echo "scratch_denial registered $registered test(s)"
+          ctest -R '^scratch_denial\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch symlinked tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_symlinked\.'"
+          registered=$(ctest -N -R '^scratch_symlinked\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_symlinked registered no tests"
+            exit 1
+          fi
+          echo "scratch_symlinked registered $registered test(s)"
+          ctest -R '^scratch_symlinked\.' --output-on-failure --no-tests=error
+
+      # The next three replace the global allocation functions, so their registration is decided by
+      # a build-time predicate rather than by the source alone. A stem that predicate drops still
+      # leaves a green suite behind it, which is how a link failure survived a run once already.
+      - name: Focus scratch exhaustion tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_exhaustion\.'"
+          registered=$(ctest -N -R '^scratch_exhaustion\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_exhaustion registered no tests"
+            exit 1
+          fi
+          echo "scratch_exhaustion registered $registered test(s)"
+          ctest -R '^scratch_exhaustion\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch teardown tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_teardown\.'"
+          registered=$(ctest -N -R '^scratch_teardown\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_teardown registered no tests"
+            exit 1
+          fi
+          echo "scratch_teardown registered $registered test(s)"
+          ctest -R '^scratch_teardown\.' --output-on-failure --no-tests=error
+
+      - name: Focus scratch foreign tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_foreign\.'"
+          registered=$(ctest -N -R '^scratch_foreign\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_foreign registered no tests"
+            exit 1
+          fi
+          echo "scratch_foreign registered $registered test(s)"
+          ctest -R '^scratch_foreign\.' --output-on-failure --no-tests=error
+
+      # Verbose rather than --output-on-failure: this stem's whole value is that its guard fired on a
+      # volume that folds, and a passing case's transcript is the only place that is visible.
+      - name: Focus scratch case-folding tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scratch_case_fold\.'"
+          registered=$(ctest -N -R '^scratch_case_fold\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scratch_case_fold registered no tests"
+            exit 1
+          fi
+          echo "scratch_case_fold registered $registered test(s)"
+          ctest -V -R '^scratch_case_fold\.' --no-tests=error
+
       - name: Test
         run: cd build && ctest --output-on-failure
 
@@ -55,9 +200,12 @@ jobs:
           cmake --build pugixml-build
           cmake --install pugixml-build
 
-      # MEIOS_BUILD_EXAMPLES only gates enable_testing() at HEAD (no examples/
-      # subdir yet), so this cell configures + builds green now and gains teeth
-      # once Phase 14 lands the examples. All enrichments stay OFF.
+      # The examples cell builds examples/ with the enrichment options left at their
+      # defaults: the flagship (core+urdf only) must compile and every gated example
+      # must gate itself out. Manifest resolution is the one enrichment whose option
+      # defaults ON, so its example builds here too, and building examples/ fetches
+      # the pinned upstream description that example resolves against — this cell
+      # needs the network.
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \
@@ -68,6 +216,49 @@ jobs:
 
       - name: Build
         run: cmake --build build
+
+      # A -R filter selecting nothing exits 0, so the corpus is asserted to register before it
+      # runs; here that proves the ungated examples survive an all-enrichments-OFF configure.
+      - name: Run examples
+        run: |
+          cd build
+          echo "ctest -N -R '^example_'"
+          registered=$(ctest -N -R '^example_' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "examples registered no tests"
+            exit 1
+          fi
+          echo "examples registered $registered test(s)"
+          ctest -R '^example_' --output-on-failure --no-tests=error
+
+  docs:
+    runs-on: macos-14
+    name: docs (MEIOS_BUILD_DOCS compile-gate)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      # The gate compiles the documented snippets against the build-tree
+      # meios::urdf target with every enrichment OFF, so it exercises the core
+      # consumer surface and FATALs at configure on a zero or malformed snippet.
+      - name: Configure
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_DOCS=ON
+
+      - name: Build
+        run: cmake --build build --target doc_snippets
 
   tools:
     runs-on: macos-14
@@ -83,6 +274,13 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
           cmake --build pugixml-build
           cmake --install pugixml-build
+
+      # The CMake harness cases turn on how finely the build tool compares file
+      # modification times, so the versions in play are recorded rather than assumed.
+      - name: Report build tool versions
+        run: |
+          make --version
+          cmake --version
 
       # MEIOS_BUILD_TOOLS compiles the meios CLI; MEIOS_BUILD_TESTS is required
       # for the if(TARGET meios_cli) unit tests to register (they skip silently
@@ -119,7 +317,7 @@ jobs:
 
       # MEIOS_BUILD_PROPERTY_TESTS alone declares the RapidCheck fetch and the
       # xacro_eval_prop target (it does not need MEIOS_BUILD_TESTS). The property
-      # suite formats doubles, so it depends on 12-01's libc++ print_double fix.
+      # suite formats doubles, so it depends on the libc++ print_double fix.
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \
@@ -167,6 +365,109 @@ jobs:
       - name: Run consumer test
         run: ./build-consumer/integration_test
 
+      - name: Build and run the installed resource consumer
+        run: |
+          cmake examples/install_consumer -B build-resource-consumer \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/resource-consumer-install" \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-resource-consumer
+          cmake --install build-resource-consumer
+          "${{ github.workspace }}/resource-consumer-install/bin/install_consumer"
+
+  # The pinned expression-valued description was kept out of the install-consumer
+  # legs because the only evaluator that could expand it forced the project's own
+  # install off, and those legs need the install. It needs that evaluator no
+  # longer, so a staged prefix can carry it and a program that builds none of the
+  # library can assert the model it received.
+  clean-consumer:
+    runs-on: macos-14
+    name: clean consumer (pinned expression-valued description, both acquisition routes)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Build and install
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_FETCH_CORPUS=ON \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
+          cmake --build build
+          cmake --install build
+
+      - name: Build the consumer against the staged prefix
+        run: |
+          corpus="${{ github.workspace }}/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-installed \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" \
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" \
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" \
+            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+          cmake --build build-consumer-installed
+
+      - name: Build the consumer against the working tree
+        run: |
+          corpus="${{ github.workspace }}/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-fetched \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_CONSUMER_SOURCE_DIR="${{ github.workspace }}" \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON \
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" \
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" \
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" \
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" \
+            -DMEIOS_CONSUMER_TESTS_DIR="${{ github.workspace }}/tests"
+          cmake --build build-consumer-fetched
+
+      # ctest reports success when a -R filter selects nothing, so each selection is
+      # asserted non-empty before it runs; an out-of-tree build tree is exactly where
+      # a gate that gates nothing would go unnoticed. Both routes are held to the same
+      # count, so a route that quietly registered less than the other reddens.
+      - name: Run both routes
+        run: |
+          expected=0
+          for tree in build-consumer-installed build-consumer-fetched; do
+            listed=$(ctest --test-dir "$tree" -N -R 'universal_robots|kr6')
+            registered=$(printf '%s\n' "$listed" | grep -c 'Test *#' || true)
+            if [ "$registered" -eq 0 ]; then
+              echo "$tree registered no native load test"
+              exit 1
+            fi
+            if [ "$expected" -eq 0 ]; then
+              expected=$registered
+            elif [ "$registered" -ne "$expected" ]; then
+              echo "$tree registered $registered test(s), the other route registered $expected"
+              exit 1
+            fi
+            echo "$tree registered $registered test(s)"
+            ctest --test-dir "$tree" -R 'universal_robots|kr6' --output-on-failure --no-tests=error
+          done
+
+      # A claim about an absence nobody ran a command for is not evidence, so the assertions live
+      # in a script the repository can syntax-check and fire against deliberately wrong inputs.
+      - name: Read the executables back
+        run: |
+          bash .github/scripts/read_back_consumer.sh \
+            "${{ github.workspace }}/install" \
+            build-consumer-installed build-consumer-fetched
+
   enrichments:
     runs-on: macos-14
     name: enrichments (scanners + archive-zip + ros)
@@ -184,6 +485,8 @@ jobs:
 
       # The AppleClang/libc++ leg is the signal for float from_chars in the
       # scanner numeric-parsing paths, which historically lagged on libc++.
+      # Building examples/ also fetches the pinned upstream description the
+      # manifest-resolution example resolves against, so this cell needs the network.
       - name: Configure
         run: |
           cmake . -B build -DCMAKE_BUILD_TYPE=Release \
@@ -191,15 +494,69 @@ jobs:
             -DMEIOS_WERROR=ON \
             -DMEIOS_BUILD_TESTS=ON \
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
-            -DMEIOS_BUILD_SCAN_OBJ=ON \
-            -DMEIOS_BUILD_SCAN_COLLADA=ON \
-            -DMEIOS_BUILD_SCAN_STL=ON \
-            -DMEIOS_BUILD_SCAN_GLTF=ON \
-            -DMEIOS_BUILD_ARCHIVE_ZIP=ON \
-            -DMEIOS_BUILD_ROS=ON
+            -DMEIOS_SCAN_OBJ_SUPPORT=ON \
+            -DMEIOS_SCAN_COLLADA_SUPPORT=ON \
+            -DMEIOS_SCAN_STL_SUPPORT=ON \
+            -DMEIOS_SCAN_GLTF_SUPPORT=ON \
+            -DMEIOS_ARCHIVE_ZIP_SUPPORT=ON \
+            -DMEIOS_BUILD_EXAMPLES=ON \
+            -DMEIOS_ROS_PACKAGE_SUPPORT=ON
 
       - name: Build
         run: cmake --build build
 
+      # This is the only cell that compiles the enrichment-gated examples at all, and a -R filter
+      # selecting nothing exits 0, so the corpus is asserted to register before it runs.
+      - name: Run examples
+        run: |
+          cd build
+          echo "ctest -N -R '^example_'"
+          registered=$(ctest -N -R '^example_' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "examples registered no tests"
+            exit 1
+          fi
+          echo "examples registered $registered test(s)"
+          ctest -R '^example_' --output-on-failure --no-tests=error
+
+      # The scanner stems register only where their module option is on, so a stem that
+      # quietly stopped registering would pass here as a green filtered run. Each is
+      # asserted to have discovered tests before its result is trusted.
+      - name: Focus scan_obj tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_obj\.'"
+          registered=$(ctest -N -R '^scan_obj\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_obj registered no tests"
+            exit 1
+          fi
+          echo "scan_obj registered $registered test(s)"
+          ctest -R '^scan_obj\.' --output-on-failure --no-tests=error
+
+      - name: Focus scan_collada tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_collada\.'"
+          registered=$(ctest -N -R '^scan_collada\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_collada registered no tests"
+            exit 1
+          fi
+          echo "scan_collada registered $registered test(s)"
+          ctest -R '^scan_collada\.' --output-on-failure --no-tests=error
+
+      - name: Focus scan_gltf tests
+        run: |
+          cd build
+          echo "ctest -N -R '^scan_gltf\.'"
+          registered=$(ctest -N -R '^scan_gltf\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "scan_gltf registered no tests"
+            exit 1
+          fi
+          echo "scan_gltf registered $registered test(s)"
+          ctest -R '^scan_gltf\.' --output-on-failure --no-tests=error
+
       - name: Test
-        run: cd build && ctest --output-on-failure
+        run: cd build && ctest --output-on-failure --no-tests=error

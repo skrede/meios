@@ -45,8 +45,11 @@ TEST_CASE("meios::load parses the real single-link description", "[urdf][realfix
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::model<double> robot = meios::load(fixture_path("test-desc.urdf"), opts, capture);
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture_path("test-desc.urdf"), opts, capture);
 
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = loaded->robot;
     REQUIRE(robot.name == "test");
     REQUIRE(robot.links.size() == 1);
     REQUIRE(robot.links.at(0).name == "base_link");
@@ -59,8 +62,11 @@ TEST_CASE("the name-only 'blue' material warns and never resolves to a color", "
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::model<double> robot = meios::load(fixture_path("test-desc.urdf"), opts, capture);
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture_path("test-desc.urdf"), opts, capture);
 
+    REQUIRE(loaded.has_value());
+    const meios::model<double> &robot = loaded->robot;
     REQUIRE(robot.materials.empty());
     REQUIRE_FALSE(robot.links.at(0).visuals.at(0).material_ref.has_value());
     REQUIRE(std::count(levels.begin(), levels.end(), meios::level::warn) == 1);
@@ -79,14 +85,10 @@ TEST_CASE("a non-<robot> root is a loud diagnostic, never a silent misparse", "[
     meios::log_sink_f capture{ recorder{ levels, msgs } };
     meios::load_options opts;
 
-    const meios::model<double> robot = meios::load(fixture_path("not_a_robot.xml"), opts, capture);
+    const meios::expected<meios::load_result, meios::load_error> loaded =
+        meios::load(fixture_path("not_a_robot.xml"), opts, capture);
 
-    REQUIRE(robot.links.empty());
-    REQUIRE(std::count(levels.begin(), levels.end(), meios::level::error) >= 1);
-
-    bool complained_about_root = false;
-    for(const std::string &msg : msgs)
-        if(msg.find("robot") != std::string::npos)
-            complained_about_root = true;
-    REQUIRE(complained_about_root);
+    REQUIRE_FALSE(loaded.has_value());
+    REQUIRE(loaded.error().loc.line > 0);
+    REQUIRE(loaded.error().message.find("robot") != std::string::npos);
 }

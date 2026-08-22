@@ -15,6 +15,8 @@ namespace
 
 struct capture_log : meios::log_sink
 {
+    using meios::log_sink::log;
+
     std::vector<meios::level> levels;
 
     void log(meios::level lvl, const std::string &) override
@@ -60,7 +62,7 @@ meios::tree<double> sample_tree()
 
     meios::joint<double> edge{};
     edge.name = "j1";
-    edge.kind = meios::joint_kind::revolute;
+    edge.kind = meios::joint_kind::continuous;
     edge.parent = "base";
     edge.child = "tool";
     edge.axis = meios::vector3<double>{ 0.0, 0.0, 1.0 };
@@ -75,7 +77,7 @@ meios::tree<double> reparse(const std::string &text, meios::log_sink &log)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, log, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, "emit.urdf" };
+                              meios::strictness::fail, "emit.urdf" };
     meios::pod_recorder<meios::tree<double>> rec(log, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(text, rec);
@@ -112,7 +114,7 @@ TEST_CASE("a resolved tree replays to a single well-formed flat urdf", "[bundle]
     const meios::tree<double> round = reparse(urdf, relog);
     REQUIRE(round.links.size() == robot.links.size());
     REQUIRE(round.joints.size() == robot.joints.size());
-    REQUIRE(round.joints[0].kind == meios::joint_kind::revolute);
+    REQUIRE(round.joints[0].kind == meios::joint_kind::continuous);
 }
 
 TEST_CASE("special characters in a name round-trip through escaping", "[bundle][writer]")

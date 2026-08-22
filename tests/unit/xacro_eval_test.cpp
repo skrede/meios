@@ -1,82 +1,16 @@
-#include <meios/xacro.h>
+#include "xacro_eval_fixture.h"
 
 #include <catch2/catch_test_macros.hpp>
-
-#include <string>
-#include <clocale>
-#include <optional>
-#include <functional>
-#include <string_view>
-
-namespace
-{
-
-struct mock_evaluator
-{
-    meios::value eval(std::string_view, const meios::eval_scope &, meios::log_sink &) const
-    {
-        return meios::value{ 0ll };
-    }
-};
-
-struct not_an_evaluator
-{
-    int eval(int) const { return 0; }
-};
-
-std::string eval_str(std::string_view expression, const meios::eval_scope &scope = {})
-{
-    meios::core_evaluator evaluator;
-    meios::log_sink sink;
-    return meios::to_python_str(evaluator.eval(expression, scope, sink));
-}
-
-struct failure
-{
-    bool failed{ false };
-    int diagnostics{ 0 };
-    std::string message{};
-
-    void operator()(meios::level, const std::string &text)
-    {
-        message = text;
-        ++diagnostics;
-    }
-
-    void operator()(meios::level, const meios::source_location &, const std::string &text)
-    {
-        message = text;
-        ++diagnostics;
-    }
-};
-
-failure eval_failure(std::string_view expression)
-{
-    failure state;
-    meios::core_evaluator evaluator;
-    meios::eval_scope scope;
-    meios::log_sink_f sink{ std::ref(state) };
-    evaluator.eval(expression, scope, sink);
-    state.failed = evaluator.failed();
-    return state;
-}
-
-meios::eval_failure_kind eval_kind(std::string_view expression)
-{
-    meios::core_evaluator evaluator;
-    meios::eval_scope scope;
-    meios::log_sink sink;
-    evaluator.eval(expression, scope, sink);
-    return evaluator.failure_kind();
-}
-
-}
 
 static_assert(meios::expression_evaluator<meios::core_evaluator>);
 
 static_assert(meios::expression_evaluator<mock_evaluator>);
 static_assert(!meios::expression_evaluator<not_an_evaluator>);
 static_assert(!meios::locates_errors<mock_evaluator>);
+
+static_assert(!std::is_copy_constructible_v<meios::eval_scope>);
+static_assert(std::is_move_constructible_v<meios::eval_scope>);
+
 
 TEST_CASE("the numeric shim parses and prints floats locale-independently", "[xacro][numeric]")
 {
@@ -131,29 +65,29 @@ TEST_CASE("numbers survive a comma-decimal global locale", "[xacro][numeric]")
 
 TEST_CASE("value prints int/float/bool as Python str() does", "[xacro][value]")
 {
-    REQUIRE(meios::to_python_str(meios::value{ 2ll }) == "2");
-    REQUIRE(meios::to_python_str(meios::value{ 2.0 }) == "2.0");
-    REQUIRE(meios::to_python_str(meios::value{ 0.5 }) == "0.5");
-    REQUIRE(meios::to_python_str(meios::value{ true }) == "True");
-    REQUIRE(meios::to_python_str(meios::value{ false }) == "False");
+    REQUIRE(meios::render_scalar(meios::value{ std::int64_t{ 2 } }) == "2");
+    REQUIRE(meios::render_scalar(real_of(2.0)) == "2.0");
+    REQUIRE(meios::render_scalar(real_of(0.5)) == "0.5");
+    REQUIRE(meios::render_scalar(meios::value{ true }) == "True");
+    REQUIRE(meios::render_scalar(meios::value{ false }) == "False");
 }
 
 TEST_CASE("eval_scope resolves a set name and reports an unset one absent", "[xacro][value]")
 {
     meios::eval_scope scope;
-    scope.set("radius", meios::value{ 0.2 });
-    scope.set("prefix", std::string{ "arm" });
+    scope.set("radius", real_of(0.2));
+    scope.set("prefix", meios::value{ std::string{ "arm" } });
 
     REQUIRE(scope.contains("radius"));
     REQUIRE_FALSE(scope.contains("length"));
 
-    const std::optional<meios::binding> radius = scope.lookup("radius");
+    const std::optional<meios::value> radius = scope.lookup("radius");
     REQUIRE(radius.has_value());
-    REQUIRE(std::get<meios::value>(*radius) == meios::value{ 0.2 });
+    REQUIRE(*radius == real_of(0.2));
 
-    const std::optional<meios::binding> prefix = scope.lookup("prefix");
+    const std::optional<meios::value> prefix = scope.lookup("prefix");
     REQUIRE(prefix.has_value());
-    REQUIRE(std::get<std::string>(*prefix) == "arm");
+    REQUIRE(prefix->text() == "arm");
 
     REQUIRE_FALSE(scope.lookup("length").has_value());
 }
@@ -164,7 +98,7 @@ TEST_CASE("a type exposing eval(expr, scope, log) satisfies expression_evaluator
     meios::eval_scope scope;
     meios::log_sink log;
 
-    REQUIRE(std::holds_alternative<long long>(evaluator.eval("0", scope, log)));
+    REQUIRE(evaluator.eval("0", scope, log).kind() == meios::value_kind::integer);
     STATIC_REQUIRE(meios::expression_evaluator<mock_evaluator>);
     STATIC_REQUIRE_FALSE(meios::expression_evaluator<not_an_evaluator>);
     STATIC_REQUIRE(meios::expression_evaluator<meios::core_evaluator>);
@@ -185,6 +119,20 @@ TEST_CASE("core evaluator reproduces CPython numeric semantics", "[xacro][eval]"
     REQUIRE(eval_str("True and 1<2") == "True");
     REQUIRE(eval_str("not 0") == "True");
     REQUIRE(eval_str("(2+3)*4") == "20");
+}
+
+TEST_CASE("integer power bounds its work and loud-fails on an unrepresentable result", "[xacro][eval]")
+{
+    REQUIRE(eval_str("2**10") == "1024");
+    REQUIRE(eval_str("10**18") == "1000000000000000000");
+    REQUIRE(eval_str("0**5") == "0");
+    REQUIRE(eval_str("1**1000000000") == "1");
+    REQUIRE(eval_str("(-1)**1000000001") == "-1");
+
+    const failure overflow = eval_failure("9**99999999999");
+    REQUIRE(overflow.failed);
+    REQUIRE(overflow.diagnostics >= 1);
+    REQUIRE(eval_kind("9**99999999999") == meios::eval_failure_kind::error);
 }
 
 TEST_CASE("core evaluator dispatches the whitelisted math functions", "[xacro][eval]")
@@ -213,7 +161,7 @@ TEST_CASE("core evaluator follows CPython result typing", "[xacro][typing]")
     REQUIRE(eval_str("1<2") == "True");
 
     meios::eval_scope scope;
-    scope.set("radius", meios::value{ 0.2 });
+    scope.set("radius", real_of(0.2));
     REQUIRE(eval_str("radius*2", scope) == "0.4");
 }
 

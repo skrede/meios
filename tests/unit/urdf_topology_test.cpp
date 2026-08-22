@@ -4,6 +4,7 @@
 #include <meios/xacro.h>
 
 #include <meios/model/topology.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -13,7 +14,6 @@
 #include <sstream>
 #include <cstddef>
 #include <filesystem>
-#include <string_view>
 
 namespace
 {
@@ -30,6 +30,7 @@ std::string slurp(const std::string &name)
 struct entry
 {
     meios::level lvl;
+    meios::diagnostic_code code;
     int line;
     std::string msg;
 };
@@ -38,11 +39,20 @@ struct capture
 {
     std::vector<entry> &entries;
 
-    void operator()(meios::level lvl, const std::string &msg) { entries.push_back({ lvl, 0, msg }); }
+    void operator()(meios::level lvl, const std::string &msg)
+    {
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified, 0, msg });
+    }
 
     void operator()(meios::level lvl, const meios::source_location &loc, const std::string &msg)
     {
-        entries.push_back({ lvl, loc.line, msg });
+        entries.push_back({ lvl, meios::diagnostic_code::unspecified, loc.line, msg });
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &loc,
+                    const std::string &msg)
+    {
+        entries.push_back({ lvl, code, loc.line, msg });
     }
 };
 
@@ -53,17 +63,17 @@ meios::tree<double> parse(const std::string &fixture)
     meios::core_evaluator eval;
     meios::parse_context ctx{ sources, eval, silent, meios::missing_asset::warn,
                               meios::topology_policy::fail, meios::material_policy::warn,
-                              meios::strictness::strict, {} };
+                              meios::strictness::fail, {} };
     meios::pod_recorder<meios::tree<double>> rec(silent, meios::topology_policy::fail);
     meios::basic_parser<meios::urdf_reader> parser(ctx);
     parser.parse(slurp(fixture), rec);
     return rec.result();
 }
 
-bool located(const std::vector<entry> &entries, meios::level lvl, std::string_view needle)
+bool located(const std::vector<entry> &entries, meios::level lvl, meios::diagnostic_code expected)
 {
     for(const entry &e : entries)
-        if(e.lvl == lvl && e.line > 0 && e.msg.find(needle) != std::string::npos)
+        if(e.lvl == lvl && e.line > 0 && e.code == expected)
             return true;
     return false;
 }
@@ -84,28 +94,27 @@ int root_count(const std::vector<int> &parent_of)
     return roots;
 }
 
+meios::tree<double> two_root_forest()
+{
+    meios::tree<double> robot;
+    robot.name = "two_roots";
+    robot.links = { { .name = "r0" }, { .name = "r0_a" }, { .name = "r0_b" },
+                    { .name = "r1" }, { .name = "r1_a" } };
+    robot.joints = { { .name = "j0", .parent = "r0", .child = "r0_a" },
+                     { .name = "j1", .parent = "r0", .child = "r0_b" },
+                     { .name = "j2", .parent = "r1", .child = "r1_a" } };
+    return robot;
 }
 
-TEST_CASE("each broken class is a located error under topology_policy::fail", "[urdf][topology]")
+int count_matching(const std::vector<entry> &entries, meios::diagnostic_code code)
 {
-    struct expectation
-    {
-        std::string fixture;
-        std::string needle;
-    };
-    for(const expectation &exp :
-        { expectation{ "multi_root.urdf", "additional root" },
-          expectation{ "cycle.urdf", "cycle" },
-          expectation{ "orphan_joint.urdf", "undeclared link" },
-          expectation{ "unreachable_link.urdf", "unreachable" },
-          expectation{ "multi_parent.urdf", "more than one parent" } })
-    {
-        std::vector<entry> entries;
-        const meios::topology_result result =
-            reconstruct(parse(exp.fixture), entries, meios::topology_policy::fail);
-        REQUIRE_FALSE(result.ok);
-        REQUIRE(located(entries, meios::level::error, exp.needle));
-    }
+    int hits = 0;
+    for(const entry &e : entries)
+        if(e.code == code)
+            ++hits;
+    return hits;
+}
+
 }
 
 TEST_CASE("a valid branched tree reconstructs with a single root", "[urdf][topology]")
@@ -116,8 +125,8 @@ TEST_CASE("a valid branched tree reconstructs with a single root", "[urdf][topol
 
     REQUIRE(result.ok);
     REQUIRE(entries.empty());
-    REQUIRE(root_count(result.parent_of) == 1);
-    REQUIRE(result.parent_of.at(0) == -1);
+    REQUIRE(root_count(result.topo.parent_of) == 1);
+    REQUIRE(result.topo.parent_of.at(0) == -1);
 }
 
 TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topology]")
@@ -127,10 +136,89 @@ TEST_CASE("warn downgrades to a warning while skip stays silent", "[urdf][topolo
     std::vector<entry> warned;
     const meios::topology_result warn = reconstruct(robot, warned, meios::topology_policy::warn);
     REQUIRE(warn.ok);
-    REQUIRE(located(warned, meios::level::warn, "additional root"));
+    REQUIRE(located(warned, meios::level::warn, meios::diagnostic_code::additional_root));
 
     std::vector<entry> skipped;
     const meios::topology_result skip = reconstruct(robot, skipped, meios::topology_policy::skip);
     REQUIRE(skip.ok);
     REQUIRE(skipped.empty());
+}
+
+// The dangling link reference this loop used to carry left the graph layer: it is a
+// property of the document text, refused before a record exists and at every setting.
+TEST_CASE("the graph policy governs each genuine graph property at each of its settings",
+          "[urdf][topology]")
+{
+    struct expectation
+    {
+        std::string fixture;
+        meios::diagnostic_code code;
+    };
+    for(const expectation &exp :
+        { expectation{ "multi_root.urdf", meios::diagnostic_code::additional_root },
+          expectation{ "cycle.urdf", meios::diagnostic_code::link_on_cycle },
+          expectation{ "unreachable_link.urdf", meios::diagnostic_code::unreachable_link },
+          expectation{ "multi_parent.urdf", meios::diagnostic_code::multiple_parents } })
+    {
+        INFO(exp.fixture);
+        const meios::tree<double> robot = parse(exp.fixture);
+
+        std::vector<entry> failed;
+        REQUIRE_FALSE(reconstruct(robot, failed, meios::topology_policy::fail).ok);
+        REQUIRE(located(failed, meios::level::error, exp.code));
+
+        std::vector<entry> warned;
+        REQUIRE(reconstruct(robot, warned, meios::topology_policy::warn).ok);
+        REQUIRE(located(warned, meios::level::warn, exp.code));
+
+        std::vector<entry> skipped;
+        REQUIRE(reconstruct(robot, skipped, meios::topology_policy::skip).ok);
+        REQUIRE(skipped.empty());
+    }
+}
+
+TEST_CASE("a valid multi-root forest reports no false unreachable under warn", "[urdf][topology]")
+{
+    const meios::tree<double> robot = two_root_forest();
+
+    std::vector<entry> entries;
+    const meios::topology_result result = reconstruct(robot, entries, meios::topology_policy::warn);
+
+    REQUIRE(result.ok);
+    REQUIRE(count_matching(entries, meios::diagnostic_code::unreachable_link) == 0);
+}
+
+TEST_CASE("joint_of maps each child to its forming joint and roots to -1", "[urdf][topology]")
+{
+    const meios::tree<double> robot = two_root_forest();
+
+    std::vector<entry> entries;
+    const meios::topology_result result = reconstruct(robot, entries, meios::topology_policy::skip);
+
+    REQUIRE(result.topo.joint_of == std::vector<int>{ -1, 0, 1, -1, 2 });
+}
+
+TEST_CASE("order is the all-roots DFS pre-order, roots and children ascending", "[urdf][topology]")
+{
+    const meios::tree<double> robot = two_root_forest();
+
+    std::vector<entry> entries;
+    const meios::topology_result result = reconstruct(robot, entries, meios::topology_policy::skip);
+
+    REQUIRE(result.topo.order == std::vector<int>{ 0, 1, 2, 3, 4 });
+}
+
+TEST_CASE("order is frozen public data and does not silently drift", "[urdf][topology]")
+{
+    const meios::tree<double> robot = two_root_forest();
+
+    std::vector<entry> first_log;
+    std::vector<entry> second_log;
+    const std::vector<int> first =
+        reconstruct(robot, first_log, meios::topology_policy::skip).topo.order;
+    const std::vector<int> second =
+        reconstruct(robot, second_log, meios::topology_policy::skip).topo.order;
+
+    REQUIRE(first == second);
+    REQUIRE(first == std::vector<int>{ 0, 1, 2, 3, 4 });
 }

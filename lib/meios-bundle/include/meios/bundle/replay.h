@@ -9,13 +9,15 @@
 #include "meios/records/material.h"
 #include "meios/records/robot_info.h"
 
+#include <optional>
+
 namespace meios
 {
 
 template <typename Sink>
 void replay(const tree<double> &robot, Sink &sink)
 {
-    sink.on_robot(robot_info{ robot.name, {} });
+    sink.on_robot(robot_info{ robot.name, {}, std::nullopt });
     for(const material<double> &mat : robot.materials)
         sink.on_material(mat);
     for(const link<double> &node : robot.links)
@@ -28,7 +30,7 @@ void replay(const tree<double> &robot, Sink &sink)
 template <typename Sink>
 void replay(const model<double> &robot, Sink &sink)
 {
-    sink.on_robot(robot_info{ robot.name, {} });
+    sink.on_robot(robot_info{ robot.name, {}, std::nullopt });
     for(const material<double> &mat : robot.materials)
         sink.on_material(mat);
     for(const link<double> &node : robot.links)

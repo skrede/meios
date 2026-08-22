@@ -3,3 +3,18 @@
 # platform so the Windows CI runner (core.autocrlf=true by default) does not
 # convert them to CRLF and break equality against the LF emitter output.
 tests/golden/** text eol=lf
+
+# Fixtures the suite reads as raw text rather than through an XML parser get the same
+# treatment: pugixml normalizes CRLF for the .xacro and .urdf inputs, but a YAML document
+# reaches its reader byte-for-byte, where a carriage return changes what the reader sees.
+# Scoped to the whole test tree rather than to tests/fixtures, because fixture YAML also
+# lives beside the CMake acquisition origins.
+tests/**/*.yaml text eol=lf
+
+# A fixture directory the corpus acquisition fingerprints is hashed over its raw bytes before any
+# parser sees it (cmake/corpus.cmake), so the note above does not reach it: pugixml normalizing CRLF
+# is irrelevant to a digest taken of the file. The .xacro and .urdf inputs there need the same LF pin
+# as the YAML beside them, or the recorded digest and a CRLF checkout disagree and configuration
+# FATALs on Windows alone.
+tests/fixtures/**/*.xacro text eol=lf
+tests/fixtures/**/*.urdf text eol=lf

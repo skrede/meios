@@ -1,18 +1,15 @@
 #ifndef HPP_GUARD_MEIOS_BUNDLE_ASSET_BYTES_H
 #define HPP_GUARD_MEIOS_BUNDLE_ASSET_BYTES_H
 
+#include "meios/io/text_reader.h"
 #include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
-#include <span>
-#include <array>
 #include <string>
-#include <cstddef>
-#include <fstream>
-#include <iterator>
-#include <filesystem>
 
 namespace meios
 {
@@ -20,42 +17,31 @@ namespace meios
 namespace detail
 {
 
-inline std::string read_path_text(const std::filesystem::path &path, log_sink &log)
+// meios::detail also declares two-argument readers of both these names, so an unqualified call
+// here would resolve to whichever declaration a translation unit happened to see first.
+inline text_read_result read_asset_bytes(const resolved_asset &asset)
 {
-    std::ifstream in(path, std::ios::binary);
-    if(!in)
-    {
-        log.log(level::warn, "could not open asset '" + path.string() + "'");
-        return {};
-    }
-    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    if(asset.source_root() && asset.source_relative())
+        return meios::read_text_file_under(*asset.source_root(), *asset.source_relative());
+    return meios::read_text_file(asset.path());
 }
 
-inline std::string drain_bytes(byte_reader &reader)
+inline void report_asset_read_failure(const resolved_asset &asset, const text_read_failure &failure, log_sink &log)
 {
-    std::string text;
-    std::array<std::byte, 4096> buffer{};
-    for(std::size_t got = reader.read(buffer); got != 0; got = reader.read(buffer))
-        text.append(reinterpret_cast<const char *>(buffer.data()), got);
+    log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause,
+            "cannot read asset \"" + asset.path().string() + "\": " + read_failure_reason(failure));
+}
+
+}
+
+// The one reporting site for a failed asset read: a scanner branches on the error arm and
+// reports nothing, so a terminal failure yields exactly one record.
+inline text_read_result read_asset_text(const resolved_asset &asset, log_sink &log)
+{
+    text_read_result text = detail::read_asset_bytes(asset);
+    if(!text)
+        detail::report_asset_read_failure(asset, text.error(), log);
     return text;
-}
-
-}
-
-// The asset_scanner concept hands scanners a const resolved_asset, but draining a
-// byte_reader mutates its pull stream; the const_cast is well-defined because the
-// closure owns the asset as a non-const local and only narrows it to a const view.
-inline std::string read_asset_text(const resolved_asset &asset, log_sink &log)
-{
-    if(asset.holds_path())
-        return detail::read_path_text(asset.path(), log);
-    byte_reader &reader = const_cast<resolved_asset &>(asset).bytes();
-    if(!reader.valid())
-    {
-        log.log(level::warn, "asset byte stream is not readable");
-        return {};
-    }
-    return detail::drain_bytes(reader);
 }
 
 }

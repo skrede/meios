@@ -1,0 +1,17 @@
+add_executable(load_robot load_robot.cpp)
+target_link_libraries(load_robot PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(load_robot PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(load_robot)
+add_test(NAME example_load_robot COMMAND load_robot)
+
+add_executable(load_into_sink load_into_sink.cpp)
+target_link_libraries(load_into_sink PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(load_into_sink PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(load_into_sink)
+add_test(NAME example_load_into_sink COMMAND load_into_sink)
+
+add_executable(xacro_overrides xacro_overrides.cpp)
+target_link_libraries(xacro_overrides PRIVATE meios::core meios::model meios::urdf)
+target_include_directories(xacro_overrides PRIVATE ${MEIOS_EXAMPLE_GENERATED_INCLUDE})
+meios_warnings(xacro_overrides)
+add_test(NAME example_xacro_overrides COMMAND xacro_overrides)

@@ -1,0 +1,18 @@
+<robot name="coercion_probe" version="9.9" bogus="yes">
+  <link name="a"/>
+  <link name="b">
+    <inertial>
+      <origin xyz="1 2"/>
+      <mass value=""/>
+      <inertia ixx="-5" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual><geometry><trapezoid size="1 1 1"/></geometry></visual>
+    <bogus_child/>
+  </link>
+  <joint name="j" tpye="revolute">
+    <parent link="a"/><child link="b"/>
+    <origin xyz="1 2 3 4"/>
+    <axis xyz="0 0 0"/>
+    <mimic joint="does_not_exist"/>
+  </joint>
+</robot>

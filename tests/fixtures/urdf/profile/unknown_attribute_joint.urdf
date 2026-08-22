@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="unknown_attribute_joint">
+  <link name="base_link"/>
+  <link name="arm_link"/>
+  <joint name="shoulder" type="fixed" damping="0.1">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+  </joint>
+</robot>

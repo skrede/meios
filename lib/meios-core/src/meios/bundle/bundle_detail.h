@@ -18,11 +18,12 @@ struct parsed_reference
     bool is_texture;
 };
 
-// Parses the ORIGINAL reference (never the resolved absolute path): package://pkg/rel
+// Splits the ORIGINAL reference (never the resolved absolute path): package://pkg/rel
 // splits on the first slash, a plain relative path buckets under the bundle's own
-// synthetic package, and a malformed package:// (no slash) loud-fails with nullopt.
+// synthetic package, and a malformed package:// (no slash) answers nullopt. It reports
+// nothing, because two call sites reach it for one reference.
 std::optional<parsed_reference> parse_reference(std::string_view original, bool is_texture,
-                                                std::string_view bundle_name, log_sink &log);
+                                                std::string_view bundle_name);
 
 std::string layout_dest(bool is_texture, std::string_view pkg_dir, std::string_view rel);
 

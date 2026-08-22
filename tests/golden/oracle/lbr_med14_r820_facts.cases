@@ -1,0 +1,79 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	9
+joint.count	8
+link.name.0	lbr_link_0
+link.name.1	lbr_link_1
+link.name.2	lbr_link_2
+link.name.3	lbr_link_3
+link.name.4	lbr_link_4
+link.name.5	lbr_link_5
+link.name.6	lbr_link_6
+link.name.7	lbr_link_7
+link.name.8	lbr_link_ee
+joint.name.0	lbr_A1
+joint.name.1	lbr_A2
+joint.name.2	lbr_A3
+joint.name.3	lbr_A4
+joint.name.4	lbr_A5
+joint.name.5	lbr_A6
+joint.name.6	lbr_A7
+joint.name.7	lbr_joint_ee
+joint.type.lbr_A1	revolute
+joint.limit.lbr_A1	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=1.4835298641951802
+joint.safety.lbr_A1	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=17.0 k_velocity=10
+joint.type.lbr_A2	revolute
+joint.limit.lbr_A2	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=1.4835298641951802
+joint.safety.lbr_A2	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=17.0 k_velocity=10
+joint.type.lbr_A3	revolute
+joint.limit.lbr_A3	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=1.7453292519943295
+joint.safety.lbr_A3	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=20.0 k_velocity=10
+joint.type.lbr_A4	revolute
+joint.limit.lbr_A4	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=1.3089969389957472
+joint.safety.lbr_A4	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=15.0 k_velocity=10
+joint.type.lbr_A5	revolute
+joint.limit.lbr_A5	lower=-2.9670597283903604 upper=2.9670597283903604 effort=200 velocity=2.2689280275926285
+joint.safety.lbr_A5	soft_lower_limit=-2.9670597283903604 soft_upper_limit=2.9670597283903604 k_position=26.0 k_velocity=10
+joint.type.lbr_A6	revolute
+joint.limit.lbr_A6	lower=-2.0943951023931953 upper=2.0943951023931953 effort=200 velocity=2.356194490192345
+joint.safety.lbr_A6	soft_lower_limit=-2.0943951023931953 soft_upper_limit=2.0943951023931953 k_position=27.0 k_velocity=10
+joint.type.lbr_A7	revolute
+joint.limit.lbr_A7	lower=-3.0543261909900763 upper=3.0543261909900763 effort=200 velocity=2.356194490192345
+joint.safety.lbr_A7	soft_lower_limit=-3.0543261909900763 soft_upper_limit=3.0543261909900763 k_position=27.0 k_velocity=10
+joint.type.lbr_joint_ee	fixed
+mesh.filename.0	package://lbr_med14_r820_description/meshes/visual/link_0.dae
+mesh.filename.1	package://lbr_med14_r820_description/meshes/collision/link_0.stl
+mesh.filename.2	package://lbr_med14_r820_description/meshes/visual/link_1.dae
+mesh.filename.3	package://lbr_med14_r820_description/meshes/collision/link_1.stl
+mesh.filename.4	package://lbr_med14_r820_description/meshes/visual/link_2.dae
+mesh.filename.5	package://lbr_med14_r820_description/meshes/collision/link_2.stl
+mesh.filename.6	package://lbr_med14_r820_description/meshes/visual/link_3.dae
+mesh.filename.7	package://lbr_med14_r820_description/meshes/collision/link_3.stl
+mesh.filename.8	package://lbr_med14_r820_description/meshes/visual/link_4.dae
+mesh.filename.9	package://lbr_med14_r820_description/meshes/collision/link_4.stl
+mesh.filename.10	package://lbr_med14_r820_description/meshes/visual/link_5.dae
+mesh.filename.11	package://lbr_med14_r820_description/meshes/collision/link_5.stl
+mesh.filename.12	package://lbr_med14_r820_description/meshes/visual/link_6.dae
+mesh.filename.13	package://lbr_med14_r820_description/meshes/collision/link_6.stl
+mesh.filename.14	package://lbr_med14_r820_description/meshes/visual/link_7.dae
+mesh.filename.15	package://lbr_med14_r820_description/meshes/collision/link_7.stl
+origin.lbr_link_0.visual	xyz=0 0 0 rpy=0 0 0
+origin.lbr_link_0.collision	xyz=0 0 0 rpy=0 0 0
+origin.lbr_link_1.visual	xyz=0.0 0.0 -0.147 rpy=0 0 0
+origin.lbr_link_1.collision	xyz=0.0 0.0 -0.147 rpy=0 0 0
+origin.lbr_link_2.visual	xyz=0.0 0.01 -0.3595 rpy=0 0 0
+origin.lbr_link_2.collision	xyz=0.0 0.01 -0.3595 rpy=0 0 0
+origin.lbr_link_3.visual	xyz=0.0 0.0 -0.5875 rpy=0 0 0
+origin.lbr_link_3.collision	xyz=0.0 0.0 -0.5875 rpy=0 0 0
+origin.lbr_link_4.visual	xyz=0.0 -0.0105 -0.7795 rpy=0 0 0
+origin.lbr_link_4.collision	xyz=0.0 -0.0105 -0.7795 rpy=0 0 0
+origin.lbr_link_5.visual	xyz=0.0 0.0 -0.987 rpy=0 0 0
+origin.lbr_link_5.collision	xyz=0.0 0.0 -0.987 rpy=0 0 0
+origin.lbr_link_6.visual	xyz=0.0 0.0707 -1.1795 rpy=0 0 0
+origin.lbr_link_6.collision	xyz=0.0 0.0707 -1.1795 rpy=0 0 0
+origin.lbr_link_7.visual	xyz=0.0 0.0 -1.2705 rpy=0 0 0
+origin.lbr_link_7.collision	xyz=0.0 0.0 -1.2705 rpy=0 0 0

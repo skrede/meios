@@ -1,0 +1,79 @@
+# fact <TAB> value, measured from the document upstream renders. A joint that
+# declares no limit element carries no joint.limit row at all, and one that declares
+# no safety_controller carries no joint.safety row -- an absence the comparison
+# asserts rather than skips, because presence is paired in both directions. A row
+# carries only the attributes its element declares, so a guard naming two of the
+# four is recorded as naming two.
+link.count	13
+joint.count	12
+link.name.0	world
+link.name.1	base_link
+link.name.2	base_link_inertia
+link.name.3	shoulder_link
+link.name.4	upper_arm_link
+link.name.5	forearm_link
+link.name.6	wrist_1_link
+link.name.7	wrist_2_link
+link.name.8	wrist_3_link
+link.name.9	ft_frame
+link.name.10	base
+link.name.11	flange
+link.name.12	tool0
+joint.name.0	base_joint
+joint.name.1	base_link-base_link_inertia
+joint.name.2	shoulder_pan_joint
+joint.name.3	shoulder_lift_joint
+joint.name.4	elbow_joint
+joint.name.5	wrist_1_joint
+joint.name.6	wrist_2_joint
+joint.name.7	wrist_3_joint
+joint.name.8	wrist_3_link-ft_frame
+joint.name.9	base_link-base_fixed_joint
+joint.name.10	wrist_3-flange
+joint.name.11	flange-tool0
+joint.type.base_joint	fixed
+joint.type.base_link-base_link_inertia	fixed
+joint.type.shoulder_pan_joint	revolute
+joint.limit.shoulder_pan_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=150.0 velocity=3.141592653589793
+joint.type.shoulder_lift_joint	revolute
+joint.limit.shoulder_lift_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=150.0 velocity=3.141592653589793
+joint.type.elbow_joint	revolute
+joint.limit.elbow_joint	lower=-3.141592653589793 upper=3.141592653589793 effort=150.0 velocity=3.141592653589793
+joint.type.wrist_1_joint	revolute
+joint.limit.wrist_1_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.type.wrist_2_joint	revolute
+joint.limit.wrist_2_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.type.wrist_3_joint	revolute
+joint.limit.wrist_3_joint	lower=-6.283185307179586 upper=6.283185307179586 effort=28.0 velocity=3.141592653589793
+joint.type.wrist_3_link-ft_frame	fixed
+joint.type.base_link-base_fixed_joint	fixed
+joint.type.wrist_3-flange	fixed
+joint.type.flange-tool0	fixed
+mesh.filename.0	file://<package-root>/ur_description/meshes/ur5e/visual/base.dae
+mesh.filename.1	file://<package-root>/ur_description/meshes/ur5e/collision/base.stl
+mesh.filename.2	file://<package-root>/ur_description/meshes/ur5e/visual/shoulder.dae
+mesh.filename.3	file://<package-root>/ur_description/meshes/ur5e/collision/shoulder.stl
+mesh.filename.4	file://<package-root>/ur_description/meshes/ur5e/visual/upperarm.dae
+mesh.filename.5	file://<package-root>/ur_description/meshes/ur5e/collision/upperarm.stl
+mesh.filename.6	file://<package-root>/ur_description/meshes/ur5e/visual/forearm.dae
+mesh.filename.7	file://<package-root>/ur_description/meshes/ur5e/collision/forearm.stl
+mesh.filename.8	file://<package-root>/ur_description/meshes/ur5e/visual/wrist1.dae
+mesh.filename.9	file://<package-root>/ur_description/meshes/ur5e/collision/wrist1.stl
+mesh.filename.10	file://<package-root>/ur_description/meshes/ur5e/visual/wrist2.dae
+mesh.filename.11	file://<package-root>/ur_description/meshes/ur5e/collision/wrist2.stl
+mesh.filename.12	file://<package-root>/ur_description/meshes/ur5e/visual/wrist3.dae
+mesh.filename.13	file://<package-root>/ur_description/meshes/ur5e/collision/wrist3.stl
+origin.base_link_inertia.visual	xyz=0.0 0.0 0.0 rpy=0.0 0.0 3.141592653589793
+origin.base_link_inertia.collision	xyz=0.0 0.0 0.0 rpy=0.0 0.0 3.141592653589793
+origin.shoulder_link.visual	xyz=0.0 0.0 0.0 rpy=0.0 0.0 3.141592653589793
+origin.shoulder_link.collision	xyz=0.0 0.0 0.0 rpy=0.0 0.0 3.141592653589793
+origin.upper_arm_link.visual	xyz=0.0 0.0 0.138 rpy=1.5707963267948966 0.0 -1.5707963267948966
+origin.upper_arm_link.collision	xyz=0.0 0.0 0.138 rpy=1.5707963267948966 0.0 -1.5707963267948966
+origin.forearm_link.visual	xyz=0.0 0.0 0.007 rpy=1.5707963267948966 0.0 -1.5707963267948966
+origin.forearm_link.collision	xyz=0.0 0.0 0.007 rpy=1.5707963267948966 0.0 -1.5707963267948966
+origin.wrist_1_link.visual	xyz=0.0 0.0 -0.127 rpy=1.5707963267948966 0.0 0.0
+origin.wrist_1_link.collision	xyz=0.0 0.0 -0.127 rpy=1.5707963267948966 0.0 0.0
+origin.wrist_2_link.visual	xyz=0.0 0.0 -0.0997 rpy=0.0 0.0 0.0
+origin.wrist_2_link.collision	xyz=0.0 0.0 -0.0997 rpy=0.0 0.0 0.0
+origin.wrist_3_link.visual	xyz=0.0 -0.0005 -0.0989 rpy=1.5707963267948966 0.0 0.0
+origin.wrist_3_link.collision	xyz=0.0 -0.0005 -0.0989 rpy=1.5707963267948966 0.0 0.0

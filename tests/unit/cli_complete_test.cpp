@@ -70,13 +70,14 @@ TEST_CASE("cli_complete: tree --root also enumerates link names without the sepa
     REQUIRE(out.find(":4") != std::string::npos);
 }
 
-TEST_CASE("cli_complete: resolve enumerates live link and joint names in the emitter argv shape")
+TEST_CASE("cli_complete: a resolve target offers no topology name and leaves the shell to complete a path")
 {
     const std::string out =
         complete({ "resolve", fixture("branched_all_joints.urdf"), "--", "" });
-    REQUIRE(out.find("torso") != std::string::npos);
-    REQUIRE(out.find("torso_to_arm") != std::string::npos);
-    REQUIRE(out.find(":4") != std::string::npos);
+    REQUIRE(out.find("torso") == std::string::npos);
+    REQUIRE(out.find("torso_to_arm") == std::string::npos);
+    REQUIRE(out.find(":0") != std::string::npos);
+    REQUIRE(out.find(":4") == std::string::npos);
 }
 
 TEST_CASE("cli_complete: an arg position enumerates the document's args in the emitter argv shape")

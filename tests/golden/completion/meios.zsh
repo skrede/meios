@@ -10,7 +10,7 @@ _meios() {
         'tree:Print the link and joint topology.'
         'deps:List the assets the model references.'
         'args:List the declared arguments of the document.'
-        'resolve:Resolve a link or joint to its resolved definition.'
+        'resolve:Resolve an asset reference (package://, relative, absolute or file://) to its on-disk path; a relative one is measured against the model document'\''s directory, and an unreachable path or unsupported scheme is refused.'
         'completion:Generate a shell completion script.'
     )
     local curcontext="${curcontext}" state
@@ -40,7 +40,7 @@ _meios_flags() {
         info) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the summary.]' ;;
         validate) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--format[Output format for the report.]' ;;
         tree) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--dot[Emit Graphviz DOT instead of ASCII.]' '--root[Render the subtree rooted at this link.]' ;;
-        deps) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
+        deps) _values 'flag' '--package-path[Additional package search root, repeatable.]' '--eval[Expression evaluator backend: core or python.]' '--eval-policy[Policy for an unsupported expression: fail, warn, or skip.]' ;;
         args) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
         resolve) _values 'flag' '--package-path[Additional package search root, repeatable.]' ;;
         completion) _values 'flag' ;;

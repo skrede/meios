@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot name="geometry_shape_absent">
+  <link name="base_link">
+    <visual>
+      <geometry/>
+    </visual>
+  </link>
+</robot>

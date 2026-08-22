@@ -1,137 +1,22 @@
-#include "urdf_detail.h"
+#include "load_stage.h"
 
 #include "meios/urdf/load.h"
-#include "meios/urdf/urdf_reader.h"
-#include "meios/urdf/parse_context.h"
-
-#include "meios/sink/world_recorder.h"
 
 #include "meios/io/source_stack.h"
 #include "meios/io/source_handle.h"
 #include "meios/io/directory_source.h"
 
-#include "meios/xacro/budget.h"
-#include "meios/xacro/eval_scope.h"
-#include "meios/xacro/structural.h"
-#include "meios/xacro/core_evaluator.h"
-
-#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
-#include "meios/diagnostic/source_location.h"
+#include "meios/diagnostic/capturing_log_sink.h"
 
-#include <pugixml.hpp>
-
-#include <map>
-#include <string>
 #include <vector>
-#include <fstream>
-#include <sstream>
-#include <ostream>
-#include <utility>
-#include <optional>
-#include <iostream>
 #include <filesystem>
-#include <string_view>
 
 namespace meios
 {
 
 namespace
 {
-
-std::optional<std::string> read_file(const std::filesystem::path &path)
-{
-    std::ifstream in(path, std::ios::binary);
-    if(!in)
-        return std::nullopt;
-    std::ostringstream buffer;
-    buffer << in.rdbuf();
-    return buffer.str();
-}
-
-pugi::xml_node first_element(pugi::xml_node document)
-{
-    for(pugi::xml_node child : document.children())
-        if(child.type() == pugi::node_element)
-            return child;
-    return {};
-}
-
-bool declares_xacro(pugi::xml_node root)
-{
-    for(pugi::xml_attribute attr : root.attributes())
-        if(std::string_view(attr.name()) == "xmlns:xacro")
-            return true;
-    return false;
-}
-
-void seed_caller_args(eval_scope &scope, const std::map<std::string, std::string> &args)
-{
-    for(const std::pair<const std::string, std::string> &arg : args)
-        scope.set(arg.first, detail::classify(arg.second));
-}
-
-void drive(std::string_view bytes, const std::filesystem::path &path, bool expandable,
-           const load_options &opts, parse_context &ctx, world_recorder &recorder)
-{
-    basic_parser<urdf_reader> parser(ctx);
-    if(!expandable)
-    {
-        parser.parse(bytes, recorder);
-        return;
-    }
-    eval_scope scope;
-    seed_caller_args(scope, opts.args);
-    const expansion expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{},
-                                      opts.eval, opts.backend, ctx.log);
-    parser.parse(expanded.document, recorder);
-}
-
-// Sniffs the document root: nullopt loud-rejects a non-loadable/non-<robot>
-// document, otherwise reports whether the xacro namespace calls for expansion.
-std::optional<bool> sniff_robot(std::string_view bytes, const std::filesystem::path &path,
-                                log_sink &log)
-{
-    pugi::xml_document probe;
-    const unsigned flags = pugi::parse_default | pugi::parse_comments | pugi::parse_ws_pcdata;
-    const pugi::xml_parse_result parsed = probe.load_buffer(bytes.data(), bytes.size(), flags);
-    if(!parsed)
-    {
-        log.log(level::error, std::string("urdf parse error: ") + parsed.description());
-        return std::nullopt;
-    }
-    const pugi::xml_node root = first_element(probe);
-    if(std::string_view(root.name()) != "robot")
-    {
-        log.log(level::error, detail::node_location(root, bytes, path),
-                "expected a <robot> root element, found <" + std::string(root.name()) + ">");
-        return std::nullopt;
-    }
-    return declares_xacro(root);
-}
-
-model<double> drive_load(const std::filesystem::path &path, const load_options &opts,
-                         source_stack &sources, log_sink &log)
-{
-    world_recorder recorder(log, opts.topology);
-
-    const std::optional<std::string> bytes = read_file(path);
-    if(!bytes)
-    {
-        log.log(level::error, source_location{ path, 0, 0 }, "cannot open input file");
-        return recorder.result();
-    }
-
-    const std::optional<bool> expandable = sniff_robot(*bytes, path, log);
-    if(!expandable)
-        return recorder.result();
-
-    core_evaluator eval;
-    parse_context ctx{ sources, eval, log, opts.on_missing, opts.topology, opts.materials,
-                       opts.strict, path };
-    drive(*bytes, path, *expandable, opts, ctx, recorder);
-    return recorder.result();
-}
 
 source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_sink &log)
 {
@@ -143,22 +28,26 @@ source_stack build_sources(const std::vector<std::filesystem::path> &roots, log_
 
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts, log_sink &log)
+expected<load_result, load_error> load(const std::filesystem::path &path,
+                                       const load_options &opts, log_sink &log)
 {
-    source_stack sources = build_sources(opts.package_roots, log);
-    return drive_load(path, opts, sources, log);
+    capturing_log_sink capture(log);
+    source_stack sources = build_sources(opts.package_roots, capture);
+    return load(path, opts, sources, capture);
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts,
-                   source_stack &sources, log_sink &log)
+expected<load_result, load_error> load(const std::filesystem::path &path,
+                                       const load_options &opts, source_stack &sources,
+                                       capturing_log_sink &log)
 {
-    return drive_load(path, opts, sources, log);
+    capture_window window(log);
+    return detail::drive_load(path, opts, sources, window);
 }
 
-model<double> load(const std::filesystem::path &path, const load_options &opts)
+expected<load_result, load_error> load(const std::filesystem::path &path, const load_options &opts)
 {
-    log_sink_s stderr_sink(std::cerr);
-    return load(path, opts, stderr_sink);
+    log_sink silent;
+    return load(path, opts, silent);
 }
 
 }

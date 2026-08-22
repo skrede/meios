@@ -1,0 +1,120 @@
+#ifndef HPP_GUARD_MEIOS_UNIT_EVAL_PYTHON_FIXTURE_H
+#define HPP_GUARD_MEIOS_UNIT_EVAL_PYTHON_FIXTURE_H
+
+#include <meios/eval/python_evaluator.h>
+
+#include <meios/xacro.h>
+#include <meios/io/source_stack.h>
+
+#include <meios/diagnostic/diagnostic_code.h>
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
+#include <cstddef>
+#include <fstream>
+#include <utility>
+#include <optional>
+#include <filesystem>
+#include <string_view>
+
+namespace
+{
+
+std::optional<std::string> evaluate(std::string_view expr, const meios::eval_scope &scope)
+{
+    meios::python_evaluator evaluator;
+    meios::log_sink silent;
+    return evaluator.eval_to_text(expr, scope, silent).text;
+}
+
+struct tally
+{
+    int errors{ 0 };
+    std::string last;
+    std::string every;
+
+    void operator()(meios::level lvl, const std::string &message)
+    {
+        if(lvl != meios::level::error)
+            return;
+        ++errors;
+        last = message;
+        every += message + '\n';
+    }
+
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
+    {
+        (*this)(lvl, message);
+    }
+
+    // A coded, located diagnostic is recorded in the shape the command line renders, so a case
+    // can pin the position and the typed code alongside the text without a second channel.
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &at,
+                    const std::string &message)
+    {
+        (*this)(lvl, meios::to_string(at) + ": (" + std::string(meios::to_string(code)) + ") " + message);
+    }
+};
+
+using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
+struct outcome
+{
+    expansion_result expanded;
+    int errors;
+    std::string reported;
+};
+
+struct fixed_text final : meios::text_resource_loader::fetcher
+{
+    explicit fixed_text(std::string text) : m_text(std::move(text)) {}
+
+    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    {
+        return m_text;
+    }
+
+    std::string m_text;
+};
+
+void install_yaml(meios::eval_scope &scope, std::string text)
+{
+    scope.install_text_loader(meios::text_resource_loader{ std::make_unique<fixed_text>(std::move(text)) });
+}
+
+outcome run(std::string_view source, meios::eval_policy policy,
+            const std::shared_ptr<meios::evaluator_handle> &backend,
+            std::optional<std::string> yaml = std::nullopt)
+{
+    tally counts;
+    meios::log_sink_f sink{ std::ref(counts) };
+    meios::eval_scope scope;
+    if(yaml)
+        install_yaml(scope, std::move(*yaml));
+    meios::source_stack sources;
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
+                                         meios::expansion_limits{}, policy, backend, sink);
+    return outcome{ std::move(out), counts.errors, std::move(counts.every) };
+}
+
+constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xacro\">";
+
+std::string span_document(std::string_view inner)
+{
+    return std::string(header) + "<l>" + std::string(inner) + "</l></robot>";
+}
+
+// Only a resolved expansion has a document; asking whether a span survived a refused one
+// is asking a question the error arm cannot answer, so the query says so loudly.
+bool leaves(const outcome &result, std::string_view span)
+{
+    REQUIRE(result.expanded);
+    return result.expanded->document.find(span) != std::string::npos;
+}
+
+}
+
+#endif

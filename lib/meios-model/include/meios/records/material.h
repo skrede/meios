@@ -22,6 +22,7 @@ struct material
     std::string name;
     std::optional<rgba<Scalar>> color;
     std::optional<std::string> texture;
+    std::optional<std::string> resolved_texture;
 };
 
 }

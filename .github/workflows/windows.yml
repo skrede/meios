@@ -4,7 +4,7 @@ on:
   push:
     branches: [master, develop, 'milestone/**']
   pull_request:
-    branches: [master, develop]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -33,6 +33,214 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Focus text reader tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^text_reader\.' -C Release"
+          $discovery = & ctest -N -R '^text_reader\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No text reader tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^text_reader\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^text_reader\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus operation failure tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^operation_failure\.' -C Release"
+          $discovery = & ctest -N -R '^operation_failure\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No operation failure tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^operation_failure\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^operation_failure\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus YAML acquisition tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^yaml_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^yaml_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No YAML acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^yaml_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^yaml_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus source lookup tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^io_source_lookup\.' -C Release"
+          $discovery = & ctest -N -R '^io_source_lookup\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No source lookup tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^io_source_lookup\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^io_source_lookup\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus load acquisition tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^load_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^load_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No load acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^load_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^load_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch setup tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_setup\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_setup\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch setup tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_setup\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_setup\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch publish tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_publish\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_publish\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch publish tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_publish\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_publish\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Which branch a rename over a held-open destination takes is a native fact this project has
+      # measured on POSIX only. The case prints the branch it saw, and only a verbose run keeps that
+      # print when the case passes, so this step exists to retain the transcript rather than to check
+      # anything the step above does not already check.
+      - name: Record the held-open replacement branch
+        working-directory: build
+        shell: pwsh
+        run: |
+          $selector = 'held open'
+          Write-Host "ctest -N -R '$selector' -C Release"
+          $discovery = & ctest -N -R $selector -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No held-open replacement case discovered" }
+          Write-Host "ctest -V --no-tests=error -R '$selector' -C Release --timeout 60"
+          & ctest -V --no-tests=error -R $selector -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch replace tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_replace\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_replace\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch replace tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_replace\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_replace\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # The scratch denial and symlinked stems register only where symbolic links exist, so this
+      # job focuses neither: a step that discovered nothing would fail it by design.
+      - name: Focus scratch alias tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_alias\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_alias\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch alias tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_alias\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_alias\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # The first three replace the global allocation functions and the fourth carries a
+      # volume-sensitive guard, so all four have a registration decided by something other than the
+      # source. A stem that condition drops leaves a green suite behind it.
+      - name: Focus scratch exhaustion tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_exhaustion\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_exhaustion\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch exhaustion tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_exhaustion\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_exhaustion\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch teardown tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_teardown\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_teardown\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch teardown tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_teardown\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_teardown\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scratch foreign tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_foreign\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_foreign\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch foreign tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scratch_foreign\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scratch_foreign\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Verbose rather than --output-on-failure: this stem's whole value is that its guard fired on a
+      # volume that folds, and a passing case's transcript is the only place that is visible.
+      - name: Focus scratch case-folding tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scratch_case_fold\.' -C Release"
+          $discovery = & ctest -N -R '^scratch_case_fold\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scratch case-folding tests discovered" }
+          Write-Host "ctest -V --no-tests=error -R '^scratch_case_fold\.' -C Release --timeout 60"
+          & ctest -V --no-tests=error -R '^scratch_case_fold\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60
@@ -71,6 +279,111 @@ jobs:
       - name: Run consumer test
         run: build-consumer/Release/integration_test.exe
 
+      - name: Build and run the installed resource consumer
+        run: |
+          cmake examples/install_consumer -B build-resource-consumer -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;${{ github.workspace }}/deps" `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/resource-consumer-install"
+          cmake --build build-resource-consumer --config Release
+          cmake --install build-resource-consumer --config Release
+          & "${{ github.workspace }}/resource-consumer-install/bin/install_consumer.exe"
+
+  # The pinned expression-valued description was kept out of the install-consumer
+  # legs because the only evaluator that could expand it forced the project's own
+  # install off, and those legs need the install. It needs that evaluator no
+  # longer, so a staged prefix can carry it and a program that builds none of the
+  # library can assert the model it received.
+  clean-consumer:
+    runs-on: windows-2022
+    name: clean consumer (pinned expression-valued description, both acquisition routes)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -A x64 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build --config Release
+          cmake --install pugixml-build --config Release
+
+      - name: Build and install
+        run: |
+          cmake . -B build -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/install" `
+            -DMEIOS_BUILD_TESTS=ON `
+            -DMEIOS_FETCH_CORPUS=ON `
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF `
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON
+          cmake --build build --config Release
+          cmake --install build --config Release
+
+      - name: Build the consumer against the staged prefix
+        run: |
+          $ws = "${{ github.workspace }}".Replace('\', '/')
+          $corpus = "$ws/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-installed -A x64 `
+            -DCMAKE_PREFIX_PATH="$ws/install;$ws/deps" `
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" `
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" `
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" `
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" `
+            -DMEIOS_CONSUMER_TESTS_DIR="$ws/tests"
+          cmake --build build-consumer-installed --config Release
+
+      # A backslash path reaches the generated sub-build as CMake code, where a segment such as
+      # \a reads as an invalid character escape, so the workspace is spelled with forward slashes.
+      - name: Build the consumer against the working tree
+        run: |
+          $ws = "${{ github.workspace }}".Replace('\', '/')
+          $corpus = "$ws/build/_meios_corpus_packages"
+          cmake tests/integration/consumer -B build-consumer-fetched -A x64 `
+            -DCMAKE_PREFIX_PATH="$ws/deps" `
+            -DMEIOS_CONSUMER_SOURCE_DIR="$ws" `
+            -DMEIOS_EVAL_PYTHON_SUPPORT=OFF `
+            -DCMAKE_DISABLE_FIND_PACKAGE_Python3=ON `
+            -DMEIOS_CONSUMER_UR3E_DOCUMENT="$corpus/ur_description/urdf/ur.urdf.xacro" `
+            -DMEIOS_CONSUMER_UR3E_PACKAGE_ROOT="$corpus" `
+            -DMEIOS_CONSUMER_KR6_DOCUMENT="$corpus/kuka_experimental/kuka_kr6_support/urdf/kr6r900sixx.xacro" `
+            -DMEIOS_CONSUMER_KR6_PACKAGE_ROOT="$corpus/kuka_experimental" `
+            -DMEIOS_CONSUMER_TESTS_DIR="$ws/tests"
+          cmake --build build-consumer-fetched --config Release
+
+      # ctest reports success when a -R filter selects nothing, so each selection is
+      # asserted non-empty before it runs; an out-of-tree build tree is exactly where
+      # a gate that gates nothing would go unnoticed. Both routes are held to the same
+      # count, so a route that quietly registered less than the other reddens. bash,
+      # not pwsh, so this step reuses the same idiom linux.yml/macos.yml use.
+      - name: Run both routes
+        shell: bash
+        run: |
+          expected=0
+          for tree in build-consumer-installed build-consumer-fetched; do
+            listed=$(ctest --test-dir "$tree" -N -R 'universal_robots|kr6' -C Release)
+            registered=$(printf '%s\n' "$listed" | grep -c 'Test *#' || true)
+            if [ "$registered" -eq 0 ]; then
+              echo "$tree registered no native load test"
+              exit 1
+            fi
+            if [ "$expected" -eq 0 ]; then
+              expected=$registered
+            elif [ "$registered" -ne "$expected" ]; then
+              echo "$tree registered $registered test(s), the other route registered $expected"
+              exit 1
+            fi
+            echo "$tree registered $registered test(s)"
+            ctest --test-dir "$tree" -R 'universal_robots|kr6' -C Release --output-on-failure --no-tests=error
+          done
+
+      # A claim about an absence nobody ran a command for is not evidence, so the assertions live
+      # in a script the repository can syntax-check and fire against deliberately wrong inputs.
+      - name: Read the executables back
+        run: |
+          bash .github/scripts/read_back_consumer.sh `
+            "${{ github.workspace }}/install" `
+            build-consumer-installed build-consumer-fetched
+
   enrichments:
     runs-on: windows-2022
     name: enrichments (scanners + archive-zip + ros)
@@ -85,6 +398,8 @@ jobs:
           cmake --build pugixml-build --config Release
           cmake --install pugixml-build --config Release
 
+      # Building examples/ fetches the pinned upstream description the
+      # manifest-resolution example resolves against, so this cell needs the network.
       - name: Configure
         run: |
           cmake . -B build -A x64 `
@@ -92,18 +407,94 @@ jobs:
             -DMEIOS_BUILD_TESTS=ON `
             -DMEIOS_CMAKE_FETCH_DEPS=ON `
             -DMEIOS_WERROR=ON `
-            -DMEIOS_BUILD_SCAN_OBJ=ON `
-            -DMEIOS_BUILD_SCAN_COLLADA=ON `
-            -DMEIOS_BUILD_SCAN_STL=ON `
-            -DMEIOS_BUILD_SCAN_GLTF=ON `
-            -DMEIOS_BUILD_ARCHIVE_ZIP=ON `
-            -DMEIOS_BUILD_ROS=ON
+            -DMEIOS_SCAN_OBJ_SUPPORT=ON `
+            -DMEIOS_SCAN_COLLADA_SUPPORT=ON `
+            -DMEIOS_SCAN_STL_SUPPORT=ON `
+            -DMEIOS_SCAN_GLTF_SUPPORT=ON `
+            -DMEIOS_ARCHIVE_ZIP_SUPPORT=ON `
+            -DMEIOS_BUILD_EXAMPLES=ON `
+            -DMEIOS_ROS_PACKAGE_SUPPORT=ON
 
       - name: Build
         run: cmake --build build --config Release
 
+      # This is the only cell that compiles the enrichment-gated examples at all, and a -R filter
+      # selecting nothing exits 0, so the corpus is asserted to register before it runs.
+      - name: Run examples
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^example_' -C Release"
+          $discovery = & ctest -N -R '^example_' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No examples discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus ROS source tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^ros_source\.' -C Release"
+          $discovery = & ctest -N -R '^ros_source\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No ROS source tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^ros_source\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^ros_source\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # The scanner stems register only where their module option is on, so a stem that
+      # quietly stopped registering would pass here as a green filtered run. Each is
+      # asserted to have discovered tests before its result is trusted.
+      - name: Focus scan_obj tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_obj\.' -C Release"
+          $discovery = & ctest -N -R '^scan_obj\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_obj tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_obj\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_obj\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scan_collada tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_collada\.' -C Release"
+          $discovery = & ctest -N -R '^scan_collada\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_collada tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_collada\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_collada\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus scan_gltf tests
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^scan_gltf\.' -C Release"
+          $discovery = & ctest -N -R '^scan_gltf\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No scan_gltf tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^scan_gltf\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^scan_gltf\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test
-        run: cd build && ctest -C Release --output-on-failure --timeout 60
+        run: cd build && ctest -C Release --output-on-failure --no-tests=error --timeout 60
 
   examples:
     runs-on: windows-2022
@@ -119,9 +510,12 @@ jobs:
           cmake --build pugixml-build --config Release
           cmake --install pugixml-build --config Release
 
-      # MEIOS_BUILD_EXAMPLES only gates enable_testing() at HEAD (no examples/
-      # subdir yet), so this cell configures + builds green now and gains teeth
-      # once Phase 14 lands the examples. All enrichments stay OFF.
+      # The examples cell builds examples/ with the enrichment options left at their
+      # defaults: the flagship (core+urdf only) must compile and every gated example
+      # must gate itself out. Manifest resolution is the one enrichment whose option
+      # defaults ON, so its example builds here too, and building examples/ fetches
+      # the pinned upstream description that example resolves against — this cell
+      # needs the network.
       - name: Configure
         run: |
           cmake . -B build -A x64 `
@@ -132,6 +526,50 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      # A -R filter selecting nothing exits 0, so the corpus is asserted to register before it
+      # runs; here that proves the ungated examples survive an all-enrichments-OFF configure.
+      - name: Run examples
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^example_' -C Release"
+          $discovery = & ctest -N -R '^example_' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No examples discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^example_' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  docs:
+    runs-on: windows-2022
+    name: docs (MEIOS_BUILD_DOCS compile-gate)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -A x64 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build --config Release
+          cmake --install pugixml-build --config Release
+
+      # The gate compiles the documented snippets against the build-tree
+      # meios::urdf target with every enrichment OFF, so it exercises the core
+      # consumer surface and FATALs at configure on a zero or malformed snippet.
+      - name: Configure
+        run: |
+          cmake . -B build -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" `
+            -DMEIOS_CMAKE_FETCH_DEPS=ON `
+            -DMEIOS_WERROR=ON `
+            -DMEIOS_BUILD_DOCS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --target doc_snippets
 
   tools:
     runs-on: windows-2022
@@ -161,6 +599,36 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release
+
+      - name: Focus operation adapter tests
+        if: hashFiles('tests/unit/operation_adapter_test.cpp') != ''
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^operation_adapter\.' -C Release"
+          $discovery = & ctest -N -R '^operation_adapter\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No operation adapter tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^operation_adapter\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^operation_adapter\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Focus CLI acquisition tests
+        if: hashFiles('tests/unit/cli_acquisition_test.cpp') != ''
+        working-directory: build
+        shell: pwsh
+        run: |
+          Write-Host "ctest -N -R '^cli_acquisition\.' -C Release"
+          $discovery = & ctest -N -R '^cli_acquisition\.' -C Release
+          $discovery | ForEach-Object { Write-Host $_ }
+          $count = @($discovery | Select-String -Pattern 'Test #[0-9]+:').Count
+          Write-Host "Discovered tests: $count"
+          if ($count -eq 0) { throw "No CLI acquisition tests discovered" }
+          Write-Host "ctest --output-on-failure --no-tests=error -R '^cli_acquisition\.' -C Release --timeout 60"
+          & ctest --output-on-failure --no-tests=error -R '^cli_acquisition\.' -C Release --timeout 60
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --timeout 60

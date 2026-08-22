@@ -85,7 +85,8 @@ command_spec deps_command()
 {
     return command_spec{ "deps", "deps",
                          "List the assets the model references.",
-                         { package_path_flag() }, { model_positional() } };
+                         { package_path_flag(), eval_backend_flag(), eval_policy_flag() },
+                         { model_positional(), arg_overrides_positional() } };
 }
 
 command_spec args_command()
@@ -98,10 +99,14 @@ command_spec args_command()
 command_spec resolve_command()
 {
     return command_spec{ "resolve", "resolve",
-                         "Resolve a link or joint to its resolved definition.",
+                         "Resolve an asset reference (package://, relative, absolute or "
+                         "file://) to its on-disk path; a relative one is measured against "
+                         "the model document's directory, and an unreachable path or "
+                         "unsupported scheme is refused.",
                          { package_path_flag() },
                          { model_positional(),
-                           { "target", "Link or joint name to resolve.", true } } };
+                           { "target", "Asset reference to resolve: package://<pkg>/<rel>, a "
+                                       "relative or absolute path, or a file:// URI.", true } } };
 }
 
 command_spec completion_command()

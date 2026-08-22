@@ -1,8 +1,11 @@
 #include "meios/xacro/arg_scan.h"
 #include "meios/xacro/budget.h"
 
+#include "meios/detail/text_location.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
@@ -94,20 +97,22 @@ void visit_element(pugi::xml_node node, std::vector<arg_declaration> &out)
         scan_text(attr.value(), out);
 }
 
-bool walk(pugi::xml_node node, std::size_t ceiling, std::size_t &work,
-          std::vector<arg_declaration> &out, log_sink &log)
+bool walk(pugi::xml_node node, std::string_view source, const std::filesystem::path &path,
+          std::size_t ceiling, std::size_t &work, std::vector<arg_declaration> &out, log_sink &log)
 {
     for(pugi::xml_node child : node.children())
     {
         if(++work > ceiling)
         {
-            log.log(level::error, "arg scan budget exceeded");
+            log.log(level::error, diagnostic_code::expansion_budget_exceeded,
+                    detail::offset_location(source, child.offset_debug(), path),
+                    "arg scan budget exceeded");
             return false;
         }
         if(child.type() == pugi::node_element)
         {
             visit_element(child, out);
-            if(!walk(child, ceiling, work, out, log))
+            if(!walk(child, source, path, ceiling, work, out, log))
                 return false;
         }
         else if(child.type() == pugi::node_pcdata || child.type() == pugi::node_cdata)
@@ -118,26 +123,38 @@ bool walk(pugi::xml_node node, std::size_t ceiling, std::size_t &work,
     return true;
 }
 
+// The bare string_view overload has no document path (pre-load completion scans),
+// so its emits carry an empty path with a real offset-derived line:col; the
+// path-taking overload passes its real path through here.
+std::vector<arg_declaration> scan_args_impl(std::string_view source,
+                                            const std::filesystem::path &path, log_sink &log)
+{
+    std::vector<arg_declaration> out;
+    pugi::xml_document doc;
+    pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
+    if(!parsed)
+    {
+        log.log(level::error, diagnostic_code::xacro_parse_error,
+                detail::offset_location(source, parsed.offset, path),
+                "arg scan: document did not parse");
+        return out;
+    }
+    std::size_t work = 0;
+    walk(doc, source, path, expansion_limits{}.work, work, out, log);
+    return out;
+}
+
 }
 
 std::vector<arg_declaration> scan_args(std::string_view source, log_sink &log)
 {
-    std::vector<arg_declaration> out;
-    pugi::xml_document doc;
-    if(!doc.load_buffer(source.data(), source.size()))
-    {
-        log.log(level::error, "arg scan: document did not parse");
-        return out;
-    }
-    std::size_t work = 0;
-    walk(doc, expansion_limits{}.work, work, out, log);
-    return out;
+    return scan_args_impl(source, std::filesystem::path{}, log);
 }
 
 std::vector<arg_declaration> scan_args(const std::filesystem::path &path, log_sink &log)
 {
     const std::string bytes = read_file(path);
-    return scan_args(std::string_view(bytes), log);
+    return scan_args_impl(std::string_view(bytes), path, log);
 }
 
 }

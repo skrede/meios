@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pkg_a</name>
+  <version>1.0.0</version>
+  <description>Package whose mesh was never smudged, so every acquisition of it must refuse.</description>
+  <maintainer email="dev@example.invalid">meios</maintainer>
+  <license>Apache-2.0</license>
+</package>

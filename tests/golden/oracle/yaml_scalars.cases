@@ -1,0 +1,34 @@
+# source <TAB> resolved kind <TAB> rendered text. The source is the
+# scalar exactly as written after the key; an empty source column is a
+# key written with no value at all.
+true	boolean	True
+false	boolean	False
+yes	boolean	True
+no	boolean	False
+y	string	y
+n	string	n
+'true'	string	true
+"1"	string	1
+1e5	string	1e5
+1.5e3	string	1.5e3
+1.0e+5	float	100000.0
+010	integer	8
+1_000	integer	1000
+42	integer	42
+3.5	float	3.5
+	null	None
+~	null	None
+null	null	None
+hello	string	hello
+!degrees -360.0	float	-6.283185307179586
+!degrees -180.0	float	-3.141592653589793
+!degrees -90	float	-1.5707963267948966
+!degrees 90	float	1.5707963267948966
+!degrees 120.0	float	2.0943951023931953
+!degrees 150.0	float	2.6179938779914944
+!degrees 180	float	3.141592653589793
+!degrees 180.0	float	3.141592653589793
+!degrees 210.0	float	3.6651914291880923
+!degrees 240.0	float	4.1887902047863905
+!degrees 300.0	float	5.235987755982989
+!degrees 360.0	float	6.283185307179586

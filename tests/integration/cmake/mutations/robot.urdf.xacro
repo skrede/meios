@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<robot name="meios_harness_mutated" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="base"/>
+</robot>

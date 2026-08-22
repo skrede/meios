@@ -4,9 +4,11 @@
 #include "meios/urdf/policy.h"
 
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/completeness.h"
 #include "meios/diagnostic/missing_asset.h"
 #include "meios/diagnostic/topology_policy.h"
 
+#include <vector>
 #include <filesystem>
 
 namespace meios
@@ -25,6 +27,13 @@ struct parse_context
     material_policy materials;
     strictness      strict;
     std::filesystem::path document;
+    // A policy set to skip suppresses the diagnostic, never the drop it reports. The claims
+    // are derived from the emitted diagnostics, so a suppressed one records what it would
+    // have withdrawn here instead and the derivation withdraws it all the same.
+    completeness withheld;
+    // The directories a consumer granted authority over, which together with the input
+    // document's own directory are the only places an asset path is allowed to reach.
+    std::vector<std::filesystem::path> package_roots;
 };
 
 }

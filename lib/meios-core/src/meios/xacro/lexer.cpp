@@ -4,8 +4,11 @@
 #include "meios/xacro/detail/numeric.h"
 
 #include <cctype>
-#include <cstddef>
+#include <string>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -32,6 +35,7 @@ token classify_name(std::string_view word)
     if(word == "not")   return token{ token_kind::kw_not, word };
     if(word == "if")    return token{ token_kind::kw_if, word };
     if(word == "else")  return token{ token_kind::kw_else, word };
+    if(word == "in")    return token{ token_kind::kw_in, word };
     return token{ token_kind::name, word };
 }
 
@@ -57,11 +61,29 @@ token_kind one_char_kind(char c)
         case '%': return token_kind::percent;
         case '(': return token_kind::lparen;
         case ')': return token_kind::rparen;
+        case '[': return token_kind::lbracket;
+        case ']': return token_kind::rbracket;
         case ',': return token_kind::comma;
+        case '.': return token_kind::dot;
         case '<': return token_kind::less;
         case '>': return token_kind::greater;
+        // The two-character probe in push_symbol runs before this table, which is what keeps
+        // "==" one token now that a bare "=" is one of its own.
+        case '=': return token_kind::assign;
     }
     return token_kind::error;
+}
+
+std::optional<value> number_leaf(std::string_view text, bool is_float)
+{
+    bool ok = false;
+    if(!is_float)
+    {
+        const std::int64_t number = parse_int(text, ok);
+        return ok ? std::optional<value>(value{ number }) : std::nullopt;
+    }
+    const double number = parse_double(text, ok);
+    return ok ? value::make_real(number) : std::nullopt;
 }
 
 std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> &out)
@@ -76,10 +98,35 @@ std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> 
         else if(!std::isdigit(static_cast<unsigned char>(c)) && !exp_sign) break;
     }
     std::string_view text = src.substr(i, j - i);
-    bool ok = false;
-    value leaf = is_float ? value{ parse_double(text, ok) } : value{ parse_int(text, ok) };
-    out.push_back(token{ ok ? token_kind::number : token_kind::error, text, leaf });
+    const std::optional<value> leaf = number_leaf(text, is_float);
+    out.push_back(token{ leaf ? token_kind::number : token_kind::error, text,
+                         leaf.value_or(value{}) });
     return j;
+}
+
+// Only the single-quoted spelling is measured upstream, so the double-quoted one and a
+// backslash escape refuse as unsupported rather than being given an unmeasured meaning; an
+// unterminated literal is a lexical fault and refuses as an error. Every refusal consumes
+// the rest of the source, because there is no resynchronization point after one.
+std::size_t push_string(std::string_view src, std::size_t i, std::vector<token> &out)
+{
+    if(src[i] == '"')
+    {
+        out.push_back(token{ token_kind::unsupported, src.substr(i, 1) });
+        return src.size();
+    }
+    std::size_t j = i + 1;
+    while(j < src.size() && src[j] != '\'' && src[j] != '\\') ++j;
+    if(j == src.size() || src[j] == '\\')
+    {
+        const bool unterminated = j == src.size();
+        out.push_back(token{ unterminated ? token_kind::error : token_kind::unsupported,
+                             src.substr(i) });
+        return src.size();
+    }
+    out.push_back(token{ token_kind::string, src.substr(i, j - i + 1),
+                         value{ std::string(src.substr(i + 1, j - i - 1)) } });
+    return j + 1;
 }
 
 std::size_t push_name(std::string_view src, std::size_t i, std::vector<token> &out)
@@ -112,10 +159,11 @@ std::vector<token> tokenize(std::string_view source)
             || (c == '.' && i + 1 < source.size()
                 && std::isdigit(static_cast<unsigned char>(source[i + 1])) != 0);
         if(std::isspace(static_cast<unsigned char>(c)) != 0) { ++i; continue; }
-        if(starts_number)      { i = push_number(source, i, tokens); continue; }
-        if(is_name_start(c))   { i = push_name(source, i, tokens); continue; }
+        if(starts_number)              { i = push_number(source, i, tokens); continue; }
+        if(is_name_start(c))           { i = push_name(source, i, tokens); continue; }
+        if(c == '\'' || c == '"')      { i = push_string(source, i, tokens); continue; }
         std::size_t consumed = push_symbol(source, i, tokens);
-        if(consumed == 0) { tokens.push_back(token{ token_kind::unsupported, source.substr(i, 1) }); return tokens; }
+        if(consumed == 0) { tokens.push_back(token{ token_kind::unsupported, source.substr(i, 1) }); break; }
         i += consumed;
     }
     tokens.push_back(token{ token_kind::end, {} });

@@ -1,0 +1,59 @@
+# expr <TAB> verdict <TAB> rule <TAB> note. The verdict is refuse or allow; an allowing row's rule is a bare -.
+# A refusing row's rule is exactly one of the four the evaluator emits: dunder-identifier,
+# format-traversal, non-allowlisted-builtin, uncontained-yaml-path.
+# The withheld set is dir(builtins) minus the value-level allowlist minus the mathematics names, and pow
+# is the only name those last two share, so pow reaches the description as math.pow rather than refusing.
+# Import and process reach.
+__import__('os').getcwd()	refuse	dunder-identifier	
+(lambda: __import__('os').getcwd())()	refuse	dunder-identifier	The lambda body is a nested code object a top-level name-table scan never sees; the tree walk descends into it.
+[__import__('os').getcwd() for i in range(1)]	refuse	dunder-identifier	
+__import__('subprocess').run(['id'])	refuse	dunder-identifier	
+# File access.
+open('/etc/passwd')	refuse	non-allowlisted-builtin	
+open('/etc/passwd').read()	refuse	non-allowlisted-builtin	
+# Dunder traversal.
+().__class__	refuse	dunder-identifier	
+().__class__.__bases__	refuse	dunder-identifier	
+().__class__.__bases__[0].__subclasses__()	refuse	dunder-identifier	
+load_yaml.__globals__	refuse	dunder-identifier	Reaches a live module without naming any builtin, so the allowlist alone would not close it.
+# Traversal written inside a string constant.
+'{0.__globals__}'.format(load_yaml)	refuse	format-traversal	The dunder here sits inside a string constant the walk deliberately never inspects, so the identifier rule cannot see it and the formatting primitive itself is refused instead.
+'{0.__globals__[builtins]}'.format(load_yaml)	refuse	format-traversal	
+'{0.__self__.__loader__}'.format(sqrt)	refuse	format-traversal	
+'{0.__self__}'.format_map({0: len})	refuse	format-traversal	
+str.format('{0.__self__}', len)	refuse	format-traversal	Reaches the method through the allowlisted string type rather than through a literal receiver.
+# Conversion specifiers.
+f'{x!r}'	refuse	non-allowlisted-builtin	The conversion field calls a withheld builtin the walk sees no identifier for, so the specifier is read as that builtin's name.
+f'{x!a}'	refuse	non-allowlisted-builtin	
+f'{x!s}'	allow	-	The string type is allowlisted, so this conversion names nothing withheld.
+f'{v:.3f}'	allow	-	
+'%r' % x	allow	-	Percent formatting performs no attribute access and no traversal, and its own subscript form indexes only a mapping the caller supplied, so there is nothing for the traversal rule to close; refusing it would widen the restriction to the shape of a claim rather than the shape of a reach.
+# Computed attribute access.
+getattr(x, '_' + '_class__')	refuse	non-allowlisted-builtin	The attribute name is built at runtime, so no name-based check can see it; only the builtin's absence closes it.
+# Other withheld builtins.
+type(1)	refuse	non-allowlisted-builtin	
+vars()	refuse	non-allowlisted-builtin	
+dir()	refuse	non-allowlisted-builtin	
+globals()	refuse	non-allowlisted-builtin	
+eval('1')	refuse	non-allowlisted-builtin	
+exec('1')	refuse	non-allowlisted-builtin	
+compile('1','','eval')	refuse	non-allowlisted-builtin	
+input()	refuse	non-allowlisted-builtin	
+# Uncontained resource paths.
+load_yaml('/etc/passwd')	refuse	uncontained-yaml-path	
+load_yaml('../../../etc/passwd')	refuse	uncontained-yaml-path	
+# Parity rows that must keep working.
+sqrt(2)	allow	-	
+radians(180)	allow	-	
+[i*i for i in range(3)][2]	allow	-	
+'link_' + name	allow	-	
+2**64	allow	-	
+min(1,2)	allow	-	
+abs(-3.5)	allow	-	
+pow(2,3)	allow	-	The one name the allowlist and the mathematics names share; it resolves as math.pow and so returns a float.
+load_yaml('config.yaml')['arm']['dof']	allow	-	
+'a literal containing __import__'	allow	-	The walk never inspects a string constant, which is what makes this row pass and what forced the formatting traversals above to be closed by a rule of their own.
+# Refusals deliberately accepted as false.
+'{}'.format(2)	refuse	format-traversal	An accepted cost: the innocent use of the formatting primitive on a plain value refuses, because the primitive is refused by spelling rather than by what it is asked to reach.
+format	refuse	format-traversal	An accepted cost at the evaluator seam: the bare-name branch is a spelling refusal like the identifier rule, not a namespace lookup, and making it conditional on what the scope binds would read as a lookup and invite a future exemption. A document is narrower, because the substitution layer answers a lone identifier bound to a string from the scope without ever calling the evaluator, so ${format} against a string property expands rather than refusing.
+'mesh.' + format	refuse	format-traversal	This is where the accepted cost actually reaches a description: the moment a property named format appears in a composed expression the substitution layer stops answering it from the scope and the traversal rule refuses.

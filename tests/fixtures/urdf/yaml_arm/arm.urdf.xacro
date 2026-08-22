@@ -1,13 +1,12 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="yaml_arm">
-  <xacro:arg name="config_path" default=""/>
-  <xacro:property name="config_file" value="$(arg config_path)"/>
-  <xacro:property name="config" value="${xacro.load_yaml(config_file)}"/>
+  <xacro:property name="config" value="${xacro.load_yaml('config.yaml')}"/>
   <xacro:property name="joints" value="${config['joints']}"/>
   <xacro:property name="shoulder" value="${joints['shoulder']}"/>
 
   <link name="base_link"/>
   <link name="shoulder_link"/>
+  <link name="elbow_link"/>
 
   <joint name="shoulder_joint" type="revolute">
     <parent link="base_link"/>
@@ -16,5 +15,14 @@
     <axis xyz="0 0 1"/>
     <limit lower="${shoulder['lower']}" upper="${shoulder['upper']}"
            effort="${shoulder['effort']}" velocity="${shoulder['velocity']}"/>
+  </joint>
+
+  <joint name="elbow_joint" type="revolute">
+    <parent link="shoulder_link"/>
+    <child link="elbow_link"/>
+    <origin xyz="${config['segments'][1].length} 0 ${joints.elbow.height}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="${joints.elbow.lower}" upper="${joints.elbow.upper}"
+           effort="${joints.elbow.effort}" velocity="${joints.elbow.velocity}"/>
   </joint>
 </robot>
