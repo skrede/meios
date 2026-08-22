@@ -316,7 +316,8 @@ every time. Their expression content is arithmetic. Two of the richest spellings
 a cylindrical inertia and a solid-cylinder inertia — are already committed rows of this project's
 expression record, character for character.
 
-None of these ten is promoted by loading. A candidate this page records as unmaintained stays
+These nine repositories carry ten verdicts, because one of them was driven at two entry points that
+disagree. None of the ten is promoted by loading. A candidate this page records as unmaintained stays
 unmaintained; a candidate recorded with a last-push date keeps it; and none of them is recorded as
 carrying a construct, because none was observed to carry one.
 

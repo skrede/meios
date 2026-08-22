@@ -47,6 +47,8 @@ std::vector<row> document_rows()
              { "xacro.load_yaml('aux.yaml')['a']", "a: &x 1\nb: *x\n", { "alias" } },
              { "xacro.load_yaml('aux.yaml')['a']['p']", "a: {<<: {p: 1}}\n", { "merge-key" } },
              { "xacro.load_yaml('aux.yaml')['a']", "a: 1\na: 2\n", { "duplicate-key" } },
+             { "xacro.load_yaml('aux.yaml')['b']['p']", "a: &x {p: 1}\nb:\n  <<: *x\n  p: 2\n",
+               { "alias", "merge-key" } },
              { "xacro.load_yaml('aux.yaml')['b']", "1: x\nb: 2\n", { "non-string-key" } },
              { "xacro.load_yaml('aux.yaml')['a']", "a: !degrees 90\n", { "unit-tag" } },
              { "xacro.load_yaml('aux.yaml').b", "b: 2\n", { "dotted-member" } },

@@ -8,6 +8,7 @@
 #include <yaml-cpp/anchor.h>
 #include <yaml-cpp/emitterstyle.h>
 
+#include <vector>
 #include <string>
 #include <cstddef>
 #include <utility>
@@ -89,24 +90,26 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag,
     m_frames.push_back(frame{ .listing = false, .at = mark, .anchor = anchor });
 }
 
+// Resolving the written entries alone says whether the document wrote one key twice. A merged
+// key the document also writes collapses under the same first-position, last-value rule, but
+// that collapse is merge precedence and is already marked as the merge; reading the extent of
+// the written entries on their own separates the two without a second resolver.
+bool wrote_one_key_twice(const std::vector<value::entry> &entries)
+{
+    return value::make_mapping(entries).size() != entries.size();
+}
+
 // Merged entries lead and the entries the document wrote follow, which is all the precedence
 // this builder states: the mapping constructor's first-position, last-value rule turns that
 // order into the resolution upstream produces.
-//
-// A mapping holding fewer entries than were placed into it is that rule having fired, read off
-// the extent rather than searched for, so the constructor stays the only resolver. A merge whose
-// key the document also writes reaches the same rule by the same route and is reported the same
-// way, because it is the same resolution and not a second one.
 void value_builder::OnMapEnd()
 {
     frame done = std::move(m_frames.back());
     m_frames.pop_back();
-    const std::size_t placed = done.merged.size() + done.entries.size();
-    done.merged.insert(done.merged.end(), done.entries.begin(), done.entries.end());
-    value made = value::make_mapping(std::move(done.merged));
-    if(made.size() != placed)
+    if(wrote_one_key_twice(done.entries))
         exercised(evaluator_construct::duplicate_key);
-    deliver(std::move(made), done.denoted + 1, done.anchor, done.at);
+    done.merged.insert(done.merged.end(), done.entries.begin(), done.entries.end());
+    deliver(value::make_mapping(std::move(done.merged)), done.denoted + 1, done.anchor, done.at);
 }
 
 // An empty document raises no event, so the null it stands for is made here rather than
