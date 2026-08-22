@@ -4,7 +4,7 @@ All notable, user-facing changes to meios are recorded here. The format follows 
 [Keep a Changelog](https://keepachangelog.com/). meios is in public preview: expect breaking
 changes onwards to a stable `v1.0.0` release.
 
-## Unreleased
+## v0.2.2
 
 ### Added
 
