@@ -307,7 +307,12 @@ can therefore carry a read the reference will refuse. The permissive direction i
 two facts here; what such a name binds is the second. An argument binds the characters its author
 wrote, so a bare name reading one reads text: `${not flag}` over a `false`-spelled default answers
 the truth of a non-empty string, not the truth of a boolean. Reach an argument through the `$(arg n)`
-command, or bind it to a property first, and both implementations agree.
+command and both implementations agree, so long as no property of that name has been written. Binding
+it to a property does *not* restore agreement here and is the second half of the same divergence: an
+argument and a property share one binding table on this side and are two contexts upstream, so a
+property written over an argument's name changes what `$(arg n)` answers here and changes nothing
+there. Measured: an argument defaulted to `A` with a property of the same name written `B` renders
+`Barm` here and `Aarm` upstream.
 
 **A `$(arg n)` standing above its own declaration resolves here and refuses upstream.** The main
 expansion pass is single-forward, so a pre-pass seeds every literal default a document declares
@@ -455,9 +460,9 @@ platforms. What no run covers is `GITHUB` combined with `SPARSE_PATHS`.
 
 **`MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing.** Forwarding a CA bundle to the download
 needs an origin served over TLS, which nothing offline can be. On a machine whose CMake ships
-without a trust store that variable is the documented way through. It is one of three items on this
-page carried by nothing at all — the other two are the silently ignored repeated element and the
-silently accepted empty fixed-length numeric attribute — and the index below says so for each.
+without a trust store that variable is the documented way through, and nothing here drives it. It is
+not the only claim on this page carried by nothing; the index below answers *Nothing* for each one it
+applies to, which is where to read them off rather than from a count in this sentence.
 
 **Flattening is not proven from an installed package.** That an installed meios carries acquisition
 and deployment to a `find_package` consumer is proven on all three platforms — the install-consumer
@@ -606,7 +611,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 |---|---|
 | The acquisition tests never reach the network | `tests/integration/cmake/meios_cmake_origin.cmake`, which builds every origin on local disk. That no transport failure is exercised is the absence that leaves. |
 | The `GITHUB` short form is exercised only through the examples | `cmake_declare_url_hash` and `cmake_declare_git_sparse` offline, and the example build behind `MEIOS_EXAMPLE_FETCH_NETWORK` for the rewrite. `GITHUB` beside `SPARSE_PATHS` is carried by nothing. |
-| `MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing | **Nothing.** No case, no row and no run: forwarding a CA bundle needs a TLS origin, which nothing offline can be. Two other entries here are carried by nothing in the same sense — the repeated element and the empty fixed-length numeric attribute — and the entry above names them rather than claiming to be alone. |
+| `MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing | **Nothing.** No case, no row and no run: forwarding a CA bundle needs a TLS origin, which nothing offline can be. |
 | Flattening is not proven from an installed package | `cmake_flatten_install_destination` and `cmake_flatten_install_component` install a flattened document; both reach the modules through the module path, which is what leaves the claim standing. |
 | `PACKAGE_PATH` precedence is reasoned about, not measured | `cmake_flatten_package_path_reaches_vendored_package` carries the adds-reach half. Two roots offering one package name is carried by nothing. |
 | Flattening with the Python backend is only really run on Linux | `cmake_flatten_eval_python_live` and `cmake_flatten_eval_python_statement` where the enrichment is built; `cmake_flatten_eval_python_refusal` where it is not. |

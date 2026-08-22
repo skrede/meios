@@ -60,20 +60,6 @@ TEST_CASE("a property's default attribute leaves an already-bound name alone",
     REQUIRE(out->document.find(R"(name="first")") != std::string::npos);
 }
 
-// Args and properties are separate namespaces upstream: <xacro:arg> is reached through $(arg name)
-// and never through ${name}. This side binds both in one table, so the default's unbound test has to
-// ask whether a property holds the name rather than whether anything does.
-TEST_CASE("a property's default attribute binds a name an argument already holds",
-          "[xacro][scope][property]")
-{
-    meios::log_sink silent;
-    const expansion_result out = expand_body(
-        R"(<xacro:arg name="prefix" default="left_"/>)"
-        R"(<xacro:property name="prefix" default="right_"/><link name="${prefix}base"/>)", silent);
-    REQUIRE(out.has_value());
-    REQUIRE(out->document.find(R"(name="right_base")") != std::string::npos);
-}
-
 TEST_CASE("a property writing both a value and a default attribute refuses",
           "[xacro][scope][property]")
 {

@@ -168,20 +168,14 @@ TEST_CASE("a ledger row's divergence column is checked in both directions", "[le
 TEST_CASE("entry points exercising the same constructs still pair one to one", "[ledger]")
 {
     const std::vector<oracle::row> rows = ledger();
+    REQUIRE_FALSE(rows.empty());
     std::vector<std::string> keys;
-    std::size_t shared = 0;
-    for(std::size_t one = 0; one < rows.size(); ++one)
+    for(const oracle::row &row : rows)
     {
-        for(std::size_t other = 0; other < rows.size(); ++other)
-            if(one != other
-               && rows[one].fields[exercised_constructs]
-                      == rows[other].fields[exercised_constructs])
-                ++shared;
-        CHECK(std::ranges::find(keys, rows[one].fields[entry_point]) == keys.end());
-        keys.push_back(rows[one].fields[entry_point]);
+        INFO("ledger row: " << row.fields[entry_point]);
+        CHECK(std::ranges::find(keys, row.fields[entry_point]) == keys.end());
+        keys.push_back(row.fields[entry_point]);
     }
-    INFO("rows sharing a construct set with another row: " << shared);
-    CHECK(keys.size() == rows.size());
 }
 
 TEST_CASE("each ledger row names the immutable revision the corpus fetches", "[ledger]")

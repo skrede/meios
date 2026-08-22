@@ -8,8 +8,8 @@
 #include <yaml-cpp/anchor.h>
 #include <yaml-cpp/emitterstyle.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 #include <cstddef>
 #include <utility>
 #include <optional>
@@ -90,6 +90,9 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag,
     m_frames.push_back(frame{ .listing = false, .at = mark, .anchor = anchor });
 }
 
+namespace
+{
+
 // Resolving the written entries alone says whether the document wrote one key twice. A merged
 // key the document also writes collapses under the same first-position, last-value rule, but
 // that collapse is merge precedence and is already marked as the merge; reading the extent of
@@ -97,6 +100,8 @@ void value_builder::OnMapStart(const YAML::Mark &mark, const std::string &tag,
 bool wrote_one_key_twice(const std::vector<value::entry> &entries)
 {
     return value::make_mapping(entries).size() != entries.size();
+}
+
 }
 
 // Merged entries lead and the entries the document wrote follow, which is all the precedence

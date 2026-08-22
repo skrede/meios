@@ -18,7 +18,6 @@
 #include <pugixml.hpp>
 
 #include <map>
-#include <set>
 #include <memory>
 #include <string>
 #include <vector>
@@ -124,12 +123,6 @@ struct expand_ctx
     std::size_t depth;
     std::map<std::string, macro_def> macros;
     std::map<std::string, block_arg> blocks;
-    // Args and properties share one binding table, so a name bound by <xacro:arg> is
-    // indistinguishable from a property by lookup alone. The reference keeps them apart, and
-    // <xacro:property default=> asks whether a *property* of that name exists; without this set
-    // a same-named arg answers yes and the default binds nothing. A name leaves the set when a
-    // property is written under it.
-    std::set<std::string, std::less<>> arg_bound;
     std::vector<std::filesystem::path> include_stack;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;

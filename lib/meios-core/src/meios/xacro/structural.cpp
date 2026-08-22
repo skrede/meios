@@ -31,7 +31,7 @@ void seed_document(detail::expand_ctx &ctx, std::string_view source,
     ctx.include_stack.push_back(canon_ec ? document : canonical_key);
     ctx.scope.set_active_document(ctx.include_stack.back());
     ctx.origins.push_back(detail::emit_origin{ document, source });
-    detail::seed_declared_args(ctx, doc);
+    detail::seed_declared_args(ctx.scope, doc);
 }
 
 unexpected<expansion_error> refuse(const detail::expand_ctx &ctx,

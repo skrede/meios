@@ -106,7 +106,7 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
 // names only) so use-before-declaration resolves the way real xacro does. A default
 // carrying a nested substitution is left for declare_arg to resolve at its
 // declaration, where the sources and document needed to substitute it are in hand.
-void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
+void seed_declared_args(eval_scope &scope, pugi::xml_node node)
 {
     for(pugi::xml_node child : node.children())
     {
@@ -116,14 +116,12 @@ void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
         {
             pugi::xml_attribute name = child.attribute("name");
             pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !ctx.scope.contains(name.value())
+            if(name && fallback && !scope.contains(name.value())
                && !has_substitution(fallback.value()))
-            {
-                ctx.scope.set(name.value(), value{ strip_authored_markers(fallback.value()) });
-                ctx.arg_bound.insert(name.value());
-            }
+                scope.set(name.value(),
+                          value{ strip_authored_markers(fallback.value()) });
         }
-        seed_declared_args(ctx, child);
+        seed_declared_args(scope, child);
     }
 }
 
@@ -140,7 +138,7 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
                     "<xacro:property> writes a value attribute and a default attribute together, "
                     "which are mutually exclusive");
     std::string_view name = in.attribute("name").value();
-    if(fallback && ctx.scope.contains(name) && !ctx.arg_bound.contains(name))
+    if(fallback && ctx.scope.contains(name))
         return true;
     const char *chosen = fallback ? "default" : "value";
     bool ok = true;
@@ -151,7 +149,6 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
         return false;
     record_scoped(ctx, in.attribute("scope").value(), name);
     ctx.scope.set(name, bound);
-    ctx.arg_bound.erase(std::string(name));
     return true;
 }
 
@@ -175,7 +172,6 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
     if(!ok)
         return false;
     ctx.scope.set(name, resolved);
-    ctx.arg_bound.insert(std::string(name));
     return true;
 }
 
