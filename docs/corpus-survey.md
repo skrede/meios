@@ -9,7 +9,13 @@ It is not a catalogue of robots, not a ranking, and not a statement about what m
 description's expressions may run belongs to [evaluation](evaluation.md), what the reader does with the
 expanded document belongs to the [URDF profile](urdf-profile.md), and what is not yet proven belongs to
 [known limitations](known-limitations.md). Nothing on this page restates any of those. A candidate
-appearing here has not been pinned, is not loaded by anything, and is not claimed to load.
+appearing here was not pinned when the survey ran and is not claimed to load on the strength of
+appearing here. One of them — the Kinova arm — has since been pinned, after being driven through this
+project's own loader and compared against the reference; its row says so, and it is the only one.
+
+A second question was answered later and is recorded in a section of its own near the end: for each
+candidate, what happens when this project's own loader is pointed at it. That is a different
+measurement from the one the tables below carry, and the two are never mixed.
 
 The survey's breadth is bounded by construct coverage rather than by a candidate count: it continues
 until every uncovered construct has either a candidate observed to carry it or a recorded finding that
@@ -70,10 +76,36 @@ disagree, the row says so rather than picking one. Nothing here is a legal deter
 here has been checked for a mismatch between a declaration and the file contents; a candidate that is
 ever acquired gets its own determination at that point.
 
+**Two candidates state one license in a package manifest and a different one in the repository's own
+license file.** Both are recorded here with both spellings and neither is resolved, because resolving
+one in this project's favour would be this project making a claim it cannot support:
+
+| Upstream | Package manifest declares | Root license file is | Note |
+|---|---|---|---|
+| `shadow-robot/sr_common` | `sr_description/package.xml`: **`GPL`** | verbatim BSD 3-Clause; the description files' own headers carry a BSD notice | not a spelling difference — two different licenses. It is not acquired, so no determination was made. |
+| `DoosanRobotics/doosan-robot2` | `dsr_description2/package.xml`: **`Apache License 2.0`** | BSD 3-Clause | the same shape. It is not acquired either. |
+
+Neither is comparable to a manifest writing `Apache 2.0` where the root file is `Apache-2.0`, which is
+one license spelled two ways and which this project's own acquisition gate records as such.
+
 ## The gap list
 
-The evaluator names fourteen constructs it can observe a load exercising. Six of them are recorded
-against at least one pinned entry point. The other eight are what this survey is looking for:
+The evaluator names fourteen constructs it can observe a load exercising. **Thirteen of the fourteen
+are now recorded against at least one pinned entry point, and one is not.** That is the current state
+and it is not the state this survey was written in: when the tables below were compiled, six were
+recorded and eight were being looked for. Eight rows of this page are therefore a record of a search,
+and what the search produced is stated here rather than left to be inferred from an out-of-date count.
+
+What closed the other seven:
+
+| Construct | How it closed |
+|---|---|
+| `sequence-subscript`, `string-membership`, `named-split` | already inside the pinned Franka description, and reached once a block argument's contents were evaluated where the caller wrote them rather than where a macro inserts them. No acquisition. Five pinned rows carry them. |
+| `mapping-literal` | pinned twice: the Kinova arm, and a second top-level document of the already-pinned Universal Robots package. Both reach it through a macro-parameter default the caller overrides, which is only evaluated at all because a default is now evaluated whether or not the caller supplied the parameter. |
+| `merge-key`, `document-sequence`, `negative-index` | witnessed together by a gantry description written in this repository, exactly as the finding below recommends: its joint-limit table factors a repeated block behind an anchor, and a table like that writes each axis's range and vector as a short sequence and reads the ends of a range by index. |
+| `non-string-key` | **still unwitnessed, and deliberately so.** The key is admitted and takes its place in the mapping, but every subscript spelling here is text, so a load exercising it would exercise a dead end rather than a construct. Its evidence is a unit case and a divergence-manifest row instead of a pinned row. |
+
+The eight the survey set out to find carriers for were:
 
 | Construct | What a description does to reach it |
 |---|---|
@@ -86,8 +118,9 @@ against at least one pinned entry point. The other eight are what this survey is
 | `merge-key` | an auxiliary document flattens one mapping into another with `<<:` |
 | `non-string-key` | an auxiliary document keys a mapping by something other than text |
 
-The six already covered — an alias, a duplicate key, a unit tag, a dotted member read, string
-concatenation and a string's truth value — need nothing from this survey and are not looked for below.
+The six already covered when the survey ran — an alias, a duplicate key, a unit tag, a dotted member
+read, string concatenation and a string's truth value — needed nothing from it and are not looked for
+below.
 
 ## What the survey found
 
@@ -166,6 +199,15 @@ repeated block out behind an anchor. None was found. One near miss is worth reco
 re-found: `enactic/openarm_description` has an anchor and an alias in
 `assets/end_effector/pinch_gripper/config/old/inertials.yaml`, and both lines are commented out.
 
+**What was done about it.** The recommendation implicit in that finding — that a description of this
+shape has to be written rather than found — was taken. A two-file cartesian gantry was authored in
+this repository: every axis runs on the same drive, so the drive's rating is stated once behind an
+anchor and merged into each axis entry, and one axis departs from it by overriding a single key. It is
+pinned as a corpus entry point by a digest of its two files. It is the one entry point in the pinned
+set that is not a vendor's own document, and it is marked as such wherever it appears, because a
+description this project wrote is weaker evidence about how anyone authors than a description somebody
+ships.
+
 **`non-string-key`: not found at all.** Of the same 1 405 auxiliary documents, parsed rather than
 pattern-matched, **not one** keys a mapping by anything other than text. Every key in every document
 read here is a string. This is the strongest negative in the survey and it has a plausible cause: a
@@ -173,6 +215,12 @@ robot description's configuration is keyed by joint and link names, which are st
 and the shapes that produce a numeric or boolean key in YAML — an index table, or a key spelled `on`,
 `off`, `yes` or `no` — do not arise in that vocabulary. Evidence for this construct will have to be
 authored rather than found, and this survey's recommendation is to stop looking for it.
+
+**And authoring one was declined, on a measurement rather than on effort.** Such a key is admitted by
+the reader and takes its place in the mapping, but every subscript spelling this evaluator has is
+text, so no expression reaches the entry: a description written to exercise the construct would
+exercise a dead end. It is recorded as supported and unwitnessed instead, and what carries it is a
+unit case and a row in the reviewed divergence manifest.
 
 ## Candidates considered and not selected
 
@@ -209,6 +257,83 @@ maintained wording on its own terms — **last pushed 2018-06-26.** It is kept i
 candidate for *structural* rather than semantic breadth: it is a dual-arm robot with left and right
 end-effector variants, a topology unlike anything pinned. The unmaintained caveat travels with it
 wherever it goes, and it should never be presented as a current description.
+
+## What this project's own loader measured
+
+Everything above is a measurement of the **reference** tooling. The closing section below has always
+said so in as many words, and the distinction turned out to matter more than the wording suggested: a
+document the reference renders is not a document this project loads. So every candidate named on this
+page was subsequently driven through this project's own loader, and the verdicts are recorded here so
+that a later reader does not repeat the work.
+
+**How, and where.** Each upstream was fetched at the revision its row names, extracted, and its entry
+point driven through this project's command-line tool with the extracted tree as the package root. The
+control throughout was the already-pinned `franka_description/robots/fr3/fr3.urdf.xacro`, driven
+through the identical harness and flattened successfully, so a failure below is the document's and not
+the harness's. Every verdict in this section was taken **once, locally, on Linux, with one toolchain,
+in a release build** — none of them is a statement about continuous testing, and none of them should be
+read as one. The pinned entry points this project actually ships are a different set and carry their
+own evidence; what is recorded here is a probe of candidates, not a gate.
+
+### The three candidates the survey selected
+
+All three were selected because the reference evaluated a gap-list construct while rendering them. All
+three refuse here, each on a different thing:
+
+| Candidate | Entry point driven | Verdict | Refuses on |
+|---|---|---|---|
+| `shadow-robot/sr_common` | `sr_description/robots/sr_hand.urdf.xacro` | **refuses** | a namespaced set constructor, `${python.set('hand_e hand_g hand_c'.split())}`. Behind it: a set value kind the model does not have, the no-separator split this grammar deliberately refuses, a bracket list literal, string methods and string subscripting, and the reference's own message helper. Its bimanual sibling fails at the same site and there is no third entry point. |
+| `enactic/openarm_description` | `assets/robot/openarm_v2.0/urdf/openarm_v20.urdf.xacro` | **refuses** | a bracket list comprehension. Comprehensions are named outright as future work rather than as a gap. Its v1.0 entry point refuses independently on a tuple literal, and its gripper entry point on a numeric constructor; the repository also writes a lazy-evaluation attribute on 154 properties, which this evaluator has no concept of. |
+| `Kinovarobotics/ros2_kortex` | `kortex_description/robots/gen3.xacro dof:=7` | **refused when probed; loads now** | it refused on a property declaring a fallback attribute, and then on the order a block argument is expanded in. Both are behaviors this project has since brought into line with the reference, and the document is now a pinned corpus entry point that renders element for element with the reference. |
+
+That the first two refuse is not a correction to this survey's method. The closing section states
+plainly what its *evaluated* column means, and it never meant native loadability. What was missing was
+the measurement, and this is it.
+
+### The nine candidates the survey did not select
+
+They were driven anyway, because the question they answer — how much of this ecosystem loads here
+today — is worth a table and is expensive to re-derive.
+
+| Candidate | Entry points driven | Verdict | Constructs the load exercises |
+|---|---|---|---|
+| `TechmanRobotInc/tmr_ros2` | five, `tm5-900` through `tm20` | **loads**, five of five | none |
+| `neobotix/neo_simulation2` | four, `mp_400` through `mpo_700` | **loads**, four of four | none |
+| `ROBOTIS-GIT/open_manipulator` | four, including `omy_3m` and `omy_l100` | **loads**, four of four | none |
+| `DoosanRobotics/doosan-robot2` | two, `m1013` and `h2017` | **loads**, two of two | none |
+| `Interbotix/interbotix_ros_manipulators` | two, `px150` and `uxarm7` | **loads**, two of two | none |
+| `unitreerobotics/unitree_ros` | `go2`, a legged topology | **loads** | none |
+| " | `b1` | refuses | an unset substitution argument the driver is expected to supply — a usage question, not an evaluator gap |
+| `flexivrobotics/flexiv_description` | `urdf/flexiv.urdf.xacro` | **refuses** | a bracket list literal, `${robot_type_str in ['AICO1-4-V1', …]}` — its *first* blocker |
+| `pal-robotics/tiago_robot` | `tiago_description/robots/tiago.urdf.xacro` | **refuses** | the same form negated, `${base_type not in ['pmb2', 'omni_base']}` — also its first blocker |
+| `rai-opensource/spot_ros2` | — | not applicable | ships no URDF or xacro at all; it is a driver repository, not a description candidate |
+
+**Six vendors load natively today with no change to this library, and every one of them exercises
+nothing.** That is a settled negative result rather than an absence of data: the construct set each
+load exercises was read off the load itself with the same instrument the compatibility record uses,
+validated three-for-three against that record's own rows before it was trusted, and it came back empty
+every time. Their expression content is arithmetic. Two of the richest spellings in the best of them —
+a cylindrical inertia and a solid-cylinder inertia — are already committed rows of this project's
+expression record, character for character.
+
+None of these ten is promoted by loading. A candidate this page records as unmaintained stays
+unmaintained; a candidate recorded with a last-push date keeps it; and none of them is recorded as
+carrying a construct, because none was observed to carry one.
+
+### The correlation this exposes, which is the survey's most useful conclusion
+
+**Everything that loads is arithmetic, and everything with semantics reaches for a form this evaluator
+refuses.** The six that load exercise nothing. The four that refuse — two here, and the two selected
+candidates that are out of reach — refuse on a list comprehension, a set constructor, or a bracket list
+literal. The gap-list filter this survey applied was not an arbitrary narrowing: it was tracking that
+correlation, and a candidate rich enough to contribute a distinct case is, in this ecosystem, a
+candidate written in a form this grammar does not read.
+
+**One form would change the answer more than any other: the bracket list literal.** It is the first
+blocker for `flexivrobotics/flexiv_description` and for `pal-robotics/tiago_robot`; it is what keeps
+the two-arm and mobile two-arm assemblies of the already-pinned Franka description outside the corpus;
+and it is one of several things `shadow-robot/sr_common` needs. Four independent upstreams stand behind
+one spelling.
 
 ## What was checked, and what was not
 

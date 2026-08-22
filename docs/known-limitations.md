@@ -240,10 +240,12 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Every way this evaluator differs from canonical xacro is written down, and twelve of them are
-measured.** The reviewed manifest carries twelve rows and the differential drives them on every push in
-both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as a
-new one does. Most of them are a meaning upstream has and this grammar refuses:
+**Every way this evaluator differs from canonical xacro is written down, and fourteen of them are
+measured.** The reviewed manifest carries fourteen rows and the differential drives them on every push
+in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
+a new one does. Nine of the fourteen are a meaning upstream has and this grammar refuses — the first
+five entries below, and the mapping key an auxiliary document did not write as text, which has an
+entry of its own further down:
 
 - A string repeated by an integer, and one string ordered against another. Only the addition of two
   strings and equality between two were measured into this grammar.
@@ -264,11 +266,16 @@ new one does. Most of them are a meaning upstream has and this grammar refuses:
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Two differ in the other direction, rendering here where upstream refuses: a closing brace inside a
-string literal, and one expression span written inside another. Both follow from a span scanner that
-folds over quotes and counts depth where the reference's pattern does neither. And two render on both
-sides with different answers: `and` and `or` yield a boolean here rather than the deciding operand, so
-`${1 or 2}` is `True` here and `1` there. That one is deliberate and measured, not an oversight.
+Three differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+string literal, one expression span written inside another, and the absolute value. The first two
+follow from a span scanner that folds over quotes and counts depth where the reference's pattern does
+neither, so the reference truncates the span and never hands its evaluator a whole expression to
+refuse. The third is a difference in what the evaluator itself carries: the reference's expression
+globals hold the mathematics module and the two reducers and no builtins at all, so `${abs(-3)}`
+renders `3` here and raises an undefined name there, while every other name on this grammar's
+mathematics list renders on both sides. And two render on both sides with different answers: `and` and
+`or` yield a boolean here rather than the deciding operand, so `${1 or 2}` is `True` here and `1`
+there. That one is deliberate and measured, not an oversight.
 
 The last three entries above are the ones the manifest does not carry, because none of them can be
 matched by exact text: the colliding member names produce upstream text embedding an object's own
@@ -276,19 +283,21 @@ address, and the other two are absences rather than divergent renderings. They a
 the evaluation page instead. The colliding names are checked against a committed measurement of what
 the reference's wrapper answers, and the `math` namespace refuses by a named case; the argument and
 message helpers and the two missing functions refuse as any unrecognized name does, and nothing names
-them individually.
+them individually. A fourth difference the manifest cannot carry is the separator a located path is
+written with, further down: it is observable on Windows alone, and the job that renders a fresh
+upstream to compare against runs on Linux, where both implementations write the same character.
 
-**An expression inside a discarded block argument is never evaluated here, and is evaluated upstream.**
-Where a macro takes a block argument and then drops it — `<xacro:if value="${off}">` around the
-`<xacro:insert_block>` — the reference expands that block's contents at the *call* site, before the
-receiving macro decides anything, while meios expands them only if the block is inserted. On a
-well-formed description the two agree, because the work is discarded either way; the whole rendered
-document is compared against upstream's on every push, and one pinned description takes exactly this
-path. What differs is a description that is *not* well formed there: a block argument naming a property
-nobody bound fails the load upstream and loads clean here. So a description validated only against
-meios can carry a defect in a discarded block that the reference will refuse. This one is not in the
-reviewed manifest — it was measured after that record was last written — and the direction is the
-permissive one, which is why it is written down here rather than left to be met.
+**A block argument's contents now take effect where the caller wrote them, and a description that
+relied on them not doing so will refuse.** A macro's block argument is expanded once, at the call site,
+in the caller's macros and scope — which is what the reference does, and which this evaluator did not
+do until recently: it used to expand a block only if the receiving macro inserted it. Two consequences
+are visible on descriptions that load today. A property, an include or a nested macro call written
+inside a block the receiving macro never inserts now takes effect anyway. And a block argument naming a
+property nobody bound now fails the load whether or not the block is ever reached. The change moves
+this evaluator toward the reference rather than away from it, so nothing the reference accepts is
+newly refused here — but a description that was only ever validated against meios, and that hid a
+defect inside an unreachable block, will stop loading. There is no shim, alias or migration note: this
+project is pre-release and the behavior was changed outright.
 
 **An argument is readable by its bare name in an expression, where upstream has no such name.** This
 evaluator keeps one symbol table; the reference keeps two, an argument table the `$(arg n)` command
@@ -307,12 +316,16 @@ reference reads its argument table in document order and refuses the whole docum
 undefined-substitution-argument diagnostic. The acceptance is deliberate and is pinned by cases, but
 the direction is the permissive one: a description that relies on it loads here and fails there.
 
-**A mapping key an auxiliary document did not write as text loads, and nothing can read it.** A
-document may key a mapping by a number, a boolean or an empty scalar, and it parses — the key is
-admitted, it counts toward the mapping's extent, and it collides with another key exactly as the
-reference's own comparison would have it collide. What no expression has is a spelling that reaches it:
-every subscript key is text, and a dotted member is a name. So such an entry is present and unreadable
-rather than refused at the parse, and a description that needs one needs the explicit backend.
+**A mapping key an auxiliary document wrote as a number or a boolean loads, and nothing can read
+it.** Such a key is admitted, it counts toward the mapping's extent, and it collides with another key
+exactly as the reference's own comparison would have it collide. What no expression has is a spelling
+that reaches it: every subscript key is text, and a dotted member is a name. So the entry is present
+and unreadable rather than refused at the parse, and a description that needs one needs the explicit
+backend. An **empty** scalar written as a key is a different answer, and this page gave the wrong one
+until it was measured: a document writing the explicit-key form with nothing after it does not parse
+here at all — the reader meets a mapping standing where a key belongs and refuses the document at that
+line and column. So an empty key is refused rather than admitted-and-unreadable, and the sentence above
+covers the two kinds it names and no third.
 
 **A located path is written with forward separators on every platform, where the reference writes the
 platform's own.** `$(find)` and `$(dirname)` render the path they resolve in the generic spelling, so a
@@ -322,13 +335,25 @@ expression span, that text is resolved before the expression is lexed, so the ba
 string literal. A backslash in a literal is refused here rather than given the escape meaning nothing
 measured, so the native spelling would make a description that loads everywhere else refuse on Windows
 alone. The generic spelling is accepted by the platform's own filesystem interfaces and is what a mesh
-URI carries in any case.
+URI carries in any case. The reviewed manifest cannot carry this one. A row there is matched by exact
+text against a render the pinned reference produces at that moment, and the job producing that render
+runs on Linux, where the reference writes the same separator this project does — so on the platform
+where the difference exists there is no fresh render to compare against, and on the platform that
+renders there is no difference. What carries it instead is the set of unit assertions that compose the
+expected path in the generic spelling and therefore hold on every platform the suite runs on,
+including the one that would otherwise write a backslash.
 
-**The string operations compare and count by bytes where the reference counts code points.** Substring
-containment, the named split, the addition of two strings and a string's truth value all work over
-bytes. The two agree over the ASCII text every measured description carries. Whether any real
-description carries non-ASCII text through one of them is unmeasured, so this is written down rather
-than claimed absent.
+**The string operations compare and count by bytes where the reference counts code points, and no
+description can tell the difference.** Substring containment, the named split, the addition of two
+strings and a string's truth value all work over bytes. That was written down here as an unmeasured
+risk; it has since been measured, by driving all four through both implementations over text carrying
+multi-byte characters, and the two agree character for character. They have to. Well-formed UTF-8 is
+self-synchronizing, so a byte-wise search for a well-formed needle cannot match across a character
+boundary and a byte-wise split cannot cut one in half; byte equality and code-point equality coincide
+exactly; and none of the four operations exposes a length or an index, because this grammar has no
+string-length function and no string subscript. A byte sequence that is not well-formed text cannot be
+written into an XML document in the first place. The difference is real in the implementation and has
+no spelling that reaches it from a description.
 
 ## Command-line behavior
 
@@ -351,17 +376,20 @@ help entry, and is the thing the paragraphs above mean whenever they name the co
 
 ## What the description corpus proves
 
-**The blocking corpus reaches four vendors.** Every rule about what a description may say is held
-against pinned, real robot descriptions, and a rule that refuses one of them turns a pull request
-red. What that gate covers, exactly, is seventeen top-level documents named outright in the build,
-never found by globbing a directory: `ros-industrial/kuka_experimental`'s `kr6r900sixx.xacro` and the
-four pre-expanded descriptions beside it, five variants of
-`UniversalRobots/Universal_Robots_ROS2_Description`, the single entry point
-`lbr-stack/med14_r820_description` carries, and six of the eight `frankarobotics/franka_description`
-ships. Four of those seventeen — the pre-expanded KUKA set — sit behind a breadth option that the
-blocking job turns on and a plain local build does not, so a developer running the corpus by hand
-sees thirteen. Four vendors is not every authoring style, and a description written in some other
-house style can still meet a refusal that nothing here would have caught.
+**The blocking corpus reaches five vendors, plus one description this project wrote itself.** Every
+rule about what a description may say is held against pinned, real robot descriptions, and a rule that
+refuses one of them turns a pull request red. What that gate covers, exactly, is twenty top-level
+documents named outright in the build, never found by globbing a directory:
+`ros-industrial/kuka_experimental`'s `kr6r900sixx.xacro` and the four pre-expanded descriptions beside
+it, six documents of `UniversalRobots/Universal_Robots_ROS2_Description` — five variants of its main
+entry point and a second entry point the same package ships — the single entry point
+`lbr-stack/med14_r820_description` carries, six of the eight `frankarobotics/franka_description`
+ships, the seven-joint variant of `Kinovarobotics/ros2_kortex`, and a two-file gantry authored in this
+repository because no surveyed vendor writes a merge key into a file a description loads. Four of
+those twenty — the pre-expanded KUKA set — sit behind a breadth option that the blocking job turns on
+and a plain local build does not, so a developer running the corpus by hand sees sixteen. Five vendors
+is not every authoring style, and a description written in some other house style can still meet a
+refusal that nothing here would have caught.
 
 **Two of the pinned family's own entry points do not load.** All eight documents
 `franka_description` ships were rendered against the pinned upstream and compared; the six that are
@@ -377,15 +405,18 @@ rows are `file://` throughout — and no shipping document carries a relative re
 what the corpus leaves to a case table of crafted documents is the containment rule and the
 relative base, not the whole URI contract.
 
-**The comparison against a fresh upstream render is confined to Linux.** Every corpus document
-the built-in evaluator handles is expanded by it, with the interpreter binding switched off, and
-both that comparison and the pinned corpus run on every push. What is confined to Linux is the
-render each is compared against: producing one needs the pinned upstream tooling, and only the Linux
-workflow installs it. macOS and Windows load the same pinned documents natively and check them
-against recorded facts, so what those two platforms leave unproven is agreement with a freshly
-rendered upstream, not whether the documents load.
+**The comparison against a fresh upstream render is confined to Linux, and so is the corpus that
+feeds it.** Every corpus document the built-in evaluator handles is expanded by it, with the
+interpreter binding switched off, and both that comparison and the pinned corpus run on every push —
+on Linux. Producing a fresh reference render needs the pinned upstream tooling and only the Linux
+workflow installs it, which is the older half of this. The other half is that the corpus tier is a
+Linux gate too. What macOS and Windows fetch the corpus for is the install-consumer job, and that job
+loads two of the twenty documents — the `ur3e` variant and the KR6 — through a consumer built against
+an installed package, checking them against the same recorded facts. So on those two platforms
+eighteen of the twenty pinned documents are not loaded at all, and no statement here that a pinned
+entry point loads on three platforms reaches further than that pair.
 
-**The third vendor is pinned as a description package, not as its umbrella repository.**
+**The KUKA LBR family is pinned as a description package, not as its umbrella repository.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
 description of any kind, and every top-level document in it includes description packages that are
 not inside the tarball. What is pinned in its place is `lbr-stack/med14_r820_description` at
@@ -395,7 +426,8 @@ are not covered.
 
 **One upstream revision is pinned in the build but absent from the recorded pins.**
 `tests/golden/oracle/PINS` names the upstream tooling, `ur_description`,
-`lbr_med14_r820_description` and `franka_description`. It does not name `kuka_experimental`, whose
+`lbr_med14_r820_description`, `franka_description`, `kortex_description`, and the in-repository gantry
+by a digest of the two files that are the whole of it. It does not name `kuka_experimental`, whose
 commit and archive digest are pinned in the build alone — so the KR6 measurement is recorded against
 a revision that record does not state.
 
@@ -479,3 +511,111 @@ deleted outright rather than marked `[[deprecated]]`, so an API you depend on ca
 between versions with no compiler warning to cushion the transition. This holds until the `v1.0.0`
 boundary, which is where the pre-release breaking-change license ends. Pin a revision if you need
 stability in the meantime.
+
+## What carries each claim
+
+This page makes fifty-five claims — the bold sentence that opens each entry above — and this table
+says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
+case (named by the stem it lives in and its own wording), by a row in a committed record, or by
+nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
+good half of this page exists to say what is *not* measured; what is not legitimate is leaving a
+reader to guess which kind a sentence is. Where an entry says *nothing*, the sentence above it is the
+claim that nothing measures it, and the entry says what would have to be written to change that.
+
+The pairing is not enforced by a test. It is checked by reading, and it is written down so the
+reading can be repeated rather than redone from scratch by whoever next doubts a sentence.
+
+### Sources and resolution
+
+| Claim | Carried by |
+|---|---|
+| No runtime remote fetch | Nothing, and that is the claim: it is an absent capability. Every source the library has is driven by `io_sources.*` and `io_source_stack.*`, and none of them takes a URL. |
+| Symlink-installed workspaces are covered by fixtures only | `ros_source.*` and `ros_prefix.*` over crafted layouts. Nothing builds a real `--symlink-install` workspace — which is the claim. |
+| A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
+| A byte-serving source leaks its scratch tree where an open file cannot be deleted | `io_sources.the scratch tree is removed when the source that owns it dies` and the `scratch_teardown.*` stems, which drive removal stopping at its first error. The platform that will not delete an open file is not one the suite runs on. |
+| A narrow window between creating a scratch root and narrowing it | Nothing drives the window itself. Its two ends are carried: `scratch_setup.the candidate loop takes the first free name and exhausts at its bound` and `scratch_setup.a root that could not be narrowed is removed and refused`. |
+| Narrowing replaces permission bits, and not every platform decides access that way | `io_sources.the scratch root is reachable by its owner alone`, on the platforms whose access decision *is* a permission bit. Nothing drives an access-control-list platform, which is the claim. |
+| The staging-directory guard folds ASCII case, and that fold has run on no case-folding filesystem | `scratch_case_fold.a differently-cased package reaching one file is refused` — which now runs where case folds — and `scratch_alias.a publication onto a vanished entry's file is refused rather than silently taken` for the absence half. The combination of the two is what nothing drives. |
+| Creation beneath a resolved temporary directory is not driven through a source | `scratch_unusable.*` drives the outer branch through a source; `scratch_setup.a collision ahead of a permanent creation failure reports the permanent cause` drives the narrower one against the creation step alone. The claim is the seam between them. |
+| A byte-backed source resolves the temporary directory once | `scratch_symlinked.a resolution lies under the scratch root it reports when the temporary directory is a symbolic link` and `scratch_symlinked.the reported scratch root resolves the link rather than repeating it`. |
+| What has been driven natively, and where | The three platform workflows and the install-consumer harness under `tests/integration/consumer`. The sentence about the resolution being observed on one platform only is carried by nothing, and says so. |
+| Whether a held-open replacement succeeds is a platform fact, measured on POSIX only | `scratch_publish.a replacement with the destination held open is measured, not assumed` — it asserts whichever branch its host takes, which is why no native refusal value exists. |
+| A directory-backed source makes its root absolute but does not resolve it | `io_sources.directory_source resolves an in-root file to a path` and `io_sources.a relative source root resolves an in-root asset and still refuses an escape`. Nothing drives the symlinked-root relation there — the claim. |
+| Whether containment over-refuses on Windows is unmeasured | Nothing, on any platform. A case would hand the containment check a candidate differing from its root only in case, or in short form, and assert the verdict. |
+| Containment is enforced at resolution, not at every subsequent copy | `io_sources.a containment decision on a candidate that is not absolute is refused`, `uri_cases.uri rows unsoftened containment refusal`. That a later consumer does not re-check is carried by nothing. |
+
+### Diagnostics
+
+| Claim | Carried by |
+|---|---|
+| A successful `load()` does not mean a clean load | `load_report.a successful load returns every diagnostic the document raised, not the first`, `model_diag.a document that said nothing wrong claims everything`, and the duplicate-material exception by `urdf_profile`'s `duplicate_material_name` row. |
+| Two of the five policies leave their claim standing under `skip` | Half carried: `load_report.a document the reader could not read whole still reports a valid topology` pins the topology half. The evaluation half — `parsed` surviving a span left verbatim — is asserted by no case; `eval_policy.a leading python-only span is left verbatim under skip and warn` drives the span but not the claim. |
+| Nothing is printed unless you ask | `silent_default.a default load writes nothing to cerr or cout`, and `model_diag.default log_sink is a silent no-op on both overloads`. |
+
+### Modeling gaps
+
+| Claim | Carried by |
+|---|---|
+| Extension fragments are dropped, not carried through | `urdf_vocabulary.each recognized extension block is disclosed under its own code` and `urdf_material.a dropped robot-level ros2_control child raises a loud WARN naming it`. |
+| An unreadable `<axis>` on a `fixed` or `floating` joint leaves a zero vector | `urdf_axis.a zero axis on a fixed joint loads clean through the whole entry point`, against `urdf_axis.a zero axis on a turning joint is refused at a real location`. |
+| An inertia tensor is checked for admissibility, never for plausibility | `urdf_inertia.*` — six cases over the tensor rules, including `a real tensor sits orders of magnitude inside the boundary`. That plausibility is unchecked is the absence those six leave. |
+| A repeated element is silently ignored | **Nothing.** The published rule table carries no row for it, because a row states a diagnostic and this raises none, and no case asserts the silent acceptance either. |
+| An empty fixed-length numeric attribute is silently accepted | **Nothing**, for the same reason. The wrong-*count* half is carried by `urdf_fields.a non-finite value is refused under a code rather than under none` and the profile table's own rows; the empty case is not. |
+| Under a permissive setting a partially-valid element is lost whole | `profile_permissive.a visual whose origin the reader refuses is dropped whole` and `urdf_fields.a required part that is missing drops its containing element at every setting`. |
+| `load_into` stages the model before it pushes | `load_into.a failed load leaves every counter on the sink at zero`, `load_into.an unopenable path leaves the sink untouched too`, `load_into.the success summary agrees with the entry point it delegates to`. |
+| The Python evaluator runs a restricted subset with false refusals | `eval_python_refusal.a scope-bound name spelled format is refused all the same`, `eval_python_refusal.an expression reaching past arithmetic refuses under a named rule`, and the `eval_python_abuse.*` stem. |
+| The Python backend has no bound on resource exhaustion | **Nothing** — there is no bound to drive. The contrast is carried: `native_ceilings.*` and `native_limits.*` drive the built-in evaluator's eleven, and `xacro_depth.*` and `xacro_budget.*` the expansion three. |
+| Python xacro expressions are recovered by literal re-parsing | `eval_python_container.an authored literal-shaped property value stays a string under subscript`, `eval_python_container.a set is refused rather than emitted as a container it is not`, and the `eval_python_container_table` stem. |
+
+### Expression evaluation
+
+| Claim | Carried by |
+|---|---|
+| Fourteen measured differences | The fourteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| A block argument's contents take effect where the caller wrote them | `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`, over the minimized document both implementations were driven through. |
+| An argument is readable by its bare name | `xacro_arg_domain.an argument read by its bare name renders the characters that were written` and `xacro_arg_domain.a bare name computing on an argument computes on the text that was written`. No manifest row: the upstream side is an undefined-name failure of the whole document rather than a differing render. |
+| A `$(arg n)` above its own declaration resolves | `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. No manifest row, for the same reason. |
+| A non-text mapping key loads and nothing reads it | The `non_text_mapping_key` row of the divergence manifest, driven as a whole document through both implementations, plus `native_yaml.a key is read in any of the scalar kinds a document can write`. The empty-scalar sentence beside it is carried by the reader's own refusal, measured while that row was minimized. |
+| A located path is written with generic separators | The assertions in `xacro_subst_command` that compose an expected path in the generic spelling, and `xacro_arg.a nested arg default resolves at declaration`, which is where the last native spelling was found. No manifest row is possible, and the entry says why. |
+| The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry this side's behavior. |
+
+### Command-line behavior
+
+| Claim | Carried by |
+|---|---|
+| `info` and the completion engine fail loudly on a broken topology | `cli_verbs.info exits nonzero and prints each failure's typed code exactly once`, `cli_tree.tree exits nonzero and prints each failure's typed code exactly once`, and `cli_tree.an unknown --root link exits nonzero and renders nothing`. |
+| Unresolved meshes do not stop the reporting verbs | Half carried. The four lowering sites are one assignment each in the verbs' own sources, and `cli_table_drift: resolve names every accepted asset form and deps carries the override surface` holds the surface; no case drives a reporting verb over a document whose mesh does not resolve. |
+| The completion engine is not a verb you can type | `cli_verbs.completion bash equals the golden and calls __complete`, `cli_table_drift: the completion verb is part of the shared surface`, and the three `completion_emit` golden cases. |
+
+### What the description corpus proves
+
+| Claim | Carried by |
+|---|---|
+| Five vendors, twenty documents | `cmake/corpus_documents.cmake`, which names every one outright, and the sixteen rows of `tests/golden/oracle/compatibility_ledger.cases`, which the ledger test pairs against the listfile in both directions — a pinned document with no row fails, and a row naming no pinned document fails. |
+| Two of the pinned family's own entry points do not load | **Nothing drives them**, because they are deliberately not corpus documents. The measurement that put them outside is recorded in the listfile beside the six that are in. |
+| The corpus exercises two of the asset reference forms | The `file://` rows of `ur5e_abs_paths_facts.cases`, and `uri_cases.uri rows accepted` for the forms the corpus does not reach. |
+| The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned upstream tooling and registers the corpus tier, and the other two fetch the corpus only for the install-consumer job. |
+| The KUKA LBR family is pinned as a description package | Its `PINS` row and its license determination in `cmake/corpus.cmake`. That the umbrella repository's other packages are unpinned is carried by their absence from the listfile. |
+| One upstream revision is pinned in the build but absent from the recorded pins | Nothing asserts the absence — it *is* the claim. Both halves are readable: `tests/golden/oracle/PINS` and the fetch in `cmake/corpus.cmake`. |
+| Fragments are not loaded, by design | The listfile's own rule, and the count it states: pointing the selection at the macro extension would load twenty-one documents carrying a `<robot>` root with no name and no links. |
+
+### The CMake resource modules
+
+| Claim | Carried by |
+|---|---|
+| The acquisition tests never reach the network | `tests/integration/cmake/meios_cmake_origin.cmake`, which builds every origin on local disk. That no transport failure is exercised is the absence that leaves. |
+| The `GITHUB` short form is exercised only through the examples | `cmake_declare_url_hash` and `cmake_declare_git_sparse` offline, and the example build behind `MEIOS_EXAMPLE_FETCH_NETWORK` for the rewrite. `GITHUB` beside `SPARSE_PATHS` is carried by nothing. |
+| `MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing | **Nothing.** It is the one item on this page with no case, no row and no run behind it, and the entry says so. |
+| Flattening is not proven from an installed package | `cmake_flatten_install_destination` and `cmake_flatten_install_component` install a flattened document; both reach the modules through the module path, which is what leaves the claim standing. |
+| `PACKAGE_PATH` precedence is reasoned about, not measured | `cmake_flatten_package_path_reaches_vendored_package` carries the adds-reach half. Two roots offering one package name is carried by nothing. |
+| Flattening with the Python backend is only really run on Linux | `cmake_flatten_eval_python_live` and `cmake_flatten_eval_python_statement` where the enrichment is built; `cmake_flatten_eval_python_refusal` where it is not. |
+| Submodules and large-file objects are left alone | `cmake_declare_lfs_pointer_refusal` and `urdf_mesh.a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted`. Nothing clones a repository carrying a submodule. |
+| Nothing in the automated set cross-compiles | **Nothing**, by construction. A case would need a toolchain file and a host-runnable binary. |
+| Tool discovery is proven for two of three routes | `cmake_flatten_runs_a_cli_target` and `cmake_flatten_no_cli_refusal`. The installed-package route is carried by nothing. |
+| An unrecognized evaluator name is refused by the build and accepted by the tool | `cmake_flatten_eval_unknown_refusal` for the refusal, and the three `cmake_eval_vocabulary` cases holding the module's backend list to the binary's. The tool's silent acceptance is asserted by nothing. |
+
+### API stability
+
+| Claim | Carried by |
+|---|---|
+| No deprecation cushion before `v1.0.0` | The absence of any deprecation attribute in the shipped headers, and `version.*`, which holds the declared version to the one the package config exports. |

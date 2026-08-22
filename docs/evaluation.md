@@ -88,7 +88,11 @@ floor   max   min   radians   sin   sqrt   tan
 
 `min` and `max` take one or more arguments — zero is a fault, not an identity — `atan2` takes exactly
 two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
-integers whatever they are handed. Any other name followed by `(` is refused by that name, so a
+integers whatever they are handed. Fourteen of the fifteen names render identically to the reference.
+`abs` is the exception and is not a compatible spelling: the reference's expression globals carry the
+mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
+raises an undefined name there. It is a reviewed divergence, and the section on divergences below
+carries it. Any other name followed by `(` is refused by that name, so a
 description reaching for a function this list does not carry is told which one it reached for rather
 than that something went wrong. A name on the list called at the wrong arity is refused the same way,
 by name, so `atan2(x)` reports the function rather than the count.
@@ -303,13 +307,23 @@ it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings
 integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
 value at all is a null that spells `None`.
 
-**A block argument's contents are evaluated at the call site there and at the insertion site here.**
-Where a macro receives a block and then drops it, the reference has already evaluated every expression
-inside that block; here nothing inside it is evaluated at all. The rendered documents agree, because
-the work is discarded on both sides, and the corpus comparison covers a pinned description that takes
-exactly this path. What does not agree is the failure: an undefined name inside a discarded block is a
-load failure there and passes unnoticed here. This one is measured but not yet in the reviewed manifest,
-and [known limitations](known-limitations.md) is where a reader meets it.
+**A block argument's contents are evaluated at the call site, on both sides.** A macro's block
+argument is expanded once, where the caller wrote it, in the caller's macros and scope; the block
+parameters then bind to the element children of that expanded result. This evaluator used to expand a
+block only where the receiving macro inserted it, which made an undefined name inside a discarded
+block a load failure upstream and nothing at all here. That difference is closed, and the two sides now
+agree on the failure as well as on the rendering. The change is visible on descriptions that load: a
+side effect written inside a block nobody inserts now takes effect, and a block naming an unbound
+property now fails the load whether or not it is reached. [Known limitations](known-limitations.md)
+says so in the reader's own terms.
+
+**The absolute value renders here and refuses there.** `${abs(-3)}` is `3` here; upstream raises an
+undefined name, because its expression globals are the mathematics module and the two reducers with no
+builtins beside them. It is the one difference on this page that runs in that direction for a reason
+belonging to the evaluator rather than to the reference's span scanner, and it is a reviewed
+divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a new one
+appears. The function is documented, implemented and range-checked here and a pinned description
+already reaches it, so it is recorded rather than removed.
 
 **A self-referential alias graph loads there and refuses here.** A document whose anchor contains an
 alias to itself — `a: &x [1, *x]` — reads upstream as a value that contains itself, because its reader
@@ -373,6 +387,10 @@ What is compared, exactly:
     names the variant, not because it adds a form the other four do not reach.
 - **`kuka_experimental`'s `kr6r900sixx.xacro`** — the one measured document resolving `$(find)`
   across two sibling packages.
+- **A second top-level document the same Universal Robots package ships**, driven with a
+  distinguishing name as well as the variant. It reaches the keyword-argument mapping constructor
+  through a macro-parameter default its own call overrides, and declares a property fallback where
+  the main entry point declares a value.
 - **KUKA LBR Med 14 R820 at tag `v2.5.0`** (archive digest `edb596d3e2b7…`), whose macro reads a
   joint-limits document through `xacro.load_yaml` and computes every joint's limits out of it.
 - **Franka Robotics' description at tag `2.8.1`** (archive digest `4adcc45f83fd…`), through six of
@@ -381,17 +399,29 @@ What is compared, exactly:
   passes such a mapping through a macro parameter. All eight were rendered and compared: no two are
   alike, so none of the six stands in for another, and the two that are absent build their arm list
   with a bracket literal and then slice it — neither spelling is read here.
+- **The Kinova `gen3` arm at its seven-joint variant**, whose initial-position mapping is a
+  macro-parameter default the caller overrides — which is why it exercises the mapping constructor at
+  all.
+- **A two-file gantry written in this repository rather than pinned from a vendor**, because no
+  surveyed vendor writes a merge key into a file a description loads. Its joint-limit table factors a
+  repeated block behind an anchor and writes each axis's range and vector as a short sequence, so one
+  document witnesses a merge key, a document sequence and an index counted back from the end. It is
+  pinned by a digest of its two files, recomputed at configure, so an edit to either fails the build
+  rather than silently invalidating a measurement.
 - **Twenty-three minimized expression cases** — one for each non-trivial expression form in the
   closure of the Universal Robots document: the joint-limit arithmetic, the inertia arithmetic, the
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
   loads. Each is driven through a document seeding exactly the names it reads, so a failing case
   names one form.
-- **Fifty-one authored expression cases beside them** — the spellings no pinned description reaches,
-  named here and driven through the same minimized document: an index into a sequence, forwards and
-  backwards and off both ends, a key the reference's own mapping wrapper answers itself, the
-  keyword-argument mapping constructor and every argument shape it refuses, and every string meaning
-  this grammar admits or refuses. A chained comparison and most of the mathematics names are still
-  written by no measured description and are measured against upstream by nothing here.
+- **One hundred and four authored expression cases beside them** — the spellings no pinned
+  description reaches, named here and driven through the same minimized document: an index into a
+  sequence, forwards and backwards and off both ends, a key the reference's own mapping wrapper
+  answers itself, the keyword-argument mapping constructor and every argument shape it refuses, every
+  string meaning this grammar admits or refuses, every arithmetic, comparison and logical spelling
+  including the chained comparison, the dotted read of a loaded key, and the mathematics names called
+  by bare name. What each of them measures is not left to a reader to infer: the grammar's accepted
+  forms are enumerated in the test tree, and that enumeration is paired against these rows in both
+  directions, so a form no row measures fails the build and a row no form names fails it too.
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
   tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
   than read off the YAML specification.
@@ -408,17 +438,17 @@ the arguments it needs, what upstream produced, what meios produced, which const
 actually exercised, and any reviewed divergence. The construct column is compared against an
 observation taken from loading that document, in both directions, so a description that quietly stops
 exercising what it was pinned for fails as loudly as one that starts exercising something the row does
-not claim. All thirteen rows record agreement — on the result and on the whole normalized rendered
+not claim. All sixteen rows record agreement — on the result and on the whole normalized rendered
 document — and that empty divergence column is asserted empty rather than ignored. Two things fall
 straight out of the record: exactly one pinned description resolves a duplicate key, and no Universal
 Robots or KUKA entry point reads a mapping by a member name.
 
 The comparison against a fresh upstream render runs on Linux, where the pinned upstream tooling is
-installed and run. The documents themselves are not confined to it: every push builds the library and
-runs its suite on Linux, macOS and Windows, and on each of the three a consumer outside this project
-loads the pinned Universal Robots and KR6 documents natively and checks them against the same
-recorded facts. Agreement with upstream is established on one platform; that these documents resolve
-to the same facts is established on all three.
+installed and run — and so does the corpus tier that feeds it. What macOS and Windows fetch the corpus
+for is a narrower thing: on each of the three, a consumer outside this project loads two of the pinned
+documents — the `ur3e` variant and the KR6 — natively and checks them against the same recorded facts.
+So agreement with upstream is established on one platform, and of the pinned documents exactly those
+two are established to resolve to the same facts on all three. The rest are established on Linux.
 
 That is the whole of it. The claim extends no further than these documents at these revisions and
 these expression forms. Another vendor's authoring style, another revision of the same upstream, or
