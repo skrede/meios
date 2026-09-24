@@ -108,23 +108,23 @@ function(_meios_flatten_rule target resource input output args package_path cli 
     # A rule's output may not carry a target-dependent expression, which is why the document is
     # named through a command argument rather than declared as the rule's output.
     set(_file "$<TARGET_FILE_DIR:${target}>/${output}")
-    string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _slug "${output}")
-    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_file}" ${target}_flatten_${_slug})
+    _meios_rule_name("${target}" flatten "${output}" _rule)
+    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_file}" ${_rule})
     # Ordering onto the deploy rule is a target dependency rather than a file dependency, because a
     # file dependency only connects two commands issued in one directory and flatten may be called
     # from another.
     get_property(_deploy GLOBAL PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${resource})
     if(_deploy)
-        add_dependencies(${target}_flatten_${_slug} ${_deploy})
+        add_dependencies(${_rule} ${_deploy})
     endif()
-    add_dependencies(${target} ${target}_flatten_${_slug})
+    add_dependencies(${target} ${_rule})
     set(${out} "${_file}" PARENT_SCOPE)
 endfunction()
 
 function(_meios_flatten_install target output runtime_relative install_dest component out_file)
     get_filename_component(_subdir "${output}" DIRECTORY)
     _meios_deploy_destination("${target}" "${_subdir}" "${runtime_relative}" "${component}"
-                              "${install_dest}" _dest _unused_dir _unused_slot)
+                              "${install_dest}" _dest _unused_dir)
     if(NOT _dest)
         return()
     endif()

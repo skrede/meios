@@ -3,6 +3,24 @@ include_guard(GLOBAL)
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourcePaths.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourceRegistry.cmake")
 
+# The rule name is a digest because the Visual Studio generator repeats it in the utility project's
+# output path, where lengths the caller controls would otherwise reach the path limit.
+function(_meios_rule_name target kind identity out)
+    string(SHA256 _digest "${identity}")
+    string(SUBSTRING "${_digest}" 0 8 _digest)
+    set(${out} "${target}_${kind}_${_digest}" PARENT_SCOPE)
+endfunction()
+
+# SUBDIR and the name enter length-prefixed because either may carry any character a separator
+# could be, so only the length fixes where a field ends.
+function(_meios_deploy_rule_name target subdir name tree out)
+    string(LENGTH "${subdir}" _subdir_length)
+    string(LENGTH "${name}" _name_length)
+    _meios_rule_name("${target}" deploy "${_subdir_length}:${subdir}${_name_length}:${name}${tree}"
+                     _rule)
+    set(${out} "${_rule}" PARENT_SCOPE)
+endfunction()
+
 function(_meios_deploy_validate target unparsed resources runtime_relative install_dest)
     if(NOT TARGET ${target})
         message(FATAL_ERROR
@@ -28,7 +46,7 @@ endfunction()
 # directory instead would install successfully and still break such a program at runtime, and
 # only after install — the build tree resolves either way.
 function(_meios_deploy_destination target subdir runtime_relative component install_dest
-                                   out_install out_dest out_slot)
+                                   out_install out_dest)
     if(runtime_relative)
         include(GNUInstallDirs)
         set(install_dest "${CMAKE_INSTALL_BINDIR}")
@@ -45,10 +63,8 @@ function(_meios_deploy_destination target subdir runtime_relative component inst
     if(subdir)
         set(_dest "${_dest}/${subdir}")
     endif()
-    string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _slot "${subdir}")
     set(${out_install} "${install_dest}" PARENT_SCOPE)
     set(${out_dest} "${_dest}" PARENT_SCOPE)
-    set(${out_slot} "${_slot}" PARENT_SCOPE)
 endfunction()
 
 # PACKAGES names entries to copy out of ONE tree, so more than one source tree would leave the
@@ -83,16 +99,12 @@ endfunction()
 # whether the deployed tree is current. A POST_BUILD command stays rejected for the reason it always
 # was: it runs only when the target itself relinks, so editing a resource without touching a source
 # file would leave a stale tree deployed with no sign anything was wrong.
-function(_meios_deploy_command target slot label src dst out_rule)
-    # A rule target name may not carry a separator, and a nested PACKAGES entry puts one in the label.
-    string(REGEX REPLACE "[^A-Za-z0-9_]" "_" _label_slot "${label}")
-    set(_rule ${target}_deploy_${slot}_${_label_slot})
-    add_custom_target(${_rule}
+function(_meios_deploy_command target rule label src dst)
+    add_custom_target(${rule}
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${src}" "${dst}"
         COMMENT "Deploying resource '${label}' to ${dst}"
         VERBATIM)
-    add_dependencies(${target} ${_rule})
-    set(${out_rule} "${_rule}" PARENT_SCOPE)
+    add_dependencies(${target} ${rule})
 endfunction()
 
 function(_meios_deploy_install install_dest component tree src)
@@ -111,7 +123,7 @@ function(_meios_deploy_install install_dest component tree src)
             PATTERN ".git" EXCLUDE)
 endfunction()
 
-function(_meios_deploy_rule target name dir tree dest slot install_dest component)
+function(_meios_deploy_rule target name dir tree dest subdir install_dest component)
     # Each entry keeps its own directory name at the destination, because package://<name>/…
     # resolves to <package root>/<name>/…: copying a selected package's *contents* into the
     # package root would strip the very name the reference is looked up under.
@@ -124,7 +136,8 @@ function(_meios_deploy_rule target name dir tree dest slot install_dest componen
         set(_dst "${dest}/${tree}")
         set(_label "${name}.${tree}")
     endif()
-    _meios_deploy_command("${target}" "${slot}" "${_label}" "${_src}" "${_dst}" _rule)
+    _meios_deploy_rule_name("${target}" "${subdir}" "${name}" "${tree}" _rule)
+    _meios_deploy_command("${target}" "${_rule}" "${_label}" "${_src}" "${_dst}")
     # Published rather than left to be reconstructed: a module ordering against this rule would
     # otherwise couple itself to a target-name format that the next edit here breaks.
     set_property(GLOBAL APPEND PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${name} "${_rule}")
@@ -145,7 +158,7 @@ function(meios_target_deploy_resources target)
                            "${ARG_INSTALL_RUNTIME_RELATIVE}" "${ARG_INSTALL_DESTINATION}")
     _meios_deploy_destination("${target}" "${ARG_SUBDIR}" "${ARG_INSTALL_RUNTIME_RELATIVE}"
                               "${ARG_INSTALL_COMPONENT}" "${ARG_INSTALL_DESTINATION}"
-                              ARG_INSTALL_DESTINATION _dest _slot)
+                              ARG_INSTALL_DESTINATION _dest)
     _meios_check_contained_paths("meios_target_deploy_resources(${target})" SUBDIR "${ARG_SUBDIR}")
     _meios_check_contained_paths("meios_target_deploy_resources(${target})" PACKAGES "${ARG_PACKAGES}")
 
@@ -154,8 +167,8 @@ function(meios_target_deploy_resources target)
         _meios_deploy_selection("${target}" "${_name}" "${_dir}" "${ARG_RESOURCES}"
                                 "${ARG_PACKAGES}" _selection)
         foreach(_tree IN LISTS _selection)
-            _meios_deploy_rule("${target}" "${_name}" "${_dir}" "${_tree}" "${_dest}" "${_slot}"
-                               "${ARG_INSTALL_DESTINATION}" "${ARG_INSTALL_COMPONENT}")
+            _meios_deploy_rule("${target}" "${_name}" "${_dir}" "${_tree}" "${_dest}"
+                               "${ARG_SUBDIR}" "${ARG_INSTALL_DESTINATION}" "${ARG_INSTALL_COMPONENT}")
         endforeach()
     endforeach()
 endfunction()

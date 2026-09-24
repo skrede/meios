@@ -68,6 +68,7 @@ meios_cmake_case(cmake_flatten_publishes_only_a_changed_document
 # lands inside the deployment root and the wrapper creates its own parent, so a rule not depending
 # on the deploy target would produce the document into an otherwise empty directory. Naming the rule
 # is the point of the case: nothing else selects it on its own.
+meios_cmake_flatten_rule(app models/robot.urdf _flatten_rule)
 meios_cmake_case(cmake_flatten_orders_after_deploy
     FIXTURE flatten
     DRIVER  meios_build_case.cmake
@@ -75,7 +76,7 @@ meios_cmake_case(cmake_flatten_orders_after_deploy
     EXTRA   "${_cli}"
             -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
             -DFX_OUTPUT=models/robot.urdf
-    BUILD_TARGET app_flatten_models_robot_urdf
+    BUILD_TARGET ${_flatten_rule}
     REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml
     REQUIRE_CONTAINS models/robot.urdf,harness_arm)
 

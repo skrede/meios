@@ -8,14 +8,35 @@ meios_cmake_case(cmake_deploy_placement
     EXTRA   -DFX_SUBDIR=models
     REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml)
 
-# A nested entry, not a flat one: a flat selection produces a deploy label with no separator in it,
-# and the separator is what the stamp path has to survive.
+# A nested entry rather than a flat one: only a nested entry has an intermediate directory to lose on
+# the way to the destination.
 meios_cmake_case(cmake_deploy_nested_selection
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
     EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT models/pkg_b/config/params.yaml)
+
+# A package deployed under a directory named after itself carries its name into the rule twice
+# unless the rule's name is bounded independently of both. The Windows leg runs this under the
+# Visual Studio generator, where that length meets the path limit.
+meios_cmake_case(cmake_deploy_bounded_rule_name
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_NAME=harness_description_package
+            -DFX_SUBDIR=urdf/harness_description_package
+            -DFX_PACKAGES=pkg_b/config
+    REQUIRE_PRESENT urdf/harness_description_package/pkg_b/config/params.yaml)
+
+# The two SUBDIRs are the pair a character-substituting name folds together. A successful configure
+# is itself the assertion, since two equal rule names are a duplicate target.
+meios_cmake_case(cmake_deploy_distinct_rule_names
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models/pkg -DFX_SECOND_SUBDIR=models_pkg
+    REQUIRE_PRESENT models/pkg/pkg_a/package.xml,models_pkg/pkg_a/package.xml)
 
 # The edit touches no source file, so nothing relinks: a deployment attached as a post-build command
 # would leave the stale tree in place with no sign anything was wrong.

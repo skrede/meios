@@ -82,6 +82,13 @@ function(meios_cmake_case name)
     endif()
 endfunction()
 
+# A case that builds a flatten rule alone has to name it the way the module does.
+function(meios_cmake_flatten_rule target output out)
+    string(SHA256 _digest "${output}")
+    string(SUBSTRING "${_digest}" 0 8 _digest)
+    set(${out} "${target}_flatten_${_digest}" PARENT_SCOPE)
+endfunction()
+
 # Globbed so a later group file registers itself by existing, the same way a test stem here
 # registers only when its source is present.
 file(GLOB _case_groups CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cases-*.cmake")
