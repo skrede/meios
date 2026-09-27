@@ -74,6 +74,22 @@ meios_cmake_case(cmake_flatten_package_path_containment_refusal
     EXTRA   "${_cli}" ${_declare} -DFX_PACKAGE_PATH=../escape
     REFUSES "PACKAGE_PATH[ \t\r\n]+entry[ \t\r\n]+'[.][.]/escape'")
 
+# The second OUTPUT differs only by a '.' component and by case, which is how two spellings name one
+# document on the default Windows and macOS file systems.
+meios_cmake_case(cmake_flatten_repeated_output_refusal
+    FIXTURE flatten
+    ORIGIN  tarball
+    EXTRA   "${_cli}" ${_declare} -DFX_REPEAT_OUTPUT=./urdf/Robot.urdf
+    REFUSES "is[ \t\r\n]+already[ \t\r\n]+written[ \t\r\n]+by[ \t\r\n]+an[ \t\r\n]+earlier[ \t\r\n]+flatten")
+
+# The step runs its commands in call order, so a deploy after its flatten would write the tree over
+# the document.
+meios_cmake_case(cmake_flatten_before_deploy_refusal
+    FIXTURE flatten
+    ORIGIN  tarball
+    EXTRA   "${_cli}" ${_declare} -DFX_FLATTEN_FIRST=ON
+    REFUSES "Deploy[ \t\r\n]+it[ \t\r\n]+before[ \t\r\n]+flattening[ \t\r\n]+it")
+
 meios_cmake_case(cmake_flatten_args_option_refusal
     FIXTURE flatten
     ORIGIN  tarball

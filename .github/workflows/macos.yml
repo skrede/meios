@@ -594,3 +594,45 @@ jobs:
 
       - name: Test
         run: cd build && ctest --output-on-failure --no-tests=error
+
+  # The harness hands this build's generator to every case's sub-configure, so configuring with Xcode
+  # is what runs the deploy and flatten cases under it.
+  harness-xcode:
+    runs-on: macos-14
+    name: build integration (Xcode generator)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        run: |
+          cmake . -B build -G Xcode \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_TOOLS=ON \
+            -DMEIOS_BUILD_TESTS=ON
+
+      # The flatten cases need only the binary, and the deploy cases need nothing built.
+      - name: Build
+        run: cmake --build build --config Release --target meios
+
+      - name: Run the deploy and flatten cases
+        run: |
+          cd build
+          echo "ctest -C Release -N -R '^cmake_(deploy|flatten)_'"
+          registered=$(ctest -C Release -N -R '^cmake_(deploy|flatten)_' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "the deploy and flatten cases registered no tests"
+            exit 1
+          fi
+          echo "the deploy and flatten cases registered $registered test(s)"
+          ctest -C Release -R '^cmake_(deploy|flatten)_' --output-on-failure --no-tests=error -j3

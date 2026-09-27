@@ -319,10 +319,12 @@ Declaring and deploying are separate calls because they vary independently: one 
 deployed beside several executables, and a target's runtime layout is decided in the directory that
 owns the target, not in the file that acquired the tree. **Declare at the top level, deploy in the
 subdirectory that builds the program** — the registry is global, so a name declared in the top-level
-listfile is visible in any subdirectory, including a sibling of the one that declared it.
+listfile is visible in any subdirectory, including a sibling of the one that declared it. The deploy
+and flatten calls go in the listfile that defines the target they attach to, and neither adds a
+target of its own.
 
 Everything else about these functions — where bytes may come from, how acquired trees are stored and
-reclaimed, sparse checkouts, install behavior, and the flatten rule's arguments — is the
+reclaimed, sparse checkouts, install behavior, and the flatten call's arguments — is the
 [resource guide](resources-guide.md)'s to own, and is documented in full there rather than
 summarized here.
 

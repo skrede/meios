@@ -3,7 +3,7 @@ function(meios_cmake_case name)
                      MUTATE MUTATE_FROM MUTATE_BACKDATE TIMEOUT INSTALL CONSUMER
                      REQUIRE_PRESENT REQUIRE_ABSENT REQUIRE_CONTAINS REQUIRE_INSTALLED
                      REQUIRE_STABLE REQUIRE_PREFIX_EMPTY REQUIRE_PREFIX_ABSENT
-                     REQUIRE_TREE_LACKS REQUIRE_PREFIX_LACKS)
+                     REQUIRE_TREE_LACKS REQUIRE_PREFIX_LACKS REQUIRE_UNRELINKED)
     set(multi_value  EXTRA SECOND_CONFIGURE CONSUMER_EXTRA CONSUMER_CONTROL)
     cmake_parse_arguments(ARG "" "${one_value}" "${multi_value}" ${ARGN})
 
@@ -39,6 +39,7 @@ function(meios_cmake_case name)
         "-DCONSUMER_EXTRA=${ARG_CONSUMER_EXTRA}"
         "-DCONSUMER_CONTROL=${ARG_CONSUMER_CONTROL}"
         -DREQUIRE_STABLE=${ARG_REQUIRE_STABLE}
+        -DREQUIRE_UNRELINKED=${ARG_REQUIRE_UNRELINKED}
         -DREQUIRE_PRESENT=${ARG_REQUIRE_PRESENT}
         -DREQUIRE_ABSENT=${ARG_REQUIRE_ABSENT}
         -DREQUIRE_INSTALLED=${ARG_REQUIRE_INSTALLED}
@@ -80,13 +81,6 @@ function(meios_cmake_case name)
             PASS_REGULAR_EXPRESSION "${ARG_MATCHES}"
             FAIL_REGULAR_EXPRESSION "MEIOS_HARNESS_FAILED;MEIOS_HARNESS_ASSERT_FAILED")
     endif()
-endfunction()
-
-# A case that builds a flatten rule alone has to name it the way the module does.
-function(meios_cmake_flatten_rule target output out)
-    string(SHA256 _digest "${output}")
-    string(SUBSTRING "${_digest}" 0 8 _digest)
-    set(${out} "${target}_flatten_${_digest}" PARENT_SCOPE)
 endfunction()
 
 # Globbed so a later group file registers itself by existing, the same way a test stem here

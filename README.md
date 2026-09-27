@@ -257,6 +257,7 @@ from that install tree, on all three platforms, by a project that lives outside 
 | The example programs compile | `examples` | ● | ● | ● |
 | **Every C++ block in this README and in `docs/` is extracted and compiled** | `docs` | ● | ● | ● |
 | The CLI builds and its unit tests pass | `tools` | ● | ● | ● |
+| Deploying and flattening work under the Xcode generator — the CMake integration cases for both, with every sub-configure generated for Xcode | `harness-xcode` | | ● | |
 | Generative properties of the xacro evaluator | `property-tests` (RapidCheck) | ● | ● | ● |
 | An optional dependency is absent as well as present | `eval-python` — Python found *and* absent | ● | | |
 | A pinned known-good and known-faulty document pair | `corpus` | ● | | |

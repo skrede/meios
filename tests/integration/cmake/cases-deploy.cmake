@@ -17,9 +17,9 @@ meios_cmake_case(cmake_deploy_nested_selection
     EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT models/pkg_b/config/params.yaml)
 
-# A package deployed under a directory named after itself carries its name into the rule twice
-# unless the rule's name is bounded independently of both. The Windows leg runs this under the
-# Visual Studio generator, where that length meets the path limit.
+# A package deployed under a directory named after itself carries that name twice into any name built
+# from the call's arguments, while the step is named after the target alone. The Windows leg runs
+# this under the Visual Studio generator, which names a rule file after that step.
 meios_cmake_case(cmake_deploy_bounded_rule_name
     FIXTURE target
     DRIVER  meios_build_case.cmake
@@ -29,9 +29,9 @@ meios_cmake_case(cmake_deploy_bounded_rule_name
             -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT urdf/harness_description_package/pkg_b/config/params.yaml)
 
-# The only case with two deploy calls on one target. Its SUBDIRs are the pair a name built by
-# substituting characters in SUBDIR would fold together, and a successful configure is itself an
-# assertion, since two equal rule names are a duplicate target.
+# The only case with two deploy calls on one target: the second call appends to the step the first
+# created, and both trees land. Its SUBDIRs are the pair a name built by substituting characters in
+# SUBDIR would fold together.
 meios_cmake_case(cmake_deploy_distinct_rule_names
     FIXTURE target
     DRIVER  meios_build_case.cmake
@@ -39,8 +39,7 @@ meios_cmake_case(cmake_deploy_distinct_rule_names
     EXTRA   -DFX_SUBDIR=models/pkg -DFX_SECOND_SUBDIR=models_pkg
     REQUIRE_PRESENT models/pkg/pkg_a/package.xml,models_pkg/pkg_a/package.xml)
 
-# Two entries out of one tree give the fixture's per-call count a call whose trees would each
-# otherwise have become a rule of their own.
+# Two entries out of one tree are deployed through the one step the target carries.
 meios_cmake_case(cmake_deploy_one_rule_two_packages
     FIXTURE target
     DRIVER  meios_build_case.cmake
@@ -48,9 +47,7 @@ meios_cmake_case(cmake_deploy_one_rule_two_packages
     EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=pkg_a,pkg_b/config
     REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml)
 
-# A flatten orders against the rule published under its own resource, so a call naming two resources
-# has to publish its one rule under both. The fixture's union check is what sees a call that split
-# into one rule per resource.
+# A call naming two resources deploys both through the one step the target carries.
 meios_cmake_case(cmake_deploy_one_rule_two_resources
     FIXTURE target
     DRIVER  meios_build_case.cmake
@@ -90,6 +87,17 @@ meios_cmake_case(cmake_deploy_reruns_on_backdated_edit
     MUTATE_BACKDATE ON
     REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated)
 
+# The edit redeploys in a build that must not relink, which is what tells a step attached as a source
+# apart from one attached to the link.
+meios_cmake_case(cmake_deploy_does_not_relink
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models
+    MUTATE  pkg_a/package.xml
+    REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated
+    REQUIRE_UNRELINKED app)
+
 # Every inter-word space is spelled as a character class because CMake re-wraps message(FATAL_ERROR)
 # text at roughly 78 columns, so a pattern copied verbatim out of the module does not match what the
 # case reads.
@@ -99,3 +107,12 @@ meios_cmake_case(cmake_deploy_containment_refusal
     ORIGIN  tarball
     EXTRA   -DFX_PACKAGES=../escape
     REFUSES "must[ \t\r\n]+be[ \t\r\n]+a[ \t\r\n]+relative[ \t\r\n]+path[ \t\r\n]+inside[ \t\r\n]+the[ \t\r\n]+tree")
+
+# A step created from another directory configures, builds, and never runs, so without the refusal a
+# tree would silently never deploy.
+meios_cmake_case(cmake_deploy_other_directory_refusal
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_ELSEWHERE=ON
+    REFUSES "must[ \t\r\n]+be[ \t\r\n]+called[ \t\r\n]+in[ \t\r\n]+the[ \t\r\n]+directory[ \t\r\n]+that[ \t\r\n]+defines")

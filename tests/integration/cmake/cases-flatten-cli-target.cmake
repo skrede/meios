@@ -4,15 +4,15 @@
 # else. The fixture builds its own stub binary, so the case registers whether or not this build
 # produced a real one.
 #
-# Only the flatten rule is built, by name: that is what makes the ordering observable, because
-# nothing else in the build selects the stub or the deployment.
-meios_cmake_flatten_rule(app models/robot.urdf _flatten_rule)
+# Only the consumer target is built, and nothing else selects the stub. Under a generator that orders
+# only through target-level edges, the stub is built only because of the edge the module adds from
+# the consumer target onto it.
 meios_cmake_case(cmake_flatten_runs_a_cli_target
     FIXTURE flatten-cli-target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
     EXTRA   -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
             -DFX_OUTPUT=models/robot.urdf
-    BUILD_TARGET ${_flatten_rule}
+    BUILD_TARGET app
     REQUIRE_PRESENT models/pkg_a/package.xml
     REQUIRE_CONTAINS models/robot.urdf,harness_stub_cli)

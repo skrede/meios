@@ -103,6 +103,22 @@ function(meios_harness_require_year path year)
     endif()
 endfunction()
 
+# Timestamps compare at one-second resolution, so the pause keeps a relink that lands in the same
+# second from reading as no relink.
+function(meios_harness_link_stamp binary out)
+    meios_harness_require_file("${binary}")
+    file(TIMESTAMP "${binary}" _stamp "%s" UTC)
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
+    set(${out} "${_stamp}" PARENT_SCOPE)
+endfunction()
+
+function(meios_harness_require_unrelinked binary stamp)
+    file(TIMESTAMP "${binary}" _stamp "%s" UTC)
+    if(NOT _stamp STREQUAL stamp)
+        meios_harness_failed_assertion("${binary} was relinked by a build that changed no source")
+    endif()
+endfunction()
+
 function(meios_harness_require_dir path)
     if(NOT IS_DIRECTORY "${path}")
         meios_harness_failed_assertion("expected a directory at ${path}")

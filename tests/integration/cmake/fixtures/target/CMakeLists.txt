@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.28)
 
-# CXX rather than NONE: deployment resolves its destination through the target's runtime directory
-# and attaches itself with add_dependencies, and neither accepts an imported or a custom target, so
-# only a real binary target reaches this path at all.
+# CXX rather than NONE: deployment resolves its destination through the target's runtime directory,
+# which neither an imported nor a custom target has, so only a real binary target reaches this path.
 project(meios_cmake_target LANGUAGES CXX)
+
+# A consumer requiring CMake 3.31 or later gets CMP0175 as NEW, under which an append carrying a
+# keyword it ignores is an error.
+if(POLICY CMP0175)
+    cmake_policy(SET CMP0175 NEW)
+endif()
 
 # Every per-configuration variant is pinned to the same directory as the base one, because a
 # multi-config generator otherwise appends the configuration name and the deployment root would move
@@ -33,6 +38,10 @@ if(FX_SECOND_RESOURCE)
     list(APPEND _names "${FX_SECOND_RESOURCE}")
 endif()
 
+if(FX_ELSEWHERE)
+    add_subdirectory(elsewhere)
+endif()
+
 set(_args RESOURCES ${_names})
 if(DEFINED FX_PACKAGES)
     string(REPLACE "," ";" _packages "${FX_PACKAGES}")
@@ -43,33 +52,10 @@ if(FX_SUBDIR)
     set(_subdir SUBDIR "${FX_SUBDIR}")
 endif()
 
-set(_calls 1)
 meios_target_deploy_resources(app ${_args} ${_subdir})
 if(FX_SECOND_SUBDIR)
-    set(_calls 2)
     meios_target_deploy_resources(app ${_args} SUBDIR "${FX_SECOND_SUBDIR}")
 endif()
 
-# Read from the published list rather than rebuilt here, because that list is the contract a
-# consumer orders against.
-set(_union "")
-foreach(_name IN LISTS _names)
-    get_property(_rules GLOBAL PROPERTY MEIOS_DEPLOY_TARGETS_app_${_name})
-    list(LENGTH _rules _count)
-    if(NOT _count EQUAL _calls)
-        message(FATAL_ERROR "MEIOS_HARNESS_ASSERT_FAILED: '${_name}' published ${_count} deploy "
-                            "rules for ${_calls} calls: '${_rules}'")
-    endif()
-    list(APPEND _union ${_rules})
-endforeach()
-list(REMOVE_DUPLICATES _union)
-list(LENGTH _union _count)
-if(NOT _count EQUAL _calls)
-    message(FATAL_ERROR "MEIOS_HARNESS_ASSERT_FAILED: the resources published ${_count} distinct "
-                        "deploy rules for ${_calls} calls: '${_union}'")
-endif()
-foreach(_rule IN LISTS _union)
-    if(NOT TARGET "${_rule}" OR NOT _rule MATCHES "^app_deploy(_[0-9]+)?$")
-        message(FATAL_ERROR "MEIOS_HARNESS_ASSERT_FAILED: '${_rule}' is not a readable deploy target.")
-    endif()
-endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/../meios_fixture_checks.cmake")
+meios_fixture_require_one_step(app app)

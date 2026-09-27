@@ -7,6 +7,7 @@ include_guard(GLOBAL)
 
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosFlattenArgs.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeployResources.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/MeiosTargetStep.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourceRegistry.cmake")
 
 # Captured while the module is being read: inside a function body the current list directory is the
@@ -70,54 +71,59 @@ function(_meios_flatten_argv dir input args package_path eval out)
     set(${out} "${_argv}" PARENT_SCOPE)
 endfunction()
 
-# The rule runs on every build because an edit to a description changes no source file: a POST_BUILD
+# The step runs on every build because an edit to a description changes no source file: a POST_BUILD
 # command runs only when the target relinks and would leave a stale document behind, and a
 # modification-time comparison answers a different question than whether the document is current.
 # The repeated run stays cheap because the run script publishes only a document whose bytes differ.
-function(_meios_flatten_command target cli argv out_file rule)
-    set(_run "${cli}")
-    if(TARGET ${cli})
-        set(_run "$<TARGET_FILE:${cli}>")
-    endif()
+function(_meios_flatten_step target cli argv out_file)
     # List expansion of the command splits every unescaped ';' in an argument, so the vector has to
     # arrive escaped or the wrapper would receive its first element and nothing else. $<SEMICOLON>
     # does not survive it either: it is evaluated before the split.
     string(REPLACE ";" "\;" _args "${argv}")
     get_property(_module_dir GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR)
+    _meios_step_mode("${target}" _step _mode)
     # The binary is a dependency by path and not only by target name: a caller-supplied path may
     # still name a binary this same build produces, and only the file-level edge orders the flatten
-    # after the rule writing it. A path naming a file nothing produces then fails as a build-graph
-    # error rather than as a flatten against a stale or absent binary.
-    add_custom_target(${rule}
-        COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${_run}" "-DMEIOS_FLATTEN_ARGS=${_args}"
+    # after the step or target writing it. A path naming a file nothing produces then fails as a
+    # build-graph error rather than as a flatten against a stale or absent binary.
+    add_custom_command(OUTPUT "${_step}" ${_mode}
+        COMMAND "${CMAKE_COMMAND}" -E echo "Flattening ${out_file}"
+        COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${cli}" "-DMEIOS_FLATTEN_ARGS=${_args}"
                 "-DMEIOS_FLATTEN_OUT=${out_file}"
                 -P "${_module_dir}/MeiosFlattenRun.cmake"
-        DEPENDS "${_run}"
-        COMMENT "Flattening ${out_file}"
-        VERBATIM COMMAND_EXPAND_LISTS)
-    # The target-level edge additionally orders against the binary's own post-build steps, which a
-    # dependency on its file alone does not reach.
-    if(TARGET ${cli})
-        add_dependencies(${rule} ${cli})
+        DEPENDS "${cli}")
+endfunction()
+
+# The key is folded because the default file systems on Windows and macOS fold case, so two OUTPUTs
+# differing only in case name one file there.
+function(_meios_flatten_record target resource output)
+    cmake_path(SET _key NORMALIZE "${output}")
+    string(TOLOWER "${_key}" _key)
+    get_property(_outputs GLOBAL PROPERTY MEIOS_FLATTEN_OUTPUTS_${target})
+    if(_key IN_LIST _outputs)
+        message(FATAL_ERROR
+            "meios_target_flatten_resource(${target}): OUTPUT '${output}' is already written by an "
+            "earlier flatten call on '${target}'; two documents published to one file would each "
+            "overwrite the other.")
     endif()
+    set_property(GLOBAL APPEND PROPERTY MEIOS_FLATTEN_OUTPUTS_${target} "${_key}")
+    set_property(GLOBAL APPEND PROPERTY MEIOS_FLATTENED_${target} "${resource}")
 endfunction()
 
 function(_meios_flatten_rule target resource input output args package_path cli eval out)
     _meios_flatten_input("${target}" "${resource}" "${input}" _dir)
     _meios_flatten_argv("${_dir}" "${input}" "${args}" "${package_path}" "${eval}" _argv)
-    # A rule's output may not carry a target-dependent expression, which is why the document is
-    # named through a command argument rather than declared as the rule's output.
+    # A step's output may not carry a target-dependent expression, which is why the document is
+    # named through a command argument rather than declared as the step's output.
     set(_file "$<TARGET_FILE_DIR:${target}>/${output}")
-    _meios_rule_name("${target}" flatten "${output}" _rule)
-    _meios_flatten_command("${target}" "${cli}" "${_argv}" "${_file}" ${_rule})
-    # Ordering onto the deploy rule is a target dependency rather than a file dependency, because a
-    # file dependency only connects two commands issued in one directory and flatten may be called
-    # from another.
-    get_property(_deploy GLOBAL PROPERTY MEIOS_DEPLOY_TARGETS_${target}_${resource})
-    if(_deploy)
-        add_dependencies(${_rule} ${_deploy})
+    set(_run "${cli}")
+    # The target-level edge additionally orders against the binary's own post-build steps, which a
+    # dependency on its file alone does not reach.
+    if(TARGET ${cli})
+        set(_run "$<TARGET_FILE:${cli}>")
+        add_dependencies(${target} ${cli})
     endif()
-    add_dependencies(${target} ${_rule})
+    _meios_flatten_step("${target}" "${_run}" "${_argv}" "${_file}")
     set(${out} "${_file}" PARENT_SCOPE)
 endfunction()
 
@@ -144,9 +150,11 @@ function(meios_target_flatten_resource target)
     cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
     _meios_flatten_validate("${target}" "${ARG_UNPARSED_ARGUMENTS}" "${ARG_RESOURCE}"
                             "${ARG_INPUT}" "${ARG_OUTPUT}")
+    _meios_step_check_directory("meios_target_flatten_resource(${target})" "${target}")
     _meios_flatten_check_install("${target}" "${ARG_INSTALL_RUNTIME_RELATIVE}"
                                  "${ARG_INSTALL_DESTINATION}" "${ARG_INSTALL_COMPONENT}")
     _meios_flatten_paths("${target}" "${ARG_INPUT}" "${ARG_OUTPUT}" "${ARG_PACKAGE_PATH}")
+    _meios_flatten_record("${target}" "${ARG_RESOURCE}" "${ARG_OUTPUT}")
     _meios_flatten_check_args("${target}" "${ARG_ARGS}")
     _meios_flatten_cli("${target}" _cli)
     _meios_flatten_eval("${target}" "${ARG_EVAL}" _eval)

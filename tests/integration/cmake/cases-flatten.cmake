@@ -64,21 +64,32 @@ meios_cmake_case(cmake_flatten_publishes_only_a_changed_document
     REQUIRE_STABLE urdf/robot.urdf
     REQUIRE_CONTAINS urdf/robot.urdf,harness_arm)
 
-# Only the flatten rule is built, which is what makes the ordering observable at all: the document
-# lands inside the deployment root and the wrapper creates its own parent, so a rule not depending
-# on the deploy target would produce the document into an otherwise empty directory. Naming the rule
-# is the point of the case: nothing else selects it on its own.
-meios_cmake_flatten_rule(app models/robot.urdf _flatten_rule)
+# An edited description re-expands without the target relinking, because nothing the step declares
+# is compiled or linked.
+meios_cmake_case(cmake_flatten_does_not_relink
+    FIXTURE flatten
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   "${_cli}"
+            -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
+            -DFX_OUTPUT=urdf/robot.urdf
+    MUTATE      pkg_a/urdf/robot.urdf.xacro
+    MUTATE_FROM mutations/robot.urdf.xacro
+    REQUIRE_CONTAINS urdf/robot.urdf,meios_harness_mutated
+    REQUIRE_UNRELINKED app)
+
+# The document is written over a file the deployed tree also carries, so whichever command runs last
+# decides what is left there. Only a document written after the tree carries the robot's name.
 meios_cmake_case(cmake_flatten_orders_after_deploy
     FIXTURE flatten
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
     EXTRA   "${_cli}"
             -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro
-            -DFX_OUTPUT=models/robot.urdf
-    BUILD_TARGET ${_flatten_rule}
-    REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml
-    REQUIRE_CONTAINS models/robot.urdf,harness_arm)
+            -DFX_OUTPUT=models/pkg_a/package.xml
+    BUILD_TARGET app
+    REQUIRE_PRESENT models/pkg_b/config/params.yaml
+    REQUIRE_CONTAINS models/pkg_a/package.xml,harness_arm)
 
 # What makes the entry load-bearing is the crawl stopping at a manifest: pkg_inner sits under
 # pkg_outer's directory, so the acquired tree as the sole root reaches pkg_outer and stops, and the

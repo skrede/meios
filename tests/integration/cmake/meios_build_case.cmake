@@ -12,6 +12,11 @@ meios_harness_reset()
 if(NOT ORIGIN STREQUAL "tarball")
     message(FATAL_ERROR "meios-harness: the build driver serves ORIGIN tarball, not '${ORIGIN}'.")
 endif()
+# The mutation build is the second build the relink check compares against, so without one the
+# check would pass vacuously.
+if(REQUIRE_UNRELINKED AND NOT MUTATE)
+    message(FATAL_ERROR "meios-harness: REQUIRE_UNRELINKED needs MUTATE to build a second time.")
+endif()
 meios_harness_tarball_origin("${HARNESS_DIR}/origin/clean" "${WORK}/origin.tar.gz" _url _hash)
 set(_extra "-DFX_URL=${_url}" "-DFX_HASH=SHA256=${_hash}")
 
@@ -22,6 +27,14 @@ list(APPEND _extra ${EXTRA})
 meios_harness_configure("${FIXTURE}" "${WORK}/tree" "${_extra}" _rc)
 if(_rc EQUAL 0)
     meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
+endif()
+set(_run "${WORK}/tree/run")
+if(_rc EQUAL 0 AND REQUIRE_UNRELINKED)
+    set(_binary "${_run}/${REQUIRE_UNRELINKED}")
+    if(CMAKE_HOST_WIN32)
+        string(APPEND _binary ".exe")
+    endif()
+    meios_harness_link_stamp("${_binary}" _linked)
 endif()
 
 # The edit lands inside the acquired tree and touches no source file, which is the only way to tell
@@ -43,13 +56,14 @@ if(_rc EQUAL 0 AND MUTATE)
     endif()
     meios_harness_build("${WORK}/tree" "${BUILD_TARGET}" _rc)
 endif()
+if(_rc EQUAL 0 AND REQUIRE_UNRELINKED)
+    meios_harness_require_unrelinked("${_binary}" "${_linked}")
+endif()
 
 set(_prefix "${WORK}/prefix")
 if(_rc EQUAL 0 AND REQUIRE_INSTALLED)
     meios_harness_install("${WORK}/tree" "${_prefix}" "${COMPONENT}" _rc)
 endif()
-
-set(_run "${WORK}/tree/run")
 
 # Back-dating between the two builds is what makes the assertion granularity-proof: two builds
 # landing in the same second would leave an equality check on the recorded time passing whatever

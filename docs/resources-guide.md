@@ -40,6 +40,11 @@ meios_target_deploy_resources(app RESOURCES kuka SUBDIR urdf)
 The registry is global, which is what makes the cross-directory case work — a name declared in the
 top-level listfile is visible in any subdirectory, including a sibling of the one that declared it.
 
+The deploy and flatten calls, unlike the declaration, must be made in the listfile that defines the
+target; a call from any other directory is a configure error rather than a step CMake would silently
+drop. Neither call adds a target: every call on a target appends to one build step of that target,
+so an IDE's target list shows only the targets the project wrote.
+
 A third function, `meios_target_flatten_resource`, expands one description to a file during your
 build. It is a deployment convenience for a program that needs a plain URDF on disk rather than the
 way descriptions are meant to be consumed, and it is documented after the two above.
@@ -278,8 +283,9 @@ and constants, and dropping it is a hard failure at load, not a cosmetic one. Fo
 differ: `kr6r900_2_macro.xacro` additionally reaches into `kuka_kr10_support`. Deploying the whole
 tree always works and is the right default; trim when the size difference earns it.
 
-Deployment is wired into the build graph on the tree's contents, not attached as a post-build step,
-so editing a description redeploys it on the next build even when no source file changed.
+Deployment runs as part of the target's own build on every build, copying only what differs from
+what is already deployed. It is not a post-build step, so editing a description redeploys it on the
+next build even when no source file changed, and such a build does not relink the target.
 
 ### Deploying is not installing
 
@@ -389,7 +395,7 @@ and in the install tree alike.
 
 ### Which binary does the expanding
 
-The rule needs a `meios` binary that runs on the build host, and it takes the first of three it
+The flatten needs a `meios` binary that runs on the build host, and it takes the first of three it
 finds: `MEIOS_CLI_EXECUTABLE`, a cache entry naming a binary you already have; the imported
 `meios::cli` target, from a `find_package(meios)` whose installed package carries the tool; or the
 in-tree `meios` target, in a build that builds meios itself with `MEIOS_BUILD_TOOLS=ON`.
@@ -446,11 +452,15 @@ is no escape that gets a semicolon through this argument — run the binary your
 
 ### Ordering and rebuilds
 
-The rule watches the acquired tree's `.urdf`, `.xacro`, `.xml` and `.yaml` files, so editing a
-description re-runs the flatten on the next build even though no source file changed — the same
-reason deployment is wired into the build graph rather than attached as a post-build step. It also
-depends on the binary, and it is ordered after the deploy rule for the same resource on the same
-target, so the tree and the document expanded out of it are never written in the other order.
+Every deploy and flatten call on a target appends its commands to the target's one step, which runs
+them in the order the calls were made, on every build. Editing a description therefore re-expands it
+on the next build even though no source file changed, and the document is republished only when its
+bytes change. The step also depends on the binary.
+
+A resource must be deployed before it is flattened on the same target. A deploy of a resource the
+target already flattened is a configure error, because its tree would be written over the document.
+Two flatten calls on one target may not name the same `OUTPUT` either, compared after removing `.`
+components and ignoring case.
 
 ### A failed flatten leaves nothing behind
 
@@ -461,7 +471,7 @@ build log with its file and line intact:
 …/ur_description/urdf/ur.urdf.xacro:8:27: [error] (undefined_property) name 'ur_typ' is not defined
 ```
 
-Nothing is written: not a truncated document, not an empty one, and not the temporary the rule
+Nothing is written: not a truncated document, not an empty one, and not the temporary the step
 captures into. The document is published by renaming that temporary once the binary has exited zero,
 because build tools disagree about what to do with a failed command's leftovers and a half-written
 URDF parses far enough to look like a whole one.
