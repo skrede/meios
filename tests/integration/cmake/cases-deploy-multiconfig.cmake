@@ -19,7 +19,8 @@ if(_capabilities MATCHES "Ninja Multi-Config" AND MEIOS_NINJA_EXECUTABLE)
         CONFIGS Debug,Release
         REQUIRE_PRESENT models/pkg_a/package.xml)
 
-    # The generator under which three executables were measured failing every clean build.
+    # Ninja Multi-Config runs the three steps concurrently on every clean build, so it is the
+    # generator under which unserialized writers fail most reliably.
     meios_cmake_case(cmake_deploy_shared_directory_multiconfig
         FIXTURE shared-dir
         DRIVER  meios_shared_dir_case.cmake

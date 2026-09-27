@@ -22,8 +22,8 @@ endif()
 include("${CMAKE_CURRENT_LIST_DIR}/meiosTargets.cmake")
 
 # One name, two writers, one reader: the CLI's own listfile records this in an
-# add_subdirectory tree, this line records it for an installed package, and the flatten
-# rule reads it. A global property rather than a variable, because a variable set here
+# add_subdirectory tree, this line records it for an installed package, and
+# meios_target_flatten_resource reads it at configure time. A global property rather than a variable, because a variable set here
 # would reach only the directory that called find_package.
 set_property(GLOBAL PROPERTY MEIOS_CLI_HAS_EVAL_PYTHON @MEIOS_CLI_HAS_EVAL_PYTHON@)
 

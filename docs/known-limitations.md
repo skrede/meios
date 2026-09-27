@@ -516,8 +516,8 @@ built into one directory never write at once. Two arrangements fall outside that
 serialized: targets whose runtime directories nest, where one target's `SUBDIR` or `OUTPUT` reaches
 into the other's directory, and two build trees writing into one directory. The lock orders nothing
 either: two targets that write different content to one path end with whichever step ran last, and
-that can differ from one build to the next. That the race is gone is shown by repetition, which
-cannot prove a race absent; what is shown deterministically is that each step takes the lock and
+that can differ from one build to the next. That no writer races another is shown by repetition,
+which cannot prove a race absent; what is shown deterministically is that each step takes the lock and
 waits on it.
 
 ## API stability
