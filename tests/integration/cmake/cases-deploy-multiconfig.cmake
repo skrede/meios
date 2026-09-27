@@ -1,5 +1,5 @@
 # The deployment follows the target's runtime directory, so under a generator carrying several
-# configurations each one has to receive its own deployed tree. A rule gated on one stamp shared
+# configurations each one has to receive its own deployed tree. A step gated on one stamp shared
 # across configurations deploys into whichever configuration was built first and leaves the others
 # empty, which no single-configuration case can see.
 #
@@ -18,6 +18,31 @@ if(_capabilities MATCHES "Ninja Multi-Config" AND MEIOS_NINJA_EXECUTABLE)
         ORIGIN  tarball
         CONFIGS Debug,Release
         REQUIRE_PRESENT models/pkg_a/package.xml)
+
+    # The generator under which three executables were measured failing every clean build.
+    meios_cmake_case(cmake_deploy_shared_directory_multiconfig
+        FIXTURE shared-dir
+        DRIVER  meios_shared_dir_case.cmake
+        ORIGIN  tarball
+        CONFIGS Debug
+        TIMEOUT 600
+        REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml)
+    set_tests_properties(cmake_deploy_shared_directory_multiconfig PROPERTIES PROCESSORS 3)
+
+    if(TARGET meios)
+        meios_cmake_case(cmake_flatten_shared_directory_multiconfig
+            FIXTURE shared-dir
+            DRIVER  meios_shared_dir_case.cmake
+            ORIGIN  tarball
+            CONFIGS Debug
+            TIMEOUT 600
+            EXTRA   "-DMEIOS_CLI_EXECUTABLE=$<TARGET_FILE:meios>"
+                    -DFX_INPUT=pkg_a/urdf/robot.urdf.xacro -DFX_OUTPUT=urdf/robot.urdf
+            REQUIRE_PRESENT models/pkg_a/package.xml
+            REQUIRE_CONTAINS urdf/robot.urdf,harness_arm)
+        set_tests_properties(cmake_flatten_shared_directory_multiconfig PROPERTIES PROCESSORS 3)
+    endif()
 else()
-    message(STATUS "meios-cmake: no multi-config generator; the per-configuration deploy case is not registered.")
+    message(STATUS
+        "meios-cmake: no multi-config generator; the multi-config cases are not registered.")
 endif()

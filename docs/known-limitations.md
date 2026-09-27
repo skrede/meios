@@ -510,6 +510,16 @@ list of accepted names, silently uses its default for anything it does not recog
 document with no diagnostic. A typo therefore changes which evaluator runs, and the only sign is
 that an expression the core evaluator refuses starts failing to resolve.
 
+**Steps take turns only within one runtime directory of one build.** Every deploy and flatten step
+holds a lock keyed on its target's runtime directory, where every write it makes lands, so targets
+built into one directory never write at once. Two arrangements fall outside that key, and neither is
+serialized: targets whose runtime directories nest, where one target's `SUBDIR` or `OUTPUT` reaches
+into the other's directory, and two build trees writing into one directory. The lock orders nothing
+either: two targets that write different content to one path end with whichever step ran last, and
+that can differ from one build to the next. That the race is gone is shown by repetition, which
+cannot prove a race absent; what is shown deterministically is that each step takes the lock and
+waits on it.
+
 ## API stability
 
 **No deprecation cushion before `v1.0.0`.** meios is pre-release. A superseded type or function is
@@ -520,7 +530,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes fifty-five claims — the bold sentence that opens each entry above — and this table
+This page makes fifty-six claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -619,6 +629,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Nothing in the automated set cross-compiles | **Nothing**, by construction. A case would need a toolchain file and a host-runnable binary. |
 | Tool discovery is proven for two of three routes | `cmake_flatten_runs_a_cli_target` and `cmake_flatten_no_cli_refusal`. The installed-package route is carried by nothing. |
 | An unrecognized evaluator name is refused by the build and accepted by the tool | `cmake_flatten_eval_unknown_refusal` for the refusal, and the three `cmake_eval_vocabulary` cases holding the module's backend list to the binary's. The tool's silent acceptance is asserted by nothing. |
+| Steps take turns only within one runtime directory of one build | By repetition, `cmake_deploy_shared_directory` and `cmake_flatten_shared_directory`, plus their `_multiconfig` variants where Ninja Multi-Config is available. Deterministically, `cmake_deploy_waits_for_a_held_lock` and `cmake_flatten_waits_for_a_held_lock`. Nested runtime directories and a second build tree are carried by nothing. |
 
 ### API stability
 

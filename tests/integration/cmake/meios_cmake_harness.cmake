@@ -45,7 +45,7 @@ function(_meios_harness_config_args out)
 endfunction()
 
 # An empty target builds everything, which is what a case that has nothing to say about build order
-# wants; naming one is how a case observes what a single rule pulls in behind it.
+# wants; naming one is how a case observes what a single target pulls in behind it.
 function(meios_harness_build binary target out_rc)
     _meios_harness_config_args(_args)
     if(target)
@@ -56,6 +56,20 @@ function(meios_harness_build binary target out_rc)
         RESULT_VARIABLE _rc)
     set(${out_rc} "${_rc}" PARENT_SCOPE)
 endfunction()
+
+# Everything the harness forwards about the parent's generator is overridden with the generator
+# selected here, because none of it describes that generator. The parent's build tool would hand
+# make to Ninja, which reports it as a Ninja too old to use; the parent's platform and toolset are
+# Visual Studio settings that Ninja Multi-Config refuses outright. A macro, so the settings land in
+# the driver's scope.
+macro(meios_harness_select_ninja_multi_config)
+    set(GEN "Ninja Multi-Config")
+    set(CONFIG "")
+    find_program(_meios_ninja NAMES ninja ninja-build samu)
+    set(MAKE_PROGRAM "${_meios_ninja}")
+    set(GEN_PLATFORM "")
+    set(GEN_TOOLSET "")
+endmacro()
 
 function(meios_harness_install binary prefix component out_rc)
     _meios_harness_config_args(_args)
@@ -134,6 +148,24 @@ endfunction()
 function(meios_harness_require_absent path)
     if(EXISTS "${path}")
         meios_harness_failed_assertion("expected nothing at ${path}")
+    endif()
+endfunction()
+
+function(meios_harness_require_placement run present contains)
+    string(REPLACE "," ";" _present "${present}")
+    foreach(_rel IN LISTS _present)
+        meios_harness_require_file("${run}/${_rel}")
+    endforeach()
+    if(NOT contains)
+        return()
+    endif()
+    string(REPLACE "," ";" _pair "${contains}")
+    list(GET _pair 0 _rel)
+    list(GET _pair 1 _needle)
+    meios_harness_require_file("${run}/${_rel}")
+    file(READ "${run}/${_rel}" _placed)
+    if(NOT _placed MATCHES "${_needle}")
+        meios_harness_failed_assertion("${_rel} does not carry '${_needle}'")
     endif()
 endfunction()
 

@@ -74,6 +74,14 @@ meios_cmake_case(cmake_flatten_package_path_containment_refusal
     EXTRA   "${_cli}" ${_declare} -DFX_PACKAGE_PATH=../escape
     REFUSES "PACKAGE_PATH[ \t\r\n]+entry[ \t\r\n]+'[.][.]/escape'")
 
+# The pattern names the flatten function, so a refusal from the deploy call beside it cannot satisfy
+# the case.
+meios_cmake_case(cmake_flatten_other_directory_refusal
+    FIXTURE flatten
+    ORIGIN  tarball
+    EXTRA   "${_cli}" ${_declare} -DFX_ELSEWHERE=ON
+    REFUSES "meios_target_flatten_resource[(]app[)]:[ \t\r\n]+must[ \t\r\n]+be[ \t\r\n]+called[ \t\r\n]+in[ \t\r\n]+the[ \t\r\n]+directory")
+
 # The second OUTPUT differs only by a '.' component and by case, which is how two spellings name one
 # document on the default Windows and macOS file systems.
 meios_cmake_case(cmake_flatten_repeated_output_refusal

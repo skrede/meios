@@ -38,7 +38,7 @@ struct exemption
     std::string_view reason;
 };
 
-constexpr std::array<exemption, 5> allowlist{
+constexpr std::array<exemption, 6> allowlist{
     { { reach::file, "tests/compile/pass/CMakeLists.txt", "CMAKE_BINARY_DIR",
         "a generated build system exists only at the top of the build tree; the target and "
         "configuration arguments are what narrow the build to one probe" },
@@ -48,6 +48,9 @@ constexpr std::array<exemption, 5> allowlist{
       { reach::file, "cmake/MeiosResourceCache.cmake", "CMAKE_BINARY_DIR",
         "one resource cache and one owner key per build tree is the unit the claim and prune "
         "lifecycle rests on" },
+      { reach::file, "cmake/MeiosTargetStep.cmake", "CMAKE_BINARY_DIR",
+        "every deploy and flatten step of one build has to find the same lock without knowing "
+        "about the others, and the top of the build is the one directory they all share" },
       { reach::file, "cmake/corpus.cmake", "CMAKE_BINARY_DIR",
         "corpus scratch belongs to whichever build tree is running, not to meios's own binary "
         "directory" },

@@ -38,9 +38,9 @@ if(_rc EQUAL 0 AND REQUIRE_UNRELINKED)
 endif()
 
 # The edit lands inside the acquired tree and touches no source file, which is the only way to tell
-# a rule keyed on the tree's contents apart from one that merely runs when the target relinks.
-# A case whose rule reads the edited file as a description names a replacement document instead of
-# taking the token, which is not one and would fail the rule rather than show it reran.
+# a step keyed on the tree's contents apart from one that merely runs when the target relinks.
+# A case whose step reads the edited file as a description names a replacement document instead of
+# taking the token, which is not one and would fail the step rather than show it reran.
 if(_rc EQUAL 0 AND MUTATE)
     file(READ "${WORK}/tree/harness_tree.txt" _acquired)
     if(MUTATE_FROM)
@@ -50,7 +50,7 @@ if(_rc EQUAL 0 AND MUTATE)
     endif()
     # An edit whose modification time is older than what was deployed is reachable from an archive
     # extraction, a time-preserving copy, or a checkout of an older revision, and it is the case a
-    # rule deciding currency by modification time gets wrong while a content comparison gets right.
+    # step deciding currency by modification time gets wrong while a content comparison gets right.
     if(MUTATE_BACKDATE)
         meios_harness_backdate("${_acquired}/${MUTATE}")
     endif()
@@ -67,7 +67,7 @@ endif()
 
 # Back-dating between the two builds is what makes the assertion granularity-proof: two builds
 # landing in the same second would leave an equality check on the recorded time passing whatever
-# the rule republished.
+# the step republished.
 if(_rc EQUAL 0 AND REQUIRE_STABLE)
     meios_harness_require_file("${_run}/${REQUIRE_STABLE}")
     meios_harness_backdate("${_run}/${REQUIRE_STABLE}")
@@ -78,10 +78,7 @@ if(_rc EQUAL 0 AND REQUIRE_STABLE)
 endif()
 
 if(_rc EQUAL 0)
-    string(REPLACE "," ";" _present "${REQUIRE_PRESENT}")
-    foreach(_rel IN LISTS _present)
-        meios_harness_require_file("${_run}/${_rel}")
-    endforeach()
+    meios_harness_require_placement("${_run}" "${REQUIRE_PRESENT}" "${REQUIRE_CONTAINS}")
     string(REPLACE "," ";" _installed "${REQUIRE_INSTALLED}")
     foreach(_rel IN LISTS _installed)
         meios_harness_require_file("${_prefix}/${_rel}")
@@ -89,22 +86,11 @@ if(_rc EQUAL 0)
 endif()
 
 # Absence is asserted whatever the build did, because the case that cares most about it is the one
-# whose build failed: a rule that writes straight into its output leaves a half-written document
+# whose build failed: a step that writes straight into its output leaves a half-written document
 # behind exactly there, and a check skipped on failure would never see it.
 string(REPLACE "," ";" _absent "${REQUIRE_ABSENT}")
 foreach(_rel IN LISTS _absent)
     meios_harness_require_absent("${_run}/${_rel}")
 endforeach()
-
-if(_rc EQUAL 0 AND REQUIRE_CONTAINS)
-    string(REPLACE "," ";" _pair "${REQUIRE_CONTAINS}")
-    list(GET _pair 0 _rel)
-    list(GET _pair 1 _needle)
-    meios_harness_require_file("${_run}/${_rel}")
-    file(READ "${_run}/${_rel}" _deployed)
-    if(NOT _deployed MATCHES "${_needle}")
-        meios_harness_failed_assertion("${_rel} does not carry '${_needle}'")
-    endif()
-endif()
 
 meios_harness_sentinel(${_rc})

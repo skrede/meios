@@ -10,18 +10,11 @@ include("${CMAKE_CURRENT_LIST_DIR}/MeiosDeployResources.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosTargetStep.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/MeiosResourceRegistry.cmake")
 
-# Captured while the module is being read: inside a function body the current list directory is the
-# caller's, so a function locating its sibling script from there would look beside whichever
-# listfile called it. A GLOBAL property rather than a variable because include_guard runs this file
-# once, in whichever directory reaches it first, and that directory's siblings never see a variable
-# set there.
-set_property(GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}")
-
 # Caller-supplied on both of its paths and never a discovery mechanism: it is the seam a
 # cross-compiling build uses to name a binary that runs on the build host, and it is equally how a
-# build with no meios package to look up points the rule at a binary it already has.
+# build with no meios package to look up points the flatten at a binary it already has.
 set(MEIOS_CLI_EXECUTABLE "" CACHE FILEPATH
-    "Host-runnable meios binary used by the build-time flatten rule.")
+    "Host-runnable meios binary that runs the build-time flatten.")
 
 # The order is fixed and stops where it stops. Nothing searches the path for a binary — one found
 # there is version skew between this module and whatever expansion semantics that binary carries —
@@ -80,7 +73,8 @@ function(_meios_flatten_step target cli argv out_file)
     # arrive escaped or the wrapper would receive its first element and nothing else. $<SEMICOLON>
     # does not survive it either: it is evaluated before the split.
     string(REPLACE ";" "\;" _args "${argv}")
-    get_property(_module_dir GLOBAL PROPERTY MEIOS_CMAKE_MODULE_DIR)
+    _meios_step_script(MeiosFlattenRun.cmake _script)
+    _meios_step_lock_args("${target}" _lock)
     _meios_step_mode("${target}" _step _mode)
     # The binary is a dependency by path and not only by target name: a caller-supplied path may
     # still name a binary this same build produces, and only the file-level edge orders the flatten
@@ -89,8 +83,8 @@ function(_meios_flatten_step target cli argv out_file)
     add_custom_command(OUTPUT "${_step}" ${_mode}
         COMMAND "${CMAKE_COMMAND}" -E echo "Flattening ${out_file}"
         COMMAND ${CMAKE_COMMAND} "-DMEIOS_FLATTEN_CLI=${cli}" "-DMEIOS_FLATTEN_ARGS=${_args}"
-                "-DMEIOS_FLATTEN_OUT=${out_file}"
-                -P "${_module_dir}/MeiosFlattenRun.cmake"
+                "-DMEIOS_FLATTEN_OUT=${out_file}" ${_lock}
+                -P "${_script}"
         DEPENDS "${cli}")
 endfunction()
 
@@ -110,7 +104,7 @@ function(_meios_flatten_record target resource output)
     set_property(GLOBAL APPEND PROPERTY MEIOS_FLATTENED_${target} "${resource}")
 endfunction()
 
-function(_meios_flatten_rule target resource input output args package_path cli eval out)
+function(_meios_flatten_append target resource input output args package_path cli eval out)
     _meios_flatten_input("${target}" "${resource}" "${input}" _dir)
     _meios_flatten_argv("${_dir}" "${input}" "${args}" "${package_path}" "${eval}" _argv)
     # A step's output may not carry a target-dependent expression, which is why the document is
@@ -159,8 +153,8 @@ function(meios_target_flatten_resource target)
     _meios_flatten_cli("${target}" _cli)
     _meios_flatten_eval("${target}" "${ARG_EVAL}" _eval)
     _meios_flatten_announce("${target}" "${ARG_INPUT}" "${_eval}")
-    _meios_flatten_rule("${target}" "${ARG_RESOURCE}" "${ARG_INPUT}" "${ARG_OUTPUT}" "${ARG_ARGS}"
-                        "${ARG_PACKAGE_PATH}" "${_cli}" "${_eval}" _out)
+    _meios_flatten_append("${target}" "${ARG_RESOURCE}" "${ARG_INPUT}" "${ARG_OUTPUT}" "${ARG_ARGS}"
+                          "${ARG_PACKAGE_PATH}" "${_cli}" "${_eval}" _out)
     _meios_flatten_install("${target}" "${ARG_OUTPUT}" "${ARG_INSTALL_RUNTIME_RELATIVE}"
                            "${ARG_INSTALL_DESTINATION}" "${ARG_INSTALL_COMPONENT}" "${_out}")
 endfunction()

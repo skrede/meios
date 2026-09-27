@@ -1,9 +1,9 @@
 #include <cstring>
 #include <iostream>
 
-// Stands in for the real binary only as far as the build rule can see it: the rule invokes the
+// Stands in for the real binary only as far as the flatten step can see it: the step invokes the
 // flatten verb and publishes what arrives on standard output, so printing a document nothing else
-// in the tree carries is enough to show which binary the rule actually ran.
+// in the tree carries is enough to show which binary the step actually ran.
 int main(int argc, char **argv)
 {
     if(argc < 2 || std::strcmp(argv[1], "flatten") != 0)

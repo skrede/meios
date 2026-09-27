@@ -223,9 +223,9 @@ is documented elsewhere.
   derives from which enrichment targets exist. Defining one by hand claims a capability that is not
   linked in.
 - **Resource-system variables** — `MEIOS_RESOURCE_CACHE_DIR`, `MEIOS_RESOURCE_TLS_CAINFO`,
-  `MEIOS_RESOURCE_<name>_SOURCE_DIR`, `MEIOS_CLI_EXECUTABLE`. Real cache entries you may set, but
-  they belong to the description-acquisition system rather than to meios's build, and the
-  [resource guide](resources-guide.md) is where each is documented.
+  `MEIOS_RESOURCE_<name>_SOURCE_DIR`, `MEIOS_CLI_EXECUTABLE`, `MEIOS_STEP_LOCK_TIMEOUT`. Real cache
+  entries you may set, but they belong to the description-acquisition system rather than to meios's
+  build, and the [resource guide](resources-guide.md) is where each is documented.
 
 ## What an installed package carries
 

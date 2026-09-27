@@ -189,6 +189,7 @@ text quoted here. Every option named below is defined once, with its default, in
 | `meios_target_deploy_resources(<target>): must be called in the directory that defines '<target>' (<its directory>), not <the calling directory>. …` (`meios_target_flatten_resource` says the same) | The call is in a listfile in another directory. Both calls add to a build step of the target, and CMake builds such a step only for a target defined in the directory that issued it, so from anywhere else it would configure, build, and never run. | Move the call into the listfile that defines the target; the declaration can stay where it is. |
 | `meios_target_deploy_resources(<target>): resource '<name>' is already flattened on '<target>' by an earlier call. …` | The step runs the calls in order, so this deploy would write the tree over the document. | Move the deploy call above the flatten call. |
 | `meios_target_flatten_resource(<target>): OUTPUT '<path>' is already written by an earlier flatten call on '<target>'; …` | Two calls would publish to one file. Spellings that differ only by `.` components or by case count as one, because Windows and macOS file systems fold case by default. | Give each document its own `OUTPUT`. |
+| `meios: MEIOS_STEP_LOCK_TIMEOUT is '<value>', which is not a whole number of seconds. …` | The variable bounds how long a deploy or flatten step waits for another step writing into the same runtime directory, and it takes whole seconds. | Set a number, or clear it to wait without a bound. |
 
 ### The configure kept going
 
@@ -212,6 +213,12 @@ CMake Warning:
 The listfiles this repository answers for are the ones it tracks, and it asks git rather than
 walking the working copy. Where git is unavailable, the case that scans them reports the absent
 manifest and skips, rather than passing on an empty scan. Nothing is wrong with your build.
+
+### The build stopped
+
+| Message | What it means | What to do |
+|---|---|---|
+| `meios: waited <n> seconds for another step writing into '<runtime directory>' to release <lock file>. …` | Targets built into one directory take turns placing resources there, and this step gave up after `MEIOS_STEP_LOCK_TIMEOUT` seconds. The other step is still running, because a lock is released when its process exits. | Raise `MEIOS_STEP_LOCK_TIMEOUT`, or clear it to wait for as long as the other step takes. If no other step should be running, look for a second build running in the same build tree. |
 
 ## Where to go next
 

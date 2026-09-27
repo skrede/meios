@@ -23,7 +23,7 @@ meios_cmake_case(cmake_flatten_parameterized
 
 # The pattern is a fragment of the binary's own typed diagnostic rather than the build tool's
 # failure line, so the case fails for the reason it names: a missing input would also return
-# non-zero. The absent paths are the other half of it: a rule writing straight into its output would
+# non-zero. The absent paths are the other half of it: a step writing straight into its output would
 # leave a fragment of a URDF behind, which parses far enough to look like one.
 meios_cmake_case(cmake_flatten_failure_diagnostic
     FIXTURE flatten
@@ -35,8 +35,8 @@ meios_cmake_case(cmake_flatten_failure_diagnostic
     REFUSES "broken[.]urdf[.]xacro:[0-9]+:[0-9]+:[ \t\r\n]+\\[error\\][ \t\r\n]+\\(undefined_property\\)"
     REQUIRE_ABSENT urdf/broken.urdf,urdf/broken.urdf.tmp)
 
-# The edit replaces the description the rule reads and touches no source file, so nothing relinks:
-# a rule attached to the target's link step would leave the stale document in place with no sign
+# The edit replaces the description the step reads and touches no source file, so nothing relinks:
+# a step attached to the target's link would leave the stale document in place with no sign
 # anything was wrong. The expected name exists nowhere in the acquired tree, so a document that was
 # not regenerated cannot carry it.
 meios_cmake_case(cmake_flatten_reruns_on_edit
@@ -50,7 +50,7 @@ meios_cmake_case(cmake_flatten_reruns_on_edit
     MUTATE_FROM mutations/robot.urdf.xacro
     REQUIRE_CONTAINS urdf/robot.urdf,meios_harness_mutated)
 
-# The rule runs on every build, so what keeps the published document stable is the run script
+# The step runs on every build, so what keeps the published document stable is the run script
 # republishing only bytes that differ. The document is back-dated between the two builds rather than
 # compared for equality across them, because a recorded time is second-granular and two builds can
 # land in the same second.

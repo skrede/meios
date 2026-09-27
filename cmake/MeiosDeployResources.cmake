@@ -118,7 +118,17 @@ function(_meios_deploy_install install_dest component tree src)
             PATTERN ".git" EXCLUDE)
 endfunction()
 
-function(_meios_deploy_tree name dir tree dest install_dest component out_command out_label)
+# Each tree is its own command, because one command per call would build a command line past the
+# length cmd accepts once a call selects many entries.
+function(_meios_deploy_copy target src dst out)
+    _meios_step_lock_args("${target}" _lock)
+    _meios_step_script(MeiosDeployRun.cmake _script)
+    set(${out} COMMAND "${CMAKE_COMMAND}" "-DMEIOS_DEPLOY_SOURCE=${src}"
+        "-DMEIOS_DEPLOY_DESTINATION=${dst}" ${_lock} -P "${_script}" PARENT_SCOPE)
+endfunction()
+
+function(_meios_deploy_tree target name dir tree dest install_dest component out_command
+                            out_label)
     # Each entry keeps its own directory name at the destination, because package://<name>/…
     # resolves to <package root>/<name>/…: copying a selected package's *contents* into the
     # package root would strip the very name the reference is looked up under.
@@ -134,8 +144,8 @@ function(_meios_deploy_tree name dir tree dest install_dest component out_comman
     if(install_dest)
         _meios_deploy_install("${install_dest}" "${component}" "${tree}" "${_src}")
     endif()
-    set(${out_command} COMMAND "${CMAKE_COMMAND}" -E copy_directory_if_different "${_src}" "${_dst}"
-        PARENT_SCOPE)
+    _meios_deploy_copy("${target}" "${_src}" "${_dst}" _command)
+    set(${out_command} "${_command}" PARENT_SCOPE)
     set(${out_label} "${_label}" PARENT_SCOPE)
 endfunction()
 
@@ -148,8 +158,8 @@ function(_meios_deploy_collect target resources packages dest install_dest compo
         _meios_deploy_selection("${target}" "${_name}" "${_dir}" "${resources}" "${packages}"
                                 _selection)
         foreach(_tree IN LISTS _selection)
-            _meios_deploy_tree("${_name}" "${_dir}" "${_tree}" "${dest}" "${install_dest}"
-                               "${component}" _command _label)
+            _meios_deploy_tree("${target}" "${_name}" "${_dir}" "${_tree}" "${dest}"
+                               "${install_dest}" "${component}" _command _label)
             list(APPEND _commands ${_command})
             list(APPEND _labels "${_label}")
         endforeach()

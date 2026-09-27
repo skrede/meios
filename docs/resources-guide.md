@@ -462,6 +462,14 @@ target already flattened is a configure error, because its tree would be written
 Two flatten calls on one target may not name the same `OUTPUT` either, compared after removing `.`
 components and ignoring case.
 
+Targets built into one runtime directory, which is where CMake builds every executable of a
+directory unless told otherwise, each deploy and flatten into that one place, and their steps take
+turns. Each step holds a lock on the runtime directory while it writes, so two copies of one tree
+never run at once, and no document is renamed into place while another step copies there. The lock
+is a file under the build tree's `CMakeFiles/meios-locks`, and the operating system releases it when
+the step's process exits, even one that crashed. A step waits for as long as the other one takes;
+setting `MEIOS_STEP_LOCK_TIMEOUT` to a number of seconds makes it give up with a message instead.
+
 ### A failed flatten leaves nothing behind
 
 A description that does not resolve fails the build, and the binary's typed diagnostic reaches your

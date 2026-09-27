@@ -27,15 +27,17 @@ function(_meios_collect_included_modules dir entry out_var)
     set(${out_var} "${_found}" PARENT_SCOPE)
 endfunction()
 
-# Reachable from no include(), because they are invoked as bare script runs rather than included,
-# so they cannot be derived and have to be named.
-set(_meios_cmake_script_modules MeiosPruneResources.cmake MeiosFlattenRun.cmake)
+# The scripts run as bare script runs rather than being included, so they are named here; what they
+# include is derived from them like everything else.
+set(_meios_cmake_script_modules
+    MeiosPruneResources.cmake MeiosFlattenRun.cmake MeiosDeployRun.cmake)
 
 function(meios_installed_cmake_modules dir out_var)
-    _meios_collect_included_modules("${dir}" MeiosDeclareResource.cmake _modules)
+    _meios_collect_included_modules("${dir}"
+        "MeiosDeclareResource.cmake;${_meios_cmake_script_modules}" _modules)
     file(GLOB _present RELATIVE "${dir}" "${dir}/Meios*.cmake")
     foreach(_file IN LISTS _present)
-        if(NOT _file IN_LIST _modules AND NOT _file IN_LIST _meios_cmake_script_modules)
+        if(NOT _file IN_LIST _modules)
             message(FATAL_ERROR
                 "meios: cmake/${_file} is reached by no include() and is not named as a script "
                 "entry point, so the installed package would carry it only by accident. Include "
@@ -43,7 +45,6 @@ function(meios_installed_cmake_modules dir out_var)
                 "points in installed_modules.cmake, or delete it.")
         endif()
     endforeach()
-    list(APPEND _modules ${_meios_cmake_script_modules})
     list(TRANSFORM _modules PREPEND "${dir}/")
     set(${out_var} "${_modules}" PARENT_SCOPE)
 endfunction()

@@ -20,7 +20,7 @@ meios_cmake_case(cmake_deploy_nested_selection
 # A package deployed under a directory named after itself carries that name twice into any name built
 # from the call's arguments, while the step is named after the target alone. The Windows leg runs
 # this under the Visual Studio generator, which names a rule file after that step.
-meios_cmake_case(cmake_deploy_bounded_rule_name
+meios_cmake_case(cmake_deploy_bounded_step_name
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
@@ -29,10 +29,9 @@ meios_cmake_case(cmake_deploy_bounded_rule_name
             -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT urdf/harness_description_package/pkg_b/config/params.yaml)
 
-# The only case with two deploy calls on one target: the second call appends to the step the first
-# created, and both trees land. Its SUBDIRs are the pair a name built by substituting characters in
-# SUBDIR would fold together.
-meios_cmake_case(cmake_deploy_distinct_rule_names
+# Two deploy calls on one target: the second appends to the step the first created, and each tree
+# lands in its own SUBDIR, even where the two SUBDIRs differ only by `/` against `_`.
+meios_cmake_case(cmake_deploy_two_calls_one_step
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
@@ -40,7 +39,7 @@ meios_cmake_case(cmake_deploy_distinct_rule_names
     REQUIRE_PRESENT models/pkg/pkg_a/package.xml,models_pkg/pkg_a/package.xml)
 
 # Two entries out of one tree are deployed through the one step the target carries.
-meios_cmake_case(cmake_deploy_one_rule_two_packages
+meios_cmake_case(cmake_deploy_one_step_two_packages
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
@@ -48,7 +47,7 @@ meios_cmake_case(cmake_deploy_one_rule_two_packages
     REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml)
 
 # A call naming two resources deploys both through the one step the target carries.
-meios_cmake_case(cmake_deploy_one_rule_two_resources
+meios_cmake_case(cmake_deploy_one_step_two_resources
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
@@ -75,8 +74,8 @@ meios_cmake_case(cmake_deploy_reruns_on_edit
     MUTATE  pkg_a/package.xml
     REQUIRE_CONTAINS models/pkg_a/package.xml,meios-harness-mutated)
 
-# The sibling above only proves an edit stamped forward in time redeploys, which a rule comparing
-# modification times also gets right. Back-dating the edit is what separates the two: a stamped rule
+# The sibling above only proves an edit stamped forward in time redeploys, which a step comparing
+# modification times also gets right. Back-dating the edit is what separates the two: a stamped step
 # sees an input older than its own stamp and skips, while a content comparison republishes.
 meios_cmake_case(cmake_deploy_reruns_on_backdated_edit
     FIXTURE target

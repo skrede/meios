@@ -37,3 +37,29 @@ function(_meios_step_mode target out_step out_mode)
     set(${out_step} "${_step}" PARENT_SCOPE)
     set(${out_mode} "${_mode}" PARENT_SCOPE)
 endfunction()
+
+set(MEIOS_STEP_LOCK_TIMEOUT "" CACHE STRING
+    "Seconds a meios deploy or flatten step waits for another step writing into the same \
+runtime directory; empty or 0 waits for as long as that step takes.")
+
+# The directory of the file defining the function, because inside a function body the current list
+# directory is the caller's.
+function(_meios_step_script name out)
+    set(${out} "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${name}" PARENT_SCOPE)
+endfunction()
+
+# CMAKE_BINARY_DIR is the top of the whole build, the same in every directory and every subproject,
+# so every step of one build agrees on where the locks are without knowing about the others.
+function(_meios_step_lock_args target out)
+    if(NOT MEIOS_STEP_LOCK_TIMEOUT MATCHES "^[0-9]*$")
+        message(FATAL_ERROR
+            "meios: MEIOS_STEP_LOCK_TIMEOUT is '${MEIOS_STEP_LOCK_TIMEOUT}', which is not a whole "
+            "number of seconds. Set a number of seconds, or leave it empty to wait for as long as "
+            "the other step takes.")
+    endif()
+    set(${out}
+        "-DMEIOS_STEP_ROOT=$<TARGET_FILE_DIR:${target}>"
+        "-DMEIOS_STEP_BINARY_DIR=${CMAKE_BINARY_DIR}"
+        "-DMEIOS_STEP_LOCK_TIMEOUT=${MEIOS_STEP_LOCK_TIMEOUT}"
+        PARENT_SCOPE)
+endfunction()
