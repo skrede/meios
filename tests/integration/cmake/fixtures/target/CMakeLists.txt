@@ -34,7 +34,7 @@ if(FX_SECOND_RESOURCE)
 endif()
 
 set(_args RESOURCES ${_names})
-if(FX_PACKAGES)
+if(DEFINED FX_PACKAGES)
     string(REPLACE "," ";" _packages "${FX_PACKAGES}")
     list(APPEND _args PACKAGES ${_packages})
 endif()

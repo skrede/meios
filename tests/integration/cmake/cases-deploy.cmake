@@ -58,6 +58,16 @@ meios_cmake_case(cmake_deploy_one_rule_two_resources
     EXTRA   -DFX_SUBDIR=models -DFX_SECOND_RESOURCE=demo_b
     REQUIRE_PRESENT models/pkg_a/package.xml,models/config/params.yaml)
 
+# CMake's if() reads a lone `off` as false, so a selection tested for truth rather than emptiness
+# deploys the whole tree instead of the one entry named.
+meios_cmake_case(cmake_deploy_false_constant_package
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=off
+    REQUIRE_PRESENT models/off/package.xml
+    REQUIRE_ABSENT  models/pkg_a/package.xml)
+
 # The edit touches no source file, so nothing relinks: a deployment attached as a post-build command
 # would leave the stale tree in place with no sign anything was wrong.
 meios_cmake_case(cmake_deploy_reruns_on_edit

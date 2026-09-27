@@ -81,12 +81,12 @@ endfunction()
 # nothing at all whenever PACKAGES was absent.
 function(_meios_deploy_selection target name dir resources packages out)
     list(LENGTH resources _resource_count)
-    if(packages AND NOT _resource_count EQUAL 1)
+    if(NOT packages STREQUAL "" AND NOT _resource_count EQUAL 1)
         message(FATAL_ERROR
             "meios_target_deploy_resources(${target}): PACKAGES selects entries from a single "
             "resource tree; pass exactly one RESOURCES name (got ${_resource_count}).")
     endif()
-    if(NOT packages)
+    if(packages STREQUAL "")
         set(${out} "." PARENT_SCOPE)
         return()
     endif()

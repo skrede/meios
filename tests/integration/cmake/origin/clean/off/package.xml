@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>off</name>
+  <version>1.0.0</version>
+  <description>Package whose name CMake reads as a false constant when it is tested for truth.</description>
+  <maintainer email="dev@example.invalid">meios</maintainer>
+  <license>Apache-2.0</license>
+</package>
