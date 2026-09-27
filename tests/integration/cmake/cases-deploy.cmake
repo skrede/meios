@@ -29,14 +29,34 @@ meios_cmake_case(cmake_deploy_bounded_rule_name
             -DFX_PACKAGES=pkg_b/config
     REQUIRE_PRESENT urdf/harness_description_package/pkg_b/config/params.yaml)
 
-# The two SUBDIRs are the pair a character-substituting name folds together. A successful configure
-# is itself the assertion, since two equal rule names are a duplicate target.
+# The only case with two deploy calls on one target. Its SUBDIRs are the pair a name built by
+# substituting characters in SUBDIR would fold together, and a successful configure is itself an
+# assertion, since two equal rule names are a duplicate target.
 meios_cmake_case(cmake_deploy_distinct_rule_names
     FIXTURE target
     DRIVER  meios_build_case.cmake
     ORIGIN  tarball
     EXTRA   -DFX_SUBDIR=models/pkg -DFX_SECOND_SUBDIR=models_pkg
     REQUIRE_PRESENT models/pkg/pkg_a/package.xml,models_pkg/pkg_a/package.xml)
+
+# Two entries out of one tree give the fixture's per-call count a call whose trees would each
+# otherwise have become a rule of their own.
+meios_cmake_case(cmake_deploy_one_rule_two_packages
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models -DFX_PACKAGES=pkg_a,pkg_b/config
+    REQUIRE_PRESENT models/pkg_a/package.xml,models/pkg_b/config/params.yaml)
+
+# A flatten orders against the rule published under its own resource, so a call naming two resources
+# has to publish its one rule under both. The fixture's union check is what sees a call that split
+# into one rule per resource.
+meios_cmake_case(cmake_deploy_one_rule_two_resources
+    FIXTURE target
+    DRIVER  meios_build_case.cmake
+    ORIGIN  tarball
+    EXTRA   -DFX_SUBDIR=models -DFX_SECOND_RESOURCE=demo_b
+    REQUIRE_PRESENT models/pkg_a/package.xml,models/config/params.yaml)
 
 # The edit touches no source file, so nothing relinks: a deployment attached as a post-build command
 # would leave the stale tree in place with no sign anything was wrong.
