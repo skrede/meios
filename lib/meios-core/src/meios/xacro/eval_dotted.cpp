@@ -25,6 +25,19 @@ value refuse_dotted(parser &p)
     return p.fail_unsupported("dotted access in an expression — use eval-python");
 }
 
+// Both python evaluators bind the xacro namespace to load_yaml alone, so advising one for any
+// other helper would send the reader to an evaluator that refuses the same call.
+value refuse_call_target(parser &p, std::string_view head, std::string_view member)
+{
+    const std::string target = "unsupported call target '" + std::string(head) + '.' + std::string(member) + "'";
+    if(head != "xacro")
+        return p.fail_unsupported(target + " — use eval-python");
+    std::string message = target + " — xacro.load_yaml is the only helper either evaluator exposes";
+    if(member == "arg")
+        message += "; an argument is read with the $(arg) command";
+    return p.fail_unsupported(message);
+}
+
 // Measured into tests/golden/oracle/collisions.cases, and checked against it rather than
 // asserted: upstream's mapping wrapper tries ordinary attribute lookup before falling through
 // to the document, so each of these names answers with the wrapper's own operation and the key
@@ -143,10 +156,10 @@ value parse_member(parser &p, const value &base)
     return member_of(p, base, member);
 }
 
-// The one namespaced call the measured surface uses. A head naming nothing in scope is a
-// namespace and refuses by name, because a description that means something else here than it
-// does upstream is worse than one that will not load; a head naming a value reaches the same
-// gate a dot after a subexpression reaches.
+// The one namespaced call the measured surface uses. A head naming an argument refuses as a bare
+// read of it does; a head naming nothing else in scope is a namespace and refuses by name, because
+// a description that means something else here than it does upstream is worse than one that will
+// not load; a head naming a value reaches the same gate a dot after a subexpression reaches.
 value parse_dotted(parser &p, std::string_view head)
 {
     if(!p.at(token_kind::name))
@@ -156,10 +169,11 @@ value parse_dotted(parser &p, std::string_view head)
     if(head == "xacro" && member == "load_yaml")
         return parse_load_yaml(p);
     const std::optional<value> bound = p.scope.lookup(head);
-    if(!bound)
-        return p.fail_unsupported("unsupported call target '" + std::string(head) + '.'
-                                  + std::string(member) + "' — use eval-python");
-    return member_of(p, *bound, member);
+    if(bound)
+        return member_of(p, *bound, member);
+    if(p.scope.has_argument(head))
+        return p.fail(undefined_name(p.scope, head), diagnostic_code::undefined_property);
+    return refuse_call_target(p, head, member);
 }
 
 }

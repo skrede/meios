@@ -3,11 +3,13 @@
 #include <meios/io/source_stack.h>
 
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 #include <fstream>
+#include <utility>
 #include <iterator>
 #include <filesystem>
 
@@ -105,4 +107,44 @@ TEST_CASE("the minimized fallback-attribute document renders the argument's text
     REQUIRE(out.has_value());
     REQUIRE(meios::canonical_xml(out->document)
             == R"(<robot name="probe"><link name="from_arg"></link></robot>)");
+}
+
+// Each expected render was measured on the same document against xacro 2.1.1.
+TEST_CASE("the minimized binding documents render as the reference renders them", "[xacro][scope][property]")
+{
+    const std::pair<const char *, const char *> rows[] = {
+            {"property_default_over_argument.xacro", "Bbase_Aarm"}, {"property_value_over_argument.xacro", "B_A"},      {"property_before_argument.xacro", "B_A"},
+            {"global_property_over_argument.xacro", "G_A"},         {"argument_beside_parameter.xacro", "argv_base"},   {"property_default_under_parameter.xacro", "mine_base"},
+            {"property_default_reads_argument.xacro", "from_arg"},  {"inherited_default_skips_argument.xacro", "Zarm"},
+    };
+    for(const std::pair<const char *, const char *> &row : rows)
+    {
+        DYNAMIC_SECTION(row.first)
+        {
+            meios::log_sink silent;
+            const expansion_result out = expand_probe(row.first, silent);
+            REQUIRE(out.has_value());
+            REQUIRE(meios::canonical_xml(out->document) == std::string(R"(<robot name="probe"><link name=")") + row.second + R"("></link></robot>)");
+        }
+    }
+}
+
+TEST_CASE("a read of an argument other than through the argument command refuses and names it", "[xacro][scope][property]")
+{
+    const std::pair<const char *, meios::diagnostic_code> rows[] = {
+            {"argument_by_bare_name.xacro", meios::diagnostic_code::undefined_property},
+            {"argument_command_reads_no_property.xacro", meios::diagnostic_code::unresolved_arg},
+            {"inherited_argument_refuses.xacro", meios::diagnostic_code::xacro_structural_error},
+    };
+    for(const std::pair<const char *, meios::diagnostic_code> &row : rows)
+    {
+        DYNAMIC_SECTION(row.first)
+        {
+            meios::log_sink silent;
+            const expansion_result out = expand_probe(row.first, silent);
+            REQUIRE_FALSE(out.has_value());
+            REQUIRE(out.error().code == row.second);
+            REQUIRE(out.error().message.find("$(arg p)") != std::string::npos);
+        }
+    }
 }

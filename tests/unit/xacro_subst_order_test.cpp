@@ -72,7 +72,7 @@ TEST_CASE("an expression span resolves its inner text before the expression is e
 
     SECTION("an argument command with a bound name never evaluates its default inside a span")
     {
-        scope.set("mesh_pkg", meios::value{ std::string("pkg") });
+        scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
         const substitution_result out = meios::substitute(
             "${'$(arg mesh_pkg $(find absent_pkg))' + '/x.stl'}", scope, sources, document, log);
         REQUIRE(out.has_value());

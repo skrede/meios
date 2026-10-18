@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="cfg" default="from_arg"/>
+  <xacro:property name="cfg" default="$(arg cfg)"/>
+  <link name="${cfg}"/>
+</robot>

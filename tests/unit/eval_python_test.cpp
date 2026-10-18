@@ -176,3 +176,11 @@ TEST_CASE("an import-reaching expression is refused under every evaluation polic
         REQUIRE(refused.expanded.error().message.find("${__import__") == std::string::npos);
     }
 }
+
+TEST_CASE("an argument read by its bare name refuses and names the argument command", "[eval_python]")
+{
+    const auto handle     = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const outcome refused = run(std::string(header) + "<xacro:arg name=\"flag\" default=\"false\"/><l>${flag}</l></robot>", meios::eval_policy::fail, handle);
+    REQUIRE_FALSE(refused.expanded.has_value());
+    REQUIRE(refused.reported.find("$(arg flag)") != std::string::npos);
+}

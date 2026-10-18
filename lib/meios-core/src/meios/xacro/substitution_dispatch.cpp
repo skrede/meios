@@ -93,7 +93,7 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
     std::pair<std::string_view, std::string_view> parts = split_first(rest);
     if(parts.first.empty())
         return fail(ctx, diagnostic_code::unresolved_arg, "$(arg) requires an argument name");
-    const std::optional<value> bound = ctx.scope.lookup(parts.first);
+    const std::optional<value> bound = ctx.scope.argument(parts.first);
     if(bound)
         return bound_arg(ctx, parts.first, *bound);
     if(!parts.second.empty())

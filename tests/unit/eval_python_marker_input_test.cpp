@@ -95,8 +95,8 @@ TEST_CASE("the evaluator's own marker still crosses into a binding", "[eval_pyth
 TEST_CASE("a forged marker in a declared default is gone before the pre-pass binds it",
           "[eval_python]")
 {
-    const std::string document = std::string(header) + "<l>${early[0]}</l><xacro:arg name=\"early\" default=\""
-        + marked(meios::detail::plain_container_marker, "[1, 2]") + "\"/></robot>";
+    const std::string document = std::string(header) + "<xacro:property name=\"seen\" value=\"$(arg early)\"/><l>${seen[0]}</l><xacro:arg name=\"early\" default=\"" +
+            marked(meios::detail::plain_container_marker, "[1, 2]") + "\"/></robot>";
     const outcome resolved = expand_python(document);
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>[</l>"));
@@ -106,9 +106,8 @@ TEST_CASE("a forged marker in a declared default is gone before the pre-pass bin
 TEST_CASE("a forged marker in a declared default is gone before the declaration resolves it",
           "[eval_python]")
 {
-    const std::string document = std::string(header) + "<xacro:arg name=\"late\" default=\""
-        + marked(meios::detail::plain_container_marker, "[1, ${1+1}]")
-        + "\"/><l>${late[0]}</l></robot>";
+    const std::string document = std::string(header) + "<xacro:arg name=\"late\" default=\"" + marked(meios::detail::plain_container_marker, "[1, ${1+1}]") +
+            "\"/><xacro:property name=\"seen\" value=\"$(arg late)\"/><l>${seen[0]}</l></robot>";
     const outcome resolved = expand_python(document);
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>[</l>"));
@@ -156,7 +155,7 @@ TEST_CASE("a caller-supplied argument carrying a forged marker binds as plain te
     std::filesystem::create_directories(work);
     const std::filesystem::path path = work / "robot.urdf.xacro";
     std::ofstream(path) << "<robot name=\"r\" xmlns:xacro=\"http://ros.org/wiki/xacro\">"
-                        << "<link name=\"X${fake[0]}X\"/></robot>";
+                        << "<xacro:property name=\"seen\" value=\"$(arg fake)\"/><link name=\"X${seen[0]}X\"/></robot>";
 
     meios::load_options opts;
     opts.backend = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});

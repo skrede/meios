@@ -69,15 +69,21 @@ expression binds that expression's value, exactly as an attribute of the same sh
 the `False` a boolean spells, and what leaves a `0.10` default its trailing zero. The conversion
 happens instead where the argument is read into something that does bind a value:
 `<xacro:m flag="$(arg flag)"/>` hands text to the parameter, the parameter binds it by the reading
-above, and `${flag}` inside that macro is a boolean. The reference draws the same line, keeping two
-tables where this evaluator has one — an argument table its `$(arg n)` command reads, and a property
-table its expressions read. That one table is why an expression here can name an argument at all,
-and what it names is text; [known limitations](known-limitations.md) records that read.
+above, and `${flag}` inside that macro is a boolean. Both implementations keep two tables — an
+argument table the `$(arg n)` command reads, and a property table an expression reads — so an
+expression cannot name an argument: `${flag}` over an argument alone refuses, and the refusal names
+`$(arg flag)`. A property of an argument's name is a second binding beside the argument, never a
+write to it, so a property's `default=` binds over an argument of the same name and `$(arg n)`
+answers the argument whatever property is written. `$(eval)` is the one reader that differs: the
+reference evaluates it over the argument table and this evaluator over the property table, which
+[known limitations](known-limitations.md#expression-evaluation) records.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
 bound, so one argument never sees a sibling's new value: a call passing both
 `ee_id="${ee_id}_white"` and `inertials="${...ee_id...}"` reads the caller's `ee_id` in the second,
-not the one the first just wrote. An inherited `^` default reads the caller too.
+not the one the first just wrote. An inherited `^` default reads the caller too — its properties
+and parameters, never an argument, so a bare `^` whose name only an argument binds refuses, naming
+`$(arg n)`, and `^|fallback` takes its fallback.
 
 Mathematics is a fixed set of functions, called by bare name and never through a module:
 
@@ -359,7 +365,10 @@ the grammar.
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
 namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target. The reference's
 argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
-/ `error` / `fatal`) are not exposed at all. `map` and `filter` are not among the functions above,
+/ `error` / `fatal`) are not exposed at all: a call to any of the reference's helpers but
+`xacro.load_yaml` refuses under either evaluator, and the refusal names `xacro.load_yaml` as the only
+helper either exposes. The argument helper is a reviewed divergence, since it renders upstream; a
+refusal of it also names the `$(arg)` command. `map` and `filter` are not among the functions above,
 and `${list(map(...))}` does appear in real descriptions, which makes it the omission most likely to
 be met in practice. Every one of these is a loud refusal naming what it met, so it is a decision
 rather than a silent difference in what a document means.
@@ -425,6 +434,12 @@ What is compared, exactly:
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
   tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
   than read off the YAML specification.
+- **Eleven minimized binding documents**, two of them driven a second time with a caller argument,
+  each compared whole: a property's default and value over an argument of the same name, before and
+  after its declaration and from a macro's global write, a macro parameter beside an argument, a
+  property default under a parameter, the vendor idiom of a property defaulting to its own argument,
+  and the reads of an argument other than through `$(arg n)`. Both sides refusing counts as agreement,
+  and the meios side runs through the load path with the caller arguments a consumer would hand it.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -611,7 +626,9 @@ Expansion is a result, never a flag beside a document. `meios::expand` returns e
 carrying the expanded document beside a record of which constructs that one load exercised — a closed
 vocabulary of fourteen, six the auxiliary-document reader marks and eight the expression evaluator
 marks, each at the point the construct actually resolves rather than declared anywhere, and read
-through `exercised`. A spelling outside the vocabulary resolves to nothing, and nothing is charged
+through `exercised`. Caller arguments handed to `expand` directly are bound with
+`eval_scope::bind_argument`, where `$(arg n)` reads them; `set` binds a property, which an expression
+reads. A spelling outside the vocabulary resolves to nothing, and nothing is charged
 against the record: it is an observation, not a twelfth ceiling. The other arm is an
 `expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a
 refused system operation caused it — that operation's native cause. A terminal failure is reported

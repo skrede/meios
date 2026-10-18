@@ -8,14 +8,30 @@
 namespace
 {
 
-std::string rendered(std::string_view body)
+std::string document_of(std::string_view body)
 {
-    const std::string doc =
-        "<?xml version=\"1.0\"?>\n<robot xmlns:xacro=\"http://wiki.ros.org/xacro\" name=\"probe\">\n"
-        + std::string(body) + "\n</robot>";
-    return flattened(doc);
+    return "<?xml version=\"1.0\"?>\n<robot xmlns:xacro=\"http://wiki.ros.org/xacro\" name=\"probe\">\n" + std::string(body) + "\n</robot>";
 }
 
+std::string rendered(std::string_view body)
+{
+    return flattened(document_of(body));
+}
+
+expansion_result refused(std::string_view body)
+{
+    recorder log;
+    expansion_result out = run(document_of(body), log);
+    REQUIRE_FALSE(out.has_value());
+    return out;
+}
+
+void require_names_argument_command(std::string_view name, std::string_view body)
+{
+    const expansion_result out = refused(body);
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+    REQUIRE(out.error().message.find("$(arg " + std::string(name) + ")") != std::string::npos);
+}
 }
 
 TEST_CASE("an argument's boolean spelling renders as written in an attribute and in element text",
@@ -71,9 +87,7 @@ TEST_CASE("a use above its own declaration renders the same spelling the declara
 }
 
 // A conditional's test is read from the substituted text and answered on true/false/1/0 before
-// anything is evaluated, so a boolean and the spelling of one reach the same branch. These two
-// cases guard the permissive direction against a later change; neither discriminates how an
-// argument is bound.
+// anything is evaluated, so a boolean and the spelling of one reach the same branch.
 TEST_CASE("a conditional testing an argument through the substitution command takes its branch",
           "[xacro][arg][domain]")
 {
@@ -85,39 +99,45 @@ TEST_CASE("a conditional testing an argument through the substitution command ta
                        R"XML(<robot name="probe"><link name="unless_fired"/></robot>)XML"));
 }
 
-TEST_CASE("a conditional testing the same argument by its bare name takes the same branch",
-          "[xacro][arg][domain]")
+// An expression reads properties alone, as the reference's does: an argument is reached only
+// through the substitution command, and an expression naming one refuses with that spelling.
+TEST_CASE("a conditional testing an argument by its bare name refuses and names the argument command", "[xacro][arg][domain]")
 {
-    const std::string out = rendered(R"XML(  <xacro:arg name="flag" default="false"/>
-  <xacro:if value="${flag}"><link name="if_fired"/></xacro:if>
-  <xacro:unless value="${flag}"><link name="unless_fired"/></xacro:unless>)XML");
-
-    REQUIRE(out == meios::canonical_xml(
-                       R"XML(<robot name="probe"><link name="unless_fired"/></robot>)XML"));
+    require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
+  <xacro:if value="${flag}"><link name="if_fired"/></xacro:if>)XML");
 }
 
-// An argument and a property share one symbol table here, where the reference keeps two and
-// refuses a bare name that names an argument. This pins what such a name resolves to in this
-// implementation: the characters that were written.
-TEST_CASE("an argument read by its bare name renders the characters that were written",
-          "[xacro][arg][domain]")
+TEST_CASE("an argument read by its bare name refuses and names the argument command", "[xacro][arg][domain]")
 {
-    const std::string out = rendered(R"XML(  <xacro:arg name="flag" default="false"/>
-  <link name="bare_${flag}" v="${flag}"/>)XML");
-
-    REQUIRE(out == meios::canonical_xml(
-                       R"XML(<robot name="probe"><link name="bare_false" v="false"/></robot>)XML"));
+    require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
+  <link name="bare_${flag}"/>)XML");
 }
 
-// The same one table, read by a spelling that computes rather than renders: what the name binds is
-// text, so its truth is a non-empty string's. The reference refuses this spelling as it refuses the
-// plain one, so this pins a behavior only this implementation has.
-TEST_CASE("a bare name computing on an argument computes on the text that was written",
-          "[xacro][arg][domain]")
+TEST_CASE("a bare name computing on an argument refuses as the plain read does", "[xacro][arg][domain]")
 {
-    const std::string out = rendered(R"XML(  <xacro:arg name="flag" default="false"/>
+    require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
   <link name="neg_${not flag}"/>)XML");
+}
 
-    REQUIRE(out == meios::canonical_xml(
-                       R"XML(<robot name="probe"><link name="neg_False"/></robot>)XML"));
+TEST_CASE("a dotted read whose head is an argument refuses and names the argument command", "[xacro][arg][domain]")
+{
+    require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
+  <link name="dot_${flag.x}"/>)XML");
+}
+
+TEST_CASE("the evaluation command naming an argument and no property refuses and names the argument command", "[xacro][arg][domain]")
+{
+    require_names_argument_command("q", R"XML(  <xacro:arg name="q" default="3"/>
+  <link name="$(eval q + 1)"/>)XML");
+}
+
+TEST_CASE("the reference's argument helper refuses and names the one helper either evaluator exposes", "[xacro][arg][domain]")
+{
+    const expansion_result out = refused(R"XML(  <xacro:arg name="p" default="A"/>
+  <link name="${xacro.arg('p')}arm"/>)XML");
+
+    REQUIRE(out.error().code == meios::diagnostic_code::unsupported_expression);
+    REQUIRE(out.error().message.find("xacro.load_yaml") != std::string::npos);
+    REQUIRE(out.error().message.find("$(arg") != std::string::npos);
+    CHECK(out.error().message.find("eval-python") == std::string::npos);
 }

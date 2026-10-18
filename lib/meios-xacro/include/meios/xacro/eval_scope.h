@@ -26,31 +26,55 @@ class eval_scope
 {
 public:
     eval_scope()
-        : m_load_text_cb(), m_parse_yaml_cb(), m_active_document(), m_bindings()
+            : m_load_text_cb()
+            , m_parse_yaml_cb()
+            , m_active_document()
+            , m_arguments()
+            , m_properties()
     {
     }
 
     void set(std::string_view name, value entry)
     {
-        m_bindings.insert_or_assign(std::string(name), std::move(entry));
+        m_properties.insert_or_assign(std::string(name), std::move(entry));
     }
 
     std::optional<value> lookup(std::string_view name) const
     {
-        std::unordered_map<std::string, value>::const_iterator it = m_bindings.find(std::string(name));
-        if(it == m_bindings.end())
+        std::unordered_map<std::string, value>::const_iterator it = m_properties.find(std::string(name));
+        if(it == m_properties.end())
             return std::nullopt;
         return it->second;
     }
 
     bool contains(std::string_view name) const
     {
-        return m_bindings.find(std::string(name)) != m_bindings.end();
+        return m_properties.find(std::string(name)) != m_properties.end();
     }
 
     void erase(std::string_view name)
     {
-        m_bindings.erase(std::string(name));
+        m_properties.erase(std::string(name));
+    }
+
+    // $(arg n) reads this table and an expression reads the other, so a property of an
+    // argument's name is a second binding beside the argument, never a write to it.
+    void bind_argument(std::string_view name, value entry)
+    {
+        m_arguments.insert_or_assign(std::string(name), std::move(entry));
+    }
+
+    std::optional<value> argument(std::string_view name) const
+    {
+        std::unordered_map<std::string, value>::const_iterator it = m_arguments.find(std::string(name));
+        if(it == m_arguments.end())
+            return std::nullopt;
+        return it->second;
+    }
+
+    bool has_argument(std::string_view name) const
+    {
+        return m_arguments.find(std::string(name)) != m_arguments.end();
     }
 
     void install_text_loader(text_resource_loader loader)
@@ -96,7 +120,8 @@ private:
     text_resource_loader m_load_text_cb;
     std::shared_ptr<const yaml_parser_handle> m_parse_yaml_cb;
     std::filesystem::path m_active_document;
-    std::unordered_map<std::string, value> m_bindings;
+    std::unordered_map<std::string, value> m_arguments;
+    std::unordered_map<std::string, value> m_properties;
 };
 
 }

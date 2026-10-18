@@ -102,8 +102,8 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
 
 // The main pass is single-forward, so a `$(arg x)` used above its own
 // `<xacro:arg>` declaration would resolve before the default is seen. A pre-pass
-// over the already-materialized tree seeds every declared literal default (unbound
-// names only) so use-before-declaration resolves the way real xacro does. A default
+// over the already-materialized tree seeds every declared literal default (names no
+// argument binds yet) so use-before-declaration resolves. A default
 // carrying a nested substitution is left for declare_arg to resolve at its
 // declaration, where the sources and document needed to substitute it are in hand.
 void seed_declared_args(eval_scope &scope, pugi::xml_node node)
@@ -116,19 +116,16 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
         {
             pugi::xml_attribute name = child.attribute("name");
             pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !scope.contains(name.value())
-               && !has_substitution(fallback.value()))
-                scope.set(name.value(),
-                          value{ strip_authored_markers(fallback.value()) });
+            if(name && fallback && !scope.has_argument(name.value()) && !has_substitution(fallback.value()))
+                scope.bind_argument(name.value(), value{strip_authored_markers(fallback.value())});
         }
         seed_declared_args(scope, child);
     }
 }
 
 // The reference's grab_property treats the written value and the fallback as mutually exclusive
-// and binds a fallback only where the name is still unbound, so the same spelling means the same
-// thing on both sides. A property carrying neither attribute keeps binding the empty string,
-// which is measured behavior this function does not change.
+// and binds a fallback only where no property of the name exists; an argument of the same name
+// does not suppress it. A property carrying neither attribute binds the empty string.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     pugi::xml_attribute written = in.attribute("value");
@@ -152,8 +149,8 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     return true;
 }
 
-// A declared default seeds the scope only when the name is still unbound, so a
-// caller override or an earlier binding wins; the declaration itself emits nothing.
+// A declared default binds only when no argument of the name is bound yet, so a
+// caller override or an earlier declaration wins; the declaration itself emits nothing.
 // The default is resolved through substitution first, so a nested
 // $(find)/$(arg)/${} default becomes real text rather than a raw literal.
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
@@ -163,7 +160,7 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "<xacro:arg> requires a name attribute");
     pugi::xml_attribute fallback = in.attribute("default");
-    if(!fallback || ctx.scope.contains(name))
+    if(!fallback || ctx.scope.has_argument(name))
         return true;
     bool ok = true;
     const std::string authored = strip_authored_markers(fallback.value());
@@ -171,7 +168,7 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
     if(!ok)
         return false;
-    ctx.scope.set(name, resolved);
+    ctx.scope.bind_argument(name, resolved);
     return true;
 }
 

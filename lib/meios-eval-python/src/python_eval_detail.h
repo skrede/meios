@@ -42,6 +42,20 @@ inline text_outcome classify(const yaml_context &ctx, const std::string &quoted,
     return report(eval_failure_kind::error, ctx.log, fallback);
 }
 
+// A NameError carries the unbound name as its name attribute only from Python 3.10 on.
+inline std::string argument_hint(const pybind11::error_already_set &raised, const eval_scope &scope)
+{
+    if(!raised.matches(PyExc_NameError) || !pybind11::hasattr(raised.value(), "name"))
+        return std::string{};
+    const pybind11::object name = raised.value().attr("name");
+    if(!pybind11::isinstance<pybind11::str>(name))
+        return std::string{};
+    const std::string text = name.cast<std::string>();
+    if(!scope.has_argument(text))
+        return std::string{};
+    return " — '" + text + "' is an argument; read it with $(arg " + text + ")";
+}
+
 // Interpreter readiness, the interpreter lock and the failure classification are one
 // implementation for both evaluators; the body is the only thing that differs between them.
 template<typename Body>
@@ -59,7 +73,7 @@ text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, l
     }
     catch(pybind11::error_already_set &raised)
     {
-        return classify(ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what());
+        return classify(ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what() + argument_hint(raised, scope));
     }
     catch(const std::exception &raised)
     {

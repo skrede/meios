@@ -19,7 +19,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
     meios::source_stack sources{ std::move(on_disk), std::move(in_memory) };
 
     meios::eval_scope scope;
-    scope.set("width", *meios::value::make_real(0.3));
+    scope.bind_argument("width", *meios::value::make_real(0.3));
     std::filesystem::path document = root / "sub" / "robot.xacro";
 
     SECTION("$(find) resolves a package directory to a filesystem path")
@@ -93,7 +93,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
 
     SECTION("$(arg name default) with a bound name never evaluates an unresolvable default")
     {
-        scope.set("mesh_pkg", meios::value{ std::string("pkg") });
+        scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
         const substitution_result out =
             meios::substitute("$(arg mesh_pkg $(find absent_pkg))", scope, sources, document, log);
         REQUIRE(out.has_value());

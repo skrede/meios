@@ -1,5 +1,6 @@
 #include "differential_xml.h"
 #include "differential_seed.h"
+#include "differential_agreement.h"
 #include "differential_document.h"
 
 #include "../model_facts.h"
@@ -106,20 +107,6 @@ void compare_expression_case(const oracle::row &row, const std::vector<oracle::r
     require_reviewed_divergence(manifest, id, upstream_text, ran.rendered);
 }
 
-// Document-level agreement, on the project's own normalizer applied to both sides -- the same
-// normalizer, and the same structural comparison layered on its output, that the expression arm
-// already runs. Comparing unnormalized text would make attribute order and insignificant
-// whitespace a difference; comparing the model alone leaves every element the fact vocabulary has
-// no term for unasserted.
-void require_same_document(const std::string &upstream_text, const std::string &rendered)
-{
-    const std::string meios_canon    = meios::canonical_xml(rendered);
-    const std::string upstream_canon = meios::canonical_xml(upstream_text);
-    std::string mismatch;
-    if(!differential::canonical_matches(upstream_canon, meios_canon, mismatch))
-        FAIL("the rendered documents disagree: " << mismatch);
-}
-
 void compare_corpus_document(const corpus::document &doc, std::vector<std::string> &seen)
 {
     if(doc.backend != corpus::evaluator::native)
@@ -144,13 +131,13 @@ void compare_corpus_document(const corpus::document &doc, std::vector<std::strin
     check_fresh_render(doc, scratch, facts_record);
     const std::optional<meios::expansion> rendered = corpus::expanded(doc);
     REQUIRE(rendered.has_value());
-    require_same_document(upstream_text, rendered->document);
+    differential::require_same_document(upstream_text, rendered->document);
 }
 
 }
 
 // One test case, not two, so the named expected-comparison inventory is checked once
-// against the union of both tiers' verdicts -- a comparison this target owes but skips shows up
+// against the union of every tier's verdicts -- a comparison this target owes but skips shows up
 // as a missing inventory entry, not as a false negative in whichever tier's own loop ran first.
 TEST_CASE("fresh upstream renders agree with meios on category, structure and facts",
           "[native_differential]")
@@ -165,6 +152,8 @@ TEST_CASE("fresh upstream renders agree with meios on category, structure and fa
         compare_expression_case(row, manifest, seen);
     for(const corpus::document &doc : corpus::documents(MEIOS_CORPUS_DOCUMENTS))
         compare_corpus_document(doc, seen);
+    for(const differential::agreement_probe &one : differential::agreement_probes)
+        differential::compare_agreement_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, seen);
     const std::optional<std::string> missing = differential::first_missing_verdict(inventory, seen);
     if(missing)
         FAIL("no differential verdict was produced for inventory entry '" << *missing << "'");
@@ -175,33 +164,6 @@ TEST_CASE("fresh upstream renders agree with meios on category, structure and fa
 // manifest it is meant to police.
 #ifdef MEIOS_TEST_HAS_YAML
 
-namespace
-{
-
-void compare_divergence_probe(const differential::probe &one,
-                              const std::vector<oracle::row> &manifest,
-                              differential::verdicts &observed)
-{
-    const std::string id(one.id);
-    INFO("probe " << id << ": " << one.expression);
-    const std::string rendered = differential::upstream_render(MEIOS_DIFFERENTIAL_RENDERS_DIR, id);
-    differential::record_divergence(manifest, id, differential::upstream_value(rendered),
-                                    differential::observed_value(one), observed);
-}
-
-void compare_document_probe(const differential::document_probe &one,
-                            const std::vector<oracle::row> &manifest,
-                            differential::verdicts &observed)
-{
-    const std::string id(one.id);
-    INFO("document probe " << id);
-    const std::string rendered = differential::upstream_render(MEIOS_DIFFERENTIAL_RENDERS_DIR, id);
-    differential::record_divergence(manifest, id, differential::upstream_document(rendered),
-                                    differential::observed_document(one), observed);
-}
-
-}
-
 TEST_CASE("the divergence manifest matches the measured divergences and no others",
           "[native_differential]")
 {
@@ -211,9 +173,9 @@ TEST_CASE("the divergence manifest matches the measured divergences and no other
     const std::vector<oracle::row> manifest = oracle::load_rows("differential_divergences.cases");
     differential::verdicts observed;
     for(const differential::probe &one : differential::divergence_probes)
-        compare_divergence_probe(one, manifest, observed);
+        differential::compare_divergence_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, manifest, observed);
     for(const differential::document_probe &one : differential::document_probes)
-        compare_document_probe(one, manifest, observed);
+        differential::compare_document_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, manifest, observed);
     for(const std::string &stale : differential::stale_manifest_entries(manifest, observed))
         FAIL("divergence manifest entry '" << stale << "' no longer reproduces");
 }

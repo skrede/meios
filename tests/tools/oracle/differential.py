@@ -1,8 +1,9 @@
-# Renders every minimized expression case and every native-evaluator corpus document fresh
-# through upstream xacro, for the live differential comparator (native_differential_test.cpp) to
-# read. Reuses bootstrap()/render()/package_roots()/expression_cases()/write_seed_documents() from
-# the recorder package verbatim -- this file writes nothing but scratch renders; the committed
-# records under tests/golden/oracle stay the recorder's sole output.
+# Renders every minimized expression case, every minimized binding document and every
+# native-evaluator corpus document fresh through upstream xacro, for the live differential
+# comparator (native_differential_test.cpp) to read. Reuses bootstrap()/render()/package_roots()/
+# expression_cases()/write_seed_documents() from the recorder package verbatim -- this file writes
+# nothing but scratch renders; the committed records under tests/golden/oracle stay the
+# recorder's sole output.
 
 import os
 import sys
@@ -18,36 +19,8 @@ from recorder.corpus import REPO, CORPUS_DOCUMENTS, document_root, key_of  # noq
 from recorder.rendering import render, escape, refusal_text  # noqa: E402
 from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
-
-# The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
-# than the deciding operand, a self-referential alias graph that loads here as a value containing
-# itself, the two mapping-constructor argument shapes upstream accepts that are refused here, the
-# four string meanings upstream carries that this grammar does not -- repetition, ordering, and
-# the split's two further argument shapes -- the one mathematics name this grammar answers and
-# upstream does not, and three differences in what the span scanner hands the evaluator,
-# upstream's own span pattern being ^\$\{[^\}]*\} and so neither quote-aware nor nesting. None
-# needs the expressions.cases seed scope -- the third reads only the document written beside the
-# probe, which load_yaml resolves relative to the probe itself.
-DIVERGENCE_PROBES = (("div_or_operand", "1 or 2"),
-                     ("div_and_operand", "2 and 3"),
-                     ("div_self_reference", "xacro.load_yaml('recursive.yaml')['a']"),
-                     ("div_dict_pair_sequence", "dict([('a', 1)])"),
-                     ("div_dict_mixed_arguments", "dict([('a', 1)], b=2)"),
-                     ("div_string_repetition", "'ab' * 3"),
-                     ("div_string_ordering", "'a' < 'b'"),
-                     ("div_string_split_whitespace", "'a b'.split()"),
-                     ("div_string_split_limit", "'a b c'.split(' ', 1)"),
-                     ("div_absolute_value", "abs(-3)"),
-                     ("div_span_closing_brace_in_literal", "'a}b'"),
-                     ("div_span_format_operator", "'%.3f' % 1.2345"),
-                     ("div_span_nested_expression", "${'1 + 2'}"))
-RECURSIVE_YAML = "a: &a [1, *a]\n"
-
-# A difference needing a macro, a conditional and a call site has no expression to wrap, so its
-# probe is a whole committed document read from tests/fixtures/xacro/probes by both sides. Ids
-# only: the document is the fixture, and repeating it here is what a rename would silently defeat.
-DOCUMENT_PROBES = ("non_text_mapping_key",)
-PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
+from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
+                                 PROBE_DIR, AGREEMENT_PROBES)
 
 
 def sanitize(case_id):
@@ -104,6 +77,19 @@ def render_document_probe(tmp, out, case_id):
         write_refusal(out, case_id, ".txt", failure)
 
 
+# Upstream writes every declared default into the mapping it is handed, so each render is handed
+# its own copy rather than the table's.
+def render_agreement_probe(tmp, out, case_id, fixture, mappings):
+    import xacro
+
+    try:
+        rendered = xacro.process_file(str(stage_probe(tmp, fixture)),
+                                      mappings=dict(mappings) if mappings else None)
+        write_text(out, case_id, ".xml", rendered.toxml())
+    except Exception as failure:
+        write_refusal(out, case_id, ".xml", failure)
+
+
 # The entry points are the recorder's own table, read rather than repeated: a second list of the
 # same descriptions is a rename away from rendering one document and comparing another.
 def render_corpus_document(share, out, one):
@@ -128,6 +114,8 @@ def render_all(tmp, share, out):
         render_divergence_probe(tmp, out, case_id, expression)
     for case_id in DOCUMENT_PROBES:
         render_document_probe(tmp, out, case_id)
+    for case_id, fixture, mappings in AGREEMENT_PROBES:
+        render_agreement_probe(tmp, out, case_id, fixture, mappings)
     for one in CORPUS_DOCUMENTS:
         render_corpus_document(share, out, one)
 

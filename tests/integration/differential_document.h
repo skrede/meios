@@ -41,8 +41,9 @@ struct document_probe
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 1> document_probes{
-    document_probe{ true, "non_text_mapping_key" }
+inline constexpr std::array<document_probe, 5> document_probes{
+        document_probe{true, "non_text_mapping_key"},  document_probe{false, "eval_reads_properties"},      document_probe{false, "argument_without_default"},
+        document_probe{false, "argument_helper_call"}, document_probe{false, "argument_above_declaration"},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -120,6 +121,22 @@ inline void record_divergence(const std::vector<oracle::row> &manifest, const st
     if(!matches_manifest(manifest, id, upstream_text, meios_value, detail))
         FAIL(detail);
     observed.emplace_back(id, upstream_text, meios_value);
+}
+
+inline void compare_divergence_probe(const probe &one, const std::string &renders_dir, const std::vector<oracle::row> &manifest, verdicts &observed)
+{
+    const std::string id(one.id);
+    INFO("probe " << id << ": " << one.expression);
+    const std::string rendered = upstream_render(renders_dir, id);
+    record_divergence(manifest, id, upstream_value(rendered), observed_value(one), observed);
+}
+
+inline void compare_document_probe(const document_probe &one, const std::string &renders_dir, const std::vector<oracle::row> &manifest, verdicts &observed)
+{
+    const std::string id(one.id);
+    INFO("document probe " << id);
+    const std::string rendered = upstream_render(renders_dir, id);
+    record_divergence(manifest, id, upstream_document(rendered), observed_document(one), observed);
 }
 
 #endif

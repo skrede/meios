@@ -80,6 +80,15 @@ value parse_call(parser &p, std::string_view name)
 
 }
 
+std::string undefined_name(const eval_scope &scope, std::string_view name)
+{
+    const std::string quoted = "'" + std::string(name) + "'";
+    std::string message      = "name " + quoted + " is not defined";
+    if(scope.has_argument(name))
+        message += " — " + quoted + " is an argument; read it with $(arg " + std::string(name) + ")";
+    return message;
+}
+
 value parse_name(parser &p)
 {
     const level_guard level(p);
@@ -95,8 +104,7 @@ value parse_name(parser &p)
     if(name == "pi") return real_result(p, 3.141592653589793);
     std::optional<value> bound = p.scope.lookup(name);
     if(!bound)
-        return p.fail("name '" + std::string(name) + "' is not defined",
-                      diagnostic_code::undefined_property);
+        return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
     return *bound;
 }
 

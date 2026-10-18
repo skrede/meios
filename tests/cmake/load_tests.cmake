@@ -8,6 +8,10 @@ foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure
                 Catch2::Catch2WithMain)
         target_compile_definitions(${stem}_test PRIVATE
             MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
+        if(stem STREQUAL "load_arg_domain")
+            target_compile_definitions(${stem}_test PRIVATE
+                MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
+        endif()
         meios_enable_coverage(${stem}_test)
         meios_warnings(${stem}_test)
         catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")

@@ -45,8 +45,10 @@ bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
     }
     if(def.rfind("^|", 0) == 0)
         return bind_literal(ctx, call, std::string_view(def).substr(2), document, bound);
-    return fail(ctx, call, diagnostic_code::xacro_structural_error,
-                "macro parameter '" + name + "' inherits no value and has no fallback");
+    std::string message = "macro parameter '" + name + "' inherits no value and has no fallback";
+    if(ctx.scope.has_argument(name))
+        message += " — '" + name + "' is an argument, which a parameter does not inherit; read it with $(arg " + name + ")";
+    return fail(ctx, call, diagnostic_code::xacro_structural_error, message);
 }
 
 bool bind_one(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, std::size_t at,

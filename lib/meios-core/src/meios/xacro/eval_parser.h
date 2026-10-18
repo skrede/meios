@@ -14,6 +14,7 @@
 #include "meios/diagnostic/source_location.h"
 
 #include <span>
+#include <string>
 #include <vector>
 #include <cstdint>
 #include <cstddef>
@@ -144,6 +145,7 @@ value parse_power(parser &p);
 value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
+std::string undefined_name(const eval_scope &scope, std::string_view name);
 value parse_dict(parser &p);
 value parse_dotted(parser &p, std::string_view head);
 value parse_load_yaml(parser &p);

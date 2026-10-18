@@ -1,6 +1,7 @@
-# id <TAB> kind. The named expected-comparison inventory: one row per expressions.cases id and
-# one row per native-evaluator corpus document, keyed exactly as corpus::record_for() keys it. A
-# row with no verdict fails the differential run before any pass/fail count is reported.
+# id <TAB> kind. The named expected-comparison inventory: one row per expressions.cases id, one
+# row per native-evaluator corpus document, keyed exactly as corpus::record_for() keys it, and one
+# row per agreement probe. A row with no verdict fails the differential run before any pass/fail
+# count is reported.
 e01	expression
 e02	expression
 e03	expression
@@ -144,3 +145,16 @@ tmrv0_2.urdf.xacro	document
 dof=7	document
 name=ur_mocked ur_type=ur5e	document
 gantry.urdf.xacro	document
+property_default_over_argument	agreement
+property_default_over_caller_argument	agreement
+property_value_over_argument	agreement
+property_before_argument	agreement
+global_property_over_argument	agreement
+argument_beside_parameter	agreement
+property_default_under_parameter	agreement
+property_default_reads_argument	agreement
+property_default_reads_caller_argument	agreement
+argument_by_bare_name	agreement
+argument_command_reads_no_property	agreement
+inherited_default_skips_argument	agreement
+inherited_argument_refuses	agreement
