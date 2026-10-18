@@ -87,7 +87,8 @@ endif()
 # which is core-private.
 set(compatibility_ledger_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/compatibility_ledger_test.cpp)
 if(MEIOS_FETCH_CORPUS AND EXISTS ${compatibility_ledger_src})
-    add_executable(compatibility_ledger_test ${compatibility_ledger_src})
+    add_executable(compatibility_ledger_test ${compatibility_ledger_src}
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/compatibility_ledger_load_test.cpp)
     target_link_libraries(compatibility_ledger_test
         PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
             Catch2::Catch2WithMain)

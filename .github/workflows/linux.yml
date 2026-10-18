@@ -1099,3 +1099,16 @@ jobs:
           fi
           echo "flatten_instrument registered $registered test(s)"
           ctest -R flatten_instrument --output-on-failure --no-tests=error
+
+      # Each pinned entry point's ledger row, its constructs and its divergence
+      # column are held to a live load of that entry point. Blocking.
+      - name: Test the compatibility ledger
+        run: |
+          cd build
+          registered=$(ctest -N -R '^compatibility_ledger\.' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "compatibility_ledger registered no tests"
+            exit 1
+          fi
+          echo "compatibility_ledger registered $registered test(s)"
+          ctest -R '^compatibility_ledger\.' --output-on-failure --no-tests=error
