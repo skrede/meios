@@ -74,11 +74,11 @@ verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
 
 struct only_config final : meios::text_resource_loader::fetcher
 {
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         if(spec == "config.yaml")
             return std::string("arm:\n  dof: 6\n");
-        return std::nullopt;
+        return meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable);
     }
 };
 

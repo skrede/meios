@@ -6,6 +6,7 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_render.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/text_resource_loader.h"
 
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -42,16 +43,24 @@ value refuse_parsed(parser &p, yaml_failure why)
     return value{};
 }
 
+value refuse_unread(parser &p, const std::string &spec, text_resource_failure why)
+{
+    if(why != text_resource_failure::exhausted)
+        return p.fail("cannot reach the auxiliary document \"" + spec + '"', diagnostic_code::unresolved_asset);
+    latch_exhausted(p.session, "byte", p.log, p.anchor);
+    p.refuse_exhausted();
+    return value{};
+}
+
 value load_yaml_value(parser &p, const value &argument)
 {
     const std::optional<std::string> spec = argument.text();
     if(!spec)
         return p.fail("an auxiliary document is named by text, not by a "
                       + std::string(kind_name(argument.kind())));
-    const std::optional<std::string> bytes = p.scope.load_text(*spec);
+    const text_resource_result bytes = p.scope.load_text(*spec);
     if(!bytes)
-        return p.fail("cannot reach the auxiliary document \"" + *spec + '"',
-                      diagnostic_code::unresolved_asset);
+        return refuse_unread(p, *spec, bytes.error());
     const yaml_outcome parsed =
         p.scope.parse_yaml(*bytes, p.session.limits, p.session.counters, p.log, p.anchor);
     if(!parsed.parsed)

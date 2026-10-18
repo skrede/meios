@@ -8,6 +8,8 @@
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
+#include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/source_location.h"
 
 #include <pybind11/embed.h>
 
@@ -74,13 +76,20 @@ inline std::string refusal_rule(const pybind11::dict &priv, std::string_view exp
 }
 
 // The refusal is recorded in evaluation-local state before the throw, so the outer handler
-// classifies it without inspecting the raised exception's text.
+// classifies it without inspecting the raised exception's text. A crossed byte ceiling is logged
+// before the throw instead, so the latch keeps the budget code ahead of the raise's own record.
 inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind11::object &parse,
                                         yaml_context &ctx, const std::string &spec)
 {
-    const std::optional<std::string> text = ctx.scope.load_text(spec);
+    const text_resource_result text = ctx.scope.load_text(spec);
     if(text)
         return wrap_yaml(priv, parse(pybind11::str(*text)));
+    if(text.error() == text_resource_failure::exhausted)
+    {
+        ctx.log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
+                    "yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling; this load cannot continue");
+        throw pybind11::value_error("yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling");
+    }
     ctx.rule = std::string(uncontained_rule);
     throw pybind11::value_error("unreachable yaml resource \"" + spec + '"');
 }

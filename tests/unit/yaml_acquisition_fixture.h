@@ -52,7 +52,7 @@ struct downstream_probe
     {
     }
 
-    void consume(const std::optional<std::string> &text)
+    void consume(const meios::text_resource_result &text)
     {
         if(!text)
             return;
@@ -156,7 +156,7 @@ inline void require_source_authorization(tree_guard &tree)
     meios::source_stack directory_sources{directory};
     const std::vector<std::filesystem::path> roots;
     auto directory_loader = meios::detail::make_yaml_text_loader(directory_sources, roots, capture);
-    REQUIRE(directory_loader("package://pkg/cfg.yaml", {}) == std::optional<std::string>{"value: 7"});
+    REQUIRE(directory_loader("package://pkg/cfg.yaml", {}).value() == "value: 7");
 
     meios::memory_source memory{capture};
     memory.add("pkg", "cfg.yaml", "value: 9");
@@ -165,7 +165,7 @@ inline void require_source_authorization(tree_guard &tree)
     REQUIRE(memory_hit->source_relative() == std::filesystem::path("pkg/cfg.yaml"));
     meios::source_stack memory_sources{std::move(memory)};
     auto memory_loader = meios::detail::make_yaml_text_loader(memory_sources, roots, capture);
-    REQUIRE(memory_loader("package://pkg/cfg.yaml", {}) == std::optional<std::string>{"value: 9"});
+    REQUIRE(memory_loader("package://pkg/cfg.yaml", {}).value() == "value: 9");
     REQUIRE(capture.size() == 0);
 }
 

@@ -95,14 +95,14 @@ bool names(const verdict &got, std::string_view fragment)
 
 struct fixed_text final : meios::text_resource_loader::fetcher
 {
-    explicit fixed_text(std::optional<std::string> text) : m_text(std::move(text)) {}
+    explicit fixed_text(meios::text_resource_result text) : m_text(std::move(text)) {}
 
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override { return m_text; }
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override { return m_text; }
 
-    std::optional<std::string> m_text;
+    meios::text_resource_result m_text;
 };
 
-meios::eval_scope serving(std::optional<std::string> text)
+meios::eval_scope serving(meios::text_resource_result text)
 {
     meios::eval_scope scope;
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<fixed_text>(std::move(text)) });
@@ -155,7 +155,7 @@ TEST_CASE("both evaluators render every golden corpus row identically", "[eval_p
 TEMPLATE_TEST_CASE("a yaml spec escaping containment is refused by either evaluator", "[eval_python]",
                    meios::python_evaluator, meios::unrestricted_python_evaluator)
 {
-    const meios::eval_scope scope = serving(std::nullopt);
+    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable));
     const verdict got = refuse_of<TestType>("load_yaml('../../../etc/passwd')", scope);
     REQUIRE(got.refused);
     REQUIRE(names(got, "uncontained-yaml-path"));

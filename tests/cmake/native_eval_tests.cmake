@@ -64,7 +64,8 @@ foreach(stem IN ITEMS native_oracle_records native_oracle_pins native_corpus_rec
 endforeach()
 
 foreach(stem IN ITEMS native_value native_value_key native_value_scope native_render
-                      native_expression native_member native_session native_session_isolation
+                      native_expression native_expression_document native_expression_constructor
+                      native_member native_member_collision native_session native_session_isolation
                       native_budget native_branch native_arith native_string native_split
                       native_syntax native_syntax_bracket native_syntax_scan native_syntax_table
                       native_branch_logic native_limits native_ceilings

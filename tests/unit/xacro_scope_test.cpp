@@ -26,24 +26,23 @@ using expansion_result = meios::expected<meios::expansion, meios::expansion_erro
 // scope hands the loader without the scope exposing an accessor for it.
 struct recording_fetch final : meios::text_resource_loader::fetcher
 {
-    recording_fetch(std::vector<std::string> &seen, std::optional<std::string> reply)
-        : m_seen(seen), m_reply(std::move(reply))
+    recording_fetch(std::vector<std::string> &seen, meios::text_resource_result reply)
+            : m_seen(seen)
+            , m_reply(std::move(reply))
     {
     }
 
-    std::optional<std::string> fetch(std::string_view spec,
-                                     const std::filesystem::path &document) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &document) override
     {
         m_seen.push_back(document.generic_string() + '|' + std::string(spec));
         return m_reply;
     }
 
     std::vector<std::string> &m_seen;
-    std::optional<std::string> m_reply;
+    meios::text_resource_result m_reply;
 };
 
-meios::text_resource_loader recorder(std::vector<std::string> &seen,
-                                     std::optional<std::string> reply = std::string("loaded"))
+meios::text_resource_loader recorder(std::vector<std::string> &seen, meios::text_resource_result reply = std::string("loaded"))
 {
     return meios::text_resource_loader{
         std::make_unique<recording_fetch>(seen, std::move(reply)) };
@@ -56,7 +55,8 @@ struct loading_backend
     meios::text_outcome eval_to_text(std::string_view expr, const meios::eval_scope &scope,
                                      meios::log_sink &)
     {
-        return meios::text_outcome{ scope.load_text(expr), meios::eval_failure_kind::none };
+        const meios::text_resource_result text = scope.load_text(expr);
+        return meios::text_outcome{text ? std::optional<std::string>(*text) : std::nullopt, meios::eval_failure_kind::none};
     }
 };
 
@@ -88,7 +88,9 @@ std::filesystem::path seed_include_tree()
 TEST_CASE("a scope carrying no text loader refuses instead of reading", "[xacro][scope]")
 {
     const meios::eval_scope scope;
-    REQUIRE_FALSE(scope.load_text("cfg.yaml").has_value());
+    const meios::text_resource_result text = scope.load_text("cfg.yaml");
+    REQUIRE_FALSE(text.has_value());
+    CHECK(text.error() == meios::text_resource_failure::unreachable);
 }
 
 TEST_CASE("an installed text loader answers through a const scope", "[xacro][scope]")
@@ -98,7 +100,7 @@ TEST_CASE("an installed text loader answers through a const scope", "[xacro][sco
     scope.install_text_loader(recorder(seen));
 
     const meios::eval_scope &sealed = scope;
-    REQUIRE(sealed.load_text("anything") == std::string("loaded"));
+    REQUIRE(sealed.load_text("anything").value() == std::string("loaded"));
     REQUIRE(seen.size() == 1);
 }
 
@@ -106,9 +108,11 @@ TEST_CASE("a refusing loader reads no differently from an absent one at the carr
 {
     std::vector<std::string> seen;
     meios::eval_scope scope;
-    scope.install_text_loader(recorder(seen, std::nullopt));
+    scope.install_text_loader(recorder(seen, meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable)));
 
-    REQUIRE_FALSE(scope.load_text("cfg.yaml").has_value());
+    const meios::text_resource_result text = scope.load_text("cfg.yaml");
+    REQUIRE_FALSE(text.has_value());
+    CHECK(text.error() == meios::text_resource_failure::unreachable);
     REQUIRE(seen.size() == 1);
 }
 

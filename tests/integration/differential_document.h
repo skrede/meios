@@ -55,11 +55,11 @@ inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
 class probe_loader final : public meios::text_resource_loader::fetcher
 {
 public:
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         const std::filesystem::path named = std::filesystem::path{ MEIOS_XACRO_PROBE_DIR } / spec;
         if(!std::filesystem::exists(named))
-            return std::nullopt;
+            return meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable);
         return slurp(named);
     }
 };

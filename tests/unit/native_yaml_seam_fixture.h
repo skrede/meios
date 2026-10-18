@@ -138,7 +138,10 @@ class fixed_loader final : public meios::text_resource_loader::fetcher
 public:
     explicit fixed_loader(std::string text) : m_text(std::move(text)) {}
 
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override { return m_text; }
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
+    {
+        return m_text;
+    }
 
 private:
     std::string m_text;

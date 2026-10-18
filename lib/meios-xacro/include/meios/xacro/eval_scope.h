@@ -72,10 +72,10 @@ public:
         return std::exchange(m_active_document, std::move(document));
     }
 
-    std::optional<std::string> load_text(std::string_view spec) const
+    text_resource_result load_text(std::string_view spec) const
     {
         if(!m_load_text_cb.valid())
-            return std::nullopt;
+            return unexpected<text_resource_failure>(text_resource_failure::unreachable);
         return m_load_text_cb(spec, m_active_document);
     }
 

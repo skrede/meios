@@ -53,10 +53,34 @@ TEST_CASE("the auxiliary-document loader carries a byte ceiling into the read", 
     null_probe probe;
     const meios::text_resource_loader loader = meios::detail::make_yaml_text_loader(sources, roots, heard, operations, probe, read_ceiling);
 
-    CHECK_FALSE(loader("package://pkg/cfg.yaml", {}).has_value());
+    const meios::text_resource_result result = loader("package://pkg/cfg.yaml", {});
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error() == meios::text_resource_failure::exhausted);
+    CHECK(heard.messages.empty());
     CHECK(delivered < generated_size);
-    REQUIRE(heard.messages.size() == 1);
-    CHECK(heard.messages.front().find("byte ceiling") != std::string::npos);
+}
+
+TEST_CASE("a containment-root read past the byte ceiling is returned as the budget, not as unreachable", "[native][yaml]")
+{
+    std::size_t delivered = 0;
+    generating_operations operations(generated_size, delivered);
+    recording_sink heard;
+    meios::source_stack sources;
+    const std::vector<std::filesystem::path> roots;
+    null_probe probe;
+    const meios::text_resource_loader loader = meios::detail::make_yaml_text_loader(sources, roots, heard, operations, probe, read_ceiling);
+    const std::filesystem::path document     = std::filesystem::path{MEIOS_XACRO_FIXTURE_DIR} / "sequence_flow" / "arm.xacro";
+
+    const meios::text_resource_result crossed = loader("joint_limits.yaml", document);
+    REQUIRE_FALSE(crossed.has_value());
+    CHECK(crossed.error() == meios::text_resource_failure::exhausted);
+    CHECK(heard.messages.empty());
+    CHECK(delivered < generated_size);
+
+    const meios::text_resource_result absent = loader("absent.yaml", document);
+    REQUIRE_FALSE(absent.has_value());
+    CHECK(absent.error() == meios::text_resource_failure::unreachable);
+    CHECK(heard.messages.size() == 1);
 }
 
 #ifdef MEIOS_TEST_HAS_YAML

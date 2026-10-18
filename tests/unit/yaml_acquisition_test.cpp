@@ -67,8 +67,8 @@ TEST_CASE("path and recovered package acquisition deliver exact text once", "[ya
     const auto path = loader("cfg.yaml", tree.path() / "docs" / "robot.xacro");
     downstream.consume(path);
 
-    REQUIRE(package == std::optional<std::string>{"value: 7"});
-    REQUIRE(path == package);
+    REQUIRE(package.value() == "value: 7");
+    REQUIRE(path.value() == package.value());
     REQUIRE(delivery.count == 2);
     REQUIRE(downstream.evaluations == 2);
     REQUIRE(downstream.mutations == 2);
@@ -102,7 +102,7 @@ TEST_CASE("relative roots recover from absence and native failure", "[yaml][acqu
     delivery_probe delivery;
     auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture, operations, delivery);
 
-    REQUIRE(loader("cfg.yaml", {}) == std::optional<std::string>{"value: 7"});
+    REQUIRE(loader("cfg.yaml", {}).value() == "value: 7");
     REQUIRE(script.calls == std::vector<std::string>{"open_under", "open_under", "read", "error", "read", "error", "close"});
     REQUIRE(capture.size() == 0);
 }

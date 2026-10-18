@@ -26,10 +26,8 @@ namespace meios::detail
 namespace
 {
 
-void report_failure(std::string_view subject, const text_read_failure &failure, std::size_t maximum, log_sink &log)
+void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
 {
-    if(failure.kind == text_read_failure_kind::too_large)
-        return report_too_large(subject, maximum, log);
     log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
 }
 
@@ -102,18 +100,21 @@ void remember(const text_read_failure &failure, std::optional<text_read_failure>
 
 // A determined native cause outranks both verdicts; between the two, absence wins, because a root
 // that holds the place for the resource has answered the containment question the other one raised.
-void report_exhausted(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, std::size_t maximum, log_sink &log)
+text_resource_result conclude_sweep(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, log_sink &log)
 {
+    if(first_failure && first_failure->kind == text_read_failure_kind::too_large)
+        return unexpected<text_resource_failure>(text_resource_failure::exhausted);
     if(first_failure)
-        report_failure(spec, *first_failure, maximum, log);
+        report_failure(spec, *first_failure, log);
     else if(seen.uncontained && !seen.absent)
         log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
     else
         log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "could not resolve resource \"" + std::string(spec) + '"');
+    return unexpected<text_resource_failure>(text_resource_failure::unreachable);
 }
 
-std::optional<std::string> from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
-                                            const text_reader_operations &operations, std::size_t maximum)
+text_resource_result from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
+                                      const text_reader_operations &operations, std::size_t maximum)
 {
     sweep seen{false, false};
     std::optional<text_read_failure> first_failure;
@@ -125,8 +126,7 @@ std::optional<std::string> from_containment(std::string_view spec, const std::fi
         else if(*result)
             return std::move(**result);
     }
-    report_exhausted(spec, seen, first_failure, maximum, log);
-    return std::nullopt;
+    return conclude_sweep(spec, seen, first_failure, log);
 }
 
 class yaml_fetcher final : public text_resource_loader::fetcher
@@ -143,10 +143,10 @@ public:
     {
     }
 
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &document) override
+    text_resource_result fetch(std::string_view spec, const std::filesystem::path &document) override
     {
-        std::optional<std::string> text = yaml_package::matches(spec) ? yaml_package::fetch(spec, m_sources, m_log, m_operations, m_maximum)
-                                                                     : from_containment(spec, document, m_roots, m_log, m_operations, m_maximum);
+        text_resource_result text = yaml_package::matches(spec) ? yaml_package::fetch(spec, m_sources, m_log, m_operations, m_maximum)
+                                                                : from_containment(spec, document, m_roots, m_log, m_operations, m_maximum);
         if(text)
             m_probe.delivered();
         return text;

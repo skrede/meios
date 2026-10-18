@@ -31,7 +31,7 @@ class counting_loader final : public meios::text_resource_loader::fetcher
 public:
     explicit counting_loader(std::size_t &tally) : m_tally(tally) {}
 
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         ++m_tally;
         return std::string(spec == "full.yaml" ? full_document : bare_document);

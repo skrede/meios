@@ -71,19 +71,19 @@ inline void report_failure(std::string_view subject, const operation_failure &ca
             "cannot " + std::string(to_string(cause.operation)) + " resource \"" + std::string(subject) + "\": " + cause.native.message());
 }
 
-inline void report_failure(std::string_view subject, const text_read_failure &failure, std::size_t maximum, log_sink &log)
+inline void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
 {
-    if(failure.kind == text_read_failure_kind::too_large)
-        return report_too_large(subject, maximum, log);
     log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
 }
 
-inline std::optional<std::string> consume(text_read_result text, std::string_view subject, std::size_t maximum, log_sink &log)
+inline text_resource_result consume(text_read_result text, std::string_view subject, log_sink &log)
 {
     if(text)
         return std::move(*text);
-    report_failure(subject, text.error(), maximum, log);
-    return std::nullopt;
+    if(text.error().kind == text_read_failure_kind::too_large)
+        return unexpected<text_resource_failure>(text_resource_failure::exhausted);
+    report_failure(subject, text.error(), log);
+    return unexpected<text_resource_failure>(text_resource_failure::unreachable);
 }
 
 inline std::optional<resolved_asset> locate(std::string_view spec, const package_ref &ref, source_stack &sources, log_sink &log)
@@ -109,16 +109,18 @@ inline text_read_result read(const resolved_asset &asset, const text_reader_oper
     return read_text_file(asset.path(), operations, maximum);
 }
 
-inline std::optional<std::string> fetch(std::string_view spec, source_stack &sources, log_sink &log, const text_reader_operations &operations, std::size_t maximum)
+inline text_resource_result fetch(std::string_view spec, source_stack &sources, log_sink &log, const text_reader_operations &operations, std::size_t maximum)
 {
     const std::optional<package_ref> ref = spec.starts_with(package_prefix) ? package_split(spec) : find_split(spec);
     if(!ref)
     {
         log.log(level::error, diagnostic_code::malformed_asset_uri, source_location{}, "malformed package resource spec \"" + std::string(spec) + '"');
-        return std::nullopt;
+        return unexpected<text_resource_failure>(text_resource_failure::unreachable);
     }
     const std::optional<resolved_asset> hit = locate(spec, *ref, sources, log);
-    return hit ? consume(read(*hit, operations, maximum), hit->path().string(), maximum, log) : std::nullopt;
+    if(!hit)
+        return unexpected<text_resource_failure>(text_resource_failure::unreachable);
+    return consume(read(*hit, operations, maximum), hit->path().string(), log);
 }
 
 }

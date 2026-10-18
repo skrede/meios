@@ -8,7 +8,8 @@ foreach(stem IN ITEMS
         xacro_budget xacro_depth xacro_arg xacro_arg_domain xacro_unsupported xacro_unsupported_location
         xacro_corpus
         forward_scan
-        yaml_resource yaml_grammar yaml_verdict io_concept io_source_stack io_sources)
+        yaml_resource yaml_resource_containment yaml_grammar yaml_verdict io_concept io_source_stack
+        io_sources)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
@@ -31,7 +32,8 @@ foreach(stem IN ITEMS
         # so these stems alone reach into meios-core/src; only forward-scan's helper takes
         # pugixml handles, so only it links pugixml directly.
         if(stem STREQUAL "forward_scan" OR stem STREQUAL "yaml_resource"
-                OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
+                OR stem STREQUAL "yaml_resource_containment" OR stem STREQUAL "yaml_grammar"
+                OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
                 ${meios_SOURCE_DIR}/lib/meios-core/src)
         endif()

@@ -57,7 +57,7 @@ struct tally
 
 struct fixed_config final : meios::text_resource_loader::fetcher
 {
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
     {
         return std::string(configuration);
     }

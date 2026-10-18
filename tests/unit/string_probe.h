@@ -26,7 +26,7 @@ constexpr std::string_view parts_document =
 class parts_loader final : public meios::text_resource_loader::fetcher
 {
 public:
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
     {
         return std::string(parts_document);
     }

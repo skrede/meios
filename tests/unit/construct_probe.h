@@ -50,7 +50,7 @@ class one_document final : public meios::text_resource_loader::fetcher
 public:
     explicit one_document(std::string text) : m_text(std::move(text)) {}
 
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
     {
         return m_text;
     }

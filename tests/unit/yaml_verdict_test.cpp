@@ -148,7 +148,7 @@ TEST_CASE("a traversal that stays inside a root reads, one that leaves it is ref
     const std::vector<std::filesystem::path> roots{ tree.path() };
     auto loader = meios::detail::make_yaml_text_loader(sources, roots, capture);
 
-    REQUIRE(loader("pkg/../docs/cfg.yaml", {}) == std::optional<std::string>{ "value: 7" });
+    REQUIRE(loader("pkg/../docs/cfg.yaml", {}).value() == "value: 7");
     REQUIRE(capture.size() == 0);
 
     meios::capturing_log_sink escaped{ silent };

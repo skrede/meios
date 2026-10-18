@@ -2,12 +2,16 @@
 #include "native_yaml_seam_fixture.h"
 
 #include <meios/io/source_stack.h>
+#include <meios/io/memory_source.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <memory>
 #include <string>
+#include <vector>
 #include <cstddef>
+#include <utility>
+#include <filesystem>
 #include <functional>
 #include <string_view>
 
@@ -64,6 +68,23 @@ substituted under_steps(std::string_view raw, meios::eval_policy policy, std::si
     return meios::detail::substitute_refined(raw, scope, sources, "robot.xacro", policy, {}, session, heard, span_at);
 }
 
+substituted under_bytes(meios::eval_policy policy, located_sink &heard)
+{
+    std::size_t delivered = 0;
+    yaml_seam_test::generating_operations operations(yaml_seam_test::generated_size, delivered);
+    meios::memory_source memory{heard};
+    memory.add("pkg", "cfg.yaml", "value: 9");
+    meios::source_stack sources{std::move(memory)};
+    const std::vector<std::filesystem::path> roots;
+    yaml_seam_test::null_probe probe;
+    meios::eval_scope scope;
+    scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, heard, operations, probe, yaml_seam_test::read_ceiling));
+    scope.install_yaml_parser(fake::yaml_parser_handle());
+    const meios::evaluator_limits ceilings;
+    meios::detail::eval_session session(ceilings);
+    return meios::detail::substitute_refined("v ${xacro.load_yaml('package://pkg/cfg.yaml')['value']}", scope, sources, "robot.xacro", policy, {}, session, heard, span_at);
+}
+
 }
 
 TEST_CASE("a crossed step ceiling is located, classified as the budget, and terminal under every policy", "[native][budget]")
@@ -76,5 +97,15 @@ TEST_CASE("a crossed step ceiling is located, classified as the budget, and term
         CHECK(admitted.records.empty());
         located_sink heard;
         located_on_budget(under_steps(nest, policy, 64, heard), heard);
+    }
+}
+
+TEST_CASE("a crossed byte ceiling is located, classified as the budget, and terminal under every policy", "[native][yaml]")
+{
+    for(meios::eval_policy policy : every_policy)
+    {
+        INFO("policy " << static_cast<int>(policy));
+        located_sink heard;
+        located_on_budget(under_bytes(policy, heard), heard);
     }
 }

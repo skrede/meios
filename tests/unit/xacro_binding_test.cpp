@@ -27,7 +27,7 @@ struct one_document final : meios::text_resource_loader::fetcher
 {
     explicit one_document(std::vector<std::string> &seen) : m_seen(seen) {}
 
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         m_seen.emplace_back(spec);
         return std::string(arm_document);

@@ -40,17 +40,20 @@ std::size_t mentioning(const std::vector<meios::captured_diagnostic> &records,
 
 struct fixed_text final : meios::text_resource_loader::fetcher
 {
-    explicit fixed_text(std::optional<std::string> text) : m_text(std::move(text)) {}
+    explicit fixed_text(meios::text_resource_result text)
+            : m_text(std::move(text))
+    {
+    }
 
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
     {
         return m_text;
     }
 
-    std::optional<std::string> m_text;
+    meios::text_resource_result m_text;
 };
 
-meios::eval_scope serving(std::optional<std::string> text)
+meios::eval_scope serving(meios::text_resource_result text)
 {
     meios::eval_scope scope;
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<fixed_text>(std::move(text)) });
@@ -83,7 +86,7 @@ TEST_CASE("a scope carrying no loader refuses a yaml request rather than reading
 TEST_CASE("a loader that refuses a spec reports the refusal kind and names the rule",
           "[eval_python]")
 {
-    const meios::eval_scope scope = serving(std::nullopt);
+    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable));
     const verdict got = refuse_of("load_yaml('../../../etc/passwd')", scope);
     REQUIRE(got.refused);
     REQUIRE(names(got, "uncontained-yaml-path"));
@@ -101,6 +104,21 @@ TEST_CASE("an uncontained yaml spec refuses through expand and leaks no file con
     REQUIRE(says(refused, "uncontained-yaml-path"));
     REQUIRE(refused.expanded.error().message.find("root:") == std::string::npos);
     REQUIRE(refused.expanded.error().message.find("${load_yaml") == std::string::npos);
+}
+
+TEST_CASE("an auxiliary read crossing the byte ceiling ends the load on the budget code under every policy", "[eval_python]")
+{
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    for(meios::eval_policy policy : {meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip})
+    {
+        INFO("policy " << static_cast<int>(policy));
+        meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::exhausted));
+        meios::source_stack sources;
+        meios::log_sink silent;
+        const expansion_result out = meios::expand(span_document("${load_yaml('big.yaml')}"), scope, sources, "robot.xacro", meios::expansion_limits{}, policy, handle, silent);
+        REQUIRE_FALSE(out.has_value());
+        CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+    }
 }
 
 TEST_CASE("every unit tag the reference implementation registers constructs", "[eval_python]")

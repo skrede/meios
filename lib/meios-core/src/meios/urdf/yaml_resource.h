@@ -4,16 +4,11 @@
 #include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/text_resource_loader.h"
 
-#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
-#include "meios/diagnostic/diagnostic_code.h"
-#include "meios/diagnostic/source_location.h"
 
-#include <string>
 #include <vector>
 #include <cstddef>
 #include <filesystem>
-#include <string_view>
 
 namespace meios
 {
@@ -39,14 +34,6 @@ protected:
     yaml_text_delivery_probe(yaml_text_delivery_probe &&)                 = default;
     yaml_text_delivery_probe &operator=(yaml_text_delivery_probe &&)      = default;
 };
-
-// A resource past the read maximum crossed the evaluator's byte axis rather than failing at the
-// device, so it reports on the budget code and names the ceiling the load was given.
-inline void report_too_large(std::string_view subject, std::size_t maximum, log_sink &log)
-{
-    log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
-            "resource \"" + std::string(subject) + "\" is larger than the evaluator's byte ceiling of " + std::to_string(maximum) + " bytes; this load cannot continue");
-}
 
 // The returned loader captures all three references; every one of them outlives the evaluation
 // scope it is installed on, which is a local of the frame that owns them. It captures no

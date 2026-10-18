@@ -55,7 +55,7 @@ public:
     {
     }
 
-    std::optional<std::string> fetch(std::string_view, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
     {
         return m_text;
     }

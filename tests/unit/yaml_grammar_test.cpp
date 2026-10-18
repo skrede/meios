@@ -166,7 +166,7 @@ TEST_CASE("a well-formed spec a source holds delivers its text after one lookup"
     std::vector<captured> raised;
     meios::log_sink_f log{ recorder{ raised } };
     probe under(log, counting_source{ calls, tree.path() / "pkg" / "cfg.yaml" });
-    CHECK(under.loader("package://pkg/cfg.yaml", {}) == std::optional<std::string>{ "value: 7" });
+    CHECK(under.loader("package://pkg/cfg.yaml", {}).value() == "value: 7");
     CHECK(calls == 1);
     CHECK(raised.empty());
 }

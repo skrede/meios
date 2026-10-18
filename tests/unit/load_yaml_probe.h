@@ -30,14 +30,14 @@ class recording_loader final : public meios::text_resource_loader::fetcher
 public:
     explicit recording_loader(std::vector<std::string> &seen) : m_seen(seen) {}
 
-    std::optional<std::string> fetch(std::string_view spec, const std::filesystem::path &) override
+    meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         m_seen.emplace_back(spec);
         if(spec == "catalogue.yaml")
             return std::string(catalogue);
         if(spec == "cfg/arm.yaml")
             return std::string(arm);
-        return std::nullopt;
+        return meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable);
     }
 
 private:
