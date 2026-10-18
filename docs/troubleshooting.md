@@ -141,7 +141,7 @@ the same intent.
 | Code | What it means | What to do |
 |---|---|---|
 | `undefined_property` | `${name}` names nothing the description bound. | Declare the property, or pass it as an argument. |
-| `unresolved_arg` | `$(arg name)` names an argument with no value and no declared default. | Pass the override, or give the `<xacro:arg>` a default. |
+| `unresolved_arg` | `$(arg name)` names an argument with no value and no declared default, or the command was given a second word, written or produced by a span. | Pass the override, or give the `<xacro:arg>` a default; pass the command one argument name. |
 | `unresolved_env` | `$(env VAR)` names an environment variable that is not set. | Set it, or use `$(optenv VAR fallback)`, which is the form that tolerates absence. |
 | `unresolved_find` | `$(find pkg)` names a package no configured source holds. | Add a source that holds it; the source stack is described in the [evaluation guide](evaluation.md). |
 | `unknown_substitution` | A `$(...)` command meios does not implement. | The commands that are implemented are listed in the [evaluation guide](evaluation.md#what-evaluates). |

@@ -70,13 +70,13 @@ TEST_CASE("an expression span resolves its inner text before the expression is e
         REQUIRE(out->text == "6");
     }
 
-    SECTION("an argument command with a bound name never evaluates its default inside a span")
+    SECTION("an argument command inside a span resolves its own spans before it reads a word")
     {
         scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
         const substitution_result out = meios::substitute("${'$(arg mesh_pkg ${absent_property})' + '/x.stl'}", scope, sources, document, log);
-        REQUIRE(out.has_value());
-        REQUIRE(out->text == "pkg/x.stl");
-        REQUIRE_FALSE(any_contains(records, "is not defined"));
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+        REQUIRE(locates_a_file(out));
     }
 
     SECTION("a failed inner scan carries the inner span's own cause outward")

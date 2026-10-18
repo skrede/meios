@@ -26,15 +26,15 @@ ceiling::resolved resolve(const std::string &raw)
 
 }
 
-// This shape once ran to stack exhaustion. A command now ends at its first closing parenthesis, as
-// the reference's pattern ends it, so the outermost level refuses on the command left open inside it.
-TEST_CASE("an argument nested inside its own default refuses at its first level", "[native][depth]")
+// A command ends at its first closing parenthesis, as the reference's pattern ends it, so however
+// deep the input the outermost level refuses on the command left open inside it.
+TEST_CASE("an argument command written inside another refuses at its first level", "[native][depth]")
 {
     const ceiling::resolved deep = resolve(ceiling::nested_arguments(20'000));
 
     CHECK_FALSE(deep.survived);
     REQUIRE(deep.messages.size() == 1);
-    CHECK(deep.messages.front().find("a command's text holds '('") != std::string::npos);
+    CHECK(deep.messages.front().find("unterminated $( substitution span") != std::string::npos);
 }
 
 TEST_CASE("nested expression spans refuse one level past what the ceiling admits", "[native][depth]")
@@ -51,22 +51,20 @@ TEST_CASE("sibling spans do not accumulate against the nesting ceiling", "[nativ
 {
     std::string side_by_side;
     for(std::size_t at = 0; at < 200; ++at)
-        side_by_side += ceiling::nested_arguments(1) + " ";
+        side_by_side += ceiling::nested_expressions(1) + " ";
 
     CHECK(resolve(side_by_side).survived);
 }
 
 // Measured by driving each shape until the process died on a 512 KiB thread: 2 448 recursive
-// grammar entries, 880 nested scans and 229 nested substitutions. One ceiling covers all three
-// because a level is charged what it costs in grammar entries rather than one apiece, and this
-// is the headroom that buys -- the same ninefold margin the grammar axis was sized to.
+// grammar entries and 880 nested scans. One ceiling covers both because a level is charged what it
+// costs in grammar entries rather than one apiece, and this is the headroom that buys -- the same
+// ninefold margin the grammar axis was sized to.
 TEST_CASE("the one nesting ceiling leaves every shape the same headroom", "[native][depth]")
 {
     constexpr std::size_t grammar_entries_exhausting = 2448;
     constexpr std::size_t nested_scans_exhausting = 880;
-    constexpr std::size_t nested_substitutions_exhausting = 229;
 
     CHECK(meios::default_expression_depth_ceiling * 9 < grammar_entries_exhausting);
     CHECK(admitted(meios::detail::nested_scan_cost) * 9 < nested_scans_exhausting);
-    CHECK(admitted(meios::detail::nested_substitution_cost) * 9 < nested_substitutions_exhausting);
 }

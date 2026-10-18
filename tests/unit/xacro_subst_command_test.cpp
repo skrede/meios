@@ -83,21 +83,45 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(out->text == "0.3");
     }
 
-    SECTION("$(arg name default) falls back to the default when unset")
+    SECTION("$(arg) refuses a second word")
     {
         const substitution_result out =
             meios::substitute("$(arg height 0.5)", scope, sources, document, log);
-        REQUIRE(out.has_value());
-        REQUIRE(out->text == "0.5");
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
+        REQUIRE(locates_a_file(out));
+        REQUIRE(any_contains(records, "height 0.5"));
     }
 
-    SECTION("$(arg name default) with a bound name never evaluates an unresolvable default")
+    SECTION("$(arg) refuses a second word before it looks up a bound name")
     {
-        scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
-        const substitution_result out = meios::substitute("$(arg mesh_pkg ${absent_property})", scope, sources, document, log);
+        scope.bind_argument("height", *meios::value::make_real(0.7));
+        const substitution_result out =
+            meios::substitute("$(arg height 0.5)", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
+        REQUIRE(locates_a_file(out));
+    }
+
+    SECTION("$(arg ${...}) reads the argument a span names")
+    {
+        scope.set("a", meios::value{ std::string("wid") });
+        scope.set("b", meios::value{ std::string("th") });
+        const substitution_result out =
+            meios::substitute("$(arg ${a + b})", scope, sources, document, log);
         REQUIRE(out.has_value());
-        REQUIRE(out->text == "pkg");
-        REQUIRE_FALSE(any_contains(records, "is not defined"));
+        REQUIRE(out->text == "0.3");
+    }
+
+    SECTION("$(arg ${...}) refuses when the span produces two words")
+    {
+        scope.set("a", meios::value{ std::string("width") });
+        scope.set("b", meios::value{ std::string("extra") });
+        const substitution_result out =
+            meios::substitute("$(arg ${a + ' ' + b})", scope, sources, document, log);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
+        REQUIRE(any_contains(records, "width extra"));
     }
 
     SECTION("an unset $(arg) with no default loud-fails")
@@ -110,7 +134,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(any_contains(records, "unset and has no default"));
     }
 
-    SECTION("a default whose own expression fails carries that refusal outward")
+    SECTION("a span inside an argument command is resolved first and its refusal carried outward")
     {
         const substitution_result out = meios::substitute("$(arg height ${absent_property})", scope, sources, document, log);
         REQUIRE_FALSE(out.has_value());

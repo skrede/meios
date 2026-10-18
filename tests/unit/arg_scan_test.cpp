@@ -97,3 +97,18 @@ TEST_CASE("scan_args de-duplicates and preserves document order", "[xacro][arg_s
     REQUIRE(args[0].default_value == std::optional<std::string>("1"));
     REQUIRE(args[1].name == "c");
 }
+
+TEST_CASE("scan_args reads no default from a second word in a reference", "[xacro][arg_scan]")
+{
+    const std::string_view doc =
+        R"XML(<?xml version="1.0"?>
+<robot name="r" xmlns:xacro="http://ros.org/wiki/xacro">
+  <link name="$(arg height 0.5)"/>
+</robot>)XML";
+    meios::log_sink silent;
+    const std::vector<meios::arg_declaration> args = meios::scan_args(doc, silent);
+
+    const meios::arg_declaration *height = find(args, "height");
+    REQUIRE(height != nullptr);
+    REQUIRE_FALSE(height->default_value.has_value());
+}

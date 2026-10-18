@@ -46,18 +46,6 @@ std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
     return raw.find(')', opener + 1);
 }
 
-// The default a second word gives the argument command is this evaluator's own extension, resolved
-// only on the unset branch, so that form alone is dispatched before its text is scanned.
-bool defaulted_argument(std::string_view inner)
-{
-    if(leading_command(inner) != "arg")
-        return false;
-    const std::string_view rest = inner.substr(inner.find("arg") + 3);
-    const std::size_t name      = rest.find_first_not_of(" \t");
-    const std::size_t gap       = name == std::string_view::npos ? name : rest.find_first_of(" \t", name);
-    return gap != std::string_view::npos && rest.find_first_not_of(" \t", gap) != std::string_view::npos;
-}
-
 // Upstream's command scanner refuses a '$' or a '(' left in a command's resolved text, so a span
 // nested in a command and a parenthesis among its words refuse alike.
 bool refuse_command_text(subst_ctx &ctx, std::string_view text, std::string_view refused)
@@ -109,25 +97,17 @@ bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::
 // Upstream resolves a substitution as safe_eval(eval_text(body)): a span's inner text is
 // expanded first and the string that produces is what is then evaluated or dispatched, so a
 // package-locating command written inside a quoted literal has already become a path by the
-// time the expression runs. Both openers therefore take the same inner scan. `$(arg name
-// default)` is the exception: its inner is dispatched unscanned so the `default` is evaluated
-// lazily by `cmd_arg` only on the unset branch — a pre-scan would eagerly evaluate a default
-// the bound arg never uses, failing on an unresolvable fallback. The evaluation command's body is
-// handed to an evaluator rather than to upstream's command scanner, so it alone may hold a '$' or
-// a '('. A failed inner scan yields
-// nullopt so the caller's verbatim/leniency handling governs the outcome rather than a
-// mis-dispatch. `span_offset` is the failing span's `$` byte as an offset into the whole decoded
-// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps back to
-// the real column. After a nested scan clobbers ctx.at, the outer span is re-anchored to its own
-// offset before it can emit.
+// time the expression runs, and an argument command counts the words its spans produced. Both
+// openers therefore take the same inner scan. The evaluation command's body is handed to an
+// evaluator rather than to upstream's command scanner, so it alone may hold a '$' or a '('. A
+// failed inner scan yields nullopt so the caller's verbatim/leniency handling governs the
+// outcome rather than a mis-dispatch. `span_offset` is the failing span's `$` byte as an offset
+// into the whole decoded attribute value; nested scans accumulate it so a token in `$(find ${x})`
+// still maps back to the real column. After a nested scan clobbers ctx.at, the outer span is
+// re-anchored to its own offset before it can emit.
 std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string_view inner,
                                         std::size_t span_offset)
 {
-    if(opener == '(' && defaulted_argument(inner))
-    {
-        ctx.last_kind = eval_failure_kind::none;
-        return refuse_command_text(ctx, inner, "(") ? std::nullopt : dispatch(ctx, inner);
-    }
     std::string resolved;
     if(!scan_nested(ctx, inner, resolved, span_offset + 2))
         return std::nullopt;

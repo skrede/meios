@@ -88,7 +88,7 @@ inline std::string nested_arguments(std::size_t levels)
 {
     std::string text = "x";
     for(std::size_t at = 0; at < levels; ++at)
-        text = "$(arg unset " + text + ")";
+        text = "$(arg " + text + ")";
     return text;
 }
 

@@ -80,6 +80,10 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"block_unbound_discarded", "discarded_block", {}, meios::diagnostic_code::undefined_property, "name 'undefined_name_nobody_bound' is not defined"},
         agreement_probe{"eval_unicode_digits", "eval_unicode_digits", {}},
         agreement_probe{"eval_double_underscore", "eval_double_underscore", {}, meios::diagnostic_code::expression_error, "double underscore"},
+        agreement_probe{"argument_command_second_word", "argument_command_second_word", {}, meios::diagnostic_code::unresolved_arg, "may only specify one arg"},
+        agreement_probe{"argument_command_second_word_bound", "argument_command_second_word_bound", {}, meios::diagnostic_code::unresolved_arg, "may only specify one arg"},
+        agreement_probe{"argument_command_expression_name", "argument_command_expression_name", {}},
+        agreement_probe{"argument_command_expression_words", "argument_command_expression_words", {}, meios::diagnostic_code::unresolved_arg, "may only specify one arg"},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

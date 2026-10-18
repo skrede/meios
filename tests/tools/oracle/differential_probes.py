@@ -34,7 +34,6 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "argument_without_default",
                    "argument_helper_call",
                    "argument_above_declaration",
-                   "argument_command_default",
                    "include_beside_document")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
@@ -77,4 +76,8 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("block_unbound_never_inserted", "block_unbound_never_inserted", None),
                     ("block_unbound_discarded", "discarded_block", None),
                     ("eval_unicode_digits", "eval_unicode_digits", None),
-                    ("eval_double_underscore", "eval_double_underscore", None))
+                    ("eval_double_underscore", "eval_double_underscore", None),
+                    ("argument_command_second_word", "argument_command_second_word", None),
+                    ("argument_command_second_word_bound", "argument_command_second_word_bound", None),
+                    ("argument_command_expression_name", "argument_command_expression_name", None),
+                    ("argument_command_expression_words", "argument_command_expression_words", None))

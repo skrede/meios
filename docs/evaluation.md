@@ -114,17 +114,15 @@ substitution in, and it is why the spelling a real description writes for a pack
 document reads at all. A command ends at its first closing parenthesis, as the reference's pattern
 ends it, so one command cannot be written inside another, and a `(` or a `$` left in a command's text
 once its spans are resolved refuses, as the reference's command scanner refuses it; only the
-`$(eval)` body, which an evaluator reads, may hold either. An argument command's default is the one
-exception to the order: `$(arg name default)` is dispatched unscanned, so a default the bound argument
-never uses is never evaluated — and when it is used, it resolves through the enclosing substitution
-rather than beside it, so it is charged to the same load. That two-word form is this evaluator's own:
-the reference's argument command takes one word and refuses a second, which
-[known limitations](known-limitations.md#expression-evaluation) records.
+`$(eval)` body, which an evaluator reads, may hold either. The argument command takes exactly one
+name once its spans are resolved, and refuses a second word whether or not the argument is bound, as
+the reference does: `$(arg ${a + b})` reads the argument the sum names, and a span that produces two
+words refuses.
 
 All of that nesting is charged against the expression-depth ceiling, and each shape is charged what it
-costs in stack rather than one apiece: descending into the grammar is one, a nested scan is three and a
-nested substitution is eleven, weighted from the depth at which each shape was measured to exhaust a
-512 KiB thread. So the one ceiling leaves every shape the same headroom, and a document nesting
+costs in stack rather than one apiece: descending into the grammar is one and a nested scan is three,
+weighted from the depth at which each shape was measured to exhaust a 512 KiB thread. So the one
+ceiling leaves both shapes the same headroom, and a document nesting
 expression spans past it refuses at a stated position rather than running out of stack; commands,
 which end at their first closing parenthesis, do not nest at all.
 
@@ -442,7 +440,7 @@ What is compared, exactly:
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
   tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
   than read off the YAML specification.
-- **Twenty-eight minimized binding documents**, three of them driven a second time with a caller
+- **Thirty-two minimized binding documents**, three of them driven a second time with a caller
   argument, each compared whole: a property's default and value over an argument of the same name,
   before and after its declaration and from a macro's global write, a macro parameter beside an
   argument, a property default under a parameter, the vendor idiom of a property defaulting to its own
@@ -450,8 +448,9 @@ What is compared, exactly:
   argument beside a property of its name, text in a sum and in a conditional, the conversion over ASCII
   and over other decimal digits, the names that shadow an argument, and the four refusals — and seven over the other commands: a
   command written inside one, a parenthesis or a dollar sign left in one's text, and an argument name
-  an expression span supplies. Beside them sit five documents over a block argument the macro never
-  inserts: a property, a global write and an emitting call inside it, and an unbound name under each
+  an expression span supplies. Four of them hold the argument command to one name: a second word written
+  over an unset and over a bound argument, and a span-built name with and without a space. Beside them
+  sit five documents over a block argument the macro never inserts: a property, a global write and an emitting call inside it, and an unbound name under each
   kind of block parameter. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per

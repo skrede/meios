@@ -251,10 +251,10 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Every way this evaluator differs from canonical xacro is written down, and nineteen of them are
-measured.** The reviewed manifest carries nineteen rows and the differential drives them on every push
+**Every way this evaluator differs from canonical xacro is written down, and eighteen of them are
+measured.** The reviewed manifest carries eighteen rows and the differential drives them on every push
 in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
-a new one does. Eleven of the nineteen are a meaning upstream has and this grammar refuses — the first
+a new one does. Eleven of the eighteen are a meaning upstream has and this grammar refuses — the first
 five entries below, the argument helper the seventh names, the mapping key an auxiliary document did
 not write as text, which has an entry of its own further down, and an include written beside its
 document, whose entry is under sources and resolution:
@@ -281,19 +281,15 @@ document, whose entry is under sources and resolution:
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Six differ in the other direction, rendering here where upstream refuses: a closing brace inside a
-string literal, one expression span written inside another, the absolute value, an argument command
-given a default as a second word, an argument declared without a default, and a `$(arg n)` written
-above its own declaration. The first two follow from a
+Five differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+string literal, one expression span written inside another, the absolute value, an argument declared
+without a default, and a `$(arg n)` written above its own declaration. The first two follow from a
 span scanner that folds over quotes and counts depth where the reference's pattern does neither, so
 the reference truncates the span and never hands its evaluator a whole expression to refuse. The third
 is a difference in what the evaluator itself carries: the reference's expression globals hold the
 mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
 raises an undefined name there, while every other name on this grammar's mathematics list renders on
-both sides. The fourth is this evaluator's own extension: `$(arg height 0.5)` renders `0.5` here
-when `height` is unset and never evaluates its default when it is set, while the reference's argument
-command takes exactly one word and refuses the whole document on a second. The last two have entries
-of their own further down. And two render on both sides with
+both sides. The last two have entries of their own further down. And two render on both sides with
 different answers: `and` and `or` yield a boolean here rather than the deciding operand, so
 `${1 or 2}` is `True` here and `1` there, which is deliberate and measured, not an oversight.
 
@@ -361,7 +357,9 @@ command ends at its first closing parenthesis too, and a `(` or a `$` left in it
 are resolved refuses, as the reference's command scanner refuses it: `$(arg zz $(arg q))`,
 `$(arg p $(arg q))` over a bound `p`, `$(find $(arg pkg))`, `$(optenv NAME (a))`, `$(optenv NAME x$y)`
 and an `$(optenv NAME ${w})` whose property holds `a(b` refuse on both sides, and `$(arg ${w})` reads
-the argument `w` names, as it does upstream. Measured against
+the argument `w` names, as it does upstream: a span-built name is resolved before its words are
+counted, and a second word, written or produced, refuses under `unresolved_arg` before any argument is
+looked up, on both sides. Measured against
 the pinned reference, which renders each the same way: an argument `q` defaulted to `3` beside a
 property `q` written `10` renders `$(eval q + 1)` as `4`; an argument `p` defaulted to `A` renders
 `$(eval p + 'arm')` as `Aarm`, and as `Carm` with the caller argument `p:=C`; a conditional testing
@@ -657,9 +655,9 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| Nineteen measured differences | The nineteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Eighteen measured differences | The eighteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The five `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence was measured with the command-line flatten, with and without the included file's directory as a package root, and is carried beyond that by the `include_beside_document` row. |
-| An argument is read only through the substitution commands | Thirty-one of the agreement verdicts of `native_differential`: twenty-eight minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
+| An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |
 | A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. |
 | A non-text mapping key loads and nothing reads it | The `non_text_mapping_key` row of the divergence manifest, driven as a whole document through both implementations, plus `native_yaml.a key is read in any of the scalar kinds a document can write`. The empty-scalar sentence beside it is carried by the reader's own refusal, measured while that row was minimized. |

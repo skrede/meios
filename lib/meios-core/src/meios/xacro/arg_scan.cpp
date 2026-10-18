@@ -11,7 +11,6 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 #include <fstream>
 #include <sstream>
 #include <cstddef>
@@ -49,12 +48,8 @@ void note_reference(std::string_view inner, std::vector<arg_declaration> &out)
         return;
     const std::size_t stop = inner.find_first_of(space, begin);
     const std::string_view name = inner.substr(begin, stop - begin);
-    std::optional<std::string> fallback;
-    const std::size_t rest = inner.find_first_not_of(space, stop);
-    if(stop != std::string_view::npos && rest != std::string_view::npos)
-        fallback = std::string(inner.substr(rest));
     if(!seen(out, name))
-        out.push_back({ std::string(name), std::move(fallback) });
+        out.push_back({ std::string(name), std::nullopt });
 }
 
 void scan_text(std::string_view text, std::vector<arg_declaration> &out)

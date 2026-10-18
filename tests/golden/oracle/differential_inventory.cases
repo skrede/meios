@@ -181,3 +181,7 @@ block_unbound_never_inserted	agreement
 block_unbound_discarded	agreement
 eval_unicode_digits	agreement
 eval_double_underscore	agreement
+argument_command_second_word	agreement
+argument_command_second_word_bound	agreement
+argument_command_expression_name	agreement
+argument_command_expression_words	agreement

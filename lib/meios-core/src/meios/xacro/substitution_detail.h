@@ -116,13 +116,11 @@ inline void record_terminal(subst_ctx &ctx, diagnostic_code code, const std::str
 }
 
 // The expression-depth axis counts stack frames in units of one recursive entry into the
-// expression grammar, so a level costing more than one entry is charged what it costs. Measured
-// on a 512 KiB thread by driving each shape until the process died: 2 424 grammar entries, 870
-// nested scans and 228 nested substitutions survive, where 2 448, 880 and 229 do not. A nested
-// scan re-enters the scanner alone; a nested substitution builds a context of its own and runs
-// the whole dispatch beneath it. So charged, the one ceiling leaves each shape ninefold headroom.
+// expression grammar, so a nested scan, costing more than one entry, is charged what it costs.
+// Measured on a 512 KiB thread by driving each shape until the process died: 2 424 grammar
+// entries and 870 nested scans survive, where 2 448 and 880 do not. So charged, the one ceiling
+// leaves both shapes ninefold headroom.
 inline constexpr std::size_t nested_scan_cost = 3;
-inline constexpr std::size_t nested_substitution_cost = 11;
 
 // One level of span nesting, released by the same unwind that abandons it. A crossed ceiling is
 // reported by the session against the real sink, so its cause is copied here for the caller.
@@ -188,10 +186,6 @@ expected<substitution, expansion_error> substitute_refined(
     const std::shared_ptr<evaluator_handle> &backend, eval_session &session, log_sink &log,
     const source_location &at, pugi::xml_node host = {}, std::string_view host_text = {},
     std::optional<std::size_t> attr_index = std::nullopt);
-
-// A nested resolution inside an already-running substitution, sharing its session so the
-// inner text is charged to the same load rather than to a fresh budget.
-expected<substitution, expansion_error> substitute_in(subst_ctx &ctx, std::string_view raw);
 
 }
 
