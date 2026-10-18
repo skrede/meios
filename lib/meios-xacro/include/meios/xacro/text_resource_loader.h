@@ -12,11 +12,13 @@
 namespace meios
 {
 
-// A fetcher returns a crossed byte ceiling without logging it, because only the evaluator holds the
+// A fetcher returns a crossed read ceiling without logging it, because only the evaluator holds the
 // call site and the policy-routed sink that make it one located, terminal record; it reports every
-// other failure itself, since it alone knows the cause.
+// other failure itself, since it alone knows the cause. A containment refusal is kept apart from the
+// other unreachable documents so that an evaluator reporting its own rules names only that one.
 enum class text_resource_failure
 {
+    uncontained,
     unreachable,
     exhausted
 };
@@ -34,27 +36,33 @@ class text_resource_loader
 public:
     struct fetcher
     {
-        fetcher() = default;
-        fetcher(const fetcher &) = default;
+        fetcher()                           = default;
+        fetcher(const fetcher &)            = default;
         fetcher &operator=(const fetcher &) = default;
-        fetcher(fetcher &&) = default;
-        fetcher &operator=(fetcher &&) = default;
-        virtual ~fetcher() = default;
+        fetcher(fetcher &&)                 = default;
+        fetcher &operator=(fetcher &&)      = default;
+        virtual ~fetcher()                  = default;
 
         virtual text_resource_result fetch(std::string_view spec, const std::filesystem::path &document) = 0;
     };
 
     text_resource_loader() = default;
-    explicit text_resource_loader(std::unique_ptr<fetcher> impl) : m_impl(std::move(impl)) {}
+    explicit text_resource_loader(std::unique_ptr<fetcher> impl)
+            : m_impl(std::move(impl))
+    {
+    }
 
-    text_resource_loader(text_resource_loader &&) noexcept = default;
+    text_resource_loader(text_resource_loader &&) noexcept            = default;
     text_resource_loader &operator=(text_resource_loader &&) noexcept = default;
-    text_resource_loader(const text_resource_loader &) = delete;
-    text_resource_loader &operator=(const text_resource_loader &) = delete;
+    text_resource_loader(const text_resource_loader &)                = delete;
+    text_resource_loader &operator=(const text_resource_loader &)     = delete;
 
     ~text_resource_loader() = default;
 
-    bool valid() const noexcept { return m_impl != nullptr; }
+    bool valid() const noexcept
+    {
+        return m_impl != nullptr;
+    }
 
     text_resource_result operator()(std::string_view spec, const std::filesystem::path &document) const
     {

@@ -32,9 +32,15 @@ struct tally
             messages.push_back(message);
     }
 
-    void operator()(meios::level lvl, const meios::source_location &, const std::string &message) { (*this)(lvl, message); }
+    void operator()(meios::level lvl, const meios::source_location &, const std::string &message)
+    {
+        (*this)(lvl, message);
+    }
 
-    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &, const std::string &message) { (*this)(lvl, message); }
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &, const std::string &message)
+    {
+        (*this)(lvl, message);
+    }
 };
 
 struct verdict
@@ -53,7 +59,7 @@ inline bool names(const verdict &got, std::string_view fragment)
     return false;
 }
 
-template <typename E>
+template<typename E>
 std::optional<std::string> evaluate(std::string_view expr, const meios::eval_scope &scope)
 {
     E evaluator;
@@ -61,24 +67,26 @@ std::optional<std::string> evaluate(std::string_view expr, const meios::eval_sco
     return evaluator.eval_to_text(expr, scope, silent).text;
 }
 
-template <typename E>
+template<typename E>
 verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
 {
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     E evaluator;
     const meios::text_outcome got = evaluator.eval_to_text(expr, scope, sink);
-    const bool declined = !got.text && got.failure == meios::eval_failure_kind::refused;
-    return { declined, std::move(counts.messages) };
+    const bool declined           = !got.text && got.failure == meios::eval_failure_kind::refused;
+    return {declined, std::move(counts.messages)};
 }
 
+// Stands in for a containment loader that holds only the one configuration, so every other spec
+// the table names lands outside it.
 struct only_config final : meios::text_resource_loader::fetcher
 {
     meios::text_resource_result fetch(std::string_view spec, const std::filesystem::path &) override
     {
         if(spec == "config.yaml")
             return std::string("arm:\n  dof: 6\n");
-        return meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable);
+        return meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::uncontained);
     }
 };
 
@@ -88,17 +96,17 @@ struct only_config final : meios::text_resource_loader::fetcher
 // score as a refusal the table never claimed.
 inline void seed(meios::eval_scope &scope)
 {
-    scope.set("x", meios::value{ std::string("arm") });
+    scope.set("x", meios::value{std::string("arm")});
     scope.set("v", *meios::value::make_real(1.5));
-    scope.set("name", meios::value{ std::string("arm") });
-    scope.set("format", meios::value{ std::string("stl") });
+    scope.set("name", meios::value{std::string("arm")});
+    scope.set("format", meios::value{std::string("stl")});
 }
 
 inline meios::eval_scope seeded()
 {
     meios::eval_scope scope;
     seed(scope);
-    scope.install_text_loader(meios::text_resource_loader{ std::make_unique<only_config>() });
+    scope.install_text_loader(meios::text_resource_loader{std::make_unique<only_config>()});
     return scope;
 }
 
@@ -113,14 +121,13 @@ struct outcome
 inline outcome expand_with_python(std::string_view source, meios::eval_policy policy)
 {
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     meios::eval_scope scope;
     seed(scope);
     meios::source_stack sources;
-    const auto backend = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
-                                         meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ std::move(out), std::move(counts.messages) };
+    const auto backend   = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro", meios::expansion_limits{}, policy, backend, sink);
+    return outcome{std::move(out), std::move(counts.messages)};
 }
 
 inline std::string span_document(const std::string &span)

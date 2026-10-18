@@ -38,20 +38,43 @@ expansion_result expand_under(meios::eval_policy policy, meios::eval_scope &scop
 
 TEMPLATE_TEST_CASE("a yaml spec escaping containment is refused by either evaluator", "[eval_python]", meios::python_evaluator, meios::unrestricted_python_evaluator)
 {
-    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable));
+    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::uncontained));
     const verdict got             = refuse_of<TestType>("load_yaml('../../../etc/passwd')", scope);
     REQUIRE(got.refused);
     REQUIRE(names(got, "uncontained-yaml-path"));
     REQUIRE(names(got, "../../../etc/passwd"));
 }
 
-TEMPLATE_TEST_CASE("a scope carrying no loader refuses a yaml request under either evaluator", "[eval_python]", meios::python_evaluator, meios::unrestricted_python_evaluator)
+TEMPLATE_TEST_CASE("a scope carrying no loader ends a yaml request on one located unresolved record under either evaluator", "[eval_python]", meios::python_evaluator,
+                   meios::unrestricted_python_evaluator)
 {
-    const meios::eval_scope bare;
-    const verdict got = refuse_of<TestType>("load_yaml('/etc/passwd')", bare);
-    REQUIRE(got.refused);
-    REQUIRE(names(got, "uncontained-yaml-path"));
-    REQUIRE(names(got, "/etc/passwd"));
+    for(meios::eval_policy policy : {meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip})
+    {
+        INFO("policy " << static_cast<int>(policy));
+        meios::eval_scope bare;
+        error_sink_test::error_sink heard;
+        const expansion_result out = expand_under<TestType>(policy, bare, heard);
+        error_sink_test::ends_on_one_record(out, heard, meios::diagnostic_code::unresolved_asset, hosting);
+        for(const error_sink_test::error_record &one : heard.errors)
+        {
+            CHECK(one.message.find("big.yaml") != std::string::npos);
+            CHECK(one.message.find("uncontained-yaml-path") == std::string::npos);
+        }
+    }
+}
+
+TEMPLATE_TEST_CASE("an unreachable document comes back from either evaluator as an error on its own record", "[eval_python]", meios::python_evaluator,
+                   meios::unrestricted_python_evaluator)
+{
+    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable));
+    error_sink_test::error_sink heard;
+    TestType evaluator;
+    const meios::text_outcome got = evaluator.eval_to_text("load_yaml('absent.yaml')", scope, heard);
+    CHECK_FALSE(got.text.has_value());
+    CHECK(got.failure == meios::eval_failure_kind::error);
+    REQUIRE(heard.errors.size() == 1);
+    CHECK(heard.errors.front().code == meios::diagnostic_code::unresolved_asset);
+    CHECK(heard.errors.front().message.find("absent.yaml") != std::string::npos);
 }
 
 TEMPLATE_TEST_CASE("a resolvable yaml spec loads its unit tags identically under either evaluator", "[eval_python]", meios::python_evaluator, meios::unrestricted_python_evaluator)

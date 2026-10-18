@@ -98,11 +98,16 @@ void remember(const text_read_failure &failure, std::optional<text_read_failure>
 text_resource_result conclude_sweep(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, log_sink &log)
 {
     if(first_failure)
+    {
         yaml_package::report_failure(spec, *first_failure, log);
-    else if(seen.uncontained && !seen.absent)
+        return unexpected<text_resource_failure>(text_resource_failure::unreachable);
+    }
+    if(seen.uncontained && !seen.absent)
+    {
         log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
-    else
-        log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "could not resolve resource \"" + std::string(spec) + '"');
+        return unexpected<text_resource_failure>(text_resource_failure::uncontained);
+    }
+    log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "could not resolve resource \"" + std::string(spec) + '"');
     return unexpected<text_resource_failure>(text_resource_failure::unreachable);
 }
 

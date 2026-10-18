@@ -77,23 +77,32 @@ inline std::string refusal_rule(const pybind11::dict &priv, std::string_view exp
     return rule.cast<std::string>();
 }
 
+inline eval_failure_kind report_unread(log_sink &log, const std::string &spec, text_resource_failure why)
+{
+    if(why == text_resource_failure::exhausted)
+    {
+        log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
+                "yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling; this load cannot continue");
+        return eval_failure_kind::exhausted;
+    }
+    log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "cannot reach the auxiliary document \"" + spec + '"');
+    return eval_failure_kind::error;
+}
+
 // The cause is recorded in evaluation-local state before the throw, so the outer handler
-// classifies it without inspecting the raised exception's text. A crossed read ceiling is reported
-// here, coded, as the failure's one record, and the handler returns its kind without another.
+// classifies it without inspecting the raised exception's text. A containment refusal is reported
+// there under its rule; any other unread document is reported here, coded, as the failure's one
+// record, and the handler returns its kind without adding another.
 inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind11::object &parse, yaml_context &ctx, const std::string &spec)
 {
     const text_resource_result text = ctx.scope.load_text(spec);
     if(text)
         return wrap_yaml(priv, parse(pybind11::str(*text)));
-    if(text.error() == text_resource_failure::exhausted)
-    {
-        ctx.log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
-                    "yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling; this load cannot continue");
-        ctx.reported = eval_failure_kind::exhausted;
-        throw pybind11::value_error("yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling");
-    }
-    ctx.rule = std::string(uncontained_rule);
-    throw pybind11::value_error("unreachable yaml resource \"" + spec + '"');
+    if(text.error() == text_resource_failure::uncontained)
+        ctx.rule = std::string(uncontained_rule);
+    else
+        ctx.reported = report_unread(ctx.log, spec, text.error());
+    throw pybind11::value_error("cannot read the auxiliary document \"" + spec + '"');
 }
 
 // A compiled callable carries no defining-globals attribute, so the privileged namespace

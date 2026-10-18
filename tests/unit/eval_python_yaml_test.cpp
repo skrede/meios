@@ -66,18 +66,9 @@ TEST_CASE("the yaml helper parses the text the scope's loader hands it", "[eval_
     REQUIRE(*shim == "6");
 }
 
-TEST_CASE("a scope carrying no loader refuses a yaml request rather than reading a file", "[eval_python]")
-{
-    const meios::eval_scope bare;
-    const verdict got = refuse_of("load_yaml('/etc/passwd')", bare);
-    REQUIRE(got.refused);
-    REQUIRE(names(got, "uncontained-yaml-path"));
-    REQUIRE(names(got, "/etc/passwd"));
-}
-
 TEST_CASE("a loader that refuses a spec reports the refusal kind and names the rule", "[eval_python]")
 {
-    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::unreachable));
+    const meios::eval_scope scope = serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::uncontained));
     const verdict got             = refuse_of("load_yaml('../../../etc/passwd')", scope);
     REQUIRE(got.refused);
     REQUIRE(names(got, "uncontained-yaml-path"));
@@ -87,7 +78,8 @@ TEST_CASE("a loader that refuses a spec reports the refusal kind and names the r
 TEST_CASE("an uncontained yaml spec refuses through expand and leaks no file content", "[eval_python]")
 {
     const auto handle     = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused = run(span_document("${load_yaml('/etc/passwd')}"), meios::eval_policy::skip, handle);
+    const outcome refused = run(span_document("${load_yaml('/etc/passwd')}"), meios::eval_policy::skip, handle,
+                                serving(meios::unexpected<meios::text_resource_failure>(meios::text_resource_failure::uncontained)));
     REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.errors >= 1);
     REQUIRE(says(refused, "uncontained-yaml-path"));

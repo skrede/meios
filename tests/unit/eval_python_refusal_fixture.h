@@ -28,8 +28,8 @@ namespace
 
 struct tally
 {
-    int errors{ 0 };
-    int line{ 0 };
+    int errors{0};
+    int line{0};
     std::string file;
     std::vector<std::string> messages;
 
@@ -46,15 +46,13 @@ struct tally
         record(lvl, message);
     }
 
-    void operator()(meios::level lvl, const meios::source_location &where,
-                    const std::string &message)
+    void operator()(meios::level lvl, const meios::source_location &where, const std::string &message)
     {
         record(lvl, message);
         anchor(lvl, where);
     }
 
-    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &where,
-                    const std::string &message)
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &where, const std::string &message)
     {
         record(lvl, message);
         anchor(lvl, where);
@@ -85,11 +83,11 @@ struct verdict
 verdict refuse_of(std::string_view expr, const meios::eval_scope &scope)
 {
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     meios::python_evaluator evaluator;
     const meios::text_outcome got = evaluator.eval_to_text(expr, scope, sink);
-    const bool declined = !got.text && got.failure == meios::eval_failure_kind::refused;
-    return { declined, std::move(counts.messages) };
+    const bool declined           = !got.text && got.failure == meios::eval_failure_kind::refused;
+    return {declined, std::move(counts.messages)};
 }
 
 // The acquisition layer states the terminal cause and names the resolved spec; the expression layer
@@ -105,7 +103,6 @@ bool names(const verdict &got, std::string_view fragment)
     return false;
 }
 
-
 using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
 
 struct outcome
@@ -117,17 +114,13 @@ struct outcome
     std::vector<std::string> messages;
 };
 
-outcome run(std::string_view source, meios::eval_policy policy,
-            const std::shared_ptr<meios::evaluator_handle> &backend)
+outcome run(std::string_view source, meios::eval_policy policy, const std::shared_ptr<meios::evaluator_handle> &backend, meios::eval_scope scope = meios::eval_scope{})
 {
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
-    meios::eval_scope scope;
+    meios::log_sink_f sink{std::ref(counts)};
     meios::source_stack sources;
-    expansion_result out = meios::expand(source, scope, sources, "robot.xacro",
-                                         meios::expansion_limits{}, policy, backend, sink);
-    return outcome{ counts.errors, counts.line, counts.file, std::move(out),
-                    std::move(counts.messages) };
+    expansion_result out = meios::expand(source, scope, sources, "robot.xacro", meios::expansion_limits{}, policy, backend, sink);
+    return outcome{counts.errors, counts.line, counts.file, std::move(out), std::move(counts.messages)};
 }
 
 bool says(const outcome &result, std::string_view fragment)
