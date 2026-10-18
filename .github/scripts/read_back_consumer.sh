@@ -29,12 +29,9 @@ case "$plat" in
     MINGW*|MSYS*|CYGWIN*) plat=windows ;;
 esac
 
-# Two stages on purpose, here and below. A count taken straight out of a pipeline reports zero for
-# a producer that could not run at all, and a zero is exactly what a clean subject reports, so the
-# producing command's own exit status is read before anything counts its output. The Windows leg is
-# the exception: tr and grep over the PE image's raw bytes are the whole check, needing no MSVC
-# developer environment a bash step does not carry, and the self-proof below is what shows that
-# pipeline can see a name at all, so a zero-match count is the clean result there.
+# A count taken straight from a pipeline reads zero when its producer could not run, which is also
+# the clean result, so each producer's exit status is read before its output is counted. The Windows
+# byte scan has no producer to fail; the self-proof and the image check below stand in for one.
 dll_pattern='python3[0-9]{0,3}\.dll|python[0-9]\.[0-9]+\.dll'
 # PEP 7 (https://peps.python.org/pep-0007/): public C names carry a Py, Py_ or Py<Group>_ prefix and
 # internal ones _Py; Mach-O prepends one more underscore, so up to three leading ones are allowed.
@@ -47,6 +44,14 @@ count_api_names()
     tr '\0' '\n' < "$1" | grep -aoE '[A-Za-z0-9_]+$' | grep -cE "^${api_pattern}$"
 }
 
+# Emptiness is read as well as the exit status: nm succeeds on a stripped image and prints nothing,
+# which counts the same as a clean subject while having read nothing at all.
+count_symbols()
+{
+    symbols=$(nm -C "$1" 2>/dev/null) && [ -n "$symbols" ] || return 1
+    printf '%s\n' "$symbols" | grep -cE "(^|[^A-Za-z0-9_])${api_pattern}|pybind11" || true
+}
+
 count_bindings()
 {
     grep -aoE 'pybind11' "$1" 2>/dev/null | wc -l
@@ -57,16 +62,13 @@ count_dll_imports()
     grep -aoiE "$dll_pattern" "$1" 2>/dev/null | wc -l
 }
 
-# A negative check that cannot fail proves nothing. Both patterns are first held against a subject
-# known to carry the interpreter -- the running interpreter's own executable, which imports its
-# entry point, Py_Main, from python3NN.dll -- and a pattern matching nothing there is reported as a
-# blind detector rather than as a clean subject. A missing reference is a refusal, not a skip, so
-# the leg cannot quietly downgrade to the unproven check.
+# A negative check that cannot fail proves nothing: both patterns must first match the running
+# interpreter's own executable, which imports Py_Main from python3NN.dll. A missing reference
+# refuses rather than skips, so the leg cannot quietly fall back to an unproven check.
 prove_interpreter_pattern()
 {
     reference=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
-    # command -v reports the name a shell would execute, which under MSYS resolves an .exe the
-    # bare path does not name; reading the image needs the name on disk.
+    # Under MSYS command -v names an .exe without its suffix, and reading the image needs the file.
     if [ -n "$reference" ] && [ ! -f "$reference" ] && [ -f "$reference.exe" ]; then
         reference="$reference.exe"
     fi
@@ -82,18 +84,41 @@ prove_interpreter_pattern()
         || refuse "the interpreter-symbol pattern matched nothing in $reference, so this read-back is blind"
 }
 
+# The nm legs' counterpart of the proof above: a program compiled here, defining the interpreter's
+# entry point, must read as carrying it before a zero from the same reader is trusted.
+prove_symbol_pattern()
+{
+    scratch=$(mktemp -d) || { refuse "no scratch directory was available for the symbol control"; return; }
+    printf 'extern "C" int Py_Main(int, wchar_t**) { return 0; }\nint main() { return Py_Main(0, 0); }\n' \
+        > "$scratch/control.cpp"
+    if ! c++ "$scratch/control.cpp" -o "$scratch/control" 2>/dev/null; then
+        refuse "the symbol control could not be compiled, so this read-back is unproven"
+    elif ! seen=$(count_symbols "$scratch/control") || [ "$seen" -eq 0 ]; then
+        refuse "a compiled control carrying Py_Main read as clean, so this read-back is blind"
+    fi
+    rm -rf "$scratch"
+}
+
+# A byte scan of an empty or unreadable file finds no name at all, which is the clean result, so a
+# subject must be readable and open with the DOS stub's MZ signature before its zero counts.
+is_pe_image()
+{
+    test -r "$1" && test "$(head -c 2 "$1" 2>/dev/null)" = "MZ"
+}
+
 read_symbols()
 {
     probe="$1"
     if [ "$plat" = "windows" ]; then
+        if ! is_pe_image "$probe"; then
+            refuse "$probe is not a readable PE image, so nothing was read back from it"
+            return
+        fi
         carried=$(( $(count_api_names "$probe") + $(count_bindings "$probe") ))
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
         return
     fi
-    # Emptiness is read as well as the exit status: nm succeeds on a stripped image and prints
-    # nothing, which counts the same as a clean subject while having read nothing at all.
-    if symbols=$(nm -C "$probe" 2>/dev/null) && [ -n "$symbols" ]; then
-        carried=$(printf '%s\n' "$symbols" | grep -cE "(^|[^A-Za-z0-9_])${api_pattern}|pybind11" || true)
+    if carried=$(count_symbols "$probe"); then
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
     else
         refuse "$probe yielded no symbol table, so nothing was read back from it"
@@ -108,11 +133,8 @@ read_linkage()
         test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
         return
     fi
-    if [ "$plat" = "darwin" ]; then
-        lister=(otool -L)
-    else
-        lister=(ldd)
-    fi
+    lister=(ldd)
+    [ "$plat" = "darwin" ] && lister=(otool -L)
     if linkage=$("${lister[@]}" "$probe" 2>/dev/null); then
         linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
         test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
@@ -121,9 +143,8 @@ read_linkage()
     fi
 }
 
-# The staged prefix and the working tree route both build to a bare path on Linux/macOS and to
-# Release\<name>.exe on Windows; an executable missing from a tree still refuses by name rather
-# than aborting the loop, so the others in the same tree are still checked.
+# Both routes build to a bare path on Linux/macOS and to Release\<name>.exe on Windows; a missing
+# executable refuses by name rather than aborting, so the rest of its tree is still read.
 locate_probe()
 {
     tree="$1"
@@ -139,6 +160,8 @@ locate_probe()
 
 if [ "$plat" = "windows" ]; then
     prove_interpreter_pattern
+else
+    prove_symbol_pattern
 fi
 
 for tree in "$@"; do
@@ -156,9 +179,8 @@ for tree in "$@"; do
     done
 done
 
-# meios's own subdirectory rather than the whole prefix: a fetched dependency that installs itself
-# deposits its headers beside meios's, and a match on one of those says nothing at all about what
-# meios exposes.
+# meios's own subdirectory only: a fetched dependency that installs itself puts its headers beside
+# meios's, and a match there says nothing about what meios exposes.
 headers="$install/include/meios"
 if test -d "$headers"; then
     named=$(grep -rl 'yaml-cpp/\|YAML::' "$headers" 2>/dev/null)
