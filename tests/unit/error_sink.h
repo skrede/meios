@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <string_view>
 
 namespace error_sink_test
 {
@@ -68,6 +69,15 @@ inline void one_record_at(const error_sink &heard, meios::diagnostic_code code, 
         CHECK(one.code == code);
         CHECK(one.loc.file == at.file);
         CHECK(one.loc.line == at.line);
+    }
+}
+
+inline void every_record_names(const error_sink &heard, std::string_view fragment)
+{
+    for(const error_record &one : heard.errors)
+    {
+        INFO("recorded " << one.message);
+        CHECK(one.message.find(fragment) != std::string::npos);
     }
 }
 

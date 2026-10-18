@@ -82,7 +82,7 @@ inline eval_failure_kind report_unread(log_sink &log, const std::string &spec, t
     if(why == text_resource_failure::exhausted)
     {
         log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
-                "yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling; this load cannot continue");
+                "the auxiliary document \"" + spec + "\" is larger than its loader's read ceiling; this load cannot continue");
         return eval_failure_kind::exhausted;
     }
     log.log(level::error, diagnostic_code::unresolved_asset, source_location{}, "cannot reach the auxiliary document \"" + spec + '"');

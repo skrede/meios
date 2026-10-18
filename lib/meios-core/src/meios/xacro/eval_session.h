@@ -23,8 +23,11 @@ namespace meios::detail
 struct eval_session
 {
     explicit eval_session(const evaluator_limits &ceilings)
-        : limits(ceilings), counters(), span_depth(0), failure(eval_failure_kind::none),
-          terminal()
+            : limits(ceilings)
+            , counters()
+            , span_depth(0)
+            , failure(eval_failure_kind::none)
+            , terminal()
     {
     }
 
@@ -58,14 +61,15 @@ struct eval_session
     void leave_span(std::size_t cost);
 
 private:
-    bool charge(std::size_t &counter, std::size_t ceiling, std::size_t amount,
-                std::string_view axis, log_sink &log, const source_location &at);
-    bool admits(std::size_t &counter, std::size_t ceiling, std::size_t depth,
-                std::string_view axis, log_sink &log, const source_location &at);
+    bool charge(std::size_t &counter, std::size_t ceiling, std::size_t amount, std::string_view axis, log_sink &log, const source_location &at);
+    bool admits(std::size_t &counter, std::size_t ceiling, std::size_t depth, std::string_view axis, log_sink &log, const source_location &at);
 };
 
-void latch_exhausted(eval_session &session, std::string_view axis, log_sink &log,
-                     const source_location &at);
+void latch_exhausted(eval_session &session, std::string_view axis, log_sink &log, const source_location &at);
+
+// Latches the same terminal failure under a message of the caller's own, for a crossed limit that is
+// not one of the evaluator's axes and so must be named by whoever holds it.
+void report_exhausted(eval_session &session, const std::string &message, log_sink &log, const source_location &at);
 
 }
 

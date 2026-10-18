@@ -28,10 +28,14 @@ eval_failure_kind category_of(yaml_failure why)
 {
     switch(why)
     {
-        case yaml_failure::unavailable: return eval_failure_kind::unsupported;
-        case yaml_failure::unsupported: return eval_failure_kind::unsupported;
-        case yaml_failure::exhausted:   return eval_failure_kind::exhausted;
-        default:                        return eval_failure_kind::error;
+        case yaml_failure::unavailable:
+            return eval_failure_kind::unsupported;
+        case yaml_failure::unsupported:
+            return eval_failure_kind::unsupported;
+        case yaml_failure::exhausted:
+            return eval_failure_kind::exhausted;
+        default:
+            return eval_failure_kind::error;
     }
 }
 
@@ -47,7 +51,7 @@ value refuse_unread(parser &p, const std::string &spec, text_resource_failure wh
 {
     if(why != text_resource_failure::exhausted)
         return p.fail("cannot reach the auxiliary document \"" + spec + '"', diagnostic_code::unresolved_asset);
-    latch_exhausted(p.session, "byte", p.log, p.anchor);
+    report_exhausted(p.session, "the auxiliary document \"" + spec + "\" is larger than its loader's read ceiling; this load cannot continue", p.log, p.anchor);
     p.refuse_exhausted();
     return value{};
 }
@@ -56,13 +60,11 @@ value load_yaml_value(parser &p, const value &argument)
 {
     const std::optional<std::string> spec = argument.text();
     if(!spec)
-        return p.fail("an auxiliary document is named by text, not by a "
-                      + std::string(kind_name(argument.kind())));
+        return p.fail("an auxiliary document is named by text, not by a " + std::string(kind_name(argument.kind())));
     const text_resource_result bytes = p.scope.load_text(*spec);
     if(!bytes)
         return refuse_unread(p, *spec, bytes.error());
-    const yaml_outcome parsed =
-        p.scope.parse_yaml(*bytes, p.session.limits, p.session.counters, p.log, p.anchor);
+    const yaml_outcome parsed = p.scope.parse_yaml(*bytes, p.session.limits, p.session.counters, p.log, p.anchor);
     if(!parsed.parsed)
         return refuse_parsed(p, parsed.failure);
     return *parsed.parsed;

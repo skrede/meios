@@ -108,6 +108,8 @@ TEMPLATE_TEST_CASE("a read crossing the loader's ceiling ends the load on one lo
         error_sink_test::error_sink heard;
         const expansion_result out = expand_under<TestType>(policy, scope, heard);
         error_sink_test::ends_on_one_record(out, heard, meios::diagnostic_code::expansion_budget_exceeded, hosting);
+        error_sink_test::every_record_names(heard, "\"big.yaml\"");
+        error_sink_test::every_record_names(heard, "loader's read ceiling");
     }
 }
 
