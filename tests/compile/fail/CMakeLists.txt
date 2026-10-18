@@ -23,5 +23,5 @@ foreach(source IN LISTS compile_fail_sources)
     add_test(NAME compile_fail_${stem}
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
             --target ${stem} --config $<CONFIG>)
-    set_tests_properties(compile_fail_${stem} PROPERTIES WILL_FAIL TRUE)
+    set_tests_properties(compile_fail_${stem} PROPERTIES WILL_FAIL TRUE RESOURCE_LOCK meios_build_tree)
 endforeach()

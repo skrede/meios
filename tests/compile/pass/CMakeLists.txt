@@ -14,6 +14,9 @@ foreach(source IN LISTS compile_pass_sources)
     add_test(NAME compile_pass_${stem}
         COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}
             --target ${stem} --config $<CONFIG>)
+    # Every probe drives the one build tree, and two builds running in it at once corrupt its
+    # dependency log, so a parallel ctest run must take them one at a time.
+    set_tests_properties(compile_pass_${stem} PROPERTIES RESOURCE_LOCK meios_build_tree)
 endforeach()
 
 # The name collision this stem pins is with the core-private reader declarations, so it has to
