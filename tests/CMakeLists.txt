@@ -170,3 +170,4 @@ if(MEIOS_BUILD_TESTS AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/cmake)
 endif()
 
 include(cmake/acquisition_tests.cmake)
+include(cmake/script_tests.cmake)

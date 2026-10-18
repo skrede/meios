@@ -3,41 +3,44 @@
 #include "../fact_rows.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <fstream>
 #include <optional>
+#include <filesystem>
 #include <string_view>
 
 namespace
 {
 
-constexpr std::string_view measured[] = { "PINS",
-                                          "collisions.cases",
-                                          "compatibility_ledger.cases",
-                                          "differential_divergences.cases",
-                                          "differential_inventory.cases",
-                                          "expressions.cases",
-                                          "fer_facts.cases",
-                                          "fp3_facts.cases",
-                                          "fr3_facts.cases",
-                                          "fr3v2_1_facts.cases",
-                                          "fr3v2_facts.cases",
-                                          "gantry_facts.cases",
-                                          "gen3_facts.cases",
-                                          "kr6_facts.cases",
-                                          "lbr_med14_r820_facts.cases",
-                                          "rendering.cases",
-                                          "tmrv0_2_facts.cases",
-                                          "unit_tags.cases",
-                                          "ur3e_facts.cases",
-                                          "ur5e_abs_paths_facts.cases",
-                                          "ur5e_facts.cases",
-                                          "ur5e_safety_facts.cases",
-                                          "ur7e_facts.cases",
-                                          "ur_mocked_facts.cases",
-                                          "yaml_scalars.cases" };
+constexpr std::string_view measured[] = {"PINS",
+                                         "collisions.cases",
+                                         "compatibility_ledger.cases",
+                                         "differential_divergences.cases",
+                                         "differential_inventory.cases",
+                                         "expressions.cases",
+                                         "fer_facts.cases",
+                                         "fp3_facts.cases",
+                                         "fr3_facts.cases",
+                                         "fr3v2_1_facts.cases",
+                                         "fr3v2_facts.cases",
+                                         "gantry_facts.cases",
+                                         "gen3_facts.cases",
+                                         "kr6_facts.cases",
+                                         "lbr_med14_r820_facts.cases",
+                                         "rendering.cases",
+                                         "tmrv0_2_facts.cases",
+                                         "unit_tags.cases",
+                                         "ur3e_facts.cases",
+                                         "ur5e_abs_paths_facts.cases",
+                                         "ur5e_facts.cases",
+                                         "ur5e_safety_facts.cases",
+                                         "ur7e_facts.cases",
+                                         "ur_mocked_facts.cases",
+                                         "yaml_scalars.cases"};
 
 std::string value_of(std::string_view file, std::string_view key)
 {
@@ -45,6 +48,17 @@ std::string value_of(std::string_view file, std::string_view key)
     REQUIRE(found.has_value());
     REQUIRE(found->fields.size() >= 2);
     return found->fields[1];
+}
+
+// An absolute name replaces the record directory it is joined to, which is what lets a scratch
+// record stand outside the committed set.
+std::filesystem::path scratch_record(std::string_view name, std::string_view content)
+{
+    const std::filesystem::path dir = std::filesystem::temp_directory_path() / "meios_oracle_record_refusal";
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path path = dir / name;
+    std::ofstream(path, std::ios::binary) << content;
+    return path;
 }
 
 }
@@ -76,8 +90,7 @@ TEST_CASE("upstream renders small negative magnitudes in fixed notation", "[orac
     CHECK(value_of("rendering.cases", "0.0004") == "0.0004");
 }
 
-TEST_CASE("upstream leaves a wrist joint without position limits its effort and velocity",
-          "[oracle]")
+TEST_CASE("upstream leaves a wrist joint without position limits its effort and velocity", "[oracle]")
 {
     const std::string limit = value_of("ur3e_facts.cases", "joint.limit.wrist_3_joint");
     CHECK(value_of("ur3e_facts.cases", "joint.type.wrist_3_joint") == "continuous");
@@ -93,25 +106,22 @@ TEST_CASE("the guarded elements tell the safety branch's record from the plain o
 {
     CHECK(facts::rows_under(oracle::load_rows("ur5e_facts.cases"), "joint.safety.") == 0);
     CHECK(facts::rows_under(oracle::load_rows("ur5e_safety_facts.cases"), "joint.safety.") == 6);
-    CHECK(value_of("ur5e_safety_facts.cases", "joint.safety.elbow_joint")
-          == "soft_lower_limit=-2.991592653589793 soft_upper_limit=2.991592653589793 "
-             "k_position=20 k_velocity=0.0");
+    CHECK(value_of("ur5e_safety_facts.cases", "joint.safety.elbow_joint") ==
+          "soft_lower_limit=-2.991592653589793 soft_upper_limit=2.991592653589793 "
+          "k_position=20 k_velocity=0.0");
 }
 
 // Two vendors write a guard's soft bounds as the hard bounds themselves. Both are recorded as they
 // render: coinciding is not a reason to drop either, and the comparison that reads them is exact.
 TEST_CASE("a guard whose soft bounds coincide with its hard bounds records both", "[oracle]")
 {
-    CHECK(value_of("fr3_facts.cases", "joint.limit.fr3_joint1")
-          == "lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62");
-    CHECK(value_of("fr3_facts.cases", "joint.safety.fr3_joint1")
-          == "soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0");
+    CHECK(value_of("fr3_facts.cases", "joint.limit.fr3_joint1") == "lower=-2.9007 upper=2.9007 effort=87.0 velocity=2.62");
+    CHECK(value_of("fr3_facts.cases", "joint.safety.fr3_joint1") == "soft_lower_limit=-2.9007 soft_upper_limit=2.9007 k_position=100.0 k_velocity=40.0");
 }
 
 // The one case the refusal set turns on: a name the wrapper answers itself reads as a bound
 // method by the attribute spelling and as the document's own value by the subscript spelling.
-TEST_CASE("a colliding member name reads differently by each spelling, a plain key does not",
-          "[oracle]")
+TEST_CASE("a colliding member name reads differently by each spelling, a plain key does not", "[oracle]")
 {
     const std::vector<oracle::row> rows = oracle::load_rows("collisions.cases");
 
@@ -142,4 +152,21 @@ TEST_CASE("every measured row carries a subject and a measurement", "[oracle]")
             CHECK(one.fields.size() >= 2);
         }
     }
+}
+
+TEST_CASE("a record that is absent or carries no rows refuses instead of reading as empty", "[oracle]")
+{
+    using Catch::Matchers::ContainsSubstring;
+
+    const std::filesystem::path empty    = scratch_record("empty.cases", "");
+    const std::filesystem::path comments = scratch_record("comments.cases", "# a header only\n\n# and another\n");
+    const std::filesystem::path one_row  = scratch_record("one_row.cases", "# a header\nkey\tvalue\n");
+    const std::filesystem::path absent   = empty.parent_path() / "absent.cases";
+    std::filesystem::remove(absent);
+
+    REQUIRE_THROWS_WITH(oracle::load_rows(absent.string()), ContainsSubstring("did not open"));
+    REQUIRE_THROWS_WITH(oracle::load_rows(empty.string()), ContainsSubstring("carries no rows"));
+    REQUIRE_THROWS_WITH(oracle::load_rows(comments.string()), ContainsSubstring("carries no rows"));
+    REQUIRE(oracle::load_rows(one_row.string()).size() == 1);
+    std::filesystem::remove_all(empty.parent_path());
 }

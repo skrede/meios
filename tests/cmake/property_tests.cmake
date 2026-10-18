@@ -10,6 +10,17 @@ if(MEIOS_BUILD_PROPERTY_TESTS)
         catch_discover_tests(xacro_eval_prop)
     endif()
 
+    set(native_form_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/native_form_prop.cpp)
+    if(EXISTS ${native_form_prop_src})
+        add_executable(native_form_prop ${native_form_prop_src})
+        target_link_libraries(native_form_prop
+            PRIVATE meios::core meios::model meios::xacro
+                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(native_form_prop)
+        meios_warnings(native_form_prop)
+        catch_discover_tests(native_form_prop)
+    endif()
+
     set(urdf_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/urdf_prop.cpp)
     if(EXISTS ${urdf_prop_src})
         add_executable(urdf_prop ${urdf_prop_src})
