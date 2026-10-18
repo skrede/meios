@@ -1,0 +1,70 @@
+#include "include_target.h"
+
+#include <string>
+#include <vector>
+#include <cstddef>
+#include <filesystem>
+#include <string_view>
+#include <system_error>
+
+namespace meios::detail
+{
+
+include_target split_target(std::string_view raw)
+{
+    if(raw.rfind("package://", 0) == 0)
+    {
+        std::string_view rest = raw.substr(10);
+        std::size_t slash = rest.find('/');
+        if(slash == std::string_view::npos)
+            return { std::string(rest), {} };
+        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)) };
+    }
+    std::size_t find = raw.find("$(find ");
+    std::size_t close = find == std::string_view::npos ? find : raw.find(')', find);
+    if(close == std::string_view::npos)
+        return { {}, std::string(raw) };
+    std::string_view after = raw.substr(close + 1);
+    if(!after.empty() && after.front() == '/')
+        after.remove_prefix(1);
+    return { std::string(raw.substr(find + 7, close - find - 7)), std::string(after) };
+}
+
+std::string normalize_relative(std::string_view rel, bool &escaped)
+{
+    std::vector<std::string_view> parts;
+    escaped = false;
+    for(std::size_t i = 0; i <= rel.size();)
+    {
+        std::size_t slash = rel.find('/', i);
+        std::string_view seg = rel.substr(i, slash == std::string_view::npos ? slash : slash - i);
+        if(seg == "..")
+        {
+            if(parts.empty())
+                return (escaped = true, std::string{});
+            parts.pop_back();
+        }
+        else if(!seg.empty() && seg != ".")
+            parts.push_back(seg);
+        if(slash == std::string_view::npos)
+            break;
+        i = slash + 1;
+    }
+    std::string out;
+    for(std::string_view part : parts)
+        out += (out.empty() ? "" : "/") + std::string(part);
+    return out;
+}
+
+// An include located through the configured sources is identified by its package-relative
+// spelling canonicalized against the process directory, not by a location: two spellings of
+// one include must collapse onto one key.
+std::filesystem::path include_key(const std::string &package, const std::string &normalized)
+{
+    std::filesystem::path joined = std::filesystem::path(package) / normalized;
+    std::error_code canon_ec;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(joined, canon_ec);
+    return canon_ec ? joined : canonical;
+}
+
+}

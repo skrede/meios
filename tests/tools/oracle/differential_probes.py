@@ -34,7 +34,7 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "argument_without_default",
                    "argument_helper_call",
                    "argument_above_declaration",
-                   "include_beside_document")
+                   "include_parent_directory")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
@@ -80,4 +80,9 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("argument_command_second_word", "argument_command_second_word", None),
                     ("argument_command_second_word_bound", "argument_command_second_word_bound", None),
                     ("argument_command_expression_name", "argument_command_expression_name", None),
-                    ("argument_command_expression_words", "argument_command_expression_words", None))
+                    ("argument_command_expression_words", "argument_command_expression_words", None),
+                    ("include_beside_document", "include_beside_document", None),
+                    ("include_nested_beside", "include_nested_beside", None),
+                    ("include_beside_over_root", "include_nested_beside", None),
+                    ("include_in_macro_body", "include_in_macro_body", None),
+                    ("block_include_never_inserted", "block_include_never_inserted", None))

@@ -58,15 +58,20 @@ def render_divergence_probe(tmp, out, case_id, expression):
         write_refusal(out, case_id, ".txt", failure)
 
 
-# Every file sharing the probe's stem travels with it, so an auxiliary document beside the probe
-# resolves document-relative in the scratch directory exactly as it does in the fixture directory.
-# A probe with no fixture raises rather than rendering, so it can never be recorded as a refusal.
+# Every file sharing the probe's stem travels with it, and so does a <stem>.d/ directory, so a
+# document beside the probe or below it resolves document-relative in the scratch directory exactly
+# as it does in the fixture directory. Probes sharing a fixture stage it more than once, so a
+# directory already staged is merged rather than refused. A probe with no fixture raises rather
+# than rendering, so it can never be recorded as a refusal.
 def stage_probe(tmp, case_id):
     document = PROBE_DIR / (case_id + ".xacro")
     if not document.is_file():
         raise FileNotFoundError("no probe fixture " + str(document))
     for one in sorted(PROBE_DIR.glob(case_id + ".*")):
-        shutil.copy(one, tmp / one.name)
+        if one.is_dir():
+            shutil.copytree(one, tmp / one.name, dirs_exist_ok=True)
+        else:
+            shutil.copy(one, tmp / one.name)
     return tmp / document.name
 
 

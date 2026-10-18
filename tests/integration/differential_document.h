@@ -43,7 +43,7 @@ struct document_probe
 // the same rendered file whichever side wrote it.
 inline constexpr std::array<document_probe, 5> document_probes{
         document_probe{true, "non_text_mapping_key"},        document_probe{false, "argument_without_default"}, document_probe{false, "argument_helper_call"},
-        document_probe{false, "argument_above_declaration"}, document_probe{false, "include_beside_document"},
+        document_probe{false, "argument_above_declaration"}, document_probe{false, "include_parent_directory"},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -76,15 +76,17 @@ inline meios::eval_scope document_scope(const document_probe &one)
 }
 
 // This side's verdict for a whole document: the expansion entry the load path runs, reduced to the
-// canonical text of what it rendered or to the bare refusal a manifest column can hold.
+// canonical text of what it rendered or to the bare refusal a manifest column can hold. It is named
+// after the fixture, so a relative include in it resolves beside the fixture as upstream's does.
 inline std::string observed_document(const document_probe &one)
 {
     meios::log_sink silent;
     meios::source_stack sources;
     meios::eval_scope scope = document_scope(one);
-    const std::string source = slurp(probe_file(one.id, ".xacro"));
+    const std::filesystem::path fixture = probe_file(one.id, ".xacro");
+    const std::string source = slurp(fixture);
     const meios::expected<meios::expansion, meios::expansion_error> rendered = meios::expand(
-        source, scope, sources, "probe.xacro", meios::expansion_limits{}, silent);
+        source, scope, sources, fixture, meios::expansion_limits{}, silent);
     return rendered.has_value() ? meios::canonical_xml(rendered->document) : std::string("REFUSED");
 }
 

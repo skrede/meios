@@ -31,7 +31,8 @@ namespace differential
 // A minimized binding document both sides must render alike, under the caller arguments the
 // binding needs. The first three fields are spelled exactly as differential.py's own tuple spells
 // them, so an id names the same fixture and the same rendered file whichever side wrote it. A
-// probe both sides refuse also names the cause each side must give.
+// probe both sides refuse also names the cause each side must give. The root, relative to the
+// probe directory, is a configured source this side alone is handed: upstream consults none.
 struct agreement_probe
 {
     std::string_view id;
@@ -39,6 +40,7 @@ struct agreement_probe
     std::map<std::string, std::string> args;
     std::optional<meios::diagnostic_code> refuses;
     std::string_view upstream_cause;
+    std::string_view root;
 };
 
 inline const std::vector<agreement_probe> agreement_probes{
@@ -84,6 +86,11 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"argument_command_second_word_bound", "argument_command_second_word_bound", {}, meios::diagnostic_code::unresolved_arg, "may only specify one arg"},
         agreement_probe{"argument_command_expression_name", "argument_command_expression_name", {}},
         agreement_probe{"argument_command_expression_words", "argument_command_expression_words", {}, meios::diagnostic_code::unresolved_arg, "may only specify one arg"},
+        agreement_probe{"include_beside_document", "include_beside_document", {}},
+        agreement_probe{"include_nested_beside", "include_nested_beside", {}},
+        agreement_probe{"include_beside_over_root", "include_nested_beside", {}, std::nullopt, {}, "."},
+        agreement_probe{"include_in_macro_body", "include_in_macro_body", {}},
+        agreement_probe{"block_include_never_inserted", "block_include_never_inserted", {}},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same
@@ -103,6 +110,11 @@ inline void require_same_document(const std::string &upstream_text, const std::s
 inline std::filesystem::path agreement_fixture(const agreement_probe &one)
 {
     return std::filesystem::path{MEIOS_XACRO_PROBE_DIR} / (std::string(one.fixture) + ".xacro");
+}
+
+inline std::filesystem::path agreement_root(const agreement_probe &one)
+{
+    return one.root.empty() ? std::filesystem::path{} : std::filesystem::path{MEIOS_XACRO_PROBE_DIR} / one.root;
 }
 
 // The model the load built, written back out by the serializer the command-line flatten uses.
@@ -137,13 +149,15 @@ inline void compare_agreement_probe(const agreement_probe &one, const std::strin
     const std::string upstream_text = slurp(scratch);
     meios::load_options opts;
     opts.args = one.args;
+    if(!one.root.empty())
+        opts.package_roots.push_back(agreement_root(one));
     const meios::expected<meios::load_result, meios::load_error> loaded = meios::load(agreement_fixture(one), opts);
     REQUIRE(loaded.has_value() == !refused(upstream_text));
     if(!loaded)
         return require_same_refusal(one, upstream_text, loaded.error());
     REQUIRE_FALSE(one.refuses.has_value());
     require_same_document(upstream_text, loaded_document(*loaded));
-    const std::optional<meios::expansion> rendered = corpus::expanded(corpus::document{agreement_fixture(one), one.args, {}, corpus::evaluator::native, {}});
+    const std::optional<meios::expansion> rendered = corpus::expanded(corpus::document{agreement_fixture(one), one.args, agreement_root(one), corpus::evaluator::native, {}});
     REQUIRE(rendered.has_value());
     require_same_document(upstream_text, rendered->document);
 }

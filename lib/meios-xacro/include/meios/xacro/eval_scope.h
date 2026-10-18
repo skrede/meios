@@ -89,11 +89,17 @@ public:
         m_parse_yaml_cb = std::move(parser);
     }
 
-    // Returns the document that was active, so the expansion layer restores it on the
-    // way out of an include without the scope publishing an accessor for it.
+    // The active document is the file being processed: the expansion layer sets it on the way
+    // into an include and restores the returned one on the way out, and a macro call leaves it
+    // alone, so inside a macro body it is the file that called the macro.
     std::filesystem::path set_active_document(std::filesystem::path document)
     {
         return std::exchange(m_active_document, std::move(document));
+    }
+
+    const std::filesystem::path &active_document() const
+    {
+        return m_active_document;
     }
 
     text_resource_result load_text(std::string_view spec) const

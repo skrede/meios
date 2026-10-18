@@ -329,6 +329,17 @@ side effect written inside a block nobody inserts now takes effect, and a block 
 property now fails the load whether or not it is reached. [Known limitations](known-limitations.md)
 says so in the reader's own terms.
 
+**A relative include resolves against the document that writes it, then through the configured
+sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
+being processed (the including document, and inside a macro body the document that calls the macro)
+and consults nothing else. The same anchor is taken here, so a nested include reads the file beside
+the include that names it, and a configured root holding a same-named file does not stand in for it.
+Where nothing is beside that document, the filename is then looked for through the configured
+sources, which the reference does not consult, so a document the reference refuses for want of that
+file can render here. A filename climbing above that directory with `..` refuses here as escaping the
+source root and is read there. That one is a reviewed divergence, so the comparison fails if it stops
+reproducing exactly as much as it fails if a new one appears.
+
 **The absolute value renders here and refuses there.** `${abs(-3)}` is `3` here; upstream raises an
 undefined name, because its expression globals are the mathematics module and the two reducers with no
 builtins beside them. It is the one difference on this page that runs in that direction for a reason
@@ -450,8 +461,10 @@ What is compared, exactly:
   command written inside one, a parenthesis or a dollar sign left in one's text, and an argument name
   an expression span supplies. Four of them hold the argument command to one name: a second word written
   over an unset and over a bound argument, and a span-built name with and without a space. Beside them
-  sit five documents over a block argument the macro never inserts: a property, a global write and an emitting call inside it, and an unbound name under each
-  kind of block parameter. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
+  sit six documents over a block argument the macro never inserts: a property, a global write, an emitting call and an include inside it, and an unbound name under each
+  kind of block parameter. Three more hold a relative include to the reference's anchor, one of them
+  driven a second time with a configured root holding a same-named file: a file beside its document, a
+  nested include, and an include written in a macro body. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
   document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
@@ -553,6 +566,8 @@ always the top-level one:
   The scratch tree lives for as long as the source does. Source kind does not distinguish the two
   package spec forms: they split into the same package/relative pair and read the returned file's
   text.
+
+A relative `<xacro:include>` filename follows the same anchor.
 
 **Windows may over-refuse, and it is unmeasured.** Containment canonicalizes both paths and then
 compares them lexically, with no case folding and no expansion of short (8.3) path names of its own.

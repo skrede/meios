@@ -185,3 +185,8 @@ argument_command_second_word	agreement
 argument_command_second_word_bound	agreement
 argument_command_expression_name	agreement
 argument_command_expression_words	agreement
+include_beside_document	agreement
+include_nested_beside	agreement
+include_beside_over_root	agreement
+include_in_macro_body	agreement
+block_include_never_inserted	agreement

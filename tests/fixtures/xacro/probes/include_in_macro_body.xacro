@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="include_in_macro_body.d/defs.xacro"/>
+  <xacro:emit_part/>
+</robot>

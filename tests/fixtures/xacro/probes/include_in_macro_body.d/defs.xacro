@@ -1,0 +1,6 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="emit_part" params="">
+    <xacro:include filename="include_in_macro_body.part.xacro"/>
+    <link name="${part}"/>
+  </xacro:macro>
+</robot>

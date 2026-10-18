@@ -28,16 +28,21 @@ not resolve. Anchoring to the writing file needs a map from an expanded node bac
 produced it, and none is built. The `package://` form is unaffected, and it is what real descriptions
 overwhelmingly use. The full rule is in [asset resolution](asset-resolution.md).
 
-**A relative include resolves through the configured sources, not beside the document that writes
-it.** The reference resolves `<xacro:include filename="arm.xacro"/>` against the directory of the
-file that writes it. Here a filename that is not package-qualified is located through the configured
-sources, each root standing where the reference would use that directory, so the include resolves
-only where a configured root holds the file at that path. Measured on a document including a file
-beside it, with no source configured: upstream renders the included property, and here the load
-refuses under `unresolved_include`, which is the `include_beside_document` row the manifest carries;
-the same document renders the included property here once its own directory is given as a package
-root. No pinned corpus document reaches an include that is not package-qualified, so none of them
-is affected.
+**A relative include resolves beside the document that writes it but refuses to climb above that
+directory, and falls back to the configured sources where the reference would refuse.** The reference
+joins `<xacro:include filename="arm.xacro"/>` onto the directory of the file that writes it (inside a
+macro body, the file that calls the macro) and so does this evaluator, so such a file includes with no
+source configured and a nested include reads the file beside the include that names it. Two
+differences remain. A filename that climbs out of that directory refuses here as escaping the source
+root: measured on a document whose included file includes `../include_parent_directory.leaf.xacro`,
+upstream renders the property that file binds and here the load refuses under
+`xacro_structural_error`, which is the `include_parent_directory` row the manifest carries. The
+boundary is kept on purpose, because admitting `..` means choosing a wider containment root, and that
+is a security decision rather than a parity one. And where nothing is beside the document, the
+filename is looked for through the configured sources, which the reference does not consult and where
+it refuses; the [evaluation page](evaluation.md#where-this-diverges-from-the-compatibility-target)
+states the rule. No pinned corpus document reaches an include that is not package-qualified, so none
+of them is affected.
 
 **A source that serves bytes leaks its scratch tree on a platform that will not delete an open file.**
 Such a source materializes an asset into a scratch directory it owns and removes the tree when it is
@@ -256,8 +261,8 @@ measured.** The reviewed manifest carries eighteen rows and the differential dri
 in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
 a new one does. Eleven of the eighteen are a meaning upstream has and this grammar refuses — the first
 five entries below, the argument helper the seventh names, the mapping key an auxiliary document did
-not write as text, which has an entry of its own further down, and an include written beside its
-document, whose entry is under sources and resolution:
+not write as text, which has an entry of its own further down, and an include climbing above its
+document's directory, whose entry is under sources and resolution:
 
 - A string repeated by an integer, and one string ordered against another. Only the addition of two
   strings and equality between two were measured into this grammar.
@@ -314,8 +319,7 @@ property nobody bound now fails the load whether or not the block is ever reache
 the pinned reference on minimized documents, each renders or refuses here as it does there: a block
 the macro never inserts that carries a property, a macro call writing a global property, or a macro
 call emitting a link renders the property, the global and no emitted link on both sides; one carrying
-an include renders the included property on both sides once the directory holding the included file
-is a configured source, the condition the entry on relative includes describes; and a block naming an
+an include renders the included property on both sides with no source configured; and a block naming an
 unbound property refuses on both sides, under a `*` parameter never inserted and under a `**`
 parameter inserted only behind a false condition. So a description that was only ever validated
 against meios, and that hid a defect inside an unreachable block, will stop loading, as it never
@@ -615,7 +619,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | No runtime remote fetch | Nothing, and that is the claim: it is an absent capability. Every source the library has is driven by `io_sources.*` and `io_source_stack.*`, and none of them takes a URL. |
 | Symlink-installed workspaces are covered by fixtures only | `ros_source.*` and `ros_prefix.*` over crafted layouts. Nothing builds a real `--symlink-install` workspace — which is the claim. |
 | A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
-| A relative include resolves through the configured sources | The `include_beside_document` row of the divergence manifest, driven as a whole document through both implementations. The sentence on a configured root was measured with the command-line flatten when the row was written, and nothing carries it since. |
+| A relative include resolves beside its document, refuses to climb above it, and falls back to the configured sources | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The fallback is carried by `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source`; upstream has nothing to compare it with. The resolution itself is held to upstream by the four `include_` agreement verdicts of `native_differential` (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, and an include in a macro body), beside the other `xacro_include_resolution` and `xacro_include_precedence` cases. |
 | A byte-serving source leaks its scratch tree where an open file cannot be deleted | `io_sources.the scratch tree is removed when the source that owns it dies` and the `scratch_teardown.*` stems, which drive removal stopping at its first error. The platform that will not delete an open file is not one the suite runs on. |
 | A narrow window between creating a scratch root and narrowing it | Nothing drives the window itself. Its two ends are carried: `scratch_setup.the candidate loop takes the first free name and exhausts at its bound` and `scratch_setup.a root that could not be narrowed is removed and refused`. |
 | Narrowing replaces permission bits, and not every platform decides access that way | `io_sources.the scratch root is reachable by its owner alone`, on the platforms whose access decision *is* a permission bit. Nothing drives an access-control-list platform, which is the claim. |
@@ -656,7 +660,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Claim | Carried by |
 |---|---|
 | Eighteen measured differences | The eighteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| A block argument's contents take effect where the caller wrote them | The five `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence was measured with the command-line flatten, with and without the included file's directory as a package root, and is carried beyond that by the `include_beside_document` row. |
+| A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |
 | An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |
 | A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. |

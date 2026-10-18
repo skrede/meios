@@ -1,25 +1,25 @@
+#include "include_target.h"
 #include "structural_detail.h"
 
 #include "meios/io/text_reader.h"
 #include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
+#include "meios/io/directory_source.h"
 
 #include "meios/detail/text_location.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
+#include "meios/diagnostic/operation_failure.h"
 
 #include <pugixml.hpp>
 
 #include <memory>
 #include <string>
-#include <vector>
-#include <cstddef>
 #include <utility>
 #include <optional>
 #include <filesystem>
-#include <string_view>
 #include <system_error>
 
 namespace meios::detail
@@ -28,58 +28,6 @@ namespace meios::detail
 namespace
 {
 
-struct include_target
-{
-    std::string package;
-    std::string relative;
-};
-
-include_target split_target(std::string_view raw)
-{
-    if(raw.rfind("package://", 0) == 0)
-    {
-        std::string_view rest = raw.substr(10);
-        std::size_t slash = rest.find('/');
-        if(slash == std::string_view::npos)
-            return { std::string(rest), {} };
-        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)) };
-    }
-    std::size_t find = raw.find("$(find ");
-    std::size_t close = find == std::string_view::npos ? find : raw.find(')', find);
-    if(close == std::string_view::npos)
-        return { {}, std::string(raw) };
-    std::string_view after = raw.substr(close + 1);
-    if(!after.empty() && after.front() == '/')
-        after.remove_prefix(1);
-    return { std::string(raw.substr(find + 7, close - find - 7)), std::string(after) };
-}
-
-std::string normalize_relative(std::string_view rel, bool &escaped)
-{
-    std::vector<std::string_view> parts;
-    escaped = false;
-    for(std::size_t i = 0; i <= rel.size();)
-    {
-        std::size_t slash = rel.find('/', i);
-        std::string_view seg = rel.substr(i, slash == std::string_view::npos ? slash : slash - i);
-        if(seg == "..")
-        {
-            if(parts.empty())
-                return (escaped = true, std::string{});
-            parts.pop_back();
-        }
-        else if(!seg.empty() && seg != ".")
-            parts.push_back(seg);
-        if(slash == std::string_view::npos)
-            break;
-        i = slash + 1;
-    }
-    std::string out;
-    for(std::string_view part : parts)
-        out += (out.empty() ? "" : "/") + std::string(part);
-    return out;
-}
-
 // meios::detail also declares two-argument readers of both these names, so an unqualified call
 // here would resolve to whichever declaration this translation unit happened to see first.
 text_read_result read_include(const resolved_asset &hit)
@@ -87,16 +35,6 @@ text_read_result read_include(const resolved_asset &hit)
     if(hit.source_root() && hit.source_relative())
         return meios::read_text_file_under(*hit.source_root(), *hit.source_relative());
     return meios::read_text_file(hit.path());
-}
-
-// The cycle identity is a package-relative spelling canonicalized against the process
-// directory, not a location: two spellings of one include must collapse onto one key.
-std::filesystem::path include_key(const std::string &package, const std::string &normalized)
-{
-    std::filesystem::path joined = std::filesystem::path(package) / normalized;
-    std::error_code canon_ec;
-    std::filesystem::path canonical = std::filesystem::weakly_canonical(joined, canon_ec);
-    return canon_ec ? joined : canonical;
 }
 
 bool reenters(const expand_ctx &ctx, const std::filesystem::path &key)
@@ -115,11 +53,11 @@ bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
                     + read_failure_reason(failure));
 }
 
-// The active document tracks the include stack, because a relative resource spec belongs
-// to the file it is written in rather than to the file that began the expansion. It is
-// not the stack's key: that key is a package-relative identity used for cycle detection,
-// not a location. A layer holding only bytes materializes them into a scratch area it owns,
-// so its location is the file it wrote and a relative spec beside it resolves.
+// The active document tracks the include stack, because a relative spec belongs to the file it
+// is written in rather than to the file that began the expansion. The key is a cycle identity:
+// the located file for an include found beside its document, a package spelling otherwise. A
+// layer holding only bytes materializes them into a scratch area it owns, so its location is
+// the file it wrote and a relative spec beside it resolves.
 bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked,
              const std::filesystem::path &key, std::filesystem::path located, pugi::xml_node out)
 {
@@ -153,6 +91,84 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit,
     return descend(ctx, doc, parked, key, hit.path(), out);
 }
 
+bool refuse_cycle(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key)
+{
+    return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                "xacro:include cycle detected re-entering \"" + key.string() + '"');
+}
+
+bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, pugi::xml_node out)
+{
+    const std::filesystem::path key = include_key(package, normalized);
+    if(reenters(ctx, key))
+        return refuse_cycle(ctx, in, key);
+    std::optional<resolved_asset> hit = ctx.sources.locate(package, normalized, ctx.log);
+    if(!hit)
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not resolve \"" + package + '/' + normalized + '"');
+    return splice(ctx, in, *hit, key, out);
+}
+
+// Upstream joins a relative filename onto the directory of the file being processed; a spelling
+// that is package-qualified or absolute is not looked for there, nor one in an unnamed document.
+std::filesystem::path beside_anchor(const expand_ctx &ctx, const std::string &package, const std::string &relative)
+{
+    if(!package.empty() || std::filesystem::path(relative).has_root_path())
+        return {};
+    const std::filesystem::path anchor = absolute_base(ctx.scope.active_document()).parent_path();
+    return anchor.is_absolute() ? anchor : std::filesystem::path{};
+}
+
+struct beside_probe
+{
+    std::optional<resolved_asset> hit;
+    std::optional<operation_failure> cause;
+    bool uncontained;
+};
+
+// Logs nothing: a miss falls through to the configured sources, and a logged rejection would
+// latch as the terminal cause even when one of them then resolves the include.
+beside_probe probe_beside(const std::filesystem::path &anchor, const std::string &normalized)
+{
+    const contained_path_result contained = try_contained_under(anchor, anchor / normalized);
+    if(!contained)
+        return { std::nullopt, contained.error(), false };
+    if(!*contained)
+        return { std::nullopt, std::nullopt, true };
+    std::error_code error;
+    const std::filesystem::file_status status = std::filesystem::status(**contained, error);
+    const bool absent = error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
+    if(error && !absent)
+        return { std::nullopt, operation_failure{ operation_kind::status, error }, false };
+    if(absent || !std::filesystem::exists(status))
+        return { std::nullopt, std::nullopt, false };
+    return { resolved_asset{ **contained, anchor, normalized }, std::nullopt, false };
+}
+
+bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &normalized, const operation_failure &cause)
+{
+    return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, cause,
+                "xacro:include could not look beside its document for \"" + normalized + "\": "
+                    + std::string(to_string(cause.operation)) + " failed: " + cause.native.message());
+}
+
+// A file beside the document is the one the spelling names, so one that escapes the document's
+// directory refuses rather than letting a configured root's same-named copy stand in for it.
+bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, pugi::xml_node out)
+{
+    const beside_probe probe = probe_beside(anchor, normalized);
+    if(probe.cause)
+        return refuse_probe(ctx, in, normalized, *probe.cause);
+    if(probe.uncontained)
+        return fail(ctx, in, diagnostic_code::uncontained_asset,
+                    "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
+    if(!probe.hit)
+        return include_from_sources(ctx, in, {}, normalized, out);
+    if(reenters(ctx, probe.hit->path()))
+        return refuse_cycle(ctx, in, probe.hit->path());
+    return splice(ctx, in, *probe.hit, probe.hit->path(), out);
+}
+
 }
 
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
@@ -170,15 +186,10 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "xacro:include target \"" + relative + "\" escapes the source root");
-    const std::filesystem::path key = include_key(target.package, normalized);
-    if(reenters(ctx, key))
-        return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "xacro:include cycle detected re-entering \"" + key.string() + '"');
-    std::optional<resolved_asset> hit = ctx.sources.locate(target.package, normalized, ctx.log);
-    if(!hit)
-        return fail(ctx, in, diagnostic_code::unresolved_include,
-                    "xacro:include could not resolve \"" + target.package + '/' + normalized + '"');
-    return splice(ctx, in, *hit, key, out);
+    const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);
+    if(!anchor.empty())
+        return include_beside(ctx, in, anchor, normalized, out);
+    return include_from_sources(ctx, in, target.package, normalized, out);
 }
 
 }

@@ -153,7 +153,7 @@ the same intent.
 
 | Code | What it means | What to do |
 |---|---|---|
-| `unresolved_include` | An `<xacro:include>` names a file that could not be read. The cause carries the operating system's reason. | Check the path, and check that the package the include reaches through is held by a configured source. |
+| `unresolved_include` | An `<xacro:include>` names a file that could not be read. The cause carries the operating system's reason. | Check the path. A relative filename is looked for beside the document that writes it (inside a macro body, the document that calls the macro), then in the configured sources; a package-qualified one needs its package held by a configured source. |
 | `xacro_parse_error` | A xacro element or one of its attributes did not parse. | Fix the markup at the reported `file:line`. |
 | `xacro_structural_error` | A xacro element is used where the grammar does not allow it — a macro call that does not match its definition, a block outside the scope it belongs to. | The constructs and their shapes are in the [evaluation guide](evaluation.md). |
 | `expansion_budget_exceeded` | Expansion ran past its budget, which in practice means a macro or an include that recurses. | Break the cycle. A budget is reached by recursion far more often than by size. |
