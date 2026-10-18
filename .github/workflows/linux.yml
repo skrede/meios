@@ -31,6 +31,9 @@ jobs:
           fi
           echo "Checked $(printf '%s\n' "$guards" | wc -l) header guards: all unique and well-formed."
 
+      - name: Check the README continuous-integration table against the workflows
+        run: sh .github/scripts/check_ci_table.sh
+
   file-size:
     runs-on: ubuntu-24.04
 
