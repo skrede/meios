@@ -72,6 +72,12 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"command_dollar_in_body", "command_dollar_in_body", {}, meios::diagnostic_code::unterminated_substitution, "Dollar signs"},
         agreement_probe{"command_expanded_argument_name", "command_expanded_argument_name", {}},
         agreement_probe{"command_expanded_parenthesis", "command_expanded_parenthesis", {}, meios::diagnostic_code::unterminated_substitution, "Invalid left parenthesis"},
+        agreement_probe{"block_property_never_inserted", "block_property_never_inserted", {}},
+        agreement_probe{"block_global_call_never_inserted", "block_global_call_never_inserted", {}},
+        agreement_probe{"block_emitting_call_never_inserted", "block_emitting_call_never_inserted", {}},
+        agreement_probe{
+                "block_unbound_never_inserted", "block_unbound_never_inserted", {}, meios::diagnostic_code::undefined_property, "name 'undefined_name_nobody_bound' is not defined"},
+        agreement_probe{"block_unbound_discarded", "discarded_block", {}, meios::diagnostic_code::undefined_property, "name 'undefined_name_nobody_bound' is not defined"},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

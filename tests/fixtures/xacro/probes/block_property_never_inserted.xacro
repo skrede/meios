@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="taker" params="**body"/>
+  <xacro:taker><wrap><xacro:property name="x" value="set"/></wrap></xacro:taker>
+  <link name="${x}"/>
+</robot>

@@ -449,8 +449,9 @@ What is compared, exactly:
   argument beside a property of its name, text in a sum and in a conditional, the conversion, the
   names that shadow an argument, and the three refusals — and seven over the other commands: a
   command written inside one, a parenthesis or a dollar sign left in one's text, and an argument name
-  an expression span supplies. The meios side is what the load path
-  builds, under the caller arguments a consumer would hand it, written back out by the serializer the
+  an expression span supplies. Beside them sit five documents over a block argument the macro never
+  inserts: a property, a global write and an emitting call inside it, and an unbound name under each
+  kind of block parameter. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
   document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
