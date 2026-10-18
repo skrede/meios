@@ -75,7 +75,10 @@ value parse_call(parser &p, std::string_view name)
     if(!p.at(token_kind::rparen))
         do { args.push_back(parse_ternary(p)); } while(p.accept(token_kind::comma));
     if(!p.accept(token_kind::rparen)) return p.fail("expected ')' after arguments");
-    return call_math(p, name, args);
+    const value result = call_math(p, name, args);
+    if(p.ok)
+        p.exercised(evaluator_construct::math_call);
+    return result;
 }
 
 }

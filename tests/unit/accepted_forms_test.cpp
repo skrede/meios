@@ -140,8 +140,9 @@ TEST_CASE("a spelling outside the table resolves to nothing", "[accepted_forms]"
 }
 
 // The vocabulary a load reports is the one closed table in the library naming what an expression
-// exercised, so a member added there without a form here fails. Its one coarser member is the
-// unit tag, which this enumeration splits into the six tags the conversion table closes over.
+// exercised, so a member added there without a form here fails. Its two coarser members are the
+// unit tag, which this enumeration splits into the six tags the conversion table closes over, and
+// the mathematics call, which it splits into the fifteen functions the evaluator closes over.
 TEST_CASE("every construct the load vocabulary names is an accepted form", "[accepted_forms]")
 {
     for(const meios::construct_spelling &one : meios::construct_spellings)
@@ -150,6 +151,11 @@ TEST_CASE("every construct the load vocabulary names is an accepted form", "[acc
         if(one.construct == meios::evaluator_construct::unit_tag)
         {
             CHECK(accepted::form_from_name("radians-tag").has_value());
+            continue;
+        }
+        if(one.construct == meios::evaluator_construct::math_call)
+        {
+            CHECK(accepted::form_from_name("to-radians").has_value());
             continue;
         }
         CHECK(accepted::form_from_name(one.name).has_value());

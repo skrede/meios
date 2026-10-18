@@ -640,7 +640,7 @@ the reason given above.
 
 Expansion is a result, never a flag beside a document. `meios::expand` returns either an `expansion`
 carrying the expanded document beside a record of which constructs that one load exercised — a closed
-vocabulary of fourteen, six the auxiliary-document reader marks and eight the expression evaluator
+vocabulary of fifteen, six the auxiliary-document reader marks and nine the expression evaluator
 marks, each at the point the construct actually resolves rather than declared anywhere, and read
 through `exercised`. Caller arguments handed to `expand` directly are bound with
 `eval_scope::bind_argument`, where `$(arg n)` reads them; `set` binds a property, which an expression

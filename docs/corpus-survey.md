@@ -90,11 +90,15 @@ one license spelled two ways and which this project's own acquisition gate recor
 
 ## The gap list
 
-The evaluator names fourteen constructs it can observe a load exercising. **Thirteen of the fourteen
+The evaluator names fifteen constructs it can observe a load exercising. **Fourteen of the fifteen
 are now recorded against at least one pinned entry point, and one is not.** That is the current state
-and it is not the state this survey was written in: when the tables below were compiled, six were
-recorded and eight were being looked for. Eight rows of this page are therefore a record of a search,
-and what the search produced is stated here rather than left to be inferred from an out-of-date count.
+and it is not the state this survey was written in: when the tables below were compiled, the
+vocabulary had fourteen members, six were recorded and eight were being looked for. Eight rows of this
+page are therefore a record of a search, and what the search produced is stated here rather than left
+to be inferred from an out-of-date count. The fifteenth member, `math-call`, was added after the
+survey, when the KUKA KR6 R900 sixx was found calling `radians()` nineteen times with no member naming
+it. The KR6 is the only pinned entry point whose load evaluates a mathematics call, so its row is the
+only one recording `math-call`.
 
 What closed the other seven:
 

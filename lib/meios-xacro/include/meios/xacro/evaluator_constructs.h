@@ -12,7 +12,7 @@ namespace meios
 
 // What one load exercised, named by the two layers that can see it: the auxiliary-document
 // builder marks the first six as it reads a document and the expression evaluator marks the
-// last eight as it evaluates, each at the site where the construct is actually exercised.
+// last nine as it evaluates, each at the site where the construct is actually exercised.
 // Nothing a third layer would have to be asked about is admitted, because a member nothing
 // marks would state a claim about a load rather than observe one.
 enum class evaluator_construct : std::uint32_t
@@ -31,6 +31,7 @@ enum class evaluator_construct : std::uint32_t
     string_membership,
     string_truth,
     named_split,
+    math_call,
 };
 
 struct construct_spelling
@@ -56,7 +57,8 @@ inline constexpr construct_spelling construct_spellings[] = {
     { evaluator_construct::string_concatenation, "string-concatenation" },
     { evaluator_construct::string_membership, "string-membership" },
     { evaluator_construct::string_truth, "string-truth" },
-    { evaluator_construct::named_split, "named-split" }
+    { evaluator_construct::named_split, "named-split" },
+    { evaluator_construct::math_call, "math-call" }
 };
 
 inline constexpr std::size_t evaluator_construct_count = std::size(construct_spellings);
@@ -73,7 +75,7 @@ constexpr bool construct_spellings_are_paired()
 
 static_assert(construct_spellings_are_paired(),
               "each spelling sits at the index of the member it names");
-static_assert(static_cast<std::size_t>(evaluator_construct::named_split) + 1
+static_assert(static_cast<std::size_t>(evaluator_construct::math_call) + 1
                   == evaluator_construct_count,
               "every member of the vocabulary carries a spelling");
 

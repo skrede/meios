@@ -38,7 +38,8 @@ std::vector<row> expression_rows()
              { "'a' + 'b'", "", { "string-concatenation" } },
              { "'a' in 'abc'", "", { "string-membership" } },
              { "not 'x'", "", { "string-truth" } },
-             { "'a b'.split(' ')", "", { "named-split" } } };
+             { "'a b'.split(' ')", "", { "named-split" } },
+             { "radians(180)", "", { "math-call" } } };
 }
 
 std::string joined(const names &spellings)
@@ -93,7 +94,7 @@ TEST_CASE("the vocabulary pairs every member with exactly one spelling", "[nativ
         CHECK(meios::construct_name(one.construct) == one.name);
         CHECK(meios::construct_from_name(one.name) == std::optional{ one.construct });
     }
-    CHECK(meios::evaluator_construct_count == 14);
+    CHECK(meios::evaluator_construct_count == 15);
 }
 
 TEST_CASE("a spelling the vocabulary does not carry resolves to nothing", "[native][constructs]")
@@ -108,7 +109,7 @@ TEST_CASE("a spelling the vocabulary does not carry resolves to nothing", "[nati
 
 TEST_CASE("a load exercising nothing in the vocabulary reports nothing", "[native][constructs]")
 {
-    const load_result got = read("1 + 1");
+    const load_result got = read("pi + 1");
 
     CHECK(got.ok);
     CHECK(got.exercised.empty());
