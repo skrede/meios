@@ -19,39 +19,30 @@ ceiling::resolved resolve(const std::string &raw)
 {
     const meios::evaluator_limits defaults;
     meios::detail::eval_session session(defaults);
-    return ceiling::substitute(raw, meios::eval_policy::fail, session);
+    meios::eval_scope scope;
+    scope.set("n", meios::value{std::string("n")});
+    return ceiling::substitute(raw, meios::eval_policy::fail, session, scope);
 }
 
 }
 
-// An argument's default is resolved through a substitution context of its own. While the nesting
-// depth was held on that context it restarted at every argument boundary, so this shape ran to
-// stack exhaustion instead of refusing; the depth is carried on the session for exactly this.
-TEST_CASE("an argument nested inside its own default refuses instead of exhausting the stack",
-          "[native][depth]")
+// This shape once ran to stack exhaustion. A command now ends at its first closing parenthesis, as
+// the reference's pattern ends it, so the outermost level refuses on the command left open inside it.
+TEST_CASE("an argument nested inside its own default refuses at its first level", "[native][depth]")
 {
     const ceiling::resolved deep = resolve(ceiling::nested_arguments(20'000));
 
     CHECK_FALSE(deep.survived);
     REQUIRE(deep.messages.size() == 1);
-    CHECK(deep.messages.front().find("expression depth") != std::string::npos);
+    CHECK(deep.messages.front().find("a command's text holds '('") != std::string::npos);
 }
 
-TEST_CASE("nested argument defaults refuse one level past what the ceiling admits",
-          "[native][depth]")
-{
-    const std::size_t most = admitted(meios::detail::nested_substitution_cost);
-
-    CHECK(resolve(ceiling::nested_arguments(most)).survived);
-    CHECK_FALSE(resolve(ceiling::nested_arguments(most + 1)).survived);
-}
-
-TEST_CASE("nested command spans refuse one level past what the ceiling admits", "[native][depth]")
+TEST_CASE("nested expression spans refuse one level past what the ceiling admits", "[native][depth]")
 {
     const std::size_t most = admitted(meios::detail::nested_scan_cost);
 
-    CHECK(resolve(ceiling::nested_commands(most)).survived);
-    CHECK_FALSE(resolve(ceiling::nested_commands(most + 1)).survived);
+    CHECK(resolve(ceiling::nested_expressions(most)).survived);
+    CHECK_FALSE(resolve(ceiling::nested_expressions(most + 1)).survived);
 }
 
 // Each level is released by the unwind that abandons it, so spans written side by side cost what

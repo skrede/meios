@@ -73,12 +73,10 @@ struct resolved
     std::vector<std::string> messages;
 };
 
-inline resolved substitute(std::string_view raw, meios::eval_policy policy,
-                           meios::detail::eval_session &session)
+inline resolved substitute(std::string_view raw, meios::eval_policy policy, meios::detail::eval_session &session, const meios::eval_scope &scope = meios::eval_scope{})
 {
     recorder heard;
     meios::log_sink_f sink{ std::ref(heard) };
-    meios::eval_scope scope;
     meios::source_stack sources;
     const meios::expected<meios::substitution, meios::expansion_error> out =
         meios::detail::substitute_refined(raw, scope, sources, "inline.xacro", policy, {}, session,
@@ -94,11 +92,13 @@ inline std::string nested_arguments(std::size_t levels)
     return text;
 }
 
-inline std::string nested_commands(std::size_t levels)
+// Each level reads one name bound to its own spelling, so the evaluator answers it without entering
+// the grammar and every level costs exactly one nested scan.
+inline std::string nested_expressions(std::size_t levels)
 {
-    std::string text = "x";
+    std::string text = "n";
     for(std::size_t at = 0; at < levels; ++at)
-        text = "$(dirname " + text + ")";
+        text = "${" + text + "}";
     return text;
 }
 

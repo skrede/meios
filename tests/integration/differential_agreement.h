@@ -64,6 +64,14 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"eval_reads_no_property", "eval_reads_no_property", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
         agreement_probe{"eval_nested_command", "eval_nested_command", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: $(arg q"},
         agreement_probe{"eval_parenthesis_ends_command", "eval_parenthesis_ends_command", {}, meios::diagnostic_code::expression_error, "SyntaxError"},
+        agreement_probe{"command_nested_in_default", "command_nested_in_default", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: $(arg q"},
+        agreement_probe{
+                "command_nested_beside_bound_argument", "command_nested_beside_bound_argument", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: $(arg q"},
+        agreement_probe{"command_nested_in_find", "command_nested_in_find", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: $(arg pkg"},
+        agreement_probe{"command_parenthesis_in_body", "command_parenthesis_in_body", {}, meios::diagnostic_code::unterminated_substitution, "Invalid left parenthesis"},
+        agreement_probe{"command_dollar_in_body", "command_dollar_in_body", {}, meios::diagnostic_code::unterminated_substitution, "Dollar signs"},
+        agreement_probe{"command_expanded_argument_name", "command_expanded_argument_name", {}},
+        agreement_probe{"command_expanded_parenthesis", "command_expanded_parenthesis", {}, meios::diagnostic_code::unterminated_substitution, "Invalid left parenthesis"},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

@@ -33,7 +33,8 @@ RECURSIVE_YAML = "a: &a [1, *a]\n"
 DOCUMENT_PROBES = ("non_text_mapping_key",
                    "argument_without_default",
                    "argument_helper_call",
-                   "argument_above_declaration")
+                   "argument_above_declaration",
+                   "argument_command_default")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
@@ -61,4 +62,11 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("eval_shadowed_names", "eval_shadowed_names", None),
                     ("eval_reads_no_property", "eval_reads_no_property", None),
                     ("eval_nested_command", "eval_nested_command", None),
-                    ("eval_parenthesis_ends_command", "eval_parenthesis_ends_command", None))
+                    ("eval_parenthesis_ends_command", "eval_parenthesis_ends_command", None),
+                    ("command_nested_in_default", "command_nested_in_default", None),
+                    ("command_nested_beside_bound_argument", "command_nested_beside_bound_argument", None),
+                    ("command_nested_in_find", "command_nested_in_find", None),
+                    ("command_parenthesis_in_body", "command_parenthesis_in_body", None),
+                    ("command_dollar_in_body", "command_dollar_in_body", None),
+                    ("command_expanded_argument_name", "command_expanded_argument_name", None),
+                    ("command_expanded_parenthesis", "command_expanded_parenthesis", None))

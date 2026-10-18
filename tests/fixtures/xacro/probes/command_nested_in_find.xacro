@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="pkg" default="probe"/>
+  <link name="$(find $(arg pkg))"/>
+</robot>

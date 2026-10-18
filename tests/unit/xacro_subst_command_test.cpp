@@ -94,11 +94,10 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
     SECTION("$(arg name default) with a bound name never evaluates an unresolvable default")
     {
         scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
-        const substitution_result out =
-            meios::substitute("$(arg mesh_pkg $(find absent_pkg))", scope, sources, document, log);
+        const substitution_result out = meios::substitute("$(arg mesh_pkg ${absent_property})", scope, sources, document, log);
         REQUIRE(out.has_value());
         REQUIRE(out->text == "pkg");
-        REQUIRE_FALSE(any_contains(records, "did not resolve"));
+        REQUIRE_FALSE(any_contains(records, "is not defined"));
     }
 
     SECTION("an unset $(arg) with no default loud-fails")
@@ -111,12 +110,11 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE(any_contains(records, "unset and has no default"));
     }
 
-    SECTION("a nested default whose inner locate fails carries the inner refusal outward")
+    SECTION("a default whose own expression fails carries that refusal outward")
     {
-        const substitution_result out = meios::substitute("$(arg height $(find absent))", scope,
-                                                          sources, document, log);
+        const substitution_result out = meios::substitute("$(arg height ${absent_property})", scope, sources, document, log);
         REQUIRE_FALSE(out.has_value());
-        REQUIRE(out.error().code == meios::diagnostic_code::unresolved_find);
+        REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
         REQUIRE(locates_a_file(out));
     }
 

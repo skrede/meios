@@ -39,24 +39,36 @@ std::string_view leading_command(std::string_view inner)
     return inner.substr(start, end - start);
 }
 
-// Deliberately quote-blind where the expression close finder is not: a command resolves its
-// inner text before dispatching and therefore nests, and upstream's own command scanner reads
-// a quote as no more than another character. The evaluation command alone ends at the first
-// closing parenthesis, as upstream's pattern ^\$\([^\)]*\) ends it, so a call or a nested span
-// inside its body truncates it there as it does upstream.
+// Upstream's command pattern is ^\$\([^\)]*\): a command ends at its first closing parenthesis
+// whatever it holds, quotes included, so a call or a span written inside one truncates it there.
 std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
 {
-    if(leading_command(raw.substr(opener + 1)) == "eval")
-        return raw.find(')', opener + 1);
-    int depth = 1;
-    for(std::size_t k = opener + 1; k < raw.size(); ++k)
-    {
-        if(raw[k] == '(')
-            ++depth;
-        else if(raw[k] == ')' && --depth == 0)
-            return k;
-    }
-    return std::string_view::npos;
+    return raw.find(')', opener + 1);
+}
+
+// The default a second word gives the argument command is this evaluator's own extension, resolved
+// only on the unset branch, so that form alone is dispatched before its text is scanned.
+bool defaulted_argument(std::string_view inner)
+{
+    if(leading_command(inner) != "arg")
+        return false;
+    const std::string_view rest = inner.substr(inner.find("arg") + 3);
+    const std::size_t name      = rest.find_first_not_of(" \t");
+    const std::size_t gap       = name == std::string_view::npos ? name : rest.find_first_of(" \t", name);
+    return gap != std::string_view::npos && rest.find_first_not_of(" \t", gap) != std::string_view::npos;
+}
+
+// Upstream's command scanner refuses a '$' or a '(' left in a command's resolved text, so a span
+// nested in a command and a parenthesis among its words refuse alike.
+bool refuse_command_text(subst_ctx &ctx, std::string_view text, std::string_view refused)
+{
+    const std::size_t at = text.find_first_of(refused);
+    if(at == std::string_view::npos)
+        return false;
+    const std::string message = std::string("a command's text holds '") + text[at] + "', which a command cannot hold: it ends at its first ')'";
+    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
+    record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
+    return true;
 }
 
 bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at)
@@ -100,7 +112,9 @@ bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::
 // time the expression runs. Both openers therefore take the same inner scan. `$(arg name
 // default)` is the exception: its inner is dispatched unscanned so the `default` is evaluated
 // lazily by `cmd_arg` only on the unset branch — a pre-scan would eagerly evaluate a default
-// the bound arg never uses, failing on an unresolvable fallback. A failed inner scan yields
+// the bound arg never uses, failing on an unresolvable fallback. The evaluation command's body is
+// handed to an evaluator rather than to upstream's command scanner, so it alone may hold a '$' or
+// a '('. A failed inner scan yields
 // nullopt so the caller's verbatim/leniency handling governs the outcome rather than a
 // mis-dispatch. `span_offset` is the failing span's `$` byte as an offset into the whole decoded
 // attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps back to
@@ -109,17 +123,21 @@ bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::
 std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string_view inner,
                                         std::size_t span_offset)
 {
-    if(opener == '(' && leading_command(inner) == "arg")
+    if(opener == '(' && defaulted_argument(inner))
     {
         ctx.last_kind = eval_failure_kind::none;
-        return dispatch(ctx, inner);
+        return refuse_command_text(ctx, inner, "(") ? std::nullopt : dispatch(ctx, inner);
     }
     std::string resolved;
     if(!scan_nested(ctx, inner, resolved, span_offset + 2))
         return std::nullopt;
     refine_span_column(ctx, span_offset);
     ctx.last_kind = eval_failure_kind::none;
-    return opener == '{' ? eval_expr(ctx, resolved, ctx.scope) : dispatch(ctx, resolved);
+    if(opener == '{')
+        return eval_expr(ctx, resolved, ctx.scope);
+    if(leading_command(resolved) != "eval" && refuse_command_text(ctx, resolved, "$("))
+        return std::nullopt;
+    return dispatch(ctx, resolved);
 }
 
 }

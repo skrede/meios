@@ -21,23 +21,22 @@ struct refusing_row
 
 // Every refusal the two substitution stems drive, in one table: the two package-locating
 // forms, the two argument forms, the two environment forms, the optional-environment
-// form, the unknown command, the recursive default, the double-quoted string spelling
-// and the scanner's own unterminated spans.
+// form, the unknown command, a command written inside a default, the double-quoted string
+// spelling and the scanner's own unterminated spans.
 const refusing_row refusing_rows[] = {
-    { "$(find)", "a find with no package name" },
-    { "$(find missing)", "an unresolvable package" },
-    { "$(arg)", "an arg with no name" },
-    { "$(arg height)", "an unset arg with no default" },
-    { "$(arg height $(find absent))", "a default whose inner locate fails" },
-    { "$(env)", "an env with no variable name" },
-    { "$(env MEIOS_SUBST_SWEEP_ABSENT)", "an absent environment variable" },
-    { "$(optenv)", "an optenv with no variable name" },
-    { "$(bogus x)", "an unknown command" },
-    { "${\"a{b\"}", "the unmeasured double-quoted string spelling" },
-    { "${prefix", "an unterminated expression span" },
-    { "$(find pkg", "an unterminated command span" },
+        {"$(find)", "a find with no package name"},
+        {"$(find missing)", "an unresolvable package"},
+        {"$(arg)", "an arg with no name"},
+        {"$(arg height)", "an unset arg with no default"},
+        {"$(arg height $(find absent))", "a command written inside a default"},
+        {"$(env)", "an env with no variable name"},
+        {"$(env MEIOS_SUBST_SWEEP_ABSENT)", "an absent environment variable"},
+        {"$(optenv)", "an optenv with no variable name"},
+        {"$(bogus x)", "an unknown command"},
+        {"${\"a{b\"}", "the unmeasured double-quoted string spelling"},
+        {"${prefix", "an unterminated expression span"},
+        {"$(find pkg", "an unterminated command span"},
 };
-
 }
 
 TEST_CASE("no substitution refusal reaches the caller carrying the unspecified code",

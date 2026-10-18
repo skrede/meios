@@ -167,3 +167,10 @@ eval_shadowed_names	agreement
 eval_reads_no_property	agreement
 eval_nested_command	agreement
 eval_parenthesis_ends_command	agreement
+command_nested_in_default	agreement
+command_nested_beside_bound_argument	agreement
+command_nested_in_find	agreement
+command_parenthesis_in_body	agreement
+command_dollar_in_body	agreement
+command_expanded_argument_name	agreement
+command_expanded_parenthesis	agreement

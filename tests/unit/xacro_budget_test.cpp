@@ -136,35 +136,52 @@ TEST_CASE("two independent budget-exhausting constructs still report exactly one
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
-// One level of span nesting is several stack frames, so a span nested past the ceiling must
-// answer with the exhausted refusal rather than with the stack. Both openers descend through
-// the same inner scan and both must stop at the same depth.
+namespace
+{
+
+std::string nested_spans(const char *opener, const char *closer)
+{
+    std::string raw;
+    for(int at = 0; at < 50'000; ++at)
+        raw += opener;
+    raw += "1";
+    for(int at = 0; at < 50'000; ++at)
+        raw += closer;
+    return raw;
+}
+
+}
+
+// One level of span nesting is several stack frames, so an expression span nested past the
+// ceiling must answer with the exhausted refusal rather than with the stack.
 TEST_CASE("span nesting past the expression-depth ceiling refuses rather than descending",
           "[xacro][budget]")
 {
     meios::source_stack sources;
     meios::eval_scope scope;
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
 
-    for(const std::pair<const char *, const char *> &pair :
-        { std::pair<const char *, const char *>{ "${", "}" },
-          std::pair<const char *, const char *>{ "$(", ")" } })
-    {
-        std::vector<xacro_probe::captured> records;
-        meios::log_sink_f log{ xacro_probe::recorder{ records } };
-        INFO("opener " << pair.first);
-        std::string raw;
-        for(int at = 0; at < 50'000; ++at)
-            raw += pair.first;
-        raw += "1";
-        for(int at = 0; at < 50'000; ++at)
-            raw += pair.second;
+    const meios::expected<meios::substitution, meios::expansion_error> out = meios::substitute(nested_spans("${", "}"), scope, sources, "robot.xacro", log);
 
-        const meios::expected<meios::substitution, meios::expansion_error> out =
-            meios::substitute(raw, scope, sources, "robot.xacro", log);
+    REQUIRE_FALSE(out.has_value());
+    CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+    CHECK_FALSE(out.error().loc.file.empty());
+    CHECK(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
+}
 
-        REQUIRE_FALSE(out.has_value());
-        CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
-        CHECK_FALSE(out.error().loc.file.empty());
-        CHECK(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
-    }
+// A command ends at its first closing parenthesis, as the reference's pattern ends it, so the same
+// depth written with command openers never descends: the outermost command is left holding the rest.
+TEST_CASE("command nesting refuses at its first level rather than descending", "[xacro][budget]")
+{
+    meios::source_stack sources;
+    meios::eval_scope scope;
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+
+    const meios::expected<meios::substitution, meios::expansion_error> out = meios::substitute(nested_spans("$(", ")"), scope, sources, "robot.xacro", log);
+
+    REQUIRE_FALSE(out.has_value());
+    CHECK(out.error().code == meios::diagnostic_code::unterminated_substitution);
+    CHECK(xacro_probe::coded(records, meios::diagnostic_code::unterminated_substitution) == 1);
 }
