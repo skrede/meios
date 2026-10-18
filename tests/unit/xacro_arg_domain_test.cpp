@@ -100,7 +100,7 @@ TEST_CASE("a conditional testing an argument through the substitution command ta
 }
 
 // An expression reads properties alone, as the reference's does: an argument is reached only
-// through the substitution command, and an expression naming one refuses with that spelling.
+// through the substitution commands, and an expression naming one refuses with that spelling.
 TEST_CASE("a conditional testing an argument by its bare name refuses and names the argument command", "[xacro][arg][domain]")
 {
     require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
@@ -123,12 +123,6 @@ TEST_CASE("a dotted read whose head is an argument refuses and names the argumen
 {
     require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
   <link name="dot_${flag.x}"/>)XML");
-}
-
-TEST_CASE("the evaluation command naming an argument and no property refuses and names the argument command", "[xacro][arg][domain]")
-{
-    require_names_argument_command("q", R"XML(  <xacro:arg name="q" default="3"/>
-  <link name="$(eval q + 1)"/>)XML");
 }
 
 TEST_CASE("the reference's argument helper refuses and names the one helper either evaluator exposes", "[xacro][arg][domain]")

@@ -70,13 +70,15 @@ the `False` a boolean spells, and what leaves a `0.10` default its trailing zero
 happens instead where the argument is read into something that does bind a value:
 `<xacro:m flag="$(arg flag)"/>` hands text to the parameter, the parameter binds it by the reading
 above, and `${flag}` inside that macro is a boolean. Both implementations keep two tables — an
-argument table the `$(arg n)` command reads, and a property table an expression reads — so an
-expression cannot name an argument: `${flag}` over an argument alone refuses, and the refusal names
-`$(arg flag)`. A property of an argument's name is a second binding beside the argument, never a
-write to it, so a property's `default=` binds over an argument of the same name and `$(arg n)`
-answers the argument whatever property is written. `$(eval)` is the one reader that differs: the
-reference evaluates it over the argument table and this evaluator over the property table, which
-[known limitations](known-limitations.md#expression-evaluation) records.
+argument table the `$(arg n)` and `$(eval)` commands read, and a property table an expression span
+reads — so an expression span cannot name an argument: `${flag}` over an argument alone refuses, and
+the refusal names `$(arg flag)`. A property of an argument's name is a second binding beside the
+argument, never a write to it, so a property's `default=` binds over an argument of the same name and
+`$(arg n)` answers the argument whatever property is written. `$(eval)` reads each argument it names
+through the reference's own conversion rather than the one above — `1e3` stays text there, `1_000` is
+the integer `1000` — sees the mathematics names and the spellings `true` and `false` before any
+argument, sees no property, and ends at its first closing parenthesis, so its body holds no call;
+[known limitations](known-limitations.md#expression-evaluation) records what was measured.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
 bound, so one argument never sees a sibling's new value: a call passing both
@@ -434,11 +436,13 @@ What is compared, exactly:
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
   tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
   than read off the YAML specification.
-- **Eleven minimized binding documents**, two of them driven a second time with a caller argument,
-  each compared whole: a property's default and value over an argument of the same name, before and
-  after its declaration and from a macro's global write, a macro parameter beside an argument, a
-  property default under a parameter, the vendor idiom of a property defaulting to its own argument,
-  and the reads of an argument other than through `$(arg n)`. The meios side is what the load path
+- **Nineteen minimized binding documents**, three of them driven a second time with a caller
+  argument, each compared whole: a property's default and value over an argument of the same name,
+  before and after its declaration and from a macro's global write, a macro parameter beside an
+  argument, a property default under a parameter, the vendor idiom of a property defaulting to its own
+  argument, the reads of an argument other than through `$(arg n)`, and eight over `$(eval)` — an
+  argument beside a property of its name, text in a sum and in a conditional, the conversion, the
+  names that shadow an argument, and the three refusals. The meios side is what the load path
   builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per

@@ -138,7 +138,7 @@ std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner)
     if(cmd == "arg")
         return cmd_arg(ctx, parts.second);
     if(cmd == "eval")
-        return eval_expr(ctx, parts.second);
+        return eval_command(ctx, parts.second);
     if(cmd == "dirname")
         return ctx.document.parent_path().generic_string();
     if(cmd == "env")

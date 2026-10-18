@@ -1,0 +1,8 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="real" default="1.50"/>
+  <xacro:arg name="truth" default="TRUE"/>
+  <xacro:arg name="exponent" default="1e3"/>
+  <xacro:arg name="grouped" default="1_000"/>
+  <xacro:arg name="padded" default=" 7 "/>
+  <link name="$(eval real)_$(eval truth)_$(eval exponent)_$(eval grouped)_$(eval padded + 1)"/>
+</robot>

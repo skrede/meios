@@ -105,7 +105,7 @@ std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
     ctx.last_kind = eval_failure_kind::none;
     if(ctx.backend)
     {
-        std::optional<std::string> text = eval_expr(ctx, resolved);
+        std::optional<std::string> text = eval_expr(ctx, resolved, ctx.scope);
         return text ? std::optional<value>(classify(*text)) : std::nullopt;
     }
     std::optional<value> read = eval_native(ctx, resolved);

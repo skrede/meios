@@ -1,0 +1,6 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="e" default="X"/>
+  <xacro:arg name="true" default="X"/>
+  <xacro:arg name="len" default="L"/>
+  <link name="$(eval e)_$(eval true)_$(eval len)_$(eval tau)"/>
+</robot>

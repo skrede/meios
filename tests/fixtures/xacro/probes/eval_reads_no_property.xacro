@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="w" value="2"/>
+  <link name="$(eval w + 1)"/>
+</robot>

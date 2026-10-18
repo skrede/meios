@@ -31,7 +31,6 @@ namespace meios
 {
 
 class source_stack;
-class evaluator_handle;
 
 namespace detail
 {
@@ -148,7 +147,9 @@ private:
     bool entered;
 };
 
-std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression);
+std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression, const eval_scope &names);
+
+std::optional<std::string> eval_command(subst_ctx &ctx, std::string_view body);
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);
 

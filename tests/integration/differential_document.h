@@ -41,9 +41,11 @@ struct document_probe
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 5> document_probes{
-        document_probe{true, "non_text_mapping_key"},  document_probe{false, "eval_reads_properties"},      document_probe{false, "argument_without_default"},
-        document_probe{false, "argument_helper_call"}, document_probe{false, "argument_above_declaration"},
+inline constexpr std::array<document_probe, 4> document_probes{
+        document_probe{true, "non_text_mapping_key"},
+        document_probe{false, "argument_without_default"},
+        document_probe{false, "argument_helper_call"},
+        document_probe{false, "argument_above_declaration"},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)

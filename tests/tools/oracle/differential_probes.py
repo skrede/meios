@@ -31,7 +31,6 @@ RECURSIVE_YAML = "a: &a [1, *a]\n"
 # probe is a whole committed document read from tests/fixtures/xacro/probes by both sides. Ids
 # only: the document is the fixture, and repeating it here is what a rename would silently defeat.
 DOCUMENT_PROBES = ("non_text_mapping_key",
-                   "eval_reads_properties",
                    "argument_without_default",
                    "argument_helper_call",
                    "argument_above_declaration")
@@ -53,4 +52,13 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("argument_by_bare_name", "argument_by_bare_name", None),
                     ("argument_command_reads_no_property", "argument_command_reads_no_property", None),
                     ("inherited_default_skips_argument", "inherited_default_skips_argument", None),
-                    ("inherited_argument_refuses", "inherited_argument_refuses", None))
+                    ("inherited_argument_refuses", "inherited_argument_refuses", None),
+                    ("eval_reads_argument_over_property", "eval_reads_argument_over_property", None),
+                    ("eval_string_argument", "eval_string_argument", None),
+                    ("eval_string_caller_argument", "eval_string_argument", {"p": "C"}),
+                    ("eval_string_condition", "eval_string_condition", None),
+                    ("eval_argument_typing", "eval_argument_typing", None),
+                    ("eval_shadowed_names", "eval_shadowed_names", None),
+                    ("eval_reads_no_property", "eval_reads_no_property", None),
+                    ("eval_nested_command", "eval_nested_command", None),
+                    ("eval_parenthesis_ends_command", "eval_parenthesis_ends_command", None))

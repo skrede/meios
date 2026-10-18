@@ -240,10 +240,10 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Every way this evaluator differs from canonical xacro is written down, and eighteen of them are
-measured.** The reviewed manifest carries eighteen rows and the differential drives them on every push
+**Every way this evaluator differs from canonical xacro is written down, and seventeen of them are
+measured.** The reviewed manifest carries seventeen rows and the differential drives them on every push
 in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
-a new one does. Ten of the eighteen are a meaning upstream has and this grammar refuses — the first
+a new one does. Ten of the seventeen are a meaning upstream has and this grammar refuses — the first
 five entries below, the argument helper the seventh names, and the mapping key an auxiliary document
 did not write as text, which has an entry of its own further down:
 
@@ -277,11 +277,9 @@ the reference truncates the span and never hands its evaluator a whole expressio
 is a difference in what the evaluator itself carries: the reference's expression globals hold the
 mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
 raises an undefined name there, while every other name on this grammar's mathematics list renders on
-both sides. The last two have entries of their own further down. And three render on both sides with
+both sides. The last two have entries of their own further down. And two render on both sides with
 different answers: `and` and `or` yield a boolean here rather than the deciding operand, so
-`${1 or 2}` is `True` here and `1` there, which is deliberate and measured, not an oversight; and
-`$(eval)` over a name bound both as an argument and as a property evaluates the property here and
-the argument there, which also has an entry of its own.
+`${1 or 2}` is `True` here and `1` there, which is deliberate and measured, not an oversight.
 
 The last three entries above, the argument helper apart, are the ones the manifest does not carry,
 because none of them can be matched by exact text: the colliding member names produce upstream text
@@ -306,12 +304,13 @@ newly refused here — but a description that was only ever validated against me
 defect inside an unreachable block, will stop loading. There is no shim, alias or migration note: this
 project is pre-release and the behavior was changed outright.
 
-**An argument is read only through `$(arg n)`, as the reference reads it, and a description that
-named one bare now refuses.** Arguments and properties are two binding tables here, as they are
-upstream: the `$(arg n)` command reads the argument table and an expression reads the property table,
-and a property of an argument's name is a second binding beside the argument, never a write to it.
-This evaluator used to keep one table for both, so whichever wrote a name last answered both reads.
-Two consequences are visible on descriptions that load today. A property's `default=` now binds over
+**An argument is read only through the substitution commands, as the reference reads it, and a
+description that named one bare now refuses.** Arguments and properties are two binding tables here,
+as they are upstream: the `$(arg n)` command and the `$(eval)` command read the argument table, an
+expression span reads the property table, and a property of an argument's name is a second binding
+beside the argument, never a write to it. This evaluator used to keep one table for both, so
+whichever wrote a name last answered both reads. Two consequences are visible on descriptions that
+load today. A property's `default=` now binds over
 an argument of the same name, and a property's `value=`, a global property or a macro parameter of the
 same name leaves what `$(arg n)` answers alone. Measured against the pinned reference, which renders
 each the same way: an argument `p` defaulted to `A` under a property `p` defaulted to `B` renders
@@ -324,19 +323,27 @@ bare name — plainly, in a conditional, under `not`, or as a dotted head — no
 `undefined_property`, under either evaluator; a bare `^` default whose name only an argument binds
 refuses under `xacro_structural_error`, while `^|fallback` takes its fallback as the reference does;
 and `$(arg n)` naming only a property refuses under `unresolved_arg`. Each refusal names the
-`$(arg n)` spelling, and the reference refuses all three. The change moves this evaluator toward the
-reference rather than away from it, so nothing the reference accepts is newly refused here, and the
-sixteen pinned corpus documents flatten byte for byte as they did before it. There is no shim, alias
-or migration note: this project is pre-release and the behavior was changed outright.
-
-**`$(eval)` evaluates over the properties here and over the arguments upstream.** The reference
-evaluates the command's expression against its argument table, with no property visible; this
-evaluator evaluates it against the property table, as it evaluates an expression span. So a name bound
-both ways evaluates to the property here and to the argument there: an argument `q` defaulted to `3`
-beside a property `q` written `10` renders `$(eval q + 1)` as `11` here and `4` upstream, which is the
-row the manifest carries. A name only a property binds renders here and refuses upstream, and a name
-only an argument binds refuses here, naming `$(arg q)`, and renders upstream. No pinned corpus
-document reaches the command.
+`$(arg n)` spelling, and the reference refuses all three. `$(eval)` evaluates its body as upstream's
+does: over the arguments, each one it names converted by the reference's own conversion — a real where
+the text holds a `.`, an integer otherwise, either boolean spelling in any letter case, the text itself
+last — after the reference's own names, its helpers, the boolean spellings `true` and `false` and the
+mathematics names, which shadow an argument of the same name, and with no property visible. Its body
+ends at the first closing parenthesis, as the reference's command pattern ends it, so a call, a
+parenthesized subexpression or a `$(arg n)` written inside it refuses on both sides. Measured against
+the pinned reference, which renders each the same way: an argument `q` defaulted to `3` beside a
+property `q` written `10` renders `$(eval q + 1)` as `4`; an argument `p` defaulted to `A` renders
+`$(eval p + 'arm')` as `Aarm`, and as `Carm` with the caller argument `p:=C`; a conditional testing
+`$(eval flag == 'yes')` over a `yes` default takes its branch; the defaults `1.50`, `TRUE`, `1e3`,
+`1_000` and ` 7 ` evaluate to `1.5`, `True`, `1e3`, `1000` and, plus one, `8`; arguments named `e`,
+`true` and `len` evaluate to the mathematics constant, `True` and the argument; and a name only a
+property binds refuses. Three readings upstream has refuse here instead, measured but not carried by
+the manifest: the names `inf` and `nan` under the built-in evaluator, a name the reference binds to a
+function, which renders as the function's own text there, and an argument whose number is outside the
+64-bit range, which upstream reads as a Python integer of any size or a real that overflows to `inf`.
+Those three apart, every form this entry names renders as the reference renders it or refuses where
+the reference refuses, as measured above; the sixteen pinned corpus documents flatten byte for byte
+as they did before the change, and none of them reaches `$(eval)`. There is no shim, alias or
+migration note: this project is pre-release and the behavior was changed outright.
 
 **An argument declared without a default is accepted here and refused upstream at the declaration.**
 The reference requires a `default` attribute on every `<xacro:arg>` and refuses the whole document
@@ -558,7 +565,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes fifty-seven claims — the bold sentence that opens each entry above — and this table
+This page makes fifty-six claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -615,10 +622,9 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| Eighteen measured differences | The eighteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Seventeen measured differences | The seventeen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`, over the minimized document both implementations were driven through. |
-| An argument is read only through `$(arg n)` | The thirteen agreement verdicts of `native_differential`: eleven minimized binding documents, two of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
-| `$(eval)` evaluates over the properties | The `eval_reads_properties` row of the divergence manifest, driven as a whole document through both implementations, and `xacro_arg_domain.the evaluation command naming an argument and no property refuses and names the argument command` for the name only an argument binds. The name only a property binds is carried by nothing beyond the measurement the entry states. |
+| An argument is read only through the substitution commands | The twenty-two agreement verdicts of `native_differential`: nineteen minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`. The `$(eval)` sentences are carried by the nine `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |
 | A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. |
 | A non-text mapping key loads and nothing reads it | The `non_text_mapping_key` row of the divergence manifest, driven as a whole document through both implementations, plus `native_yaml.a key is read in any of the scalar kinds a document can write`. The empty-scalar sentence beside it is carried by the reader's own refusal, measured while that row was minimized. |

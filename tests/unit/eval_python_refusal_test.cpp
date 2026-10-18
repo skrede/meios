@@ -110,10 +110,10 @@ TEST_CASE("the bound yaml helper is compiled, not a prelude function object", "[
 TEST_CASE("the second substitution entry point refuses the same reach", "[eval_python]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
-    const outcome refused =
-        run(span_document("$(eval __import__(\"os\"))"), meios::eval_policy::fail, handle);
+    const outcome refused = run(span_document("$(eval __import__)"), meios::eval_policy::fail, handle);
     REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.errors >= 1);
+    REQUIRE(says(refused, "dunder-identifier"));
     REQUIRE(refused.expanded.error().message.find("$(eval __import__") == std::string::npos);
 }
 

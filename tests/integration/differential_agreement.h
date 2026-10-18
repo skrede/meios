@@ -55,6 +55,15 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"argument_command_reads_no_property", "argument_command_reads_no_property", {}, meios::diagnostic_code::unresolved_arg, "Undefined substitution argument p"},
         agreement_probe{"inherited_default_skips_argument", "inherited_default_skips_argument", {}},
         agreement_probe{"inherited_argument_refuses", "inherited_argument_refuses", {}, meios::diagnostic_code::xacro_structural_error, "Undefined property to forward: p"},
+        agreement_probe{"eval_reads_argument_over_property", "eval_reads_argument_over_property", {}},
+        agreement_probe{"eval_string_argument", "eval_string_argument", {}},
+        agreement_probe{"eval_string_caller_argument", "eval_string_argument", {{"p", "C"}}},
+        agreement_probe{"eval_string_condition", "eval_string_condition", {}},
+        agreement_probe{"eval_argument_typing", "eval_argument_typing", {}},
+        agreement_probe{"eval_shadowed_names", "eval_shadowed_names", {}},
+        agreement_probe{"eval_reads_no_property", "eval_reads_no_property", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
+        agreement_probe{"eval_nested_command", "eval_nested_command", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: $(arg q"},
+        agreement_probe{"eval_parenthesis_ends_command", "eval_parenthesis_ends_command", {}, meios::diagnostic_code::expression_error, "SyntaxError"},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

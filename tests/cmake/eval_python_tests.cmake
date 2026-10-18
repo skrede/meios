@@ -136,6 +136,17 @@ if(TARGET meios_eval-python)
             TEST_PREFIX "eval_python_container_table.")
     endif()
 
+    set(eval_python_argument_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_argument_test.cpp)
+    if(EXISTS ${eval_python_argument_src})
+        add_executable(eval_python_argument_test ${eval_python_argument_src})
+        target_link_libraries(eval_python_argument_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                Catch2::Catch2WithMain)
+        meios_enable_coverage(eval_python_argument_test)
+        meios_warnings(eval_python_argument_test)
+        catch_discover_tests(eval_python_argument_test TEST_PREFIX "eval_python_argument.")
+    endif()
+
     set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
     if(EXISTS ${urdf_yaml_flatten_src})
         add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})

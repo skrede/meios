@@ -46,26 +46,26 @@ static_assert(text_evaluator<core_text_evaluator>);
 namespace
 {
 
-std::optional<std::string> string_property(subst_ctx &ctx, std::string_view name)
+std::optional<std::string> string_property(const eval_scope &names, std::string_view name)
 {
     if(!is_identifier(name))
         return std::nullopt;
-    std::optional<value> bound = ctx.scope.lookup(name);
+    std::optional<value> bound = names.lookup(name);
     if(bound && bound->kind() == value_kind::string)
         return bound->text();
     return std::nullopt;
 }
 
-std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, log_sink &sink)
+std::optional<std::string> run_backend(subst_ctx &ctx, const eval_scope &names, std::string_view expr, log_sink &sink)
 {
     if(ctx.backend)
     {
         relocating_sink relocate(sink, ctx.at);
-        text_outcome out = ctx.backend->eval_to_text(expr, ctx.scope, relocate);
+        text_outcome out = ctx.backend->eval_to_text(expr, names, relocate);
         ctx.last_kind    = out.failure;
         return out.text;
     }
-    text_outcome out = ctx.core.eval_to_text(expr, ctx.scope, sink, ctx.at);
+    text_outcome out  = ctx.core.eval_to_text(expr, names, sink, ctx.at);
     ctx.last_kind     = out.failure;
     return out.text;
 }
@@ -79,17 +79,17 @@ std::optional<std::string> run_backend(subst_ctx &ctx, std::string_view expr, lo
 // carries the code the evaluator itself reported. A warning about a value that did resolve
 // survives a lenient policy, unlike a failure diagnostic: the value reached output, so what
 // was said about it must reach the author too.
-std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression)
+std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression, const eval_scope &names)
 {
     std::string_view expr             = trim(expression);
-    std::optional<std::string> direct = string_property(ctx, expr);
+    std::optional<std::string> direct = string_property(names, expr);
     if(direct)
         return direct;
     latching_sink loud(ctx);
     if(ctx.mode == eval_policy::fail)
-        return run_backend(ctx, expr, loud);
+        return run_backend(ctx, names, expr, loud);
     capture_sink buffer;
-    std::optional<std::string> out = run_backend(ctx, expr, buffer);
+    std::optional<std::string> out = run_backend(ctx, names, expr, buffer);
     if(out)
     {
         buffer.replay_warnings(loud);

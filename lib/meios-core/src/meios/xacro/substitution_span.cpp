@@ -30,11 +30,24 @@ void refine_span_column(subst_ctx &ctx, std::size_t decoded_offset)
                                        ctx.node_anchor).column;
 }
 
+std::string_view leading_command(std::string_view inner)
+{
+    std::size_t start = inner.find_first_not_of(" \t");
+    if(start == std::string_view::npos)
+        return {};
+    std::size_t end = inner.find_first_of(" \t", start);
+    return inner.substr(start, end - start);
+}
+
 // Deliberately quote-blind where the expression close finder is not: a command resolves its
 // inner text before dispatching and therefore nests, and upstream's own command scanner reads
-// a quote as no more than another character.
+// a quote as no more than another character. The evaluation command alone ends at the first
+// closing parenthesis, as upstream's pattern ^\$\([^\)]*\) ends it, so a call or a nested span
+// inside its body truncates it there as it does upstream.
 std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
 {
+    if(leading_command(raw.substr(opener + 1)) == "eval")
+        return raw.find(')', opener + 1);
     int depth = 1;
     for(std::size_t k = opener + 1; k < raw.size(); ++k)
     {
@@ -74,15 +87,6 @@ bool leave_verbatim(subst_ctx &ctx, std::string_view raw, std::size_t dollar, st
     return true;
 }
 
-std::string_view leading_command(std::string_view inner)
-{
-    std::size_t start = inner.find_first_not_of(" \t");
-    if(start == std::string_view::npos)
-        return {};
-    std::size_t end = inner.find_first_of(" \t", start);
-    return inner.substr(start, end - start);
-}
-
 // The ceiling this level answers to is the one the expression grammar's own descent answers to.
 bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::size_t base)
 {
@@ -115,7 +119,7 @@ std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string
         return std::nullopt;
     refine_span_column(ctx, span_offset);
     ctx.last_kind = eval_failure_kind::none;
-    return opener == '{' ? eval_expr(ctx, resolved) : dispatch(ctx, resolved);
+    return opener == '{' ? eval_expr(ctx, resolved, ctx.scope) : dispatch(ctx, resolved);
 }
 
 }

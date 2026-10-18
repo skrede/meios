@@ -53,6 +53,11 @@ TEST_CASE("a property defaulting to its argument reads the caller's value", "[ur
     REQUIRE(single_link(loaded_probe("property_default_reads_argument.xacro", {{"cfg", "from_caller"}})) == "from_caller");
 }
 
+TEST_CASE("the evaluation command reads a caller's argument", "[urdf][arg]")
+{
+    REQUIRE(single_link(loaded_probe("eval_string_argument.xacro", {{"p", "C"}})) == "Carm");
+}
+
 TEST_CASE("a caller's boolean spelling reaches the model as the caller wrote it", "[urdf][arg]")
 {
     const load_outcome out = loaded({ { "flag", "false" } });
