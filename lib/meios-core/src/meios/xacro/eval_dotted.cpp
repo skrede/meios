@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "reference_names.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
@@ -25,13 +26,25 @@ value refuse_dotted(parser &p)
     return p.fail_unsupported("dotted access in an expression — use eval-python");
 }
 
+// Upstream's math and python namespaces exist under neither evaluator, which bind those names bare.
+std::string unbound_head(std::string_view head)
+{
+    if(head == "math")
+        return " — neither evaluator binds a math namespace; write the bare name, as pi or sin(x)";
+    if(head == "python")
+        return " — neither evaluator binds a python namespace; the python evaluator binds its builtins bare, as len(x)";
+    if(listed(mathematics_names, head) || listed(python_builtins, head))
+        return " — use eval-python";
+    return " — neither evaluator binds '" + std::string(head) + "'";
+}
+
 // Both python evaluators bind the xacro namespace to load_yaml alone, so advising one for any
 // other helper would send the reader to an evaluator that refuses the same call.
 value refuse_call_target(parser &p, std::string_view head, std::string_view member)
 {
     const std::string target = "unsupported call target '" + std::string(head) + '.' + std::string(member) + "'";
     if(head != "xacro")
-        return p.fail_unsupported(target + " — use eval-python");
+        return p.fail_unsupported(target + unbound_head(head));
     std::string message = target + " — xacro.load_yaml is the only helper either evaluator exposes";
     if(member == "arg")
         message += "; an argument is read with the $(arg) command";

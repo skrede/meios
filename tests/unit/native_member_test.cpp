@@ -112,3 +112,23 @@ TEST_CASE("a loaded mapping crosses a property, a macro argument and a nested sc
     CHECK(out.find("<link name=\"visual\"") != std::string::npos);
     CHECK(out.find("type=\"continuous\"") != std::string::npos);
 }
+
+// The python evaluator binds the mathematics names and its builtins bare and no namespace beside
+// xacro, so only a head it binds is a reason to send the author there.
+TEST_CASE("a call target's refusal advises the python evaluator only for a head that evaluator binds", "[native][member]")
+{
+    const outcome math = evaluate("math.pi");
+    REQUIRE(math.failed);
+    CHECK(math.messages.front().find("eval-python") == std::string::npos);
+    CHECK(math.messages.front().find("sin(x)") != std::string::npos);
+    const outcome python = evaluate("python.len");
+    REQUIRE(python.failed);
+    CHECK(python.messages.front().find("eval-python") == std::string::npos);
+    CHECK(python.messages.front().find("len(x)") != std::string::npos);
+    const outcome unbound = evaluate("nowhere.x");
+    REQUIRE(unbound.failed);
+    CHECK(unbound.messages.front().find("eval-python") == std::string::npos);
+    const outcome builtin = evaluate("str.upper");
+    REQUIRE(builtin.failed);
+    CHECK(builtin.messages.front().find("eval-python") != std::string::npos);
+}

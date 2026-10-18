@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "reference_names.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
@@ -24,15 +25,10 @@ namespace meios::detail
 namespace
 {
 
-// What upstream's command resolves before an argument (xacro 2.1.1, substitution_args._eval): its
-// own helpers, four boolean spellings and every public name of the mathematics module, so an
-// argument named like one of these is shadowed there.
-constexpr std::string_view shadowing[] = {"arg",     "dirname",   "env",   "optenv", "find", "true",    "false",    "True",      "False", "acos",  "acosh",   "asin",
-                                          "asinh",   "atan",      "atan2", "atanh",  "cbrt", "ceil",    "comb",     "copysign",  "cos",   "cosh",  "degrees", "dist",
-                                          "e",       "erf",       "erfc",  "exp",    "exp2", "expm1",   "fabs",     "factorial", "floor", "fma",   "fmod",    "frexp",
-                                          "fsum",    "gamma",     "gcd",   "hypot",  "inf",  "isclose", "isfinite", "isinf",     "isnan", "isqrt", "lcm",     "ldexp",
-                                          "lgamma",  "log",       "log10", "log1p",  "log2", "modf",    "nan",      "nextafter", "perm",  "pi",    "pow",     "prod",
-                                          "radians", "remainder", "sin",   "sinh",   "sqrt", "sumprod", "tan",      "tanh",      "tau",   "trunc", "ulp"};
+// What upstream's command resolves before an argument beside the mathematics names (xacro 2.1.1,
+// substitution_args._eval): its own helpers and four boolean spellings, so an argument named like
+// one of these is shadowed there.
+constexpr std::string_view command_names[] = {"arg", "dirname", "env", "optenv", "find", "true", "false", "True", "False"};
 
 std::size_t sign(std::string_view text, std::size_t at, std::string &out)
 {
@@ -126,7 +122,7 @@ void bind_reference_names(eval_scope &over)
 std::optional<std::string> bind_read(const eval_scope &scope, eval_scope &over, std::string_view name)
 {
     const std::optional<value> bound = scope.argument(name);
-    if(!bound || std::ranges::find(shadowing, name) != std::ranges::end(shadowing))
+    if(!bound || listed(command_names, name) || listed(mathematics_names, name))
         return std::nullopt;
     const std::string quoted              = "the evaluation command reads the argument '" + std::string(name) + "'";
     const std::optional<std::string> text = render_scalar(*bound);
