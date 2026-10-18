@@ -527,6 +527,20 @@ jobs:
           fi
           echo "the pinned oracle rendered $rendered file(s)"
 
+      # The recorder lists every record present in its output directory, curated ones included, so
+      # the first run starts from nothing to prove the generated records are produced afresh, the
+      # records it does not generate are carried in, and the second run rewrites the digest list.
+      - name: Reproduce the committed records byte for byte
+        run: |
+          fresh="${{ runner.temp }}/oracle-records"
+          roots="${{ github.workspace }}/build/_meios_corpus_packages"
+          python3 tests/tools/oracle/record_upstream.py --package-root "$roots" --out "$fresh"
+          for one in tests/golden/oracle/*; do
+            [ -e "$fresh/$(basename "$one")" ] || cp "$one" "$fresh/"
+          done
+          python3 tests/tools/oracle/record_upstream.py --package-root "$roots" --out "$fresh"
+          diff -r "$fresh" tests/golden/oracle
+
       # ctest reports success when a -R filter selects nothing, so the selection is asserted
       # non-empty before it runs, matching every other filtered selector in this file.
       - name: Compare the fresh renders against meios
@@ -935,6 +949,51 @@ jobs:
 
       - name: Test
         run: cd build && ctest --output-on-failure
+
+  # The YAML module defaults on, so every other leg compiles it in; this one proves the native
+  # evaluator, the xacro layer and the URDF reader build and pass without it.
+  yaml-off:
+    runs-on: ubuntu-24.04
+    name: yaml-off (MEIOS_YAML_SUPPORT=OFF)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pugixml
+        run: |
+          git clone https://github.com/zeux/pugixml.git pugixml-src
+          git -C pugixml-src checkout c8033ce9d039e7f9d134877c363397b3cfe20816
+          cmake -S pugixml-src -B pugixml-build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/deps"
+          cmake --build pugixml-build
+          cmake --install pugixml-build
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          cmake . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps" \
+            -DMEIOS_WERROR=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_BUILD_TOOLS=ON \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_YAML_SUPPORT=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: |
+          cd build
+          registered=$(ctest -N -R 'native|xacro|urdf' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "the yaml-off selection registered no tests"
+            exit 1
+          fi
+          echo "the yaml-off selection registered $registered test(s)"
+          ctest -R 'native|xacro|urdf' --output-on-failure --no-tests=error
 
   property-tests:
     runs-on: ubuntu-24.04

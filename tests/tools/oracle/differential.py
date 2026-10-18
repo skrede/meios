@@ -1,7 +1,7 @@
 # Renders every minimized expression case and every native-evaluator corpus document fresh
 # through upstream xacro, for the live differential comparator (native_differential_test.cpp) to
 # read. Reuses bootstrap()/render()/package_roots()/expression_cases()/write_seed_documents() from
-# record_upstream.py verbatim -- this file writes nothing but scratch renders; the committed
+# the recorder package verbatim -- this file writes nothing but scratch renders; the committed
 # records under tests/golden/oracle stay the recorder's sole output.
 
 import os
@@ -12,8 +12,12 @@ import tempfile
 import subprocess
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import record_upstream as oracle  # noqa: E402
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from recorder.corpus import REPO, CORPUS_DOCUMENTS, document_root, key_of  # noqa: E402
+from recorder.rendering import render, escape, refusal_text  # noqa: E402
+from recorder.environment import bootstrap, package_roots  # noqa: E402
+from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
@@ -43,7 +47,7 @@ RECURSIVE_YAML = "a: &a [1, *a]\n"
 # probe is a whole committed document read from tests/fixtures/xacro/probes by both sides. Ids
 # only: the document is the fixture, and repeating it here is what a rename would silently defeat.
 DOCUMENT_PROBES = ("non_text_mapping_key",)
-PROBE_DIR = oracle.REPO / "tests" / "fixtures" / "xacro" / "probes"
+PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 
 def sanitize(case_id):
@@ -55,17 +59,17 @@ def write_text(out, case_id, suffix, text):
 
 
 def write_refusal(out, case_id, suffix, failure):
-    write_text(out, case_id, suffix, "REFUSED\t" + oracle.refusal_text(failure) + "\n")
+    write_text(out, case_id, suffix, "REFUSED\t" + refusal_text(failure) + "\n")
 
 
 # Written as a tiny single-attribute document rather than the bare value, so the C++ comparator
 # can run the same canonical_xml() normalizer this repository uses everywhere else, never a
 # second one, over both an expression case's render and a corpus document's whole render.
 def render_expression_case(tmp, out, seeds, case_id, expression):
-    body = "%s\n <e v=\"${%s}\"/>" % (seeds, oracle.escape(expression))
+    body = "%s\n <e v=\"${%s}\"/>" % (seeds, escape(expression))
     try:
-        node = oracle.render(tmp, body).getElementsByTagName("e")[0]
-        write_text(out, case_id, ".xml", '<e v="%s"/>\n' % oracle.escape(node.getAttribute("v")))
+        node = render(tmp, body).getElementsByTagName("e")[0]
+        write_text(out, case_id, ".xml", '<e v="%s"/>\n' % escape(node.getAttribute("v")))
     except Exception as failure:
         write_refusal(out, case_id, ".xml", failure)
 
@@ -73,9 +77,9 @@ def render_expression_case(tmp, out, seeds, case_id, expression):
 # The bare rendered value, not wrapped in XML: these ids feed the divergence manifest's
 # exact-text match directly, not the structural comparator.
 def render_divergence_probe(tmp, out, case_id, expression):
-    body = ' <e v="${%s}"/>' % oracle.escape(expression)
+    body = ' <e v="${%s}"/>' % escape(expression)
     try:
-        node = oracle.render(tmp, body).getElementsByTagName("e")[0]
+        node = render(tmp, body).getElementsByTagName("e")[0]
         write_text(out, case_id, ".txt", node.getAttribute("v") + "\n")
     except Exception as failure:
         write_refusal(out, case_id, ".txt", failure)
@@ -105,9 +109,9 @@ def render_document_probe(tmp, out, case_id):
 def render_corpus_document(share, out, one):
     import xacro
 
-    case_id = oracle.key_of(one)
+    case_id = key_of(one)
     try:
-        rendered = xacro.process_file(str(oracle.document_root(share, one.share) / one.document),
+        rendered = xacro.process_file(str(document_root(share, one.share) / one.document),
                                       mappings=one.mappings)
         write_text(out, case_id, ".xml", rendered.toxml())
     except Exception as failure:
@@ -116,15 +120,15 @@ def render_corpus_document(share, out, one):
 
 def render_all(tmp, share, out):
     ur = share("ur_description")
-    seeds = oracle.write_seed_documents(tmp)
+    seeds = write_seed_documents(tmp)
     (tmp / "recursive.yaml").write_text(RECURSIVE_YAML, encoding="utf-8", newline="\n")
-    for case_id, expression in oracle.expression_cases(ur):
+    for case_id, expression in expression_cases(ur):
         render_expression_case(tmp, out, seeds, case_id, expression)
     for case_id, expression in DIVERGENCE_PROBES:
         render_divergence_probe(tmp, out, case_id, expression)
     for case_id in DOCUMENT_PROBES:
         render_document_probe(tmp, out, case_id)
-    for one in oracle.CORPUS_DOCUMENTS:
+    for one in CORPUS_DOCUMENTS:
         render_corpus_document(share, out, one)
 
 
@@ -143,7 +147,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--package-root", action="append", default=[])
     parser.add_argument("--out", required=True)
-    parser.add_argument("--venv", default=str(oracle.REPO / "build" / "oracle-venv"))
+    parser.add_argument("--venv", default=str(REPO / "build" / "oracle-venv"))
     parser.add_argument("--worker", action="store_true")
     args = parser.parse_args()
     out = Path(args.out)
@@ -153,11 +157,11 @@ def main():
     if not args.package_root:
         parser.error("--package-root names the directory the descriptions resolve against")
     environment = dict(os.environ)
-    environment["PYTHONPATH"] = str(oracle.HERE)
+    environment["PYTHONPATH"] = str(HERE)
     environment.pop("PYTHONHOME", None)
     environment["ORACLE_PACKAGE_ROOTS"] = os.pathsep.join(
-        str(one) for one in oracle.package_roots(args.package_root))
-    python = oracle.bootstrap(Path(args.venv))
+        str(one) for one in package_roots(args.package_root))
+    python = bootstrap(Path(args.venv))
     subprocess.run([str(python), __file__, "--worker", "--out", str(out)],
                    env=environment, check=True)
 

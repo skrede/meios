@@ -20,6 +20,14 @@ expressions failed — a short or environment-degraded measurement must not reac
 corpus fetch copies into the build directory — rather than against a sourced ROS environment,
 which is what makes a run reproducible on any machine with no ROS installed.
 
+`record_upstream.py` is the entry point; what it measures and how lives in the `recorder` package
+beside it. The refusals above are driven directly by the `test_*.py` cases here, registered as
+`oracle_tools.*` whenever a Python interpreter is found:
+
+```
+python3 -I -m unittest discover -s tests/tools/oracle -p 'test_*.py'
+```
+
 ```
 cmake -S . -B build/corpus -DMEIOS_BUILD_TESTS=ON -DMEIOS_FETCH_CORPUS=ON
 python3 tests/tools/oracle/record_upstream.py --package-root build/corpus/_meios_corpus_packages --out tests/golden/oracle
@@ -29,7 +37,7 @@ python3 tests/tools/oracle/record_upstream.py --package-root build/corpus/_meios
 
 `differential.py` is the third runner here, and the one invoked from CI (the `differential` job
 on the Linux push workflow) rather than by hand. It reuses `bootstrap()`/`render()`/
-`package_roots()`/`closure_expressions()`/`seed_body()` from `record_upstream.py` verbatim,
+`package_roots()`/`closure_expressions()`/`seed_body()` from the `recorder` package verbatim,
 rendering every minimized expression case and every native-evaluator corpus document fresh
 through the pinned upstream into a scratch directory. `native_differential_test.cpp` reads those
 renders plus the committed records and compares both against meios's own expansion/load, on

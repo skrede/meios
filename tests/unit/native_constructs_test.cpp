@@ -41,6 +41,19 @@ std::vector<row> expression_rows()
              { "'a b'.split(' ')", "", { "named-split" } } };
 }
 
+std::string joined(const names &spellings)
+{
+    std::string out;
+    for(std::string_view one : spellings)
+    {
+        out += out.empty() ? "" : ", ";
+        out += one;
+    }
+    return out;
+}
+
+#ifdef MEIOS_TEST_HAS_YAML
+
 std::vector<row> document_rows()
 {
     return { { "xacro.load_yaml('aux.yaml')['b']", "a:\n  - 1\nb: 2\n", { "document-sequence" } },
@@ -58,17 +71,6 @@ std::vector<row> document_rows()
                { "document-sequence", "sequence-subscript", "negative-index" } } };
 }
 
-std::string joined(const names &spellings)
-{
-    std::string out;
-    for(std::string_view one : spellings)
-    {
-        out += out.empty() ? "" : ", ";
-        out += one;
-    }
-    return out;
-}
-
 names spellings_of(const std::vector<row> &rows)
 {
     names out;
@@ -78,6 +80,8 @@ names spellings_of(const std::vector<row> &rows)
                 out.push_back(spelling);
     return out;
 }
+
+#endif
 
 }
 

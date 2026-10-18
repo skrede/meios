@@ -171,3 +171,4 @@ endif()
 
 include(cmake/acquisition_tests.cmake)
 include(cmake/script_tests.cmake)
+include(cmake/oracle_tool_tests.cmake)

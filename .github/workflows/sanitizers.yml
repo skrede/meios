@@ -33,7 +33,10 @@ jobs:
     env:
       CC: clang-18
       CXX: clang++-18
-      UBSAN_OPTIONS: print_stacktrace=1
+      # UBSan recovers and exits zero by default, so a report would leave the step green.
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+      ASAN_OPTIONS: halt_on_error=1
+      TSAN_OPTIONS: halt_on_error=1
 
     steps:
       - uses: actions/checkout@v4
