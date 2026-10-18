@@ -4,6 +4,8 @@
 # Reads the built consumer executables and the staged public headers back, and refuses if either
 # carries what the build claims it does not.
 set -u
+# Raw images are matched byte by byte, and bracket ranges must not follow a locale's collation.
+export LC_ALL=C
 
 if [ "$#" -lt 2 ]; then
     echo "usage: $(basename "$0") <staged-install-prefix> <consumer-build-tree>..." >&2
@@ -30,17 +32,36 @@ esac
 # Two stages on purpose, here and below. A count taken straight out of a pipeline reports zero for
 # a producer that could not run at all, and a zero is exactly what a clean subject reports, so the
 # producing command's own exit status is read before anything counts its output. The Windows leg is
-# the exception: grep itself is the tool running the check, not an external tool whose absence would
-# need detecting, so a zero-match count is the clean result there, not an ambiguous one. The PE
-# image's raw bytes are read directly, needing no MSVC developer environment a bash step does not
-# carry.
-dll_pattern='python3[0-9]{1,3}\.dll|python[0-9]\.[0-9]+\.dll'
+# the exception: tr and grep over the PE image's raw bytes are the whole check, needing no MSVC
+# developer environment a bash step does not carry, and the self-proof below is what shows that
+# pipeline can see a name at all, so a zero-match count is the clean result there.
+dll_pattern='python3[0-9]{0,3}\.dll|python[0-9]\.[0-9]+\.dll'
+# PEP 7 (https://peps.python.org/pep-0007/): public C names carry a Py, Py_ or Py<Group>_ prefix and
+# internal ones _Py; Mach-O prepends one more underscore, so up to three leading ones are allowed.
+api_pattern='_{0,3}Py[A-Z_][A-Za-z0-9_]{2,}'
 
-# A negative check that cannot fail proves nothing. The Windows leg reads raw PE bytes, so the
-# pattern is first held against a subject known to carry the linkage -- the running interpreter's
-# own executable, whose import table names its pythonXY.dll -- and a pattern matching nothing there
-# is reported as a blind detector rather than as a clean subject. A missing reference is a refusal,
-# not a skip, so the leg cannot quietly downgrade to the unproven check.
+# An import table names each function as a NUL-terminated string, so only an identifier ending at a
+# NUL is read as a name; a prefix match anywhere in code bytes would be chance.
+count_api_names()
+{
+    tr '\0' '\n' < "$1" | grep -aoE '[A-Za-z0-9_]+$' | grep -cE "^${api_pattern}$"
+}
+
+count_bindings()
+{
+    grep -aoE 'pybind11' "$1" 2>/dev/null | wc -l
+}
+
+count_dll_imports()
+{
+    grep -aoiE "$dll_pattern" "$1" 2>/dev/null | wc -l
+}
+
+# A negative check that cannot fail proves nothing. Both patterns are first held against a subject
+# known to carry the interpreter -- the running interpreter's own executable, which imports its
+# entry point, Py_Main, from python3NN.dll -- and a pattern matching nothing there is reported as a
+# blind detector rather than as a clean subject. A missing reference is a refusal, not a skip, so
+# the leg cannot quietly downgrade to the unproven check.
 prove_interpreter_pattern()
 {
     reference=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
@@ -53,49 +74,56 @@ prove_interpreter_pattern()
         refuse "no interpreter executable was found to prove the read-back pattern against"
         return
     fi
-    seen=$(grep -aoiE "$dll_pattern" "$reference" 2>/dev/null | wc -l)
+    seen=$(count_dll_imports "$reference")
     test "$seen" -gt 0 \
         || refuse "the interpreter-DLL pattern matched nothing in $reference, so this read-back is blind"
+    seen=$(count_api_names "$reference")
+    test "$seen" -gt 0 \
+        || refuse "the interpreter-symbol pattern matched nothing in $reference, so this read-back is blind"
 }
 
-read_probe()
+read_symbols()
 {
     probe="$1"
     if [ "$plat" = "windows" ]; then
-        carried=$(grep -aoE 'Py_Initialize|pybind11' "$probe" 2>/dev/null | wc -l)
+        carried=$(( $(count_api_names "$probe") + $(count_bindings "$probe") ))
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
-        linked=$(grep -aoiE "$dll_pattern" "$probe" 2>/dev/null | wc -l)
-        test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
         return
     fi
     # Emptiness is read as well as the exit status: nm succeeds on a stripped image and prints
     # nothing, which counts the same as a clean subject while having read nothing at all.
     if symbols=$(nm -C "$probe" 2>/dev/null) && [ -n "$symbols" ]; then
-        carried=$(printf '%s\n' "$symbols" | grep -cE 'Py_Initialize|pybind11' || true)
+        carried=$(printf '%s\n' "$symbols" | grep -cE "(^|[^A-Za-z0-9_])${api_pattern}|pybind11" || true)
         test "$carried" -eq 0 || refuse "$probe carries an interpreter symbol"
     else
         refuse "$probe yielded no symbol table, so nothing was read back from it"
     fi
+}
+
+read_linkage()
+{
+    probe="$1"
+    if [ "$plat" = "windows" ]; then
+        linked=$(count_dll_imports "$probe")
+        test "$linked" -eq 0 || refuse "$probe carries an interpreter DLL import"
+        return
+    fi
     if [ "$plat" = "darwin" ]; then
-        if linkage=$(otool -L "$probe" 2>/dev/null); then
-            linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
-            test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
-        else
-            refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
-        fi
+        lister=(otool -L)
     else
-        if linkage=$(ldd "$probe" 2>/dev/null); then
-            linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
-            test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
-        else
-            refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
-        fi
+        lister=(ldd)
+    fi
+    if linkage=$("${lister[@]}" "$probe" 2>/dev/null); then
+        linked=$(printf '%s\n' "$linkage" | grep -ci python || true)
+        test "$linked" -eq 0 || refuse "$probe links an interpreter shared object"
+    else
+        refuse "$probe yielded no dynamic linkage, so nothing was read back from it"
     fi
 }
 
 # The staged prefix and the working tree route both build to a bare path on Linux/macOS and to
-# Release\<name>.exe on Windows; a probe missing from a tree still refuses by name rather than
-# aborting the loop, so the other probe in the same tree is still checked.
+# Release\<name>.exe on Windows; an executable missing from a tree still refuses by name rather
+# than aborting the loop, so the others in the same tree are still checked.
 locate_probe()
 {
     tree="$1"
@@ -118,12 +146,13 @@ for tree in "$@"; do
         refuse "$tree is not a directory, so the consumer was never built there"
         continue
     fi
-    for probe_name in universal_robots_probe kr6_probe; do
+    for probe_name in integration_test universal_robots_probe kr6_probe; do
         if ! probe=$(locate_probe "$tree" "$probe_name"); then
             refuse "$tree built no consumer named $probe_name to read back"
             continue
         fi
-        read_probe "$probe"
+        read_symbols "$probe"
+        read_linkage "$probe"
     done
 done
 

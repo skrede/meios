@@ -473,13 +473,13 @@ jobs:
             "${{ github.workspace }}/install" \
             build-consumer-installed build-consumer-fetched
 
-  # The live differential: renders every minimized expression case and
-  # every corpus document fresh through the pinned upstream, expands/loads the same inputs
-  # through meios, and compares the two. Linux-only, both tiers, on every push -- not the
-  # scheduled run, which a working session can outrun.
+  # The live differential: renders every minimized and every authored expression case and every
+  # corpus document the built-in evaluator expands fresh through the pinned upstream, expands/loads
+  # the same inputs through meios, and compares the two. Linux-only, both tiers, on every push
+  # rather than on a schedule, which a working session could outrun.
   differential:
     runs-on: ubuntu-24.04
-    name: differential (live oracle comparison, minimized cases + full corpus)
+    name: differential (live oracle comparison, minimized and authored cases + natively expanded corpus)
 
     steps:
       - uses: actions/checkout@v4

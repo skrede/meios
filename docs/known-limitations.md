@@ -415,11 +415,12 @@ feeds it.** Every corpus document the built-in evaluator handles is expanded by 
 interpreter binding switched off, and both that comparison and the pinned corpus run on every push —
 on Linux. Producing a fresh reference render needs the pinned upstream tooling and only the Linux
 workflow installs it, which is the older half of this. The other half is that the corpus tier is a
-Linux gate too. What macOS and Windows fetch the corpus for is the install-consumer job, and that job
-loads two of the twenty documents — the `ur3e` variant and the KR6 — through a consumer built against
-an installed package, checking them against the same recorded facts. So on those two platforms
-eighteen of the twenty pinned documents are not loaded at all, and no statement here that a pinned
-entry point loads on three platforms reaches further than that pair.
+Linux gate too. What macOS and Windows fetch the corpus for is the `clean-consumer` job, and that
+job loads two of the twenty documents — the `ur3e` variant and the KR6 — through a consumer that
+takes meios both by `find_package` against an installed package and by `FetchContent` from the
+source tree, checking them against the same recorded facts. So on those two platforms eighteen of
+the twenty pinned documents are not loaded at all, and no statement here that a pinned entry point
+loads on three platforms reaches further than that pair.
 
 **The KUKA LBR family is pinned as a description package, not as its umbrella repository.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
@@ -465,9 +466,10 @@ not the only claim on this page carried by nothing; the index below answers *Not
 applies to, which is where to read them off rather than from a count in this sentence.
 
 **Flattening is not proven from an installed package.** That an installed meios carries acquisition
-and deployment to a `find_package` consumer is proven on all three platforms — the install-consumer
-example is built, installed, and run — but no automated run flattens a description through an
-installed meios; the tests reach the modules through the module path instead.
+and deployment to a `find_package` consumer is proven on all three platforms — the `install-test`
+job builds, installs and runs the `examples/install_consumer` program — but no automated run
+flattens a description through an installed meios; the tests reach the modules through the module
+path instead.
 
 **Precedence between `PACKAGE_PATH` entries is reasoned about, not measured.** That an entry adds
 reach is exercised in both directions: a package vendored inside another package's directory is
@@ -554,7 +556,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | The staging-directory guard folds ASCII case, and that fold has run on no case-folding filesystem | `scratch_case_fold.a differently-cased package reaching one file is refused` — which now runs where case folds — and `scratch_alias.a publication onto a vanished entry's file is refused rather than silently taken` for the absence half. The combination of the two is what nothing drives. |
 | Creation beneath a resolved temporary directory is not driven through a source | `scratch_unusable.*` drives the outer branch through a source; `scratch_setup.a collision ahead of a permanent creation failure reports the permanent cause` drives the narrower one against the creation step alone. The claim is the seam between them. |
 | A byte-backed source resolves the temporary directory once | `scratch_symlinked.a resolution lies under the scratch root it reports when the temporary directory is a symbolic link` and `scratch_symlinked.the reported scratch root resolves the link rather than repeating it`. |
-| What has been driven natively, and where | The three platform workflows and the install-consumer harness under `tests/integration/consumer`. The sentence about the resolution being observed on one platform only is carried by nothing, and says so. |
+| What has been driven natively, and where | The `install-test` job in the three platform workflows, which builds the consumer under `tests/integration/consumer` against an installed package and runs it directly. The sentence about the resolution being observed on one platform only is carried by nothing, and says so. |
 | Whether a held-open replacement succeeds is a platform fact, measured on POSIX only | `scratch_publish.a replacement with the destination held open is measured, not assumed` — it asserts whichever branch its host takes, which is why no native refusal value exists. |
 | A directory-backed source makes its root absolute but does not resolve it | `io_sources.directory_source resolves an in-root file to a path` and `io_sources.a relative source root resolves an in-root asset and still refuses an escape`. Nothing drives the symlinked-root relation there — the claim. |
 | Whether containment over-refuses on Windows is unmeasured | Nothing, on any platform. A case would hand the containment check a candidate differing from its root only in case, or in short form, and assert the verdict. |
@@ -610,7 +612,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Five vendors, twenty documents | `cmake/corpus_documents.cmake`, which names every one outright, and the sixteen rows of `tests/golden/oracle/compatibility_ledger.cases`, which the ledger test pairs against the listfile in both directions — a pinned document with no row fails, and a row naming no pinned document fails. |
 | Two of the pinned family's own entry points do not load | **Nothing drives them**, because they are deliberately not corpus documents. The measurement that put them outside is recorded in the listfile beside the six that are in. |
 | The corpus exercises two of the asset reference forms | The `file://` rows of `ur5e_abs_paths_facts.cases`, and `uri_cases.uri rows accepted` for the forms the corpus does not reach. |
-| The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned upstream tooling and registers the corpus tier, and the other two fetch the corpus only for the install-consumer job. |
+| The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned upstream tooling and registers the corpus tier, and the other two fetch the corpus only for the `clean-consumer` job. |
 | The KUKA LBR family is pinned as a description package | Its `PINS` row and its license determination in `cmake/corpus.cmake`. That the umbrella repository's other packages are unpinned is carried by their absence from the listfile. |
 | One upstream revision is pinned in the build but absent from the recorded pins | Nothing asserts the absence — it *is* the claim. Both halves are readable: `tests/golden/oracle/PINS` and the fetch in `cmake/corpus.cmake`. |
 | Fragments are not loaded, by design | The listfile's own rule, and the count it states: pointing the selection at the macro extension would load twenty-one documents carrying a `<robot>` root with no name and no links. |

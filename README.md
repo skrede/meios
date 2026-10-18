@@ -255,7 +255,7 @@ from that install tree, on all three platforms, by a project that lives outside 
 | Compiles and tests on macOS 15 x86_64 as well | `build-intel` — AppleClang | | ● | |
 | **Installs, then a separate project consumes it** — `find_package` against the install prefix, built and run | `install-test` | ● | ● | ● |
 | **An installed program finds its deployed description** — the resource consumer is installed and the installed binary is run | `install-test` | ● | ● | ● |
-| **A clean consumer loads pinned robot descriptions natively, by either acquisition route** — a project outside the build takes meios through `FetchContent` from the source tree and, separately, through `find_package` against a staged install prefix, with `meios::eval-python` off and Python discovery disabled; each route loads the pinned Universal Robots `ur3e` and KUKA `kr6r900sixx` descriptions and checks them against their recorded facts, and the built executables are read back for any interpreter symbol or linkage | `clean-consumer` | ● | ● | ● |
+| **A clean consumer loads pinned robot descriptions natively, by either acquisition route** — a project outside the build takes meios through `FetchContent` from the source tree and, separately, through `find_package` against a staged install prefix, with `meios::eval-python` off and Python discovery disabled; each route loads the pinned Universal Robots `ur3e` and KUKA `kr6r900sixx` descriptions and checks them against their recorded facts, and every executable either route builds — the consumer's own `integration_test` and the two programs that load those descriptions — is read back for any name from the interpreter's `Py`-prefixed C API or from pybind11, as a symbol on Linux and macOS and as an imported name or string on Windows, and for any interpreter library it links | `clean-consumer` | ● | ● | ● |
 | Enrichment targets build and pass together | `enrichments` | ● | ● | ● |
 | The example programs compile | `examples` | ● | ● | ● |
 | **Every C++ block in this README and in `docs/` is extracted and compiled** | `docs` | ● | ● | ● |
@@ -263,17 +263,18 @@ from that install tree, on all three platforms, by a project that lives outside 
 | Deploying and flattening work under the Xcode generator — the CMake integration cases for both, with every sub-configure generated for Xcode | `harness-xcode` | | ● | |
 | Generative properties of the xacro evaluator | `property-tests` (RapidCheck) | ● | ● | ● |
 | An optional dependency is absent as well as present | `eval-python` — Python found *and* absent | ● | | |
-| Every robot description named in the pinned [description corpus](docs/known-limitations.md#what-the-description-corpus-proves), with `MEIOS_CORPUS_BREADTH` on, loads, and each expression-valued one matches its recorded facts; the known-faulty fixture reports its typed diagnostic at its expected line, and flattening the known-good description reproduces a committed baseline byte for byte | `corpus` | ● | | |
-| Fresh renders through the pinned upstream xacro, of every minimized expression case and every expression-valued corpus document, agree with meios on accept or refuse and on normalized document structure, and each document's fresh render matches its recorded model facts; a difference passes only where the reviewed divergence manifest records it, and a recorded divergence that no longer reproduces fails — [what this evidence covers](docs/evaluation.md#what-this-evidence-covers) | `differential` | ● | | |
+| With `MEIOS_CORPUS_BREADTH` on, which adds the pre-expanded KUKA set, every robot description named in the pinned [description corpus](docs/known-limitations.md#what-the-description-corpus-proves) loads, and each one the built-in evaluator expands matches its recorded facts; the known-faulty fixture reports its typed diagnostic at its expected line, and flattening the known-good description reproduces a committed baseline byte for byte | `corpus` | ● | | |
+| Fresh renders through the pinned upstream xacro, of every minimized and every authored expression case and every corpus document the built-in evaluator expands, agree with meios on accept or refuse and on normalized document structure, and each document's fresh render matches its recorded model facts; a difference passes only where the reviewed divergence manifest records it, and a recorded divergence that no longer reproduces fails — [what this evidence covers](docs/evaluation.md#what-this-evidence-covers) | `differential` | ● | | |
 | Header-guard uniqueness and format | `header-guards` | ● | | |
 | No header over the size ceiling unless registered | `file-size` | ● | | |
 | Line coverage, uploaded to Codecov | `build` → gcovr | ● | | |
 
-Beyond the two routes `clean-consumer` builds, consuming from a *subproject* or a `FetchContent`
-acquisition is also covered by the CMake integration suite that runs inside the platform workflows:
-install opt-in versus decline, export-set legality when a dependency was fetched rather than found,
-the installed module manifest, resource deployment and pruning, and the configure-time refusals —
-each an end-to-end sub-configure of a real consumer tree.
+Beyond the two routes `clean-consumer` builds, consuming meios as a *subproject* — the
+`add_subdirectory` a `FetchContent` acquisition ends in — is also covered by the CMake integration
+suite that runs inside the platform workflows: install opt-in versus decline, export-set legality
+when a dependency was fetched rather than found, the installed module manifest, resource
+deployment and pruning, and the configure-time refusals — each an end-to-end sub-configure of a
+real consumer tree.
 
 Three workflows are deliberately **advisory** — they report without blocking a merge, and promotion to
 a required gate would be a visible decision rather than a silent one:
