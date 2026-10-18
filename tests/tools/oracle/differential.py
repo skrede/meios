@@ -60,10 +60,14 @@ def render_divergence_probe(tmp, out, case_id, expression):
 
 # Every file sharing the probe's stem travels with it, so an auxiliary document beside the probe
 # resolves document-relative in the scratch directory exactly as it does in the fixture directory.
+# A probe with no fixture raises rather than rendering, so it can never be recorded as a refusal.
 def stage_probe(tmp, case_id):
+    document = PROBE_DIR / (case_id + ".xacro")
+    if not document.is_file():
+        raise FileNotFoundError("no probe fixture " + str(document))
     for one in sorted(PROBE_DIR.glob(case_id + ".*")):
         shutil.copy(one, tmp / one.name)
-    return tmp / (case_id + ".xacro")
+    return tmp / document.name
 
 
 # Driven through process_file rather than render(), which wraps a body in its own <robot> and
@@ -71,8 +75,9 @@ def stage_probe(tmp, case_id):
 def render_document_probe(tmp, out, case_id):
     import xacro
 
+    staged = stage_probe(tmp, case_id)
     try:
-        write_text(out, case_id, ".txt", xacro.process_file(str(stage_probe(tmp, case_id))).toxml())
+        write_text(out, case_id, ".txt", xacro.process_file(str(staged)).toxml())
     except Exception as failure:
         write_refusal(out, case_id, ".txt", failure)
 
@@ -82,9 +87,9 @@ def render_document_probe(tmp, out, case_id):
 def render_agreement_probe(tmp, out, case_id, fixture, mappings):
     import xacro
 
+    staged = stage_probe(tmp, fixture)
     try:
-        rendered = xacro.process_file(str(stage_probe(tmp, fixture)),
-                                      mappings=dict(mappings) if mappings else None)
+        rendered = xacro.process_file(str(staged), mappings=dict(mappings) if mappings else None)
         write_text(out, case_id, ".xml", rendered.toxml())
     except Exception as failure:
         write_refusal(out, case_id, ".xml", failure)

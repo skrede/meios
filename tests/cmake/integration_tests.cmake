@@ -56,7 +56,7 @@ set(native_differential_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/native_diffe
 if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
     add_executable(native_differential_test ${native_differential_src})
     target_link_libraries(native_differential_test
-        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf
+        PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::bundle
             pugixml::pugixml Catch2::Catch2WithMain)
     string(REPLACE ";" "|" _differential_documents "${MEIOS_CORPUS_DOCUMENTS}")
     target_compile_definitions(native_differential_test PRIVATE

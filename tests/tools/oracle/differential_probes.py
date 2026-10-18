@@ -38,7 +38,8 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
-# and the caller mapping where the binding needs one. Both sides refusing counts as agreement.
+# and the caller mapping where the binding needs one. A probe both sides refuse agrees only on the
+# cause, which the comparator's own table names for each side.
 AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_argument", None),
                     ("property_default_over_caller_argument", "property_default_over_argument", {"p": "C"}),
                     ("property_value_over_argument", "property_value_over_argument", None),

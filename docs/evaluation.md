@@ -438,8 +438,11 @@ What is compared, exactly:
   each compared whole: a property's default and value over an argument of the same name, before and
   after its declaration and from a macro's global write, a macro parameter beside an argument, a
   property default under a parameter, the vendor idiom of a property defaulting to its own argument,
-  and the reads of an argument other than through `$(arg n)`. Both sides refusing counts as agreement,
-  and the meios side runs through the load path with the caller arguments a consumer would hand it.
+  and the reads of an argument other than through `$(arg n)`. The meios side is what the load path
+  builds, under the caller arguments a consumer would hand it, written back out by the serializer the
+  command line flattens with; the expansion alone is held to the same render beside it. Two refusals
+  agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
+  document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
