@@ -14,6 +14,7 @@
 #include <pybind11/embed.h>
 
 #include <string>
+#include <cstddef>
 #include <optional>
 #include <string_view>
 
@@ -42,22 +43,24 @@ inline text_outcome classify(const yaml_context &ctx, const std::string &quoted,
     return report(eval_failure_kind::error, ctx.log, fallback);
 }
 
-// A NameError carries the unbound name as its name attribute only from Python 3.10 on.
-inline std::string argument_hint(const pybind11::error_already_set &raised, const eval_scope &scope)
+// The unbound name is read from the error's own text, which carries it on every interpreter
+// version; the attribute naming it is set only from Python 3.10 on, and only by the interpreter.
+inline std::string argument_hint(bool unbound, std::string_view raised, const eval_scope &scope)
 {
-    if(!raised.matches(PyExc_NameError) || !pybind11::hasattr(raised.value(), "name"))
+    constexpr std::string_view opener = "name '";
+    const std::size_t at              = unbound ? raised.find(opener) : std::string_view::npos;
+    const std::size_t end             = at == std::string_view::npos ? at : raised.find("' is not defined", at);
+    if(end == std::string_view::npos)
         return std::string{};
-    const pybind11::object name = raised.value().attr("name");
-    if(!pybind11::isinstance<pybind11::str>(name))
+    const std::string name(raised.substr(at + opener.size(), end - at - opener.size()));
+    if(!scope.has_argument(name))
         return std::string{};
-    const std::string text = name.cast<std::string>();
-    if(!scope.has_argument(text))
-        return std::string{};
-    return " — '" + text + "' is an argument; read it with $(arg " + text + ")";
+    return " — '" + name + "' is an argument; read it with $(arg " + name + ")";
 }
 
 // Interpreter readiness, the interpreter lock and the failure classification are one
-// implementation for both evaluators; the body is the only thing that differs between them.
+// implementation for both evaluators; the body is the only thing that differs between them. A
+// raised error is only read inside its handler, so nothing the message is built from can throw there.
 template<typename Body>
 text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, log_sink &log, Body body)
 {
@@ -65,6 +68,8 @@ text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, l
     pybind11::gil_scoped_acquire gil;
     const std::string quoted = "\"" + std::string(expr) + "\"";
     yaml_context ctx{log, scope, std::nullopt, std::nullopt};
+    std::string message;
+    bool unbound = false;
     try
     {
         text_outcome out = body(expr, ctx, quoted);
@@ -73,12 +78,14 @@ text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, l
     }
     catch(pybind11::error_already_set &raised)
     {
-        return classify(ctx, quoted, "python evaluation of " + quoted + " raised: " + raised.what() + argument_hint(raised, scope));
+        unbound = raised.matches(PyExc_NameError);
+        message = raised.what();
     }
     catch(const std::exception &raised)
     {
         return classify(ctx, quoted, "python evaluation of " + quoted + " failed to convert its result: " + raised.what());
     }
+    return classify(ctx, quoted, "python evaluation of " + quoted + " raised: " + message + argument_hint(unbound, message, scope));
 }
 
 }
