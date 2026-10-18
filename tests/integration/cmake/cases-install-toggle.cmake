@@ -112,3 +112,16 @@ meios_cmake_case(cmake_subproject_install_manifest
     INSTALL ON
     TIMEOUT 1800
     REQUIRE_INSTALLED ${_toggle_manifest})
+
+# The auxiliary format module defaults the dependency's own install option only when the consumer
+# has not set it, so a consumer's explicit no must survive and surface as the declining reason
+# rather than be overwritten by meios's own toggle.
+meios_cmake_case(cmake_install_reason_parent_declines_yaml
+    FIXTURE subproject
+    DRIVER  meios_subproject_case.cmake
+    EXTRA   ${_toggle_tree} -DFX_PARENT_INSTALL=ON -DYAML_CPP_INSTALL=OFF
+            -DMEIOS_CMAKE_FETCH_DEPS=ON -DMEIOS_YAML_SUPPORT=ON
+    INSTALL ON
+    TIMEOUT 900
+    REQUIRE_PREFIX_EMPTY ON
+    MATCHES "yaml-cpp[ \t\r\n]+\\(turn[ \t\r\n]+YAML_CPP_INSTALL[ \t\r\n]+on\\)")

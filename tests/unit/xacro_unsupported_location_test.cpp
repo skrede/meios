@@ -57,19 +57,19 @@ std::string document(const std::string &offending)
             offending + "\n</robot>\n";
 }
 
-void require_located_at(const std::string &offending, std::int32_t line)
+void require_located_at(const std::string &offending, std::int32_t line, meios::diagnostic_code code = meios::diagnostic_code::unsupported_expression)
 {
     std::vector<located> records;
     const expansion_result out = run(document(offending), records);
     INFO("offending: " << offending);
 
     REQUIRE_FALSE(out.has_value());
-    CHECK(out.error().code == meios::diagnostic_code::unsupported_expression);
+    CHECK(out.error().code == code);
     CHECK(out.error().loc.file.filename() == "robot.xacro");
     CHECK(out.error().loc.line == line);
 
     REQUIRE_FALSE(records.empty());
-    CHECK(records.front().code == meios::diagnostic_code::unsupported_expression);
+    CHECK(records.front().code == code);
     CHECK(records.front().loc.file.filename() == "robot.xacro");
     CHECK(records.front().loc.line == line);
 }
@@ -92,4 +92,20 @@ TEST_CASE("an unsupported form in a property value refuses at the line of the pr
 TEST_CASE("an unsupported form in element text refuses at the line it sits on", "[xacro][unsupported][location]")
 {
     require_located_at("  <link name=\"base2\">\n    <a>${set(1)}</a>\n  </link>", 5);
+}
+
+TEST_CASE("a slice or a double-quoted string refuses as unsupported at the line it sits on", "[xacro][unsupported][location]")
+{
+    require_located_at("  <link name=\"${'abc'[0:2]}\"/>", 4);
+    require_located_at("  <link name='${\"abc\"}'/>", 4);
+    require_located_at("  <xacro:property name=\"p\" value=\"${'abc'[1:]}\"/>\n  <link name=\"${p}\"/>", 4);
+}
+
+// A comprehension is not recognized as a construct at all, so it refuses as an expression the
+// evaluator cannot read rather than as a named unsupported form; the refusal must still be located.
+TEST_CASE("a comprehension refuses as an expression error at the line it sits on", "[xacro][unsupported][location]")
+{
+    const meios::diagnostic_code refused = meios::diagnostic_code::expression_error;
+    require_located_at("  <link name=\"${[i for i in [1, 2]]}\"/>", 4, refused);
+    require_located_at("  <link name=\"base2\">\n    <a>${[c for c in 'ab']}</a>\n  </link>", 5, refused);
 }

@@ -1,45 +1,27 @@
-# The upstream measurements under golden/oracle are the authority for every rendering, coercion and
-# unit-tag rule the native evaluator implements. A recorded value changes only by rerunning the
-# oracle against the pinned upstream, never by editing the expectation to suit new code, so the
-# manifest is recomputed here and the configure fails closed in both directions: a listed record
-# that is missing or has drifted, and a record present but absent from the manifest.
-set(meios_oracle_dir ${CMAKE_CURRENT_SOURCE_DIR}/golden/oracle)
-file(STRINGS ${meios_oracle_dir}/RECORDS.sha256 meios_oracle_manifest)
-set(meios_oracle_listed "")
-set(MEIOS_ORACLE_RECORD_ROWS 0)
-foreach(row IN LISTS meios_oracle_manifest)
-    if(row MATCHES "^#")
-        continue()
-    endif()
-    string(REGEX REPLACE "\t.*$" "" recorded "${row}")
-    string(REGEX REPLACE "^[^\t]*\t" "" name "${row}")
-    if(NOT EXISTS ${meios_oracle_dir}/${name})
-        message(FATAL_ERROR
-            "oracle: record '${name}' is listed in RECORDS.sha256 but is not on disk. "
-            "Rerun tests/tools/oracle/record_upstream.py rather than editing the manifest.")
-    endif()
-    file(SHA256 ${meios_oracle_dir}/${name} measured)
-    if(NOT measured STREQUAL recorded)
-        message(FATAL_ERROR
-            "oracle: record '${name}' does not match its recorded digest. Upstream's own behavior "
-            "is the authority here: a record changes only by rerunning "
-            "tests/tools/oracle/record_upstream.py, never by editing an expected value.")
-    endif()
-    list(APPEND meios_oracle_listed ${name})
-    file(STRINGS ${meios_oracle_dir}/${name} measured_rows REGEX "^[^#]")
-    list(LENGTH measured_rows measured_count)
-    math(EXPR MEIOS_ORACLE_RECORD_ROWS "${MEIOS_ORACLE_RECORD_ROWS} + ${measured_count}")
-endforeach()
+include(${CMAKE_CURRENT_LIST_DIR}/oracle_digest_gate.cmake)
+meios_check_oracle_records(${CMAKE_CURRENT_SOURCE_DIR}/golden/oracle MEIOS_ORACLE_RECORD_ROWS)
 
-file(GLOB meios_oracle_present CONFIGURE_DEPENDS
-     RELATIVE ${meios_oracle_dir} ${meios_oracle_dir}/*.cases)
-foreach(name IN LISTS meios_oracle_present)
-    if(NOT name IN_LIST meios_oracle_listed)
-        message(FATAL_ERROR
-            "oracle: record '${name}' is on disk but carries no digest in RECORDS.sha256. "
-            "A record outside the manifest is an unauthorized expectation.")
-    endif()
+# A refusal the gate never takes at configure is otherwise unexercised, so each one is driven over a
+# scratch copy of the records and must refuse with its own message; the clean copy is the control.
+set(meios_oracle_gate_refusals
+    "drifted|does not match its recorded digest"
+    "missing|is listed in RECORDS.sha256 but is not on disk"
+    "unlisted|is on disk but carries no digest")
+foreach(entry IN LISTS meios_oracle_gate_refusals ITEMS "clean|MEIOS_ORACLE_GATE_PASSED")
+    string(REPLACE "|" ";" field "${entry}")
+    list(GET field 0 gate_case)
+    list(GET field 1 gate_message)
+    string(REPLACE " " "[ \t\r\n]+" gate_message "${gate_message}")
+    add_test(NAME cmake_oracle_gate_${gate_case} COMMAND ${CMAKE_COMMAND}
+        -DCASE=${gate_case}
+        -DORACLE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/golden/oracle
+        -DWORK=${CMAKE_CURRENT_BINARY_DIR}/oracle_gate/${gate_case}
+        -P ${CMAKE_CURRENT_LIST_DIR}/oracle_digest_gate_case.cmake)
+    set_tests_properties(cmake_oracle_gate_${gate_case} PROPERTIES
+        PASS_REGULAR_EXPRESSION "${gate_message}")
 endforeach()
+set_tests_properties(cmake_oracle_gate_drifted cmake_oracle_gate_missing cmake_oracle_gate_unlisted
+    PROPERTIES FAIL_REGULAR_EXPRESSION "MEIOS_ORACLE_GATE_PASSED")
 
 # Every stem the native evaluator work will add is registered here behind the EXISTS guard, so a
 # stem becomes a live test the moment its source lands and no build edit is needed to make it run.
@@ -76,21 +58,22 @@ function(meios_add_native_test stem kind)
     catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
 endfunction()
 
-foreach(stem IN ITEMS native_oracle_records native_corpus_record differential_verdict
-                      accepted_forms coverage_matrix)
+foreach(stem IN ITEMS native_oracle_records native_oracle_pins native_corpus_record
+                      differential_verdict accepted_forms coverage_matrix)
     meios_add_native_test(${stem} record)
 endforeach()
 
-foreach(stem IN ITEMS native_value native_render native_expression native_member native_session
+foreach(stem IN ITEMS native_value native_value_key native_value_scope native_render
+                      native_expression native_member native_session native_session_isolation
                       native_budget native_branch native_arith native_string native_split
                       native_syntax native_syntax_table native_limits native_ceilings
                       native_span_depth native_elements)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
-foreach(stem IN ITEMS native_yaml native_yaml_resolver native_yaml_seam native_yaml_alias
-                      native_yaml_merge native_load_yaml native_sequence native_sequence_edge
-                      native_constructs)
+foreach(stem IN ITEMS native_yaml native_yaml_ceiling native_yaml_resolver native_yaml_seam
+                      native_yaml_alias native_yaml_merge native_load_yaml native_sequence
+                      native_sequence_edge native_constructs)
     meios_add_native_test(${stem} yaml)
 endforeach()
 

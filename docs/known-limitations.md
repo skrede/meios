@@ -430,13 +430,6 @@ not inside the tarball. What is pinned in its place is `lbr-stack/med14_r820_des
 packages that umbrella repository refers to are still unpinned, so the authoring styles they carry
 are not covered.
 
-**One upstream revision is pinned in the build but absent from the recorded pins.**
-`tests/golden/oracle/PINS` names the upstream tooling, `ur_description`,
-`lbr_med14_r820_description`, `franka_description`, `kortex_description`, and the in-repository gantry
-by a digest of the two files that are the whole of it. It does not name `kuka_experimental`, whose
-commit and archive digest are pinned in the build alone — so the KR6 measurement is recorded against
-a revision that record does not state.
-
 **Fragments are not loaded, by design.** Macro and include files carrying a `<robot>` root with no
 name and no links are not top-level documents, and the corpus does not treat them as such. That
 means the rules are proven against assembled descriptions only; a refusal that would fire on a
@@ -614,7 +607,6 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | The corpus exercises two of the asset reference forms | The `file://` rows of `ur5e_abs_paths_facts.cases`, and `uri_cases.uri rows accepted` for the forms the corpus does not reach. |
 | The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned upstream tooling and registers the corpus tier, and the other two fetch the corpus only for the `clean-consumer` job. |
 | The KUKA LBR family is pinned as a description package | Its `PINS` row and its license determination in `cmake/corpus.cmake`. That the umbrella repository's other packages are unpinned is carried by their absence from the listfile. |
-| One upstream revision is pinned in the build but absent from the recorded pins | Nothing asserts the absence — it *is* the claim. Both halves are readable: `tests/golden/oracle/PINS` and the fetch in `cmake/corpus.cmake`. |
 | Fragments are not loaded, by design | The listfile's own rule, and the count it states: pointing the selection at the macro extension would load twenty-one documents carrying a `<robot>` root with no name and no links. |
 
 ### The CMake resource modules

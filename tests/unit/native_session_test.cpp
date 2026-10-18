@@ -31,13 +31,12 @@ namespace
 // so a shared instance driving two loads at once must produce each load's own result.
 struct stateless_backend
 {
-    meios::text_outcome eval_to_text(std::string_view expr, const meios::eval_scope &scope,
-                                     meios::log_sink &)
+    meios::text_outcome eval_to_text(std::string_view expr, const meios::eval_scope &scope, meios::log_sink &)
     {
         const std::optional<meios::value> bound = scope.lookup(expr);
         if(!bound)
-            return meios::text_outcome{ std::nullopt, meios::eval_failure_kind::error };
-        return meios::text_outcome{ meios::render_scalar(*bound), meios::eval_failure_kind::none };
+            return meios::text_outcome{std::nullopt, meios::eval_failure_kind::error};
+        return meios::text_outcome{meios::render_scalar(*bound), meios::eval_failure_kind::none};
     }
 };
 
@@ -58,8 +57,7 @@ struct tally
         (*this)(lvl, message);
     }
 
-    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &,
-                    const std::string &message)
+    void operator()(meios::level lvl, meios::diagnostic_code, const meios::source_location &, const std::string &message)
     {
         (*this)(lvl, message);
     }
@@ -67,20 +65,17 @@ struct tally
 
 bool substitution_survives(meios::eval_policy policy, std::size_t token_ceiling)
 {
-    const meios::evaluator_limits ceilings{ 0, 0, 0, token_ceiling, 0 };
+    const meios::evaluator_limits ceilings{0, 0, 0, token_ceiling, 0};
     meios::detail::eval_session session(ceilings);
     meios::eval_scope scope;
     meios::source_stack sources;
     meios::log_sink silent;
-    return meios::detail::substitute_refined("value ${1+1}", scope, sources, "inline.xacro", policy,
-                                             {}, session, silent, {})
-        .has_value();
+    return meios::detail::substitute_refined("value ${1+1}", scope, sources, "inline.xacro", policy, {}, session, silent, {}).has_value();
 }
 
 // The link name is driven through a numeric property, so the substitution layer cannot
 // answer it from the scope directly and the shared backend really does run on both threads.
-std::filesystem::path write_document(const std::filesystem::path &dir, std::string_view name,
-                                     int index)
+std::filesystem::path write_document(const std::filesystem::path &dir, std::string_view name, int index)
 {
     std::filesystem::create_directories(dir);
     const std::filesystem::path path = dir / std::string(name);
@@ -100,10 +95,10 @@ std::filesystem::path scratch_root()
 
 TEST_CASE("a crossed ceiling latches an exhausted failure that stays latched", "[native][session]")
 {
-    const meios::evaluator_limits ceilings{ 4, 2, 16, 8, 32, 3 };
+    const meios::evaluator_limits ceilings{4, 2, 16, 8, 32, 3};
     meios::detail::eval_session session(ceilings);
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
 
     REQUIRE_FALSE(session.charge_tokens(9, sink, {}));
     REQUIRE(session.failure == meios::eval_failure_kind::exhausted);
@@ -128,27 +123,45 @@ TEST_CASE("exhaustion is terminal under every evaluation policy", "[native][sess
     REQUIRE_FALSE(substitution_survives(meios::eval_policy::skip, 1));
 }
 
+TEST_CASE("a token-ceiling refusal charges no evaluation step", "[native][session]")
+{
+    const meios::evaluator_limits ceilings{0, 0, 0, 1, 0};
+    meios::detail::eval_session session(ceilings);
+    meios::eval_scope scope;
+    meios::source_stack sources;
+    meios::log_sink silent;
+
+    REQUIRE_FALSE(meios::detail::substitute_refined("value ${1+1}", scope, sources, "inline.xacro", meios::eval_policy::fail, {}, session, silent, {}).has_value());
+    REQUIRE(session.failure == meios::eval_failure_kind::exhausted);
+    CHECK(session.counters.tokens <= ceilings.tokens);
+    CHECK(session.counters.steps == 0);
+
+    const meios::evaluator_limits roomy;
+    meios::detail::eval_session control(roomy);
+    REQUIRE(meios::detail::substitute_refined("value ${1+1}", scope, sources, "inline.xacro", meios::eval_policy::fail, {}, control, silent, {}).has_value());
+    CHECK(control.counters.steps > 0);
+}
+
 TEST_CASE("a scope with no installed parser names the missing capability", "[native][session]")
 {
     const meios::evaluator_limits ceilings;
     meios::evaluator_counters counters;
     meios::eval_scope scope;
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
 
     const meios::yaml_outcome parsed = scope.parse_yaml("a: 1", ceilings, counters, sink, {});
 
     REQUIRE_FALSE(parsed.parsed.has_value());
     REQUIRE(parsed.failure == meios::yaml_failure::unavailable);
     REQUIRE(counts.messages.size() == 1);
-    REQUIRE(counts.messages.front().find("resolves no auxiliary document format")
-            != std::string::npos);
+    REQUIRE(counts.messages.front().find("resolves no auxiliary document format") != std::string::npos);
 }
 
 TEST_CASE("two loads over one shared configuration stay independent", "[native][session]")
 {
-    const std::filesystem::path dir = scratch_root();
-    const std::filesystem::path first = write_document(dir, "alpha.xacro", 3);
+    const std::filesystem::path dir    = scratch_root();
+    const std::filesystem::path first  = write_document(dir, "alpha.xacro", 3);
     const std::filesystem::path second = write_document(dir, "beta.xacro", 8);
 
     meios::load_options shared;
@@ -156,16 +169,20 @@ TEST_CASE("two loads over one shared configuration stay independent", "[native][
 
     std::optional<std::string> alpha_link;
     std::optional<std::string> beta_link;
-    std::thread one([&] {
-        const auto loaded = meios::load(first, shared);
-        if(loaded && loaded->robot.links.size() == 1)
-            alpha_link = loaded->robot.links.front().name;
-    });
-    std::thread two([&] {
-        const auto loaded = meios::load(second, shared);
-        if(loaded && loaded->robot.links.size() == 1)
-            beta_link = loaded->robot.links.front().name;
-    });
+    std::thread one(
+            [&]
+            {
+                const auto loaded = meios::load(first, shared);
+                if(loaded && loaded->robot.links.size() == 1)
+                    alpha_link = loaded->robot.links.front().name;
+            });
+    std::thread two(
+            [&]
+            {
+                const auto loaded = meios::load(second, shared);
+                if(loaded && loaded->robot.links.size() == 1)
+                    beta_link = loaded->robot.links.front().name;
+            });
     one.join();
     two.join();
 

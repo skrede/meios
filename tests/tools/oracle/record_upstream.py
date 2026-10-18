@@ -587,20 +587,36 @@ def package_digest(listfile, name):
     return found.group(1)
 
 
+# A package that tags releases is pinned by the version its manifest declares; one fetched at a
+# bare commit has no release to name, so the commit its archive URL carries is the revision.
+VERSION_PINS = {"ur_description": CORPUS_PIN, "lbr_med14_r820_description": LBR_PIN,
+                "franka_description": FRANKA_PIN, "kortex_description": KORTEX_PIN}
+
+
+def archive_revision(listfile, name):
+    found = re.search(r"NAME {}\s+URL\s+\S*/archive/([0-9a-f]{{40}})\.tar\.gz"
+                      .format(re.escape(name)), listfile)
+    if not found:
+        sys.exit("oracle: {} is pinned neither by a version nor by an archive commit; nothing was "
+                 "recorded".format(name))
+    return found.group(1)
+
+
+def source_pin(share, listfile, name):
+    if name == AUTHORED:
+        return (AUTHORED, "in-repo", content_digest())
+    revision = package_version(share, name, VERSION_PINS[name]) if name in VERSION_PINS \
+        else archive_revision(listfile, name)
+    return (name, revision, package_digest(listfile, name))
+
+
+# One row per source behind a record, derived from the entry points themselves, so a source added
+# to the corpus cannot produce measurements this record does not name.
 def pin_rows(versions, share):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
-    return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-"),
-            (AUTHORED, "in-repo", content_digest()),
-            ("ur_description", package_version(share, "ur_description", CORPUS_PIN),
-             package_digest(listfile, "ur_description")),
-            ("lbr_med14_r820_description",
-             package_version(share, "lbr_med14_r820_description", LBR_PIN),
-             package_digest(listfile, "lbr_med14_r820_description")),
-            ("franka_description", package_version(share, "franka_description", FRANKA_PIN),
-             package_digest(listfile, "franka_description")),
-            ("kortex_description",
-             package_version(share, "kortex_description", KORTEX_PIN),
-             package_digest(listfile, "kortex_description"))]
+    sources = dict.fromkeys(one.upstream for one in CORPUS_DOCUMENTS)
+    return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-")] \
+        + [source_pin(share, listfile, name) for name in sources]
 
 
 LEDGER_COLUMNS = 8
