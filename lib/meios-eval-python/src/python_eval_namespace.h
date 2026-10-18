@@ -5,6 +5,7 @@
 #include "python_eval_convert.h"
 
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/core_evaluator.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -30,6 +31,7 @@ struct yaml_context
     log_sink &log;
     const eval_scope &scope;
     std::optional<std::string> rule;
+    std::optional<eval_failure_kind> reported;
 };
 
 inline std::vector<std::string> identifiers(std::string_view expr)
@@ -75,11 +77,10 @@ inline std::string refusal_rule(const pybind11::dict &priv, std::string_view exp
     return rule.cast<std::string>();
 }
 
-// The refusal is recorded in evaluation-local state before the throw, so the outer handler
-// classifies it without inspecting the raised exception's text. A crossed byte ceiling is logged
-// before the throw instead, so the latch keeps the budget code ahead of the raise's own record.
-inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind11::object &parse,
-                                        yaml_context &ctx, const std::string &spec)
+// The cause is recorded in evaluation-local state before the throw, so the outer handler
+// classifies it without inspecting the raised exception's text. A crossed read ceiling is reported
+// here, coded, as the failure's one record, and the handler returns its kind without another.
+inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind11::object &parse, yaml_context &ctx, const std::string &spec)
 {
     const text_resource_result text = ctx.scope.load_text(spec);
     if(text)
@@ -88,6 +89,7 @@ inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind
     {
         ctx.log.log(level::error, diagnostic_code::expansion_budget_exceeded, source_location{},
                     "yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling; this load cannot continue");
+        ctx.reported = eval_failure_kind::exhausted;
         throw pybind11::value_error("yaml resource \"" + spec + "\" crossed the evaluator's byte ceiling");
     }
     ctx.rule = std::string(uncontained_rule);
@@ -100,15 +102,20 @@ inline pybind11::object fetch_and_parse(const pybind11::dict &priv, const pybind
 inline pybind11::object yaml_helper(const pybind11::dict &priv, yaml_context &ctx)
 {
     pybind11::object parse = priv["parse_yaml"];
-    return pybind11::cpp_function(
-        [priv, parse, &ctx](const std::string &spec) { return fetch_and_parse(priv, parse, ctx, spec); });
+    return pybind11::cpp_function([priv, parse, &ctx](const std::string &spec) { return fetch_and_parse(priv, parse, ctx, spec); });
 }
 
 // These two are the whole axis of variation between the evaluators: everything else an
 // expression can see is built identically for both.
-inline pybind11::object curated_builtins(const pybind11::dict &priv) { return priv["allowed_builtins"](); }
+inline pybind11::object curated_builtins(const pybind11::dict &priv)
+{
+    return priv["allowed_builtins"]();
+}
 
-inline pybind11::object real_builtins() { return pybind11::module_::import("builtins"); }
+inline pybind11::object real_builtins()
+{
+    return pybind11::module_::import("builtins");
+}
 
 // pybind11 injects the real builtins module into any globals dict that lacks the key, on every
 // eval and exec alike, so the chosen builtins have to be the dict's first entry or they are inert.
@@ -119,12 +126,11 @@ inline pybind11::dict user_globals(const pybind11::dict &priv, yaml_context &ctx
     globals.attr("update")(priv["math_names"]());
     pybind11::object helper = yaml_helper(priv, ctx);
     globals["load_yaml"]    = helper;
-    globals["xacro"] = pybind11::module_::import("types").attr("SimpleNamespace")(pybind11::arg("load_yaml") = helper);
+    globals["xacro"]        = pybind11::module_::import("types").attr("SimpleNamespace")(pybind11::arg("load_yaml") = helper);
     return globals;
 }
 
-inline void seed_scope(const pybind11::dict &priv, pybind11::dict &globals, std::string_view expr,
-                       const eval_scope &scope)
+inline void seed_scope(const pybind11::dict &priv, pybind11::dict &globals, std::string_view expr, const eval_scope &scope)
 {
     for(const std::string &name : identifiers(expr))
     {

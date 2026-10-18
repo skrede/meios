@@ -20,8 +20,7 @@
 namespace meios::detail
 {
 
-inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr, yaml_context &ctx,
-                               const pybind11::object &builtins)
+inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr, yaml_context &ctx, const pybind11::object &builtins)
 {
     pybind11::dict globals = user_globals(priv, ctx, builtins);
     seed_scope(priv, globals, expr, ctx.scope);
@@ -31,12 +30,13 @@ inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr
 inline text_outcome report(eval_failure_kind which, log_sink &log, const std::string &message)
 {
     log.log(level::error, message);
-    return text_outcome{ std::nullopt, which };
+    return text_outcome{std::nullopt, which};
 }
 
-inline text_outcome classify(const yaml_context &ctx, const std::string &quoted,
-                             const std::string &fallback)
+inline text_outcome classify(const yaml_context &ctx, const std::string &quoted, const std::string &fallback)
 {
+    if(ctx.reported)
+        return text_outcome{std::nullopt, *ctx.reported};
     if(ctx.rule)
         return report(eval_failure_kind::refused, ctx.log, "meios refused the expression " + quoted + ": " + *ctx.rule);
     return report(eval_failure_kind::error, ctx.log, fallback);
@@ -44,16 +44,18 @@ inline text_outcome classify(const yaml_context &ctx, const std::string &quoted,
 
 // Interpreter readiness, the interpreter lock and the failure classification are one
 // implementation for both evaluators; the body is the only thing that differs between them.
-template <typename Body>
+template<typename Body>
 text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, log_sink &log, Body body)
 {
     ensure_interpreter();
     pybind11::gil_scoped_acquire gil;
     const std::string quoted = "\"" + std::string(expr) + "\"";
-    yaml_context ctx{ log, scope, std::nullopt };
+    yaml_context ctx{log, scope, std::nullopt, std::nullopt};
     try
     {
-        return body(expr, ctx, quoted);
+        text_outcome out = body(expr, ctx, quoted);
+        // An expression that caught the helper's raise still ends on the failure the helper recorded.
+        return ctx.reported || ctx.rule ? classify(ctx, quoted, std::string{}) : out;
     }
     catch(pybind11::error_already_set &raised)
     {

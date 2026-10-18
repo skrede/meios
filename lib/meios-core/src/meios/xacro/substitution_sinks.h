@@ -88,9 +88,10 @@ private:
 };
 
 // Anchors an unlocated diagnostic the injected backend emits at the hosting node, so one
-// escaping a message-only evaluator still leaves the layer with a real position.
-// The position is known here and the classification is not, so only an error is typed: a
-// terminal failure has to carry a code for the latch beneath to return it as the structured
+// escaping a message-only evaluator still leaves the layer with a real position; a location naming
+// no file is no location, so a coded record arriving without one is anchored too and keeps its code.
+// The position is known here and the classification is not, so only a message-only error is typed:
+// a terminal failure has to carry a code for the latch beneath to return it as the structured
 // cause, and reaching that latch is what an expression error means. A warning is anchored and
 // left uncoded, because claims_from clears a completeness bit per record code without regard
 // to level, so typing a warn would retract a claim on a load that succeeded.
@@ -117,22 +118,27 @@ public:
 
     void log(level lvl, const source_location &where, const std::string &message) override
     {
-        m_inner.log(lvl, where, message);
+        m_inner.log(lvl, placed(where), message);
     }
 
     void log(level lvl, diagnostic_code code, const source_location &where, const std::string &message) override
     {
-        m_inner.log(lvl, code, where, message);
+        m_inner.log(lvl, code, placed(where), message);
     }
 
     void log(level lvl, diagnostic_code code, const source_location &where, const operation_failure &cause, const std::string &message) override
     {
-        m_inner.log(lvl, code, where, cause, message);
+        m_inner.log(lvl, code, placed(where), cause, message);
     }
 
 private:
     log_sink &m_inner;
     source_location m_at;
+
+    const source_location &placed(const source_location &where) const
+    {
+        return where.file.empty() ? m_at : where;
+    }
 };
 
 // Forwards every record unchanged and keeps the first coded, located error as the

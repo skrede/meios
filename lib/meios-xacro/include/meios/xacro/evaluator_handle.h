@@ -23,11 +23,10 @@ namespace meios
 // log(level, message) overload at the node being expanded, and additionally types an error
 // as expression_error, since a terminal failure has to carry a code to be returned as the
 // structured cause. A warning is anchored and left uncoded. A backend wanting either to
-// carry a particular code must emit it through an overload that supplies one.
-template <typename E>
-concept text_evaluator = requires(E &backend, std::string_view expr,
-                                  const eval_scope &scope, log_sink &log)
-{
+// carry a particular code must emit it through an overload that supplies one; a record whose
+// location names no file is anchored at the node as well, keeping the code it carries.
+template<typename E>
+concept text_evaluator = requires(E &backend, std::string_view expr, const eval_scope &scope, log_sink &log) {
     { backend.eval_to_text(expr, scope, log) } -> std::convertible_to<text_outcome>;
 };
 
@@ -37,17 +36,23 @@ concept text_evaluator = requires(E &backend, std::string_view expr,
 class evaluator_handle
 {
 public:
-    template <text_evaluator E>
-    explicit evaluator_handle(E backend) : m_self(std::make_unique<model<E>>(std::move(backend))) {}
+    template<text_evaluator E>
+    explicit evaluator_handle(E backend)
+            : m_self(std::make_unique<model<E>>(std::move(backend)))
+    {
+    }
 
-    evaluator_handle(evaluator_handle &&) noexcept = default;
+    evaluator_handle(evaluator_handle &&) noexcept            = default;
     evaluator_handle &operator=(evaluator_handle &&) noexcept = default;
-    evaluator_handle(const evaluator_handle &) = delete;
-    evaluator_handle &operator=(const evaluator_handle &) = delete;
+    evaluator_handle(const evaluator_handle &)                = delete;
+    evaluator_handle &operator=(const evaluator_handle &)     = delete;
 
     ~evaluator_handle() = default;
 
-    bool valid() const noexcept { return m_self != nullptr; }
+    bool valid() const noexcept
+    {
+        return m_self != nullptr;
+    }
 
     text_outcome eval_to_text(std::string_view expr, const eval_scope &scope, log_sink &log)
     {
@@ -58,20 +63,23 @@ public:
 private:
     struct concept_t
     {
-        concept_t() = default;
-        concept_t(const concept_t &) = default;
+        concept_t()                             = default;
+        concept_t(const concept_t &)            = default;
         concept_t &operator=(const concept_t &) = default;
-        concept_t(concept_t &&) = default;
-        concept_t &operator=(concept_t &&) = default;
-        virtual ~concept_t() = default;
+        concept_t(concept_t &&)                 = default;
+        concept_t &operator=(concept_t &&)      = default;
+        virtual ~concept_t()                    = default;
 
         virtual text_outcome do_eval(std::string_view, const eval_scope &, log_sink &) = 0;
     };
 
-    template <text_evaluator E>
+    template<text_evaluator E>
     struct model final : concept_t
     {
-        explicit model(E backend) : m_backend(std::move(backend)) {}
+        explicit model(E backend)
+                : m_backend(std::move(backend))
+        {
+        }
 
         text_outcome do_eval(std::string_view expr, const eval_scope &scope, log_sink &log) override
         {

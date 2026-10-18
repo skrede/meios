@@ -76,6 +76,21 @@ if(TARGET meios_eval-python)
             TEST_PREFIX "eval_python_unrestricted.")
     endif()
 
+    set(eval_python_unrestricted_yaml_src
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_unrestricted_yaml_test.cpp)
+    if(EXISTS ${eval_python_unrestricted_yaml_src})
+        add_executable(eval_python_unrestricted_yaml_test ${eval_python_unrestricted_yaml_src})
+        target_link_libraries(eval_python_unrestricted_yaml_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                Catch2::Catch2WithMain)
+        target_compile_definitions(eval_python_unrestricted_yaml_test PRIVATE
+            MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
+        meios_enable_coverage(eval_python_unrestricted_yaml_test)
+        meios_warnings(eval_python_unrestricted_yaml_test)
+        catch_discover_tests(eval_python_unrestricted_yaml_test
+            TEST_PREFIX "eval_python_unrestricted_yaml.")
+    endif()
+
     set(eval_python_abuse_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_abuse_test.cpp)
     if(EXISTS ${eval_python_abuse_src})
         add_executable(eval_python_abuse_test ${eval_python_abuse_src})
