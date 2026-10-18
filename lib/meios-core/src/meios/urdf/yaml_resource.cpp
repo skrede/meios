@@ -26,11 +26,6 @@ namespace meios::detail
 namespace
 {
 
-void report_failure(std::string_view subject, const text_read_failure &failure, log_sink &log)
-{
-    log.log(level::error, diagnostic_code::cannot_open, source_location{}, failure.cause, "cannot read resource \"" + std::string(subject) + "\": " + read_failure_reason(failure));
-}
-
 std::vector<std::filesystem::path> probe_roots(const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots)
 {
     std::vector<std::filesystem::path> probes;
@@ -69,7 +64,7 @@ expected<std::optional<std::string>, text_read_failure> nothing(bool &verdict)
 }
 
 expected<std::optional<std::string>, text_read_failure> try_root(std::string_view spec, const std::filesystem::path &root, const text_reader_operations &operations, std::size_t maximum,
-                                                                sweep &seen)
+                                                                 sweep &seen)
 {
     contained_path_result contained = try_contained_under(root, root / std::filesystem::path(spec));
     if(!contained)
@@ -102,10 +97,8 @@ void remember(const text_read_failure &failure, std::optional<text_read_failure>
 // that holds the place for the resource has answered the containment question the other one raised.
 text_resource_result conclude_sweep(std::string_view spec, const sweep &seen, const std::optional<text_read_failure> &first_failure, log_sink &log)
 {
-    if(first_failure && first_failure->kind == text_read_failure_kind::too_large)
-        return unexpected<text_resource_failure>(text_resource_failure::exhausted);
     if(first_failure)
-        report_failure(spec, *first_failure, log);
+        yaml_package::report_failure(spec, *first_failure, log);
     else if(seen.uncontained && !seen.absent)
         log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
     else
@@ -113,6 +106,9 @@ text_resource_result conclude_sweep(std::string_view spec, const sweep &seen, co
     return unexpected<text_resource_failure>(text_resource_failure::unreachable);
 }
 
+// A root holding the resource past the read ceiling ends the sweep: the copy it holds is the one
+// the spec names, so a later root's copy must not stand in for it, and the crossing outranks any
+// native failure an earlier root recovered from.
 text_resource_result from_containment(std::string_view spec, const std::filesystem::path &document, const std::vector<std::filesystem::path> &roots, log_sink &log,
                                       const text_reader_operations &operations, std::size_t maximum)
 {
@@ -121,6 +117,8 @@ text_resource_result from_containment(std::string_view spec, const std::filesyst
     for(const std::filesystem::path &root : probe_roots(document, roots))
     {
         expected<std::optional<std::string>, text_read_failure> result = try_root(spec, root, operations, maximum, seen);
+        if(!result && result.error().kind == text_read_failure_kind::too_large)
+            return unexpected<text_resource_failure>(text_resource_failure::exhausted);
         if(!result)
             remember(result.error(), first_failure);
         else if(*result)

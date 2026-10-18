@@ -74,7 +74,7 @@ foreach(stem IN ITEMS native_value native_value_key native_value_scope native_re
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
-foreach(stem IN ITEMS native_yaml native_yaml_ceiling native_yaml_resolver native_yaml_seam
+foreach(stem IN ITEMS native_yaml native_yaml_ceiling native_yaml_resolver native_yaml_seam native_yaml_sweep
                       native_yaml_alias native_yaml_merge native_load_yaml native_sequence
                       native_sequence_edge native_constructs)
     meios_add_native_test(${stem} yaml)
