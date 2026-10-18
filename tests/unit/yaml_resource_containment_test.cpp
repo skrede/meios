@@ -54,7 +54,9 @@ TEST_CASE("a bare spec with no document resolves only inside a configured root",
     probe under(sink, root, {root});
 
     REQUIRE(under.loader("loose.yaml", {}).value() == std::string("from: root"));
-    REQUIRE_FALSE(under.loader("docs/absent.yaml", {}).has_value());
+    const meios::text_resource_result absent = under.loader("docs/absent.yaml", {});
+    REQUIRE_FALSE(absent.has_value());
+    CHECK(absent.error() == meios::text_resource_failure::unreachable);
     REQUIRE(counts.errors == 1);
 
     std::filesystem::remove_all(root);
@@ -71,7 +73,9 @@ TEST_CASE("an absolute spec is judged by where it lands, not by how it looks", "
     REQUIRE(under.loader((root / "docs" / "cfg.yaml").string(), document).value() == std::string("from: docs"));
     REQUIRE(counts.errors == 0);
 
-    REQUIRE_FALSE(under.loader("/etc/passwd", document).has_value());
+    const meios::text_resource_result escaped = under.loader("/etc/passwd", document);
+    REQUIRE_FALSE(escaped.has_value());
+    CHECK(escaped.error() == meios::text_resource_failure::uncontained);
     REQUIRE(counts.errors == 1);
     REQUIRE(says(counts, "/etc/passwd"));
 
@@ -85,7 +89,9 @@ TEST_CASE("a traversal spec is refused exactly once", "[yaml][resource]")
     meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {root});
 
-    REQUIRE_FALSE(under.loader("../../../etc/passwd", root / "docs" / "robot.xacro").has_value());
+    const meios::text_resource_result escaped = under.loader("../../../etc/passwd", root / "docs" / "robot.xacro");
+    REQUIRE_FALSE(escaped.has_value());
+    CHECK(escaped.error() == meios::text_resource_failure::uncontained);
     REQUIRE(counts.errors == 1);
 
     std::filesystem::remove_all(root);
@@ -107,7 +113,9 @@ TEST_CASE("a link whose real target escapes the document directory is refused", 
     meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {});
 
-    REQUIRE_FALSE(under.loader("link.yaml", root / "docs" / "robot.xacro").has_value());
+    const meios::text_resource_result escaped = under.loader("link.yaml", root / "docs" / "robot.xacro");
+    REQUIRE_FALSE(escaped.has_value());
+    CHECK(escaped.error() == meios::text_resource_failure::uncontained);
     REQUIRE(counts.errors == 1);
 
     std::filesystem::remove_all(root);

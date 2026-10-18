@@ -23,7 +23,7 @@ TEST_CASE("a package-qualified spec resolves through the source stack", "[yaml][
 {
     const std::filesystem::path root = seed_tree();
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {});
 
     REQUIRE(under.loader("package://pkg/cfg.yaml", root / "docs" / "robot.xacro").value() == std::string("from: package"));
@@ -36,10 +36,12 @@ TEST_CASE("a package URI carrying no relative part refuses loudly", "[yaml][reso
 {
     const std::filesystem::path root = seed_tree();
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {});
 
-    REQUIRE_FALSE(under.loader("package://pkg", root / "docs" / "robot.xacro").has_value());
+    const meios::text_resource_result malformed = under.loader("package://pkg", root / "docs" / "robot.xacro");
+    REQUIRE_FALSE(malformed.has_value());
+    CHECK(malformed.error() == meios::text_resource_failure::unreachable);
     REQUIRE(counts.errors == 1);
     REQUIRE(says(counts, "package://pkg"));
 
@@ -50,7 +52,7 @@ TEST_CASE("a find spec takes the same resolution path as the package form", "[ya
 {
     const std::filesystem::path root = seed_tree();
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {});
 
     const std::filesystem::path document = root / "docs" / "robot.xacro";
@@ -64,11 +66,12 @@ TEST_CASE("an unresolvable package spec refuses and names the spec", "[yaml][res
 {
     const std::filesystem::path root = seed_tree();
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     probe under(sink, root, {});
 
-    REQUIRE_FALSE(
-        under.loader("package://pkg/missing.yaml", root / "docs" / "robot.xacro").has_value());
+    const meios::text_resource_result missing = under.loader("package://pkg/missing.yaml", root / "docs" / "robot.xacro");
+    REQUIRE_FALSE(missing.has_value());
+    CHECK(missing.error() == meios::text_resource_failure::unreachable);
     REQUIRE(counts.errors == 1);
     REQUIRE(says(counts, "package://pkg/missing.yaml"));
 
@@ -78,15 +81,14 @@ TEST_CASE("an unresolvable package spec refuses and names the spec", "[yaml][res
 TEST_CASE("a byte-backed layer serves the resource with no path involved", "[yaml][resource]")
 {
     tally counts;
-    meios::log_sink_f sink{ std::ref(counts) };
+    meios::log_sink_f sink{std::ref(counts)};
     meios::source_stack sources;
-    meios::memory_source layer{ sink };
+    meios::memory_source layer{sink};
     layer.add("pkg", "cfg.yaml", "from: bytes");
     sources.push_back(meios::source_handle(std::move(layer)));
 
     const std::vector<std::filesystem::path> roots;
-    const meios::text_resource_loader loader =
-        meios::detail::make_yaml_text_loader(sources, roots, sink);
+    const meios::text_resource_loader loader = meios::detail::make_yaml_text_loader(sources, roots, sink);
 
     REQUIRE(loader("package://pkg/cfg.yaml", {}).value() == std::string("from: bytes"));
     REQUIRE(counts.errors == 0);
