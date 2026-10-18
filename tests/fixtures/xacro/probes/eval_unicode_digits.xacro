@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="arabic" default="١٢"/>
+  <xacro:arg name="fraction" default="١.٥"/>
+  <xacro:arg name="spaced" default=" 7　"/>
+  <xacro:arg name="superscript" default="²"/>
+  <link name="$(eval arabic + 1)_$(eval fraction)_$(eval spaced + 1)_$(eval superscript)"/>
+</robot>

@@ -113,7 +113,7 @@ TEST_CASE("the second substitution entry point refuses the same reach", "[eval_p
     const outcome refused = run(span_document("$(eval __import__)"), meios::eval_policy::fail, handle);
     REQUIRE_FALSE(refused.expanded.has_value());
     REQUIRE(refused.errors >= 1);
-    REQUIRE(says(refused, "dunder-identifier"));
+    REQUIRE(says(refused, "double underscore"));
     REQUIRE(refused.expanded.error().message.find("$(eval __import__") == std::string::npos);
 }
 

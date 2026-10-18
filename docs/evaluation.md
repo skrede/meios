@@ -76,8 +76,9 @@ the refusal names `$(arg flag)`. A property of an argument's name is a second bi
 argument, never a write to it, so a property's `default=` binds over an argument of the same name and
 `$(arg n)` answers the argument whatever property is written. `$(eval)` reads each argument it names
 through the reference's own conversion rather than the one above — `1e3` stays text there, `1_000` is
-the integer `1000` — sees the mathematics names and the spellings `true` and `false` before any
-argument, sees no property, and ends at its first closing parenthesis, so its body holds no call;
+the integer `1000`, and a digit is any decimal digit Python 3.14 reads, so `١٢` is `12` — sees the
+mathematics names and the spellings `true` and `false` before any argument, sees no property, refuses a
+double underscore, and ends at its first closing parenthesis, so its body holds no call;
 [known limitations](known-limitations.md#expression-evaluation) records what was measured.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
@@ -441,13 +442,13 @@ What is compared, exactly:
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
   tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
   than read off the YAML specification.
-- **Twenty-six minimized binding documents**, three of them driven a second time with a caller
+- **Twenty-eight minimized binding documents**, three of them driven a second time with a caller
   argument, each compared whole: a property's default and value over an argument of the same name,
   before and after its declaration and from a macro's global write, a macro parameter beside an
   argument, a property default under a parameter, the vendor idiom of a property defaulting to its own
-  argument, the reads of an argument other than through `$(arg n)`, and eight over `$(eval)` — an
-  argument beside a property of its name, text in a sum and in a conditional, the conversion, the
-  names that shadow an argument, and the three refusals — and seven over the other commands: a
+  argument, the reads of an argument other than through `$(arg n)`, and ten over `$(eval)` — an
+  argument beside a property of its name, text in a sum and in a conditional, the conversion over ASCII
+  and over other decimal digits, the names that shadow an argument, and the four refusals — and seven over the other commands: a
   command written inside one, a parenthesis or a dollar sign left in one's text, and an argument name
   an expression span supplies. Beside them sit five documents over a block argument the macro never
   inserts: a property, a global write and an emitting call inside it, and an unbound name under each

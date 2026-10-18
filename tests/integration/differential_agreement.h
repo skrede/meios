@@ -78,6 +78,8 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{
                 "block_unbound_never_inserted", "block_unbound_never_inserted", {}, meios::diagnostic_code::undefined_property, "name 'undefined_name_nobody_bound' is not defined"},
         agreement_probe{"block_unbound_discarded", "discarded_block", {}, meios::diagnostic_code::undefined_property, "name 'undefined_name_nobody_bound' is not defined"},
+        agreement_probe{"eval_unicode_digits", "eval_unicode_digits", {}},
+        agreement_probe{"eval_double_underscore", "eval_double_underscore", {}, meios::diagnostic_code::expression_error, "double underscore"},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

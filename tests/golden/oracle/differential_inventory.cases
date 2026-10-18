@@ -179,3 +179,5 @@ block_global_call_never_inserted	agreement
 block_emitting_call_never_inserted	agreement
 block_unbound_never_inserted	agreement
 block_unbound_discarded	agreement
+eval_unicode_digits	agreement
+eval_double_underscore	agreement

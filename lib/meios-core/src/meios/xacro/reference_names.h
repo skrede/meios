@@ -8,8 +8,8 @@
 namespace meios::detail
 {
 
-// Every public name of Python's mathematics module as of 3.14. Upstream's evaluation command
-// resolves each before an argument, and the python evaluator binds each bare.
+// Every public name of Python's mathematics module, taken from Python 3.14. Upstream's evaluation
+// command resolves each before an argument, and the python evaluator binds each bare.
 inline constexpr std::string_view mathematics_names[] = {
         "acos",    "acosh",    "asin",  "asinh",   "atan",      "atan2", "atanh",     "cbrt",   "ceil",    "comb",  "copysign", "cos",  "cosh",  "degrees", "dist",      "e",
         "erf",     "erfc",     "exp",   "exp2",    "expm1",     "fabs",  "factorial", "floor",  "fma",     "fmod",  "frexp",    "fsum", "gamma", "gcd",     "hypot",     "inf",

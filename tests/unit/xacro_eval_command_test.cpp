@@ -94,3 +94,15 @@ TEST_CASE("an argument the evaluation command does not read is never converted",
 {
     REQUIRE(flattened(document_of(R"XML(<xacro:arg name="q" default="99999999999999999999"/><link name="$(eval 1 + 1)"/>)XML")) == single_link("2"));
 }
+
+TEST_CASE("the evaluation command reads every decimal digit and space the reference's conversion reads", "[xacro][eval_command]")
+{
+    REQUIRE(flattened(probe("eval_unicode_digits")) == single_link("13_1.5_8_²"));
+}
+
+TEST_CASE("the evaluation command refuses a body holding a double underscore, as the reference does", "[xacro][eval_command]")
+{
+    const meios::expansion_error error = refusal(probe("eval_double_underscore"));
+    REQUIRE(error.code == meios::diagnostic_code::expression_error);
+    REQUIRE(error.message.find("__") != std::string::npos);
+}

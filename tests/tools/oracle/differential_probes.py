@@ -75,4 +75,6 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("block_global_call_never_inserted", "block_global_call_never_inserted", None),
                     ("block_emitting_call_never_inserted", "block_emitting_call_never_inserted", None),
                     ("block_unbound_never_inserted", "block_unbound_never_inserted", None),
-                    ("block_unbound_discarded", "discarded_block", None))
+                    ("block_unbound_discarded", "discarded_block", None),
+                    ("eval_unicode_digits", "eval_unicode_digits", None),
+                    ("eval_double_underscore", "eval_double_underscore", None))
