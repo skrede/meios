@@ -130,6 +130,19 @@ TEST_CASE("a relative include climbing above its document's directory refuses as
     const include_tree::expansion_result out = expand_file(top, sources, log);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message.find("escapes the source root") != std::string::npos);
+    REQUIRE(out.error().message.find("climbs above the directory of the document that writes it") != std::string::npos);
     REQUIRE(xacro_probe::errors(records) == 1);
+}
+
+TEST_CASE("a document named by a relative path anchors its relative includes at the working directory", "[xacro][structural][include][resolution]")
+{
+    const include_tree::tree held;
+    held.write("cwd/leaf.xacro", binds("from_cwd"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    meios::source_stack sources;
+
+    const include_tree::working_directory here(held.root() / "cwd");
+    REQUIRE(renders_link(expand_text(reads_leaf("leaf.xacro"), "top.xacro", sources, log), "from_cwd"));
+    REQUIRE(xacro_probe::errors(records) == 0);
 }

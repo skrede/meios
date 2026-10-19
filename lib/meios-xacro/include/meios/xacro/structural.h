@@ -32,14 +32,20 @@ struct expansion
 };
 
 // Expands a xacro document into a flat URDF string using only pugixml: recursive
-// xacro:include (resolved through sources), xacro:property, xacro:macro with
-// params and defaults, *block/**block insertion, and xacro:if/xacro:unless.
-// Bounded by limits and an include cycle guard. The document path seeds $(dirname)
-// and diagnostics. eval_policy and an optional injected backend govern how an
-// unsupported ${}/$(eval) construct is resolved; the delegating overload uses fail
-// policy and the core evaluator. A terminal failure is reported once through the
-// supplied sink and returned on the error arm; on the value arm the flattened text
-// arrives beside the observation of what this one load exercised.
+// xacro:include, xacro:property, xacro:macro with params and defaults, *block/**block
+// insertion, and xacro:if/xacro:unless, bounded by limits and an include cycle guard. A
+// relative xacro:include resolves beside the document that writes it (inside a macro body,
+// the document that calls the macro), then through sources; a package-qualified or
+// absolute one resolves through sources alone. document is the path they resolve beside,
+// as given: a relative path anchors at the working directory and an empty one looks for
+// nothing beside it; it also seeds $(dirname) and diagnostics. includes lifts the
+// boundaries its members name, a climb above the document's directory and a link beside it
+// that leads out of it; left at its default, both refuse. eval_policy and an optional
+// injected backend govern how an unsupported ${}/$(eval) construct is resolved; the
+// delegating overload uses fail policy, the core evaluator and the default includes. A
+// terminal failure is reported once through the supplied sink and returned on the error
+// arm; on the value arm the flattened text arrives beside the observation of what this one
+// load exercised.
 expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
                                             source_stack &sources,
                                             const std::filesystem::path &document,

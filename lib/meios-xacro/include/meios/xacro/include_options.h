@@ -11,10 +11,12 @@ struct include_options
 {
     include_options()
         : climb_above_document(false)
+        , follow_outside_links(false)
     {
     }
 
     bool climb_above_document;
+    bool follow_outside_links;
 };
 
 }

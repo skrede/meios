@@ -344,9 +344,9 @@ and consults nothing else. The same anchor is taken here, so a nested include re
 the include that names it, and a configured root holding a same-named file does not stand in for it.
 Where nothing is beside that document, the filename is then looked for through the configured
 sources, which the reference does not consult, so a document the reference refuses for want of that
-file can render here. A filename climbing above that directory with `..` refuses here as escaping the
-source root and is read there. That one is a reviewed divergence, so the comparison fails if it stops
-reproducing exactly as much as it fails if a new one appears.
+file can render here. A filename climbing above that directory with `..` refuses here as climbing above
+the directory of the document that writes it and is read there. That one is a reviewed divergence, so
+the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
 **An absolute include filename refuses here and is read there.** The reference opens an include
 written as an absolute path where it points. Here the leading separator is dropped and the rest is

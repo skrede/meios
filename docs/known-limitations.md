@@ -33,16 +33,16 @@ directory, and falls back to the configured sources where the reference would re
 joins `<xacro:include filename="arm.xacro"/>` onto the directory of the file that writes it (inside a
 macro body, the file that calls the macro) and so does this evaluator, so such a file includes with no
 source configured and a nested include reads the file beside the include that names it. Two
-differences remain. A filename that climbs out of that directory refuses here as escaping the source
-root: measured on a document whose included file includes `../include_parent_directory.leaf.xacro`,
-upstream renders the property that file binds and here the load refuses under
-`xacro_structural_error`, which is the `include_parent_directory` row the manifest carries. The
-boundary is kept on purpose, because admitting `..` means choosing a wider containment root, and that
-is a security decision rather than a parity one. And where nothing is beside the document, the
-filename is looked for through the configured sources, which the reference does not consult and where
-it refuses; the [evaluation page](evaluation.md#where-this-diverges-from-the-compatibility-target)
-states the rule. No pinned corpus document reaches an include that is not package-qualified, so none
-of them is affected.
+differences remain. A filename that climbs out of that directory refuses here as climbing above the
+directory of the document that writes it: measured on a document whose included file includes
+`../include_parent_directory.leaf.xacro`, upstream renders the property that file binds and here the
+load refuses under `xacro_structural_error`, which is the `include_parent_directory` row the manifest
+carries. The boundary is kept on purpose, because admitting `..` means choosing a wider containment
+root, and that is a security decision rather than a parity one. And where nothing is beside the
+document, the filename is looked for through the configured sources, which the reference does not
+consult and where it refuses; the
+[evaluation page](evaluation.md#where-this-diverges-from-the-compatibility-target) states the rule. No
+pinned corpus document reaches an include that is not package-qualified, so none of them is affected.
 
 **An absolute include filename is looked for only through the configured sources, with its leading
 separator removed, where the reference reads the file it names.** The reference opens

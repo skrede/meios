@@ -34,6 +34,13 @@ meios::include_options climbing()
     return includes;
 }
 
+meios::include_options following()
+{
+    meios::include_options includes;
+    includes.follow_outside_links = true;
+    return includes;
+}
+
 include_tree::expansion_result expand_with(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log, const meios::include_options &includes)
 {
     meios::eval_scope scope;
@@ -128,4 +135,50 @@ TEST_CASE("a climbing spelling with a package refuses with the climb admitted", 
     REQUIRE(unset.error().code == meios::diagnostic_code::xacro_structural_error);
     REQUIRE_FALSE(admitted.has_value());
     REQUIRE(admitted.error().code == meios::diagnostic_code::xacro_structural_error);
+}
+
+TEST_CASE("the include options default to refusing an outside link", "[urdf][xacro][include][options]")
+{
+    REQUIRE_FALSE(meios::include_options{}.follow_outside_links);
+    REQUIRE_FALSE(meios::load_options{}.includes.follow_outside_links);
+}
+
+TEST_CASE("a caller following outside links reads a sibling link that leaves the document's directory", "[urdf][xacro][include][options]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path outside = held.write("outside/leaf.xacro", include_tree::binds("outside"));
+    const std::filesystem::path top     = held.write("doc/top.xacro", include_tree::reads_leaf("leaf.xacro"));
+    if(!include_tree::linked(outside, held.root() / "doc" / "leaf.xacro"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources;
+
+    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, following()), "outside"));
+    REQUIRE(xacro_probe::errors(records) == 0);
+    const include_tree::expansion_result unset = expand_with(top, sources, log, meios::include_options{});
+    REQUIRE_FALSE(unset.has_value());
+    REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
+}
+
+TEST_CASE("a dangling sibling link is looked for in the configured sources when outside links are followed", "[urdf][xacro][include][options]")
+{
+    const include_tree::tree held;
+    held.write("root/leaf.xacro", include_tree::binds("fallback"));
+    std::filesystem::create_directories(held.root() / "outside");
+    const std::filesystem::path top = held.write("doc/top.xacro", include_tree::reads_leaf("leaf.xacro"));
+    if(!include_tree::linked(held.root() / "outside" / "leaf.xacro", held.root() / "doc" / "leaf.xacro"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+
+    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, following()), "fallback"));
+    REQUIRE(xacro_probe::errors(records) == 0);
 }

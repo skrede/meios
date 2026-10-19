@@ -90,8 +90,7 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, located_include &found, const st
 
 bool refuse_cycle(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key)
 {
-    return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                "xacro:include cycle detected re-entering \"" + key.string() + '"');
+    return fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:include cycle detected re-entering \"" + key.string() + '"');
 }
 
 bool enter(expand_ctx &ctx, pugi::xml_node in, located_include found, pugi::xml_node out)
@@ -128,6 +127,17 @@ bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &normali
                     + std::string(to_string(cause.operation)) + " failed: " + cause.native.message());
 }
 
+// The layer that served the document would not serve where the link points, so it carries no served record.
+bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &linked, const std::string &normalized, const std::string &written, pugi::xml_node out)
+{
+    const beside_probe probe = probe_unbounded(linked);
+    if(probe.cause)
+        return refuse_probe(ctx, in, normalized, *probe.cause);
+    if(!probe.hit)
+        return include_from_sources(ctx, in, {}, normalized, written, out);
+    return enter(ctx, in, located_include{ *probe.hit, linked, std::nullopt }, out);
+}
+
 // A file beside the document is the one the spelling names, so one that escapes the document's
 // directory refuses rather than letting a configured root's same-named copy stand in for it.
 bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, const std::string &written, pugi::xml_node out)
@@ -135,9 +145,10 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     const beside_probe probe = probe_beside(anchor, normalized);
     if(probe.cause)
         return refuse_probe(ctx, in, normalized, *probe.cause);
+    if(probe.uncontained && ctx.includes.follow_outside_links)
+        return include_outside(ctx, in, anchor / normalized, normalized, written, out);
     if(probe.uncontained)
-        return fail(ctx, in, diagnostic_code::uncontained_asset,
-                    "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
+        return fail(ctx, in, diagnostic_code::uncontained_asset, "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
     std::optional<served_document> sibling;
     if(ctx.served)
         sibling = sibling_of(*ctx.served, normalized);
@@ -180,7 +191,7 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     std::string normalized = normalize_relative(relative, escaped);
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "xacro:include target \"" + relative + "\" escapes the source root");
+                    "xacro:include target \"" + relative + (anchor.empty() ? "\" escapes the source root" : "\" climbs above the directory of the document that writes it"));
     if(!anchor.empty())
         return include_beside(ctx, in, anchor, normalized, relative, out);
     return include_from_sources(ctx, in, target.package, normalized, relative, out);
