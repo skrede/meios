@@ -32,7 +32,9 @@ namespace differential
 // binding needs. The first three fields are spelled exactly as differential.py's own tuple spells
 // them, so an id names the same fixture and the same rendered file whichever side wrote it. A
 // probe both sides refuse also names the cause each side must give. The root, relative to the
-// probe directory, is a configured source this side alone is handed: upstream consults none.
+// probe directory, is a configured source this side alone is handed: upstream consults none. The
+// include options, like the root, are this side's alone, because upstream always reads what they
+// admit.
 struct agreement_probe
 {
     std::string_view id;
@@ -41,7 +43,22 @@ struct agreement_probe
     std::optional<meios::diagnostic_code> refuses;
     std::string_view upstream_cause;
     std::string_view root;
+    meios::include_options includes;
 };
+
+inline meios::include_options follows_outside_links()
+{
+    meios::include_options options;
+    options.follow_outside_links = true;
+    return options;
+}
+
+inline meios::include_options climbs_above_document()
+{
+    meios::include_options options;
+    options.climb_above_document = true;
+    return options;
+}
 
 inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"property_default_over_argument", "property_default_over_argument", {}},
@@ -92,6 +109,8 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"include_in_macro_body", "include_in_macro_body", {}},
         agreement_probe{"block_include_never_inserted", "block_include_never_inserted", {}},
         agreement_probe{"include_linked_document", "include_linked_document", {}},
+        agreement_probe{"include_parent_directory_climbed", "include_parent_directory", {}, std::nullopt, {}, {}, climbs_above_document()},
+        agreement_probe{"include_outside_link_followed", "include_outside_link", {}, std::nullopt, {}, {}, follows_outside_links()},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same
@@ -149,7 +168,8 @@ inline void compare_agreement_probe(const agreement_probe &one, const std::strin
     REQUIRE(std::filesystem::exists(agreement_fixture(one)));
     const std::string upstream_text = slurp(scratch);
     meios::load_options opts;
-    opts.args = one.args;
+    opts.args     = one.args;
+    opts.includes = one.includes;
     if(!one.root.empty())
         opts.package_roots.push_back(agreement_root(one));
     const meios::expected<meios::load_result, meios::load_error> loaded = meios::load(agreement_fixture(one), opts);
@@ -158,7 +178,8 @@ inline void compare_agreement_probe(const agreement_probe &one, const std::strin
         return require_same_refusal(one, upstream_text, loaded.error());
     REQUIRE_FALSE(one.refuses.has_value());
     require_same_document(upstream_text, loaded_document(*loaded));
-    const std::optional<meios::expansion> rendered = corpus::expanded(corpus::document{agreement_fixture(one), one.args, agreement_root(one), corpus::evaluator::native, {}});
+    const std::optional<meios::expansion> rendered =
+            corpus::expanded(corpus::document{agreement_fixture(one), one.args, agreement_root(one), corpus::evaluator::native, {}}, one.includes);
     REQUIRE(rendered.has_value());
     require_same_document(upstream_text, rendered->document);
 }

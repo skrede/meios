@@ -93,3 +93,25 @@ TEST_CASE("a byte-backed layer serves the resource with no path involved", "[yam
     REQUIRE(loader("package://pkg/cfg.yaml", {}).value() == std::string("from: bytes"));
     REQUIRE(counts.errors == 0);
 }
+
+TEST_CASE("a relative spec in a byte-served document resolves only once its source has written the file", "[yaml][resource]")
+{
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    meios::source_stack sources;
+    meios::memory_source layer{sink};
+    layer.add("pkg", "urdf/a.xacro", "<robot/>").add("pkg", "urdf/c.yaml", "from: sibling");
+    sources.push_back(meios::source_handle(std::move(layer)));
+    const std::vector<std::filesystem::path> roots;
+    const meios::text_resource_loader loader = meios::detail::make_yaml_text_loader(sources, roots, sink);
+    const std::filesystem::path document     = sources.locate("pkg", "urdf/a.xacro", sink)->path();
+
+    const meios::text_resource_result before = loader("c.yaml", document);
+    REQUIRE_FALSE(before.has_value());
+    CHECK(before.error() == meios::text_resource_failure::unreachable);
+    REQUIRE(counts.errors == 1);
+
+    REQUIRE(sources.locate("pkg", "urdf/c.yaml", sink).has_value());
+    REQUIRE(loader("c.yaml", document).value() == std::string("from: sibling"));
+    REQUIRE(counts.errors == 1);
+}

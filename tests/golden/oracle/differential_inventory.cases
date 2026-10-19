@@ -191,3 +191,5 @@ include_beside_over_root	agreement
 include_in_macro_body	agreement
 block_include_never_inserted	agreement
 include_linked_document	agreement
+include_parent_directory_climbed	agreement
+include_outside_link_followed	agreement

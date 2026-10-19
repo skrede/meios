@@ -1,7 +1,7 @@
 # Known limitations
 
-meios never fails silently, and that discipline extends to its own status: this page is the candid,
-complete list of the defects and caveats that are live right now. Each is described by the effect you
+meios never fails silently, and that discipline extends to its own status: this page is the candid
+list of the defects and caveats that are live right now. Each is described by the effect you
 will see, not by the work that would close it. If a behavior below surprises you, it is documented
 here on purpose.
 
@@ -28,21 +28,67 @@ not resolve. Anchoring to the writing file needs a map from an expanded node bac
 produced it, and none is built. The `package://` form is unaffected, and it is what real descriptions
 overwhelmingly use. The full rule is in [asset resolution](asset-resolution.md).
 
-**A relative include resolves beside the document that writes it but refuses to climb above that
-directory, and falls back to the configured sources where the reference would refuse.** The reference
-joins `<xacro:include filename="arm.xacro"/>` onto the directory of the file that writes it (inside a
-macro body, the file that calls the macro) and so does this evaluator, so such a file includes with no
-source configured and a nested include reads the file beside the include that names it. Two
-differences remain. A filename that climbs out of that directory refuses here as climbing above the
-directory of the document that writes it: measured on a document whose included file includes
-`../include_parent_directory.leaf.xacro`, upstream renders the property that file binds and here the
-load refuses under `xacro_structural_error`, which is the `include_parent_directory` row the manifest
-carries. The boundary is kept on purpose, because admitting `..` means choosing a wider containment
-root, and that is a security decision rather than a parity one. And where nothing is beside the
-document, the filename is looked for through the configured sources, which the reference does not
-consult and where it refuses; the
-[evaluation page](evaluation.md#where-this-diverges-from-the-compatibility-target) states the rule. No
+**A relative include resolves beside the document that writes it, as the reference resolves it, and
+refuses to climb above that directory unless the caller admits the climb.** The reference joins
+`<xacro:include filename="arm.xacro"/>` onto the directory of the file that writes it, at the path
+that file was named by, and so does this evaluator: inside a macro body the anchor is the document that
+calls the macro, a nested include reads the file beside the include that names it, and a document
+opened through a link anchors at the link rather than at the file the link points to. A document a byte
+source served has no directory of its own to read beside, so its relative include is asked of the layer
+that served it, under that document's package and directory. A filename that climbs out of the
+document's directory refuses here as climbing above the directory of the document that writes it:
+measured on a document whose included file includes `../include_parent_directory.leaf.xacro`, upstream
+renders the property that file binds and here the load refuses under `xacro_structural_error`, which is
+the `include_parent_directory` row the manifest carries. A caller that sets
+`include_options::climb_above_document`, on `load_options::includes` or as the trailing argument of
+`meios::expand`, admits the climb exactly as the reference reads it: the spelling is joined as written
+onto the document's directory and read where the operating system resolves it, and a climb that names
+nothing refuses without consulting a configured source. That same document then renders as upstream
+renders it, which is the `include_parent_directory_climbed` verdict. Without the option, a `..` that
+stays inside the directory is resolved by its spelling and never through a link, which differs from the
+reference only where a linked directory is climbed out of: there the reference reads where the link
+leads, and this side reads the file the spelling names. Admitting the climb is a security choice, not a
+parity one. A description can then name any file the process can open, so set it only for
+descriptions you trust as much as the process itself.
+
+**A link beside the document whose target leaves the document's directory refuses unless the caller
+follows outside links.** The reference opens a file beside the including document wherever a link
+standing there points. Here the lookup beside a document is contained in the directory of the document
+that writes the include, judged on where a link leads, so a link leading out of it refuses under
+`uncontained_asset` and the configured sources are not consulted in its place. Measured on a document
+whose included file includes `part.xacro`, a link to a file one directory up: upstream renders the
+property that file binds and here the load refuses, which is the `include_outside_link` row the
+manifest carries. A caller that sets `include_options::follow_outside_links` reads the link where the
+operating system resolves it, with no bound, and the same document then renders as upstream renders
+it, which is the `include_outside_link_followed` verdict. With the option set, a dangling link is
+treated as absent and the filename is looked for through the configured sources. Following links is
+the same kind of security choice as admitting a climb: whoever can place a link beside a description
+can then have it read any file the process can open.
+
+**Where nothing is beside the document, a relative include is looked for through the configured
+sources, which the reference never consults, so a document the reference refuses can render here.**
+The reference reads a relative include beside its document or not at all. Here a miss beside the
+document, or for a document a byte source served a miss in the layer that served it, falls back to the
+configured sources, and a file one of them holds renders where the reference refuses for want of it.
+The manifest carries no row for this, because the whole-document comparison configures no source on
+either side, and with none configured both sides refuse alike; the include tests carry it instead. Two
+anchors belong to the same rule. A document expanded under no name, handed to `meios::expand` with an
+empty document path, looks for nothing beside it and goes straight to the configured sources, where the
+reference's library entry anchors such a document at the working directory. And a document named by a
+relative path anchors its relative includes at the working directory, as the reference's does. No
 pinned corpus document reaches an include that is not package-qualified, so none of them is affected.
+
+**A relative auxiliary document written in a description a byte source served resolves only once that
+source has written the file.** A source that serves bytes writes an entry into its scratch tree the
+first time that entry is looked up, and hands back the path of the file it wrote. The auxiliary-document
+reader resolves a relative spec by probing the filesystem beside the document that reads it and then
+each configured containment root; it does not ask the layer that served the document. Measured on a
+source holding `pkg/urdf/a.xacro` and `pkg/urdf/c.yaml`: a relative `c.yaml` asked for beside the
+served `a.xacro` refuses as unreachable, and the same request after `pkg/urdf/c.yaml` has itself been
+looked up returns its text. So whether such a spec resolves depends on whether something looked the
+file up first. Includes no longer behave so, since a relative include in such a document is asked of
+the layer that served it; the auxiliary-document reader does not do that yet. A spec in the package
+form, `package://` or `$(find)`, asks the source stack and is unaffected.
 
 **An absolute include filename is looked for only through the configured sources, with its leading
 separator removed, where the reference reads the file it names.** The reference opens
@@ -269,13 +315,15 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Every way this evaluator differs from canonical xacro is written down, and twenty-one of them are
-measured.** The reviewed manifest carries twenty-one rows and the differential drives them on every push
-in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
-a new one does. Twelve of the twenty-one are a meaning upstream has and this grammar refuses — the first
-five entries below, the argument helper the seventh names, the mapping key an auxiliary document did
-not write as text, which has an entry of its own further down, and an include climbing above its
-document's directory and an absolute include filename, whose entries are under sources and resolution:
+**Twenty-two ways this evaluator differs from canonical xacro are measured, and further ones no row
+can carry are written down beside them.** That is not a claim that the list is complete. The reviewed
+manifest carries twenty-two rows and the differential drives them on every push in both directions, so
+a divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
+Thirteen of the twenty-two are a meaning upstream has and this grammar refuses — the first five entries
+below, the argument helper the seventh names, the mapping key an auxiliary document did not write as
+text, which has an entry of its own further down, and an include climbing above its document's
+directory, an absolute include filename and a link beside a document leading out of its directory,
+whose entries are under sources and resolution:
 
 - A string repeated by an integer, and one string ordered against another. Only the addition of two
   strings and equality between two were measured into this grammar.
@@ -643,7 +691,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes sixty claims — the bold sentence that opens each entry above — and this table
+This page makes sixty-three claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -661,7 +709,10 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | No runtime remote fetch | Nothing, and that is the claim: it is an absent capability. Every source the library has is driven by `io_sources.*` and `io_source_stack.*`, and none of them takes a URL. |
 | Symlink-installed workspaces are covered by fixtures only | `ros_source.*` and `ros_prefix.*` over crafted layouts. Nothing builds a real `--symlink-install` workspace — which is the claim. |
 | A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
-| A relative include resolves beside its document, refuses to climb above it, and falls back to the configured sources | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The fallback is carried by `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source`; upstream has nothing to compare it with. The resolution itself is held to upstream by the five `include_` agreement verdicts of `native_differential` (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution` and `xacro_include_precedence` cases. |
+| A relative include resolves beside its document and refuses to climb above it unless the caller admits the climb | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The admitted climb is held to upstream by the `include_parent_directory_climbed` agreement verdict of `native_differential`, the same document loaded with the climb admitted and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller admitting a climb reads an include above the document's directory` and `load_include_options.an admitted climb that names nothing refuses and consults no source`. `load_include_options.an admitted climb resolves through a linked directory as the operating system does` carries both readings of a `..` through a linked directory, with the option set and unset, and `load_include_options.the include options default to refusing a climb` pins the default. The resolution itself is held to upstream by five of the `include_` agreement verdicts (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution`, `xacro_include_precedence` and `xacro_include_identity` cases. The byte-served anchor is carried by `xacro_include_served.a relative include in a document a byte source served resolves through that source` and `xacro_include_served.a served document's sibling resolves the same whether or not an earlier include wrote it`. |
+| A link beside the document leading out of its directory refuses unless the caller follows outside links | The `include_outside_link` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a link beside the document that escapes it refuses without falling through`. The followed link is held to upstream by the `include_outside_link_followed` agreement verdict of `native_differential`, the same document loaded with outside links followed and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller following outside links reads a sibling link that leaves the document's directory` and `load_include_options.a dangling sibling link is looked for in the configured sources when outside links are followed`; `load_include_options.the include options default to refusing an outside link` pins the default. The fixture's link is a committed symbolic link, so the comparison runs where the fresh-render job runs, on Linux. |
+| A relative include falls back to the configured sources where the reference refuses | No manifest row, because the whole-document comparison configures no source. `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source` and `xacro_include_served.a sibling the serving layer lacks falls back to the configured sources`; upstream has nothing to compare either with. The unnamed document is carried by `xacro_include_resolution.a document expanded under no name looks for nothing beside it`, and the relative document path by `xacro_include_resolution.a document named by a relative path anchors its relative includes at the working directory`. |
+| A relative auxiliary document in a byte-served description resolves only once its source has written the file | `yaml_resource.a relative spec in a byte-served document resolves only once its source has written the file`, which asserts both the refusal before the file is written and the text after. |
 | An absolute include filename is looked for only through the configured sources | The `include_absolute_path` row of the divergence manifest, driven as a whole document through both implementations, each binding the argument the include is built from to the directory it reads the document from, beside `xacro_include_resolution.an absolute include spelling is not looked for beside its document`, which pins this side's refusal and its message. |
 | A byte-serving source leaks its scratch tree where an open file cannot be deleted | `io_sources.the scratch tree is removed when the source that owns it dies` and the `scratch_teardown.*` stems, which drive removal stopping at its first error. The platform that will not delete an open file is not one the suite runs on. |
 | A narrow window between creating a scratch root and narrowing it | Nothing drives the window itself. Its two ends are carried: `scratch_setup.the candidate loop takes the first free name and exhausts at its bound` and `scratch_setup.a root that could not be narrowed is removed and refused`. |
@@ -702,7 +753,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| Twenty-one measured differences | The twenty-one rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Twenty-two measured differences | The twenty-two rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |
 | A block parameter left without an element renders when the macro never inserts it | The `include_sole_block` row of the divergence manifest, driven as a whole document through both implementations, for the include instance. The other shapes the entry names, a call holding only a property, an empty call, a `**` parameter and the refusal on both sides where the block is inserted, are carried by the measurement the entry states and by nothing that runs. |
 | An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |

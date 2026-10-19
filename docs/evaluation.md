@@ -339,14 +339,30 @@ comparison fails if it stops reproducing exactly as much as it fails if a new on
 
 **A relative include resolves against the document that writes it, then through the configured
 sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
-being processed (the including document, and inside a macro body the document that calls the macro)
-and consults nothing else. The same anchor is taken here, so a nested include reads the file beside
-the include that names it, and a configured root holding a same-named file does not stand in for it.
+being processed (the including document, and inside a macro body the document that calls the macro),
+at the path that file was named by, and consults nothing else. The same anchor is taken here, so a
+nested include reads the file beside the include that names it, a document opened through a link
+anchors at the link, and a configured root holding a same-named file does not stand in for the file
+beside the document. A document a byte source served is asked of the layer that served it instead.
 Where nothing is beside that document, the filename is then looked for through the configured
 sources, which the reference does not consult, so a document the reference refuses for want of that
-file can render here. A filename climbing above that directory with `..` refuses here as climbing above
-the directory of the document that writes it and is read there. That one is a reviewed divergence, so
-the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+file can render here. A document expanded under no name looks for nothing beside it, where the
+reference's library entry anchors it at the working directory. Two lookups the reference makes are
+refused here by default: a filename climbing above that directory with `..` refuses as climbing above
+the directory of the document that writes it, and a link beside the document whose target leaves its
+directory refuses under `uncontained_asset`. The reference reads both. Each is a reviewed divergence,
+so the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
+**Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
+carries `climb_above_document`, which admits a relative include climbing above its document's
+directory, joined as written and read where the operating system resolves it, and
+`follow_outside_links`, which reads a link beside the document wherever it leads. With one set, the
+document its refusal stopped renders as the reference renders it, and the comparison holds each
+opted-in document to a fresh upstream render beside the default refusal of the same document. Both
+are `false` on `load_options::includes` and on every `meios::expand` call that does not pass them.
+Only the calling program sets them: a description cannot, and the `meios` command line exposes
+neither. Setting one lets a description read any file the process can open, so it is a decision about
+how far the description is trusted, not about parity.
 
 **An absolute include filename refuses here and is read there.** The reference opens an include
 written as an absolute path where it points. Here the leading separator is dropped and the rest is
@@ -485,7 +501,10 @@ What is compared, exactly:
   sit six documents over a block argument the macro never inserts: a property, a global write, an emitting call and an include inside it, and an unbound name under each
   kind of block parameter. Four more hold a relative include to the reference's anchor, one of them
   driven a second time with a configured root holding a same-named file: a file beside its document, a
-  nested include, an include written in a macro body, and a document opened through a link. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
+  nested include, an include written in a macro body, and a document opened through a link. Two more
+  are loaded under a caller's include options: the climbing document with the climb admitted, and a
+  document whose included file includes a link leading out of its directory, with outside links
+  followed. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
   document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
@@ -582,13 +601,19 @@ always the top-level one:
   matches the compatibility target and is not obvious from reading the macro: a macro that loads a
   configuration sitting beside its own definition will not find it when called from elsewhere.
 - A document served as bytes by a source layer does have a directory: such a layer materializes the
-  bytes into a scratch area it owns and hands back the path of the file it wrote, so a relative spec
-  written in that document resolves beside it exactly as it would beside a document read off disk.
-  The scratch tree lives for as long as the source does. Source kind does not distinguish the two
-  package spec forms: they split into the same package/relative pair and read the returned file's
-  text.
+  bytes into a scratch area it owns and hands back the path of the file it wrote, and a relative spec
+  written in that document is probed beside that path. The layer writes an entry into that area only
+  the first time the entry is looked up, and this reader does not ask the layer, so a sibling the
+  layer holds but has not yet written is not found: measured on a layer holding `a.xacro` and
+  `c.yaml` side by side, a relative `c.yaml` in the served `a.xacro` refuses as unreachable until
+  `c.yaml` has itself been looked up, and resolves after. The scratch tree lives for as long as the
+  source does. Source kind does not distinguish the two package spec forms: they split into the same
+  package/relative pair and read the returned file's text.
 
-A relative `<xacro:include>` filename follows the same anchor.
+A relative `<xacro:include>` filename follows the anchor of the document that writes it, at the path
+that document was named by, and where nothing is there it falls back to the configured sources. A
+document a byte source served differs here from the reader above: its relative include is asked of the
+layer that served it, so it resolves whether or not that layer has written the sibling yet.
 
 **Windows may over-refuse, and it is unmeasured.** Containment canonicalizes both paths and then
 compares them lexically, with no case folding and no expansion of short (8.3) path names of its own.

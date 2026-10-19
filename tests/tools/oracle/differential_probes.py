@@ -37,7 +37,8 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "include_parent_directory",
                    "include_absolute_path",
                    "include_sole_block",
-                   "dirname_command")
+                   "dirname_command",
+                   "include_outside_link")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # A committed fixture cannot spell a machine's absolute path, so these probes are handed the
@@ -94,4 +95,6 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_beside_over_root", "include_nested_beside", None),
                     ("include_in_macro_body", "include_in_macro_body", None),
                     ("block_include_never_inserted", "block_include_never_inserted", None),
-                    ("include_linked_document", "include_linked_document", None))
+                    ("include_linked_document", "include_linked_document", None),
+                    ("include_parent_directory_climbed", "include_parent_directory", None),
+                    ("include_outside_link_followed", "include_outside_link", None))
