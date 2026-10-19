@@ -34,7 +34,7 @@ TEST_CASE("an argument command written inside another refuses at its first level
 
     CHECK_FALSE(deep.survived);
     REQUIRE(deep.messages.size() == 1);
-    CHECK(deep.messages.front().find("unterminated $( substitution span") != std::string::npos);
+    CHECK(deep.messages.front().find("a command's text holds '$('") != std::string::npos);
 }
 
 TEST_CASE("nested expression spans refuse one level past what the ceiling admits", "[native][depth]")

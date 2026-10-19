@@ -112,3 +112,19 @@ TEST_CASE("scan_args reads no default from a second word in a reference", "[xacr
     REQUIRE(height != nullptr);
     REQUIRE_FALSE(height->default_value.has_value());
 }
+
+TEST_CASE("a reference whose name a substitution builds is not listed as an argument", "[xacro][arg_scan]")
+{
+    const std::string_view doc =
+        R"XML(<?xml version="1.0"?>
+<robot name="r" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="d" default="1"/>
+  <link name="$(arg ${w})"/>
+  <link name="$(arg ${a + b})"/>
+</robot>)XML";
+    meios::log_sink silent;
+    const std::vector<meios::arg_declaration> args = meios::scan_args(doc, silent);
+
+    REQUIRE(args.size() == 1);
+    CHECK(args[0].name == "d");
+}

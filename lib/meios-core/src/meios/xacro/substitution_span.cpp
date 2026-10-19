@@ -46,17 +46,31 @@ std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
     return raw.find(')', opener + 1);
 }
 
+bool refuse_held(subst_ctx &ctx, std::string_view held)
+{
+    const std::string message = "a command's text holds '" + std::string(held) + "', which a command cannot hold: it ends at its first ')'";
+    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
+    record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
+    return true;
+}
+
 // Upstream's command scanner refuses a '$' or a '(' left in a command's resolved text, so a span
 // nested in a command and a parenthesis among its words refuse alike.
 bool refuse_command_text(subst_ctx &ctx, std::string_view text, std::string_view refused)
 {
     const std::size_t at = text.find_first_of(refused);
-    if(at == std::string_view::npos)
+    return at != std::string_view::npos && refuse_held(ctx, text.substr(at, 1));
+}
+
+// A command written inside another ends the outer one at its own ')', which leaves the inner
+// opener with no close, so it is refused at the outer span before the inner scan would report the
+// inner span as unterminated.
+bool refuse_nested_command(subst_ctx &ctx, std::string_view inner, std::size_t span_offset)
+{
+    if(leading_command(inner) == "eval" || inner.find("$(") == std::string_view::npos)
         return false;
-    const std::string message = std::string("a command's text holds '") + text[at] + "', which a command cannot hold: it ends at its first ')'";
-    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
-    return true;
+    refine_span_column(ctx, span_offset);
+    return refuse_held(ctx, "$(");
 }
 
 bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at)
@@ -108,6 +122,8 @@ bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::
 std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string_view inner,
                                         std::size_t span_offset)
 {
+    if(opener == '(' && refuse_nested_command(ctx, inner, span_offset))
+        return std::nullopt;
     std::string resolved;
     if(!scan_nested(ctx, inner, resolved, span_offset + 2))
         return std::nullopt;

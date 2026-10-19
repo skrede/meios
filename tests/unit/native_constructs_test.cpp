@@ -109,7 +109,7 @@ TEST_CASE("a spelling the vocabulary does not carry resolves to nothing", "[nati
 
 TEST_CASE("a load exercising nothing in the vocabulary reports nothing", "[native][constructs]")
 {
-    const load_result got = read("pi + 1");
+    const load_result got = read("pi + abs(-1) + min(1, 2) + max(1, 2)");
 
     CHECK(got.ok);
     CHECK(got.exercised.empty());

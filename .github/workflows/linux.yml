@@ -1101,7 +1101,9 @@ jobs:
           ctest -R flatten_instrument --output-on-failure --no-tests=error
 
       # Each pinned entry point's ledger row, its constructs and its divergence
-      # column are held to a live load of that entry point. Blocking.
+      # column are held to a live load of that entry point. Blocking. The live
+      # case is the one compiled only with the auxiliary-format module, so it is
+      # counted on its own.
       - name: Test the compatibility ledger
         run: |
           cd build
@@ -1111,4 +1113,10 @@ jobs:
             exit 1
           fi
           echo "compatibility_ledger registered $registered test(s)"
+          live=$(ctest -N -R 'each pinned entry point exercises and loads to what its ledger row records' | grep -c 'Test *#' || true)
+          if [ "$live" -eq 0 ]; then
+            echo "compatibility_ledger registered no live-load case"
+            exit 1
+          fi
+          echo "compatibility_ledger registered $live live-load case(s)"
           ctest -R '^compatibility_ledger\.' --output-on-failure --no-tests=error

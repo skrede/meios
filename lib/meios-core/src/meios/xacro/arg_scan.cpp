@@ -48,7 +48,7 @@ void note_reference(std::string_view inner, std::vector<arg_declaration> &out)
         return;
     const std::size_t stop = inner.find_first_of(space, begin);
     const std::string_view name = inner.substr(begin, stop - begin);
-    if(!seen(out, name))
+    if(name.find('$') == std::string_view::npos && !seen(out, name))
         out.push_back({ std::string(name), std::nullopt });
 }
 

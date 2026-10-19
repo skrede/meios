@@ -142,7 +142,8 @@ TEST_CASE("a spelling outside the table resolves to nothing", "[accepted_forms]"
 // The vocabulary a load reports is the one closed table in the library naming what an expression
 // exercised, so a member added there without a form here fails. Its two coarser members are the
 // unit tag, which this enumeration splits into the six tags the conversion table closes over, and
-// the mathematics call, which it splits into the fifteen functions the evaluator closes over.
+// the mathematics call, which it splits into the twelve functions the evaluator carries from the
+// mathematics module; the builtins abs, min and max are forms the member does not cover.
 TEST_CASE("every construct the load vocabulary names is an accepted form", "[accepted_forms]")
 {
     for(const meios::construct_spelling &one : meios::construct_spellings)

@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "reference_names.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
@@ -76,7 +77,7 @@ value parse_call(parser &p, std::string_view name)
         do { args.push_back(parse_ternary(p)); } while(p.accept(token_kind::comma));
     if(!p.accept(token_kind::rparen)) return p.fail("expected ')' after arguments");
     const value result = call_math(p, name, args);
-    if(p.ok)
+    if(p.ok && listed(mathematics_names, name))
         p.exercised(evaluator_construct::math_call);
     return result;
 }

@@ -66,7 +66,7 @@ foreach(stem IN ITEMS arg_scan cmake_listfile_scope)
             PRIVATE meios::core meios::model meios::xacro Catch2::Catch2WithMain)
         meios_enable_coverage(${stem}_test)
         meios_warnings(${stem}_test)
-        catch_discover_tests(${stem}_test)
+        catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
     endif()
 endforeach()
 
