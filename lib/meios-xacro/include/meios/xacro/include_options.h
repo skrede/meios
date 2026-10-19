@@ -4,9 +4,9 @@
 namespace meios
 {
 
-// Each member lifts a containment boundary a relative include keeps by default and reads what
-// upstream xacro reads with no bound, so a description can then name any file the process can
-// open; only the caller sets them.
+// climb_above_document lifts a relative include's boundary; follow_outside_links lifts the one an
+// include, an auxiliary document and an asset beside its document keep. Each reads what the operating
+// system resolves with no bound, so a description can name any file the process can open; only the caller sets them.
 struct include_options
 {
     include_options()

@@ -32,50 +32,6 @@ std::filesystem::path document_base(const parse_context &ctx)
     return absolute_base(ctx.document).parent_path();
 }
 
-// A root the filesystem could not traverse neither contains nor excludes the candidate: it
-// retains its failure for an exhausted search and yields to the next root, which discards it.
-bool contains(const std::filesystem::path &root, const std::filesystem::path &candidate, std::optional<std::filesystem::path> &real, std::optional<operation_failure> &retained)
-{
-    contained_path_result under = try_contained_under(root, candidate);
-    if(!under)
-    {
-        if(!retained)
-            retained = under.error();
-        return false;
-    }
-    real = std::move(*under);
-    return real.has_value();
-}
-
-contained_path_result first_container(const std::filesystem::path &candidate, const parse_context &ctx)
-{
-    std::optional<std::filesystem::path> real;
-    std::optional<operation_failure> retained;
-    for(const std::filesystem::path &root : ctx.package_roots)
-        if(contains(absolute_base(root), candidate, real, retained))
-            return real;
-    if(contains(document_base(ctx), candidate, real, retained))
-        return real;
-    if(retained)
-        return unexpected<operation_failure>(*retained);
-    return std::optional<std::filesystem::path>{};
-}
-
-// A path no root contains is unreachable and a path a root contains but the filesystem does
-// not hold as a regular file is absent; only the second is the missing-asset policy's business.
-std::optional<std::string> resolve_contained(const std::filesystem::path &candidate, parse_context &ctx, const source_location &loc, const std::string &uri)
-{
-    const contained_path_result real = first_container(candidate, ctx);
-    if(!real)
-        return report_cause(ctx, loc, uri, real.error());
-    if(!*real)
-    {
-        report_unreachable(ctx, loc, uri);
-        return std::nullopt;
-    }
-    return asset_or_missing(**real, ctx, loc, uri);
-}
-
 std::optional<std::string> package_result(const std::string &uri, source_lookup_result hit, parse_context &ctx, const source_location &loc)
 {
     if(!hit)
@@ -144,7 +100,7 @@ std::optional<std::string> resolve_absolute(const std::string &uri, bool file_sc
         ctx.log.log(level::error, diagnostic_code::malformed_asset_uri, loc, "asset '" + uri + "' does not normalize to an absolute path");
         return std::nullopt;
     }
-    return resolve_contained(candidate, ctx, loc, uri);
+    return resolve_contained(candidate, std::filesystem::path{}, ctx, loc, uri);
 }
 
 // The form a path was written in must not change what it is allowed to reach, so a relative
@@ -152,7 +108,7 @@ std::optional<std::string> resolve_absolute(const std::string &uri, bool file_sc
 // containment rule an absolute path is.
 std::optional<std::string> resolve_relative(const std::string &uri, parse_context &ctx, const source_location &loc)
 {
-    return resolve_contained(document_base(ctx) / uri, ctx, loc, uri);
+    return resolve_contained(document_base(ctx) / uri, uri, ctx, loc, uri);
 }
 
 // The scheme is resolved once and carried into the arms that need it. Each arm recomputing it

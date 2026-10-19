@@ -7,6 +7,7 @@
 
 #include <string>
 #include <optional>
+#include <filesystem>
 #include <string_view>
 
 namespace meios::detail
@@ -32,6 +33,13 @@ std::string_view file_authority(std::string_view uri);
 // Strips the scheme and percent-decodes, so a file:// URI becomes the plain absolute path it
 // names and from there travels the identical code path a bare absolute path does.
 std::string file_uri_to_path(std::string_view uri);
+
+// A path no root contains is unreachable and a path a root contains but the filesystem does
+// not hold as a regular file is absent; only the second is the missing-asset policy's business.
+// The spelling is a relative reference as written, empty for every other form, so only a relative
+// reference beside its document can follow a link out when the caller follows outside links.
+std::optional<std::string> resolve_contained(const std::filesystem::path &candidate, const std::filesystem::path &spelling,
+                                             parse_context &ctx, const source_location &loc, const std::string &uri);
 
 // Answers the path an asset URI names, or empty once it has said why there is none. Every
 // form a description can author reaches it, and none of them leaves without either a path

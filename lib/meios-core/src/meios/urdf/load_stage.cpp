@@ -166,7 +166,7 @@ expected<load_result, load_error> drive_load(const std::filesystem::path &path, 
 
     world_recorder recorder(window.log(), opts.topology);
     core_evaluator eval;
-    parse_context ctx{sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials, opts.strict, path, completeness::none, opts.package_roots};
+    parse_context ctx{sources, eval, window.log(), opts.on_missing, opts.topology, opts.materials, opts.strict, path, completeness::none, opts.package_roots, opts.includes};
     probe.entered(load_stage_point::drive);
     const std::optional<expansion_error> refused = drive(*bytes, path, sniff.expandable, opts, ctx, recorder);
     probe.entered(load_stage_point::assemble);
