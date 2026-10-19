@@ -148,6 +148,19 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     return include_from_sources(ctx, in, {}, normalized, written, out);
 }
 
+// Upstream opens the spelling joined as written, so `..` resolves against the real directories it
+// passes through, and a miss is looked for nowhere else.
+bool include_climbing(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &written, pugi::xml_node out)
+{
+    const std::filesystem::path joined = anchor / written;
+    const beside_probe probe = probe_unbounded(joined);
+    if(probe.cause)
+        return refuse_probe(ctx, in, written, *probe.cause);
+    if(!probe.hit)
+        return fail(ctx, in, diagnostic_code::unresolved_include, "xacro:include could not resolve \"" + written + "\": looked for it at \"" + joined.string() + '"');
+    return enter(ctx, in, located_include{ *probe.hit, joined, std::nullopt }, out);
+}
+
 }
 
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
@@ -160,12 +173,14 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     std::string relative = substitute_attr(ctx, in, target.relative, document, ok);
     if(!ok)
         return false;
+    const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);
+    if(!anchor.empty() && ctx.includes.climb_above_document && climbs(relative))
+        return include_climbing(ctx, in, anchor, relative, out);
     bool escaped = false;
     std::string normalized = normalize_relative(relative, escaped);
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "xacro:include target \"" + relative + "\" escapes the source root");
-    const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);
     if(!anchor.empty())
         return include_beside(ctx, in, anchor, normalized, relative, out);
     return include_from_sources(ctx, in, target.package, normalized, relative, out);

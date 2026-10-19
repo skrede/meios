@@ -18,6 +18,8 @@ include_target split_target(std::string_view raw);
 
 std::string normalize_relative(std::string_view rel, bool &escaped);
 
+bool climbs(std::string_view relative);
+
 // The key is the file found, never the spelling that found it.
 std::filesystem::path located_key(const std::filesystem::path &located);
 

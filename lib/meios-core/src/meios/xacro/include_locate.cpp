@@ -40,6 +40,18 @@ struct observed_layer
     }
 };
 
+beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset found)
+{
+    std::error_code error;
+    const std::filesystem::file_status status = std::filesystem::status(candidate, error);
+    const bool absent = error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
+    if(error && !absent)
+        return { std::nullopt, operation_failure{ operation_kind::status, error }, false };
+    if(absent || !std::filesystem::exists(status))
+        return { std::nullopt, std::nullopt, false };
+    return { std::move(found), std::nullopt, false };
+}
+
 }
 
 // Logs nothing: a miss falls through to the configured sources, and a logged rejection would
@@ -56,13 +68,13 @@ beside_probe probe_beside(const std::filesystem::path &anchor, const std::string
         return { std::nullopt, contained.error(), false };
     if(!*contained)
         return { std::nullopt, std::nullopt, true };
-    const std::filesystem::file_status status = std::filesystem::status(**contained, error);
-    const bool absent = error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
-    if(error && !absent)
-        return { std::nullopt, operation_failure{ operation_kind::status, error }, false };
-    if(absent || !std::filesystem::exists(status))
-        return { std::nullopt, std::nullopt, false };
-    return { resolved_asset{ **contained, root, (**contained).lexically_relative(root) }, std::nullopt, false };
+    return probe_status(**contained, resolved_asset{ **contained, root, (**contained).lexically_relative(root) });
+}
+
+// A hit carries no source root, so it is read as the operating system opens the path.
+beside_probe probe_unbounded(const std::filesystem::path &candidate)
+{
+    return probe_status(candidate, resolved_asset{ candidate });
 }
 
 std::optional<served_hit> locate_served(source_stack &sources, std::string_view package, std::string_view relative, log_sink &log)

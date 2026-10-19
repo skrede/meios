@@ -14,6 +14,7 @@
 #include "meios/expected.h"
 
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/include_options.h"
 
 #ifdef MEIOS_HAS_YAML
     #include "meios/yaml/parser.h"
@@ -48,6 +49,7 @@ struct load_options
           materials(material_policy::warn),
           strict(strictness::fail),
           eval(eval_policy::fail),
+          includes(),
           backend(),
           yaml(),
           package_roots(),
@@ -63,6 +65,7 @@ struct load_options
     material_policy materials;
     strictness      strict;
     eval_policy     eval;
+    include_options includes;
 
     std::shared_ptr<evaluator_handle> backend;
 

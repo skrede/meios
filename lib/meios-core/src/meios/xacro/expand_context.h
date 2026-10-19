@@ -7,6 +7,7 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/include_options.h"
 #include "meios/xacro/evaluator_limits.h"
 
 #include "meios/diagnostic/level.h"
@@ -102,12 +103,14 @@ private:
 // macro bodies stay live across files.
 struct expand_ctx
 {
-    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, eval_policy policy,
+    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
+               const include_options &inc, eval_policy policy,
                const std::shared_ptr<evaluator_handle> &inject, log_sink &lg);
 
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
+    const include_options &includes;
     // One load, one set of evaluator ceilings and counters: nothing a caller may share
     // between two loads reaches them.
     evaluator_limits eval_limits;

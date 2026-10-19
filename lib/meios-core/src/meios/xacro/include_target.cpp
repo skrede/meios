@@ -56,6 +56,20 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     return out;
 }
 
+bool climbs(std::string_view relative)
+{
+    for(std::size_t i = 0; i <= relative.size();)
+    {
+        const std::size_t slash = relative.find('/', i);
+        if(relative.substr(i, slash == std::string_view::npos ? slash : slash - i) == "..")
+            return true;
+        if(slash == std::string_view::npos)
+            break;
+        i = slash + 1;
+    }
+    return false;
+}
+
 std::filesystem::path located_key(const std::filesystem::path &located)
 {
     std::error_code canon_ec;

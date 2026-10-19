@@ -1,5 +1,5 @@
 foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation
-        load_policy_refusal load_report load_arg_domain xacro_include_served)
+        load_policy_refusal load_report load_arg_domain xacro_include_served load_include_options)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})
         add_executable(${stem}_test ${load_test_src})
@@ -8,7 +8,7 @@ foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure
                 Catch2::Catch2WithMain)
         target_compile_definitions(${stem}_test PRIVATE
             MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")
-        if(stem STREQUAL "load_arg_domain")
+        if(stem STREQUAL "load_arg_domain" OR stem STREQUAL "load_include_options")
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()

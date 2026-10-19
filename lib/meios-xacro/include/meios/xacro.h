@@ -10,6 +10,7 @@
 #include "meios/xacro/substitution.h"
 #include "meios/xacro/value_render.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/include_options.h"
 #include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/evaluator_handle.h"
 #include "meios/xacro/evaluator_concept.h"

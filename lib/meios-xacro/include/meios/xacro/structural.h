@@ -4,6 +4,7 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/eval_policy.h"
+#include "meios/xacro/include_options.h"
 #include "meios/xacro/evaluator_constructs.h"
 
 #include "meios/diagnostic/log_sink.h"
@@ -44,7 +45,8 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
                                             const std::filesystem::path &document,
                                             const expansion_limits &limits, eval_policy policy,
                                             const std::shared_ptr<evaluator_handle> &backend,
-                                            log_sink &log);
+                                            log_sink &log,
+                                            const include_options &includes = include_options());
 
 expected<expansion, expansion_error> expand(std::string_view source, eval_scope &scope,
                                             source_stack &sources,

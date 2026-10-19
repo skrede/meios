@@ -50,6 +50,8 @@ struct located_include
 
 beside_probe probe_beside(const std::filesystem::path &anchor, const std::string &normalized);
 
+beside_probe probe_unbounded(const std::filesystem::path &candidate);
+
 // The stack asks its layers in rank order and keeps the first answer, so the first to answer served
 // it; each is asked once, since a layer reports through its own sink and a repeat repeats its records.
 std::optional<served_hit> locate_served(source_stack &sources, std::string_view package, std::string_view relative, log_sink &log);
