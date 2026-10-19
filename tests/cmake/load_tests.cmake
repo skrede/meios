@@ -19,6 +19,11 @@ foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure
     endif()
 endforeach()
 
+# One stem and one test prefix, compiled from two sources.
+if(TARGET load_include_options_test)
+    target_sources(load_include_options_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/load_include_options_links_test.cpp)
+endif()
+
 foreach(stem IN ITEMS bundle_writer bundle_writer_pkg bundle_scanner bundle_checked_assets bundle_closure)
     set(bundle_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${bundle_test_src})

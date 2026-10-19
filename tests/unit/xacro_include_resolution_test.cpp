@@ -15,12 +15,27 @@
 #include <vector>
 #include <filesystem>
 #include <system_error>
+#include <initializer_list>
 
 using include_tree::binds;
 using include_tree::reads_leaf;
 using include_tree::expand_file;
 using include_tree::expand_text;
 using include_tree::renders_link;
+
+namespace
+{
+
+include_tree::expansion_result expand_under(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log, bool climb, bool follow)
+{
+    meios::include_options includes;
+    includes.climb_above_document = climb;
+    includes.follow_outside_links = follow;
+    meios::eval_scope scope;
+    return meios::expand(include_tree::read_file(document), scope, sources, document, meios::expansion_limits{}, meios::eval_policy::fail, {}, log, includes);
+}
+
+}
 
 TEST_CASE("a relative include beside its document resolves with no configured source", "[xacro][structural][include][resolution]")
 {
@@ -146,3 +161,38 @@ TEST_CASE("a document named by a relative path anchors its relative includes at 
     REQUIRE(renders_link(expand_text(reads_leaf("leaf.xacro"), "top.xacro", sources, log), "from_cwd"));
     REQUIRE(xacro_probe::errors(records) == 0);
 }
+
+#ifdef _WIN32
+TEST_CASE("a backslash climb is a climb where the backslash separates a path", "[xacro][structural][include][resolution]")
+{
+    const include_tree::tree held;
+    held.write("doc/leaf.xacro", binds("parent"));
+    const std::filesystem::path inner = held.write("doc/sub/inner.xacro", reads_leaf("..\\leaf.xacro"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    meios::source_stack sources;
+
+    for(bool follow : { false, true })
+    {
+        const include_tree::expansion_result refused = expand_under(inner, sources, log, false, follow);
+        REQUIRE_FALSE(refused.has_value());
+        REQUIRE(refused.error().code == meios::diagnostic_code::xacro_structural_error);
+        REQUIRE(refused.error().message.find("climbs above the directory of the document that writes it") != std::string::npos);
+    }
+    REQUIRE(renders_link(expand_under(inner, sources, log, true, false), "parent"));
+}
+#else
+TEST_CASE("a backslash is part of a file name where only the slash separates a path", "[xacro][structural][include][resolution]")
+{
+    const include_tree::tree held;
+    held.write("doc/..\\leaf.xacro", binds("named"));
+    const std::filesystem::path top = held.write("doc/top.xacro", reads_leaf("..\\leaf.xacro"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    meios::source_stack sources;
+
+    REQUIRE(renders_link(expand_under(top, sources, log, false, false), "named"));
+    REQUIRE(renders_link(expand_under(top, sources, log, false, true), "named"));
+    REQUIRE(xacro_probe::errors(records) == 0);
+}
+#endif

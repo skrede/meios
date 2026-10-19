@@ -42,10 +42,10 @@ bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string 
 namespace
 {
 
-bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &normalized, const operation_failure &cause)
+bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &spelling, const std::filesystem::path &looked, const operation_failure &cause)
 {
     return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, cause,
-                "xacro:include could not look beside its document for \"" + normalized + "\": "
+                "xacro:include could not look for \"" + spelling + "\" at \"" + looked.string() + "\": "
                     + std::string(to_string(cause.operation)) + " failed: " + cause.native.message());
 }
 
@@ -54,10 +54,25 @@ bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
 {
     const beside_probe probe = probe_unbounded(linked);
     if(probe.cause)
-        return refuse_probe(ctx, in, normalized, *probe.cause);
+        return refuse_probe(ctx, in, normalized, linked, *probe.cause);
     if(!probe.hit)
         return include_from_sources(ctx, in, {}, normalized, written, out);
     return enter_include(ctx, in, located_include{ *probe.hit, linked, std::nullopt }, out);
+}
+
+// The layer answers alone: a disk probe would find the file only if something earlier had made the layer write it.
+bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_document &document, const std::string &written, pugi::xml_node out)
+{
+    std::optional<served_document> sibling = climbed_sibling(document, written);
+    if(!sibling)
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:include target \"" + written + "\" climbs out of the package \"" + document.package + "\" that served the document that writes it");
+    std::optional<resolved_asset> served = probe_served(ctx.sources, *sibling);
+    if(!served)
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not resolve \"" + written + "\": looked for it in the package \"" + sibling->package + "\" that served the document that writes it");
+    const std::filesystem::path named = served->path();
+    return enter_include(ctx, in, located_include{ std::move(*served), named, std::move(*sibling) }, out);
 }
 
 }
@@ -70,7 +85,7 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     const std::filesystem::path document = absolute_base(ctx.scope.active_document());
     const beside_probe probe             = probe_beside(document, normalized);
     if(probe.cause)
-        return refuse_probe(ctx, in, normalized, *probe.cause);
+        return refuse_probe(ctx, in, normalized, anchor / normalized, *probe.cause);
     const std::optional<std::filesystem::path> link = probe.uncontained && ctx.includes.follow_outside_links ? beside_link(document, normalized) : std::nullopt;
     if(link)
         return include_outside(ctx, in, *link, normalized, written, out);
@@ -91,10 +106,12 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
 // passes through, and a miss is looked for nowhere else.
 bool include_climbing(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &written, pugi::xml_node out)
 {
+    if(ctx.served && serves_bytes(ctx.sources, *ctx.served))
+        return include_served_climb(ctx, in, *ctx.served, written, out);
     const std::filesystem::path joined = anchor / written;
     const beside_probe probe = probe_unbounded(joined);
     if(probe.cause)
-        return refuse_probe(ctx, in, written, *probe.cause);
+        return refuse_probe(ctx, in, written, joined, *probe.cause);
     if(!probe.hit)
         return fail(ctx, in, diagnostic_code::unresolved_include, "xacro:include could not resolve \"" + written + "\": looked for it at \"" + joined.string() + '"');
     return enter_include(ctx, in, located_include{ *probe.hit, joined, std::nullopt }, out);

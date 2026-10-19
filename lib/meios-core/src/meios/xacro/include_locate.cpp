@@ -1,4 +1,5 @@
 #include "include_locate.h"
+#include "include_target.h"
 
 #include "meios/io/source_stack.h"
 #include "meios/io/source_handle.h"
@@ -93,6 +94,20 @@ served_document sibling_of(const served_document &served, const std::string &nor
 std::optional<resolved_asset> probe_served(source_stack &sources, const served_document &sibling)
 {
     return sources.layers()[sibling.layer].locate(sibling.package, sibling.relative);
+}
+
+bool serves_bytes(source_stack &sources, const served_document &served)
+{
+    return sources.layers()[served.layer].capabilities().kind != source_kind::directory;
+}
+
+std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written)
+{
+    bool escaped = false;
+    std::string relative = normalize_relative((std::filesystem::path(served.relative).parent_path() / written).generic_string(), escaped);
+    if(escaped)
+        return std::nullopt;
+    return served_document{ served.layer, served.package, std::move(relative) };
 }
 
 }

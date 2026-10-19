@@ -60,6 +60,11 @@ served_document sibling_of(const served_document &served, const std::string &nor
 
 std::optional<resolved_asset> probe_served(source_stack &sources, const served_document &sibling);
 
+bool serves_bytes(source_stack &sources, const served_document &served);
+
+// Empty when the spelling, joined onto the served document's directory, leaves its package.
+std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written);
+
 }
 
 #endif

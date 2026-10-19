@@ -112,10 +112,10 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(!ok)
         return false;
     const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);
-    if(!anchor.empty() && ctx.includes.climb_above_document && climbs(relative))
-        return include_climbing(ctx, in, anchor, relative, out);
     bool escaped = false;
     std::string normalized = normalize_relative(relative, escaped);
+    if(escaped && !anchor.empty() && ctx.includes.climb_above_document)
+        return include_climbing(ctx, in, anchor, relative, out);
     if(escaped)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "xacro:include target \"" + relative

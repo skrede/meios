@@ -10,6 +10,13 @@
 namespace meios::detail
 {
 
+namespace
+{
+
+constexpr std::string_view separators = std::filesystem::path::preferred_separator == '\\' ? std::string_view("/\\") : std::string_view("/");
+
+}
+
 include_target split_target(std::string_view raw)
 {
     if(raw.rfind("package://", 0) == 0)
@@ -36,7 +43,7 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     escaped = false;
     for(std::size_t i = 0; i <= rel.size();)
     {
-        std::size_t slash = rel.find('/', i);
+        std::size_t slash = rel.find_first_of(separators, i);
         std::string_view seg = rel.substr(i, slash == std::string_view::npos ? slash : slash - i);
         if(seg == "..")
         {
@@ -54,20 +61,6 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     for(std::string_view part : parts)
         out += (out.empty() ? "" : "/") + std::string(part);
     return out;
-}
-
-bool climbs(std::string_view relative)
-{
-    for(std::size_t i = 0; i <= relative.size();)
-    {
-        const std::size_t slash = relative.find('/', i);
-        if(relative.substr(i, slash == std::string_view::npos ? slash : slash - i) == "..")
-            return true;
-        if(slash == std::string_view::npos)
-            break;
-        i = slash + 1;
-    }
-    return false;
 }
 
 std::filesystem::path located_key(const std::filesystem::path &located)
