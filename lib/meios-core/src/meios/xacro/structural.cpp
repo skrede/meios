@@ -29,7 +29,7 @@ void seed_document(detail::expand_ctx &ctx, std::string_view source,
     std::error_code canon_ec;
     std::filesystem::path canonical_key = std::filesystem::weakly_canonical(document, canon_ec);
     ctx.include_stack.push_back(canon_ec ? document : canonical_key);
-    ctx.scope.set_active_document(ctx.include_stack.back());
+    ctx.scope.set_active_document(document);
     ctx.origins.push_back(detail::emit_origin{ document, source });
     detail::seed_declared_args(ctx.scope, doc);
 }

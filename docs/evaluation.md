@@ -462,9 +462,9 @@ What is compared, exactly:
   an expression span supplies. Four of them hold the argument command to one name: a second word written
   over an unset and over a bound argument, and a span-built name with and without a space. Beside them
   sit six documents over a block argument the macro never inserts: a property, a global write, an emitting call and an include inside it, and an unbound name under each
-  kind of block parameter. Three more hold a relative include to the reference's anchor, one of them
+  kind of block parameter. Four more hold a relative include to the reference's anchor, one of them
   driven a second time with a configured root holding a same-named file: a file beside its document, a
-  nested include, and an include written in a macro body. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
+  nested include, an include written in a macro body, and a document opened through a link. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
   command line flattens with; the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
   document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.

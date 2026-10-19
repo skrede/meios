@@ -4,7 +4,7 @@
 foreach(stem IN ITEMS
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
         xacro_macro_defaults xacro_block xacro_include_read xacro_include_resolution
-        xacro_include_precedence xacro_subst
+        xacro_include_precedence xacro_include_identity xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
         xacro_budget xacro_depth xacro_arg xacro_arg_domain xacro_eval_command xacro_unsupported
         xacro_unsupported_location xacro_command_body

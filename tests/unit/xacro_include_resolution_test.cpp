@@ -66,6 +66,20 @@ TEST_CASE("a document expanded under no name looks for nothing beside it", "[xac
     REQUIRE(xacro_probe::errors(records) == 0);
 }
 
+TEST_CASE("a relative include found nowhere names the spelling written and both places looked", "[xacro][structural][include][resolution]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path top = held.write("doc/top.xacro", reads_leaf("./leaf.xacro"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    meios::source_stack sources{meios::directory_source{held.root() / "root", log}};
+
+    const include_tree::expansion_result out = expand_file(top, sources, log);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(out.error().message == "xacro:include could not resolve \"./leaf.xacro\": looked for it beside the document that writes it or in the configured sources");
+}
+
 TEST_CASE("an absolute include spelling is not looked for beside its document", "[xacro][structural][include][resolution]")
 {
     const include_tree::tree held;
@@ -78,6 +92,7 @@ TEST_CASE("an absolute include spelling is not looked for beside its document", 
     const include_tree::expansion_result out = expand_file(top, sources, log);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(out.error().message.find("beside") == std::string::npos);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::unresolved_include) == 1);
 }
 

@@ -18,7 +18,10 @@ include_target split_target(std::string_view raw);
 
 std::string normalize_relative(std::string_view rel, bool &escaped);
 
-std::filesystem::path include_key(const std::string &package, const std::string &normalized);
+// The key is the file found, never the spelling that found it.
+std::filesystem::path located_key(const std::filesystem::path &located);
+
+std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, bool looked_beside);
 
 }
 

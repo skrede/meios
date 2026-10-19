@@ -91,6 +91,7 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"include_beside_over_root", "include_nested_beside", {}, std::nullopt, {}, "."},
         agreement_probe{"include_in_macro_body", "include_in_macro_body", {}},
         agreement_probe{"block_include_never_inserted", "block_include_never_inserted", {}},
+        agreement_probe{"include_linked_document", "include_linked_document", {}},
 };
 
 // Document-level agreement, on the project's own normalizer applied to both sides -- the same

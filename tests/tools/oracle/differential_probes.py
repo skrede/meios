@@ -85,4 +85,5 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_nested_beside", "include_nested_beside", None),
                     ("include_beside_over_root", "include_nested_beside", None),
                     ("include_in_macro_body", "include_in_macro_body", None),
-                    ("block_include_never_inserted", "block_include_never_inserted", None))
+                    ("block_include_never_inserted", "block_include_never_inserted", None),
+                    ("include_linked_document", "include_linked_document", None))

@@ -190,3 +190,4 @@ include_nested_beside	agreement
 include_beside_over_root	agreement
 include_in_macro_body	agreement
 block_include_never_inserted	agreement
+include_linked_document	agreement

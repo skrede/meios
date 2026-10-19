@@ -15,6 +15,7 @@
 #include <sstream>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace include_tree
 {
@@ -46,6 +47,31 @@ private:
     meios::scratch_dir m_dir;
 };
 
+class working_directory
+{
+public:
+    explicit working_directory(const std::filesystem::path &to)
+            : m_saved(std::filesystem::current_path())
+    {
+        std::filesystem::current_path(to);
+    }
+
+    ~working_directory()
+    {
+        std::error_code ignored;
+        std::filesystem::current_path(m_saved, ignored);
+    }
+
+    working_directory(const working_directory &) = delete;
+    working_directory(working_directory &&)      = delete;
+
+    working_directory &operator=(const working_directory &) = delete;
+    working_directory &operator=(working_directory &&)      = delete;
+
+private:
+    std::filesystem::path m_saved;
+};
+
 inline std::string robot(std::string_view body)
 {
     return "<robot name=\"probe\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">" + std::string(body) + "</robot>";
@@ -72,12 +98,17 @@ inline expansion_result expand_text(std::string_view text, const std::filesystem
     return meios::expand(text, scope, sources, document, meios::expansion_limits{}, log);
 }
 
-inline expansion_result expand_file(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log)
+inline std::string read_file(const std::filesystem::path &document)
 {
     std::ifstream in(document, std::ios::binary);
     std::ostringstream text;
     text << in.rdbuf();
-    return expand_text(text.str(), document, sources, log);
+    return text.str();
+}
+
+inline expansion_result expand_file(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log)
+{
+    return expand_text(read_file(document), document, sources, log);
 }
 
 inline bool renders_link(const expansion_result &out, std::string_view name)

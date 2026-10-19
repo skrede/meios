@@ -56,15 +56,21 @@ std::string normalize_relative(std::string_view rel, bool &escaped)
     return out;
 }
 
-// An include located through the configured sources is identified by its package-relative
-// spelling canonicalized against the process directory, not by a location: two spellings of
-// one include must collapse onto one key.
-std::filesystem::path include_key(const std::string &package, const std::string &normalized)
+std::filesystem::path located_key(const std::filesystem::path &located)
 {
-    std::filesystem::path joined = std::filesystem::path(package) / normalized;
     std::error_code canon_ec;
-    std::filesystem::path canonical = std::filesystem::weakly_canonical(joined, canon_ec);
-    return canon_ec ? joined : canonical;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(located, canon_ec);
+    return canon_ec ? located : canonical;
+}
+
+// A spelling with no package is named as the document wrote it, because its normalized form
+// joined onto an empty package reads as an absolute path nobody wrote.
+std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, bool looked_beside)
+{
+    if(!package.empty())
+        return "xacro:include could not resolve \"" + package + '/' + normalized + '"';
+    const std::string_view beside = looked_beside ? "beside the document that writes it or " : "";
+    return "xacro:include could not resolve \"" + written + "\": looked for it " + std::string(beside) + "in the configured sources";
 }
 
 }
