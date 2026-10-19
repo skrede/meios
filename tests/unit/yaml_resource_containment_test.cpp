@@ -1,10 +1,14 @@
 #include "yaml_resource_fixture.h"
 
+#include <meios/xacro/include_options.h>
+
 #include <meios/diagnostic/log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
+#include <fstream>
 #include <filesystem>
 #include <functional>
 #include <system_error>
@@ -119,4 +123,71 @@ TEST_CASE("a link whose real target escapes the document directory is refused", 
     REQUIRE(counts.errors == 1);
 
     std::filesystem::remove_all(root);
+}
+
+TEST_CASE("a configured root reached through a link reads the resource it contains", "[yaml][resource]")
+{
+    const std::filesystem::path root = seed_tree();
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(root / "docs", root / "docs-link", ec);
+    if(ec)
+    {
+        std::filesystem::remove_all(root);
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    probe under(sink, {}, {root / "docs-link"});
+
+    const meios::text_resource_result text = under.loader("cfg.yaml", {});
+    std::filesystem::remove_all(root);
+
+    REQUIRE(text.value() == std::string("from: docs"));
+    REQUIRE(counts.errors == 0);
+}
+
+TEST_CASE("an escaping link beside the document refuses even where a configured root holds the name", "[yaml][resource]")
+{
+    const std::filesystem::path root = seed_tree();
+    std::ofstream(root / "pkg" / "link.yaml") << "from: package-link";
+    std::error_code ec;
+    std::filesystem::create_symlink(root / "outside" / "secret.yaml", root / "docs" / "link.yaml", ec);
+    if(ec)
+    {
+        std::filesystem::remove_all(root);
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    probe under(sink, root, {root / "pkg"});
+
+    const meios::text_resource_result escaped = under.loader("link.yaml", root / "docs" / "robot.xacro");
+    std::filesystem::remove_all(root);
+
+    REQUIRE_FALSE(escaped.has_value());
+    CHECK(escaped.error() == meios::text_resource_failure::uncontained);
+    REQUIRE(counts.errors == 1);
+}
+
+TEST_CASE("a traversal spec stays refused with outside links followed", "[yaml][resource]")
+{
+    const std::filesystem::path root = seed_tree();
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    meios::source_stack sources;
+    const std::vector<std::filesystem::path> roots{root};
+    meios::include_options includes;
+    includes.follow_outside_links            = true;
+    const meios::text_resource_loader loader = meios::detail::make_yaml_text_loader(sources, roots, sink, meios::default_byte_ceiling, includes);
+
+    const meios::text_resource_result escaped = loader("../../../etc/passwd", root / "docs" / "robot.xacro");
+    std::filesystem::remove_all(root);
+
+    REQUIRE_FALSE(escaped.has_value());
+    CHECK(escaped.error() == meios::text_resource_failure::uncontained);
+    REQUIRE(counts.errors == 1);
 }

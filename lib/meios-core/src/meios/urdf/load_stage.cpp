@@ -75,7 +75,7 @@ std::optional<expansion_error> drive(std::string_view bytes, const std::filesyst
     seed_caller_args(scope, opts.args);
     // The loader's bound is the evaluator's own byte ceiling: the read is where an auxiliary
     // document is allocated, and the parser's cumulative charge only runs once it is already held.
-    scope.install_text_loader(make_yaml_text_loader(ctx.sources, opts.package_roots, ctx.log, evaluator_limits{}.bytes));
+    scope.install_text_loader(make_yaml_text_loader(ctx.sources, opts.package_roots, ctx.log, evaluator_limits{}.bytes, opts.includes));
     scope.install_yaml_parser(opts.yaml);
     const expected<expansion, expansion_error> expanded = expand(bytes, scope, ctx.sources, path, expansion_limits{}, opts.eval, opts.backend, ctx.log, opts.includes);
     if(!expanded)

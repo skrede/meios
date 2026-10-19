@@ -3,7 +3,7 @@
 #include "meios/io/source_stack.h"
 #include "meios/io/source_handle.h"
 #include "meios/io/package_source.h"
-#include "meios/io/directory_source.h"
+#include "meios/io/beside_containment.h"
 
 #include <string>
 #include <cstddef>
@@ -55,20 +55,16 @@ beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset
 }
 
 // Logs nothing: a miss falls through to the configured sources, and a logged rejection would
-// latch as the terminal cause even when one of them then resolves the include. A hit is read
-// under the anchor's real directory, since the confined reader follows no link on its way down.
-beside_probe probe_beside(const std::filesystem::path &anchor, const std::string &normalized)
+// latch as the terminal cause even when one of them then resolves the include.
+beside_probe probe_beside(const std::filesystem::path &document, const std::string &normalized)
 {
-    std::error_code error;
-    const std::filesystem::path root = std::filesystem::weakly_canonical(anchor, error);
-    if(error)
-        return { std::nullopt, operation_failure{ operation_kind::canonicalize, error }, false };
-    const contained_path_result contained = try_contained_under(root, anchor / normalized);
+    const contained_read_result contained = contain_beside(document, normalized);
     if(!contained)
         return { std::nullopt, contained.error(), false };
     if(!*contained)
         return { std::nullopt, std::nullopt, true };
-    return probe_status(**contained, resolved_asset{ **contained, root, (**contained).lexically_relative(root) });
+    const contained_read &found = **contained;
+    return probe_status(found.real, resolved_asset{ found.real, found.root, found.real.lexically_relative(found.root) });
 }
 
 // A hit carries no source root, so it is read as the operating system opens the path.

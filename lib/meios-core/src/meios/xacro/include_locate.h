@@ -48,7 +48,7 @@ struct located_include
     std::optional<served_document> served;
 };
 
-beside_probe probe_beside(const std::filesystem::path &anchor, const std::string &normalized);
+beside_probe probe_beside(const std::filesystem::path &document, const std::string &normalized);
 
 beside_probe probe_unbounded(const std::filesystem::path &candidate);
 

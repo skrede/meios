@@ -5,6 +5,7 @@
 
 #include "meios/io/resolved_asset.h"
 #include "meios/io/directory_source.h"
+#include "meios/io/beside_containment.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/operation_failure.h"
@@ -61,15 +62,18 @@ bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
 
 }
 
-// A file beside the document is the one the spelling names, so one that escapes the document's
-// directory refuses rather than letting a configured root's same-named copy stand in for it.
+// A file beside the document is the one the spelling names, so one whose target lies under neither the directory the document was named in nor
+// the one it really lives in refuses, unless the caller follows outside links, rather than letting a configured root's same-named copy stand in.
+// weakly_canonical reports a dangling link as an absent file beside the document, which then falls through to the configured sources like one.
 bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
-    const beside_probe probe = probe_beside(anchor, normalized);
+    const std::filesystem::path document = absolute_base(ctx.scope.active_document());
+    const beside_probe probe             = probe_beside(document, normalized);
     if(probe.cause)
         return refuse_probe(ctx, in, normalized, *probe.cause);
-    if(probe.uncontained && ctx.includes.follow_outside_links)
-        return include_outside(ctx, in, anchor / normalized, normalized, written, out);
+    const std::optional<std::filesystem::path> link = probe.uncontained && ctx.includes.follow_outside_links ? beside_link(document, normalized) : std::nullopt;
+    if(link)
+        return include_outside(ctx, in, *link, normalized, written, out);
     if(probe.uncontained)
         return fail(ctx, in, diagnostic_code::uncontained_asset,
                     "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
