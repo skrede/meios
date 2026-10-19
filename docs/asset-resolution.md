@@ -140,11 +140,14 @@ spelling is vanishingly rare in descriptions, so it is named here rather than ac
 
 ## Containment
 
-**A path that reaches the filesystem must resolve under a configured package root or under the input
-document's directory.** Roots are tried in the order they were configured, and the document's own
-directory last. Containment is judged on the *canonicalized* candidate, never on the authored spelling,
-so a climb-out spelled through a real subdirectory and a symlink whose target leaves the root are both
-caught where a textual prefix test would miss them.
+**A path that reaches the filesystem must resolve under a configured package root or under the
+directory the input document was named in or the one it really lives in.** Roots are tried in the order
+they were configured, and the document's directory last, in both of its spellings, the rule an include
+and an auxiliary document beside it are held to. A relative mesh beside a description opened through a
+symlinked install tree therefore resolves to the file the install links to. Containment is judged on
+the *canonicalized* candidate, never on the authored spelling, so a climb-out spelled through a real
+subdirectory and a symlink whose target leaves the root are both caught where a textual prefix test
+would miss them.
 
 **One rule covers a relative climb-out and an absolute path alike**, which is the point: the form a
 path was written in cannot change what it is allowed to reach. `meshes/../../../stray.stl` and
@@ -153,6 +156,16 @@ path was written in cannot change what it is allowed to reach. `meshes/../../../
 **The escape is configuration, not a policy knob.** A consumer who wants a directory reachable
 registers it as a package root, so authority is granted per directory and named, rather than wholesale
 by lowering a setting. There is no option that turns containment off.
+
+**A caller can follow a link beside the document, and only a link.** With
+`include_options::follow_outside_links` set, on `load_options::includes` or on
+`parse_context::includes` for a caller driving the parser, a relative mesh beside the document that is
+a link leading out of both of the document's directories resolves where the link leads. That lets a
+description reach any file a link standing there names, so it is a decision about who can place files
+beside the description. A relative path climbing out and an absolute path landing outside stay refused
+with the option set: it follows a link's escape and leaves the check standing for every other path. The
+option is off unless the calling program sets it, and it reaches an include and an auxiliary document
+the same way.
 
 **No policy setting softens a containment refusal.** `uncontained_asset` is logged at error level
 unconditionally and refuses the load at every value of the missing-asset policy. That policy governs

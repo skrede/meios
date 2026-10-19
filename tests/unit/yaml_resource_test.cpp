@@ -13,6 +13,7 @@
 #include <utility>
 #include <filesystem>
 #include <functional>
+#include <system_error>
 
 using yaml_resource_test::probe;
 using yaml_resource_test::says;
@@ -114,4 +115,28 @@ TEST_CASE("a relative spec in a byte-served document resolves only once its sour
     REQUIRE(sources.locate("pkg", "urdf/c.yaml", sink).has_value());
     REQUIRE(loader("c.yaml", document).value() == std::string("from: sibling"));
     REQUIRE(counts.errors == 1);
+}
+
+TEST_CASE("a package-form spec naming a link inside its root is not read", "[yaml][resource]")
+{
+    const std::filesystem::path root = seed_tree();
+    std::error_code ec;
+    std::filesystem::create_symlink("cfg.yaml", root / "pkg" / "linked.yaml", ec);
+    if(ec)
+    {
+        std::filesystem::remove_all(root);
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    probe under(sink, root, {});
+
+    const meios::text_resource_result linked = under.loader("package://pkg/linked.yaml", root / "docs" / "robot.xacro");
+    REQUIRE_FALSE(linked.has_value());
+    CHECK(linked.error() == meios::text_resource_failure::unreachable);
+    REQUIRE(counts.errors == 1);
+    REQUIRE(says(counts, "cannot read resource \""));
+
+    std::filesystem::remove_all(root);
 }

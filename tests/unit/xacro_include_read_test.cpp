@@ -1,4 +1,5 @@
 #include "xacro_read_probe.h"
+#include "xacro_include_tree.h"
 
 #include <meios/xacro.h>
 
@@ -10,6 +11,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <vector>
 #include <algorithm>
 #include <filesystem>
@@ -103,4 +105,50 @@ TEST_CASE("an empty regular xacro:include is read and still reaches the parser",
     REQUIRE_FALSE(out.has_value());
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::unresolved_include) == 0);
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_parse_error) == 1);
+}
+
+TEST_CASE("a package include of a link pointing inside its configured root is not read",
+          "[xacro][structural][include][read]")
+{
+    const include_tree::tree held;
+    held.write("root/p/real/a.xacro", include_tree::binds("leaf"));
+    if(!include_tree::linked("real/a.xacro", held.root() / "root" / "p" / "a.xacro"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+
+    const expansion_result out = include_tree::expand_text(include_tree::reads_leaf("package://p/a.xacro"), held.root() / "doc" / "top.xacro", sources, log);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(out.error().message.starts_with("xacro:include could not read \""));
+    REQUIRE(out.error().cause.has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::uncontained_asset) == 0);
+    REQUIRE(xacro_probe::errors(records) == 1);
+}
+
+TEST_CASE("a package include of a link pointing out of its configured root refuses as uncontained",
+          "[xacro][structural][include][read]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path target = held.write("elsewhere/a.xacro", include_tree::binds("leaf"));
+    std::filesystem::create_directories(held.root() / "root" / "p");
+    if(!include_tree::linked(target, held.root() / "root" / "p" / "a.xacro"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+
+    const expansion_result out = include_tree::expand_text(include_tree::reads_leaf("package://p/a.xacro"), held.root() / "doc" / "top.xacro", sources, log);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(out.error().message == "xacro:include could not resolve \"p/a.xacro\"");
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::uncontained_asset) == 1);
+    REQUIRE(xacro_probe::errors(records) == 2);
 }

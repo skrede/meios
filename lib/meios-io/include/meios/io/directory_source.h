@@ -33,10 +33,11 @@ contained_path_result try_contained_under(const std::filesystem::path &root, con
 // Canonicalizes both and answers the canonicalized candidate only when it stays
 // within the root, logging nothing. weakly_canonical resolves symlinks, so an
 // in-root link whose real target leaves the root canonicalizes to an out-of-root
-// path and is rejected here. Symlink-install workspaces are supported at the ros
-// layer, which registers a package name to its real resolved directory before it
-// reaches this guard. A filesystem error (e.g. an over-long attacker path) fails
-// closed: the candidate is rejected rather than accepted uncanonicalized.
+// path and is rejected here. The ros layer registers a package under its resolved
+// directory, which admits a package directory reached through a link; a link to a
+// file inside a root is judged where it leads. A filesystem error (e.g. an
+// over-long attacker path) fails closed: the candidate is rejected rather than
+// accepted uncanonicalized.
 std::optional<std::filesystem::path> contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate);
 
 // Joins root/package/relative and holds it to contained_under; an escaping
