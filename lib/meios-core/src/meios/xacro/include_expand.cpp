@@ -1,8 +1,8 @@
+#include "include_locate.h"
 #include "include_target.h"
 #include "structural_detail.h"
 
 #include "meios/io/text_reader.h"
-#include "meios/io/source_stack.h"
 #include "meios/io/resolved_asset.h"
 #include "meios/io/directory_source.h"
 
@@ -20,7 +20,6 @@
 #include <utility>
 #include <optional>
 #include <filesystem>
-#include <system_error>
 
 namespace meios::detail
 {
@@ -53,23 +52,26 @@ bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
                     + read_failure_reason(failure));
 }
 
-// The active document is the path a file was named by, which anchors the relative specs written in it.
-// The key is the file that path located, which identifies it for cycle detection whatever route reached it.
-bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked, const std::filesystem::path &key, std::filesystem::path named, pugi::xml_node out)
+// The active document is the path the file was named by and the key is the file it located; a document a
+// source layer served also carries that layer and its request, so a relative include it writes is asked of
+// that layer when nothing is beside it on disk.
+bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked, const std::filesystem::path &key, located_include &found, pugi::xml_node out)
 {
     ctx.include_stack.push_back(key);
     ctx.origins.push_back(emit_origin{ key, parked });
-    std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(named));
+    std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(found.named));
+    std::optional<served_document> served = std::exchange(ctx.served, std::move(found.served));
     bool ok = process_children(ctx, doc.first_child(), out, key);
+    ctx.served = std::move(served);
     ctx.scope.set_active_document(std::move(enclosing));
     ctx.origins.pop_back();
     ctx.include_stack.pop_back();
     return ok;
 }
 
-bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit, const std::filesystem::path &key, std::filesystem::path named, pugi::xml_node out)
+bool splice(expand_ctx &ctx, pugi::xml_node in, located_include &found, const std::filesystem::path &key, pugi::xml_node out)
 {
-    text_read_result text = read_include(hit);
+    text_read_result text = read_include(found.asset);
     if(!text)
         return refuse_include(ctx, in, key, text.error());
     // load_buffer copies into the document, but macro bodies defined in this include
@@ -83,13 +85,21 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, const resolved_asset &hit, const
         return fail(ctx, offset_location(parked, parsed.offset, key),
                     diagnostic_code::xacro_parse_error,
                     std::string("xacro:include parse error: ") + parsed.description());
-    return descend(ctx, doc, parked, key, std::move(named), out);
+    return descend(ctx, doc, parked, key, found, out);
 }
 
 bool refuse_cycle(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key)
 {
     return fail(ctx, in, diagnostic_code::xacro_structural_error,
                 "xacro:include cycle detected re-entering \"" + key.string() + '"');
+}
+
+bool enter(expand_ctx &ctx, pugi::xml_node in, located_include found, pugi::xml_node out)
+{
+    const std::filesystem::path key = located_key(found.asset.path());
+    if(reenters(ctx, key))
+        return refuse_cycle(ctx, in, key);
+    return splice(ctx, in, found, key, out);
 }
 
 // Upstream joins a relative filename onto the directory of the file being processed; a spelling
@@ -104,43 +114,11 @@ std::filesystem::path beside_anchor(const expand_ctx &ctx, const std::string &pa
 
 bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
-    std::optional<resolved_asset> hit = ctx.sources.locate(package, normalized, ctx.log);
-    if(!hit)
+    std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
+    if(!found)
         return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, !beside_anchor(ctx, package, written).empty()));
-    const std::filesystem::path key = located_key(hit->path());
-    if(reenters(ctx, key))
-        return refuse_cycle(ctx, in, key);
-    return splice(ctx, in, *hit, key, hit->path(), out);
-}
-
-struct beside_probe
-{
-    std::optional<resolved_asset> hit;
-    std::optional<operation_failure> cause;
-    bool uncontained;
-};
-
-// Logs nothing: a miss falls through to the configured sources, and a logged rejection would
-// latch as the terminal cause even when one of them then resolves the include. A hit is read
-// under the anchor's real directory, since the confined reader follows no link on its way down.
-beside_probe probe_beside(const std::filesystem::path &anchor, const std::string &normalized)
-{
-    std::error_code error;
-    const std::filesystem::path root = std::filesystem::weakly_canonical(anchor, error);
-    if(error)
-        return { std::nullopt, operation_failure{ operation_kind::canonicalize, error }, false };
-    const contained_path_result contained = try_contained_under(root, anchor / normalized);
-    if(!contained)
-        return { std::nullopt, contained.error(), false };
-    if(!*contained)
-        return { std::nullopt, std::nullopt, true };
-    const std::filesystem::file_status status = std::filesystem::status(**contained, error);
-    const bool absent = error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
-    if(error && !absent)
-        return { std::nullopt, operation_failure{ operation_kind::status, error }, false };
-    if(absent || !std::filesystem::exists(status))
-        return { std::nullopt, std::nullopt, false };
-    return { resolved_asset{ **contained, root, (**contained).lexically_relative(root) }, std::nullopt, false };
+    const std::filesystem::path named = found->asset.path();
+    return enter(ctx, in, located_include{ std::move(found->asset), named, served_document{ found->layer, package, normalized } }, out);
 }
 
 bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &normalized, const operation_failure &cause)
@@ -160,12 +138,14 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     if(probe.uncontained)
         return fail(ctx, in, diagnostic_code::uncontained_asset,
                     "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
-    if(!probe.hit)
-        return include_from_sources(ctx, in, {}, normalized, written, out);
-    const std::filesystem::path key = located_key(probe.hit->path());
-    if(reenters(ctx, key))
-        return refuse_cycle(ctx, in, key);
-    return splice(ctx, in, *probe.hit, key, anchor / normalized, out);
+    std::optional<served_document> sibling;
+    if(ctx.served)
+        sibling = sibling_of(*ctx.served, normalized);
+    if(probe.hit)
+        return enter(ctx, in, located_include{ *probe.hit, anchor / normalized, sibling }, out);
+    if(std::optional<resolved_asset> served = sibling ? probe_served(ctx.sources, *sibling) : std::nullopt)
+        return enter(ctx, in, located_include{ *served, served->path(), sibling }, out);
+    return include_from_sources(ctx, in, {}, normalized, written, out);
 }
 
 }

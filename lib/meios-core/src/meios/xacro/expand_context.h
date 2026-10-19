@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EXPAND_CONTEXT_H
 
 #include "eval_session.h"
+#include "include_locate.h"
 
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
@@ -124,6 +125,8 @@ struct expand_ctx
     std::map<std::string, macro_def> macros;
     std::map<std::string, block_arg> blocks;
     std::vector<std::filesystem::path> include_stack;
+    // The layer that served the active document, if one did, and the request it answered.
+    std::optional<served_document> served;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;
