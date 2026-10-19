@@ -44,6 +44,19 @@ it refuses; the [evaluation page](evaluation.md#where-this-diverges-from-the-com
 states the rule. No pinned corpus document reaches an include that is not package-qualified, so none
 of them is affected.
 
+**An absolute include filename is looked for only through the configured sources, with its leading
+separator removed, where the reference reads the file it names.** The reference opens
+`<xacro:include filename="/opt/robot/arm.xacro"/>` at the path written. Here an absolute spelling is
+never opened directly: its leading separator is dropped, the rest is looked for as a relative path
+under each configured source, and where no source holds it the load refuses under
+`unresolved_include`, whose message says the configured sources were the only place looked. That keeps
+an include inside the roots the caller configured rather than letting a description name any file on
+the host. Measured on a document that includes the file beside it by an absolute path, built from an
+argument each side binds to the directory it reads the document from: upstream renders the property
+that file binds and here the load refuses, which is the `include_absolute_path` row the manifest
+carries. The portable spellings, `package://` and `$(find)`, are unaffected, and no pinned corpus
+document writes an absolute include.
+
 **A source that serves bytes leaks its scratch tree on a platform that will not delete an open file.**
 Such a source materializes an asset into a scratch directory it owns and removes the tree when it is
 destroyed. Removal stops at the first error, so a still-open handle to a file inside the tree leaves
@@ -256,13 +269,13 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Every way this evaluator differs from canonical xacro is written down, and eighteen of them are
-measured.** The reviewed manifest carries eighteen rows and the differential drives them on every push
+**Every way this evaluator differs from canonical xacro is written down, and twenty-one of them are
+measured.** The reviewed manifest carries twenty-one rows and the differential drives them on every push
 in both directions, so a divergence that quietly stopped reproducing fails the comparison as loudly as
-a new one does. Eleven of the eighteen are a meaning upstream has and this grammar refuses — the first
+a new one does. Twelve of the twenty-one are a meaning upstream has and this grammar refuses — the first
 five entries below, the argument helper the seventh names, the mapping key an auxiliary document did
 not write as text, which has an entry of its own further down, and an include climbing above its
-document's directory, whose entry is under sources and resolution:
+document's directory and an absolute include filename, whose entries are under sources and resolution:
 
 - A string repeated by an integer, and one string ordered against another. Only the addition of two
   strings and equality between two were measured into this grammar.
@@ -286,15 +299,16 @@ document's directory, whose entry is under sources and resolution:
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Five differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+Seven differ in the other direction, rendering here where upstream refuses: a closing brace inside a
 string literal, one expression span written inside another, the absolute value, an argument declared
-without a default, and a `$(arg n)` written above its own declaration. The first two follow from a
+without a default, a `$(arg n)` written above its own declaration, a block parameter a call leaves
+without an element, and `$(dirname)`. The first two follow from a
 span scanner that folds over quotes and counts depth where the reference's pattern does neither, so
 the reference truncates the span and never hands its evaluator a whole expression to refuse. The third
 is a difference in what the evaluator itself carries: the reference's expression globals hold the
 mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
 raises an undefined name there, while every other name on this grammar's mathematics list renders on
-both sides. The last two have entries of their own further down. And two render on both sides with
+both sides. The last four have entries of their own further down. And two render on both sides with
 different answers: `and` and `or` yield a boolean here rather than the deciding operand, so
 `${1 or 2}` is `True` here and `1` there, which is deliberate and measured, not an oversight.
 
@@ -325,6 +339,20 @@ parameter inserted only behind a false condition. So a description that was only
 against meios, and that hid a defect inside an unreachable block, will stop loading, as it never
 loaded upstream. There is no shim, alias or migration note: this
 project is pre-release and the behavior was changed outright.
+
+**A block parameter a call leaves without an element renders here when the macro never inserts it,
+where the reference refuses the call.** The reference expands a macro call's own children first and
+then takes one element for each `*` or `**` parameter, and refuses the whole call with "Not enough
+blocks" for any parameter left without one. Here a block parameter binds whatever the expanded call
+holds, and only inserting a block nobody supplied refuses. Measured against the pinned reference on
+minimized documents, a macro taking `*content` and never inserting it refuses upstream and renders
+here when its call holds nothing but an include of a document that binds only a property, when the
+call holds only a `<xacro:property>`, and when the call is empty; a `**content` parameter called with
+only such an include does the same. Where the macro does insert the block, both sides refuse, under
+different causes: "Not enough blocks" upstream, and here `xacro_structural_error` naming the unknown
+block. The direction is the permissive one, so a call that loads here can fail there. The include
+case is the `include_sole_block` row the manifest carries; the other shapes are the same rule, and the
+measurement above is what records them.
 
 **An argument is read only through the substitution commands, as the reference reads it, and a
 description that named one bare now refuses.** Arguments and properties are two binding tables here,
@@ -407,6 +435,20 @@ until it was measured: a document writing the explicit-key form with nothing aft
 here at all — the reader meets a mapping standing where a key belongs and refuses the document at that
 line and column. So an empty key is refused rather than admitted-and-unreadable, and the sentence above
 covers the two kinds it names and no third.
+
+**`$(dirname)` renders the directory of the file it is written in, where the reference refuses it
+everywhere.** The pinned reference never hands its directory command a file, so `$(dirname)` refuses
+there with "Cannot substitute $(dirname),no file/directory information available." wherever it is
+written. Here it renders a directory. In the document handed to the load, it is the parent of that
+path as it was handed in: relative where that path is relative, and empty for a bare file name.
+Inside an include, it is the canonical directory of the file the include located, whichever route
+found it (beside the including document, through `package://`, or through a configured source), and
+it is the same from any working directory; an include reached through a linked directory names the
+real directory, not the link. Measured on a document including `dirname_command.d/inner.xacro`, which
+names a link after the last segment of its `$(dirname)`: upstream refuses, and here the link is named
+`dirname_command.d`, which is the `dirname_command` row the manifest carries. The value is written into
+the expanded document, so it is a path on the machine that ran the load. No pinned corpus document
+uses the command.
 
 **A located path is written with forward separators on every platform, where the reference writes the
 platform's own.** `$(find)` and `$(dirname)` render the path they resolve in the generic spelling, so a
@@ -601,7 +643,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes fifty-seven claims — the bold sentence that opens each entry above — and this table
+This page makes sixty claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -620,6 +662,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Symlink-installed workspaces are covered by fixtures only | `ros_source.*` and `ros_prefix.*` over crafted layouts. Nothing builds a real `--symlink-install` workspace — which is the claim. |
 | A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
 | A relative include resolves beside its document, refuses to climb above it, and falls back to the configured sources | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The fallback is carried by `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source`; upstream has nothing to compare it with. The resolution itself is held to upstream by the five `include_` agreement verdicts of `native_differential` (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution` and `xacro_include_precedence` cases. |
+| An absolute include filename is looked for only through the configured sources | The `include_absolute_path` row of the divergence manifest, driven as a whole document through both implementations, each binding the argument the include is built from to the directory it reads the document from, beside `xacro_include_resolution.an absolute include spelling is not looked for beside its document`, which pins this side's refusal and its message. |
 | A byte-serving source leaks its scratch tree where an open file cannot be deleted | `io_sources.the scratch tree is removed when the source that owns it dies` and the `scratch_teardown.*` stems, which drive removal stopping at its first error. The platform that will not delete an open file is not one the suite runs on. |
 | A narrow window between creating a scratch root and narrowing it | Nothing drives the window itself. Its two ends are carried: `scratch_setup.the candidate loop takes the first free name and exhausts at its bound` and `scratch_setup.a root that could not be narrowed is removed and refused`. |
 | Narrowing replaces permission bits, and not every platform decides access that way | `io_sources.the scratch root is reachable by its owner alone`, on the platforms whose access decision *is* a permission bit. Nothing drives an access-control-list platform, which is the claim. |
@@ -659,12 +702,14 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| Eighteen measured differences | The eighteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Twenty-one measured differences | The twenty-one rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |
+| A block parameter left without an element renders when the macro never inserts it | The `include_sole_block` row of the divergence manifest, driven as a whole document through both implementations, for the include instance. The other shapes the entry names, a call holding only a property, an empty call, a `**` parameter and the refusal on both sides where the block is inserted, are carried by the measurement the entry states and by nothing that runs. |
 | An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |
 | A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. |
 | A non-text mapping key loads and nothing reads it | The `non_text_mapping_key` row of the divergence manifest, driven as a whole document through both implementations, plus `native_yaml.a key is read in any of the scalar kinds a document can write`. The empty-scalar sentence beside it is carried by the reader's own refusal, measured while that row was minimized. |
+| `$(dirname)` renders the directory of the file it is written in | The `dirname_command` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_identity.the directory command names the located directory of the file it is written in`, which pins the value inside a package include and a beside include and at the top, from two working directories. The relative and empty top-level values and the linked-directory value are carried by the measurement the entry states. |
 | A located path is written with generic separators | The assertions in `xacro_subst_command` that compose an expected path in the generic spelling, and `xacro_arg.a nested arg default resolves at declaration`, which is where the last native spelling was found. No manifest row is possible, and the entry says why. |
 | The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry this side's behavior. |
 

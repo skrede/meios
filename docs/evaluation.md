@@ -329,6 +329,14 @@ side effect written inside a block nobody inserts now takes effect, and a block 
 property now fails the load whether or not it is reached. [Known limitations](known-limitations.md)
 says so in the reader's own terms.
 
+**A block parameter a call leaves without an element renders here and refuses there.** The reference
+expands a macro call's children and then refuses the call with "Not enough blocks" for any `*` or `**`
+parameter left without an element, so a call holding only an `<xacro:include>` of a document that binds
+a property, only a property, or nothing at all refuses there even when the macro never inserts the
+block. Here a block parameter binds what the expanded call holds, and only inserting a block nobody
+supplied refuses, which it does on both sides. The include shape is a reviewed divergence, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
 **A relative include resolves against the document that writes it, then through the configured
 sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
 being processed (the including document, and inside a macro body the document that calls the macro)
@@ -339,6 +347,19 @@ sources, which the reference does not consult, so a document the reference refus
 file can render here. A filename climbing above that directory with `..` refuses here as escaping the
 source root and is read there. That one is a reviewed divergence, so the comparison fails if it stops
 reproducing exactly as much as it fails if a new one appears.
+
+**An absolute include filename refuses here and is read there.** The reference opens an include
+written as an absolute path where it points. Here the leading separator is dropped and the rest is
+looked for only through the configured sources, so an include stays inside the roots the caller
+configured, and where none of them holds it the load refuses. This is a reviewed divergence, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
+**`$(dirname)` renders here and refuses there.** The reference never hands its directory command a
+file and refuses it wherever it is written. Here it renders the directory of the file it is written
+in: at the top, the parent of the document path as the load was handed it, and inside an include the
+canonical directory of the file the include located, the same from any working directory. This is a
+reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a
+new one appears.
 
 **The absolute value renders here and refuses there.** `${abs(-3)}` is `3` here; upstream raises an
 undefined name, because its expression globals are the mathematics module and the two reducers with no

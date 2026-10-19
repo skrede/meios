@@ -77,6 +77,21 @@ inline std::string robot(std::string_view body)
     return "<robot name=\"probe\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">" + std::string(body) + "</robot>";
 }
 
+inline bool linked(const std::filesystem::path &target, const std::filesystem::path &link)
+{
+    std::error_code ec;
+    std::filesystem::create_symlink(target, link, ec);
+    return !ec;
+}
+
+inline std::filesystem::path linked_robot(const tree &held, std::string_view body)
+{
+    held.write("src/robot.xacro", robot(body));
+    std::filesystem::create_directories(held.root() / "install");
+    const std::filesystem::path link = held.root() / "install" / "robot.xacro";
+    return linked(held.root() / "src" / "robot.xacro", link) ? link : std::filesystem::path{};
+}
+
 inline std::string include(std::string_view filename)
 {
     return "<xacro:include filename=\"" + std::string(filename) + "\"/>";
@@ -109,6 +124,12 @@ inline std::string read_file(const std::filesystem::path &document)
 inline expansion_result expand_file(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log)
 {
     return expand_text(read_file(document), document, sources, log);
+}
+
+inline expansion_result expand_file_from(const std::filesystem::path &working, const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log)
+{
+    const working_directory here(working);
+    return expand_file(document, sources, log);
 }
 
 inline bool renders_link(const expansion_result &out, std::string_view name)

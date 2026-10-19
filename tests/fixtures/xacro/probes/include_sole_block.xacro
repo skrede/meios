@@ -1,0 +1,6 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="wrap" params="*content">
+    <link name="${leaf}"/>
+  </xacro:macro>
+  <xacro:wrap><xacro:include filename="include_sole_block.inc.xacro"/></xacro:wrap>
+</robot>

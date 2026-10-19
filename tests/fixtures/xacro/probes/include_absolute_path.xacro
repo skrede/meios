@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="probe_directory" default=""/>
+  <xacro:include filename="$(arg probe_directory)/include_absolute_path.inc.xacro"/>
+  <link name="${from_include}"/>
+</robot>

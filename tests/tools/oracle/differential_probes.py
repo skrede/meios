@@ -34,8 +34,16 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "argument_without_default",
                    "argument_helper_call",
                    "argument_above_declaration",
-                   "include_parent_directory")
+                   "include_parent_directory",
+                   "include_absolute_path",
+                   "include_sole_block",
+                   "dirname_command")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
+
+# A committed fixture cannot spell a machine's absolute path, so these probes are handed the
+# directory they are staged in under this argument name.
+PROBE_DIRECTORY_ARGUMENT = "probe_directory"
+DIRECTORY_BOUND_PROBES = ("include_absolute_path",)
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
 # and the caller mapping where the binding needs one. A probe both sides refuse agrees only on the

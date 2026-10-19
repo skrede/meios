@@ -1,0 +1,4 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="where" value="$(dirname)"/>
+  <link name="${where.split('/')[-1]}"/>
+</robot>

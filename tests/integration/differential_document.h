@@ -37,13 +37,15 @@ struct document_probe
 {
     bool reads_documents;
     std::string_view id;
+    bool binds_directory;
 };
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 5> document_probes{
+inline constexpr std::array<document_probe, 8> document_probes{
         document_probe{true, "non_text_mapping_key"},        document_probe{false, "argument_without_default"}, document_probe{false, "argument_helper_call"},
-        document_probe{false, "argument_above_declaration"}, document_probe{false, "include_parent_directory"},
+        document_probe{false, "argument_above_declaration"}, document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
+        document_probe{false, "include_sole_block"},         document_probe{false, "dirname_command"},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -65,9 +67,13 @@ public:
     }
 };
 
+// A committed fixture cannot spell a machine's absolute path, so a directory-bound probe is handed
+// the directory this side reads it from, as differential.py hands upstream the one it stages it in.
 inline meios::eval_scope document_scope(const document_probe &one)
 {
     meios::eval_scope scope;
+    if(one.binds_directory && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
+        scope.bind_argument("probe_directory", meios::value{std::string(MEIOS_XACRO_PROBE_DIR)});
     if(!one.reads_documents)
         return scope;
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<probe_loader>() });

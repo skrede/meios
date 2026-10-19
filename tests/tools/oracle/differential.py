@@ -20,7 +20,8 @@ from recorder.rendering import render, escape, refusal_text  # noqa: E402
 from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
-                                 PROBE_DIR, AGREEMENT_PROBES)
+                                 PROBE_DIR, AGREEMENT_PROBES, PROBE_DIRECTORY_ARGUMENT,
+                                 DIRECTORY_BOUND_PROBES)
 
 
 def sanitize(case_id):
@@ -82,8 +83,9 @@ def render_document_probe(tmp, out, case_id):
     import xacro
 
     staged = stage_probe(tmp, case_id)
+    mappings = {PROBE_DIRECTORY_ARGUMENT: str(tmp)} if case_id in DIRECTORY_BOUND_PROBES else None
     try:
-        write_text(out, case_id, ".txt", xacro.process_file(str(staged)).toxml())
+        write_text(out, case_id, ".txt", xacro.process_file(str(staged), mappings=mappings).toxml())
     except Exception as failure:
         write_refusal(out, case_id, ".txt", failure)
 

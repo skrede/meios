@@ -16,13 +16,14 @@
 #include <vector>
 #include <filesystem>
 #include <string_view>
-#include <system_error>
 
 using include_tree::robot;
 using include_tree::binds;
+using include_tree::linked;
 using include_tree::include;
 using include_tree::reads_leaf;
 using include_tree::expand_file;
+using include_tree::linked_robot;
 using include_tree::renders_link;
 
 namespace
@@ -45,21 +46,6 @@ public:
 private:
     std::vector<std::filesystem::path> &m_seen;
 };
-
-bool linked(const std::filesystem::path &target, const std::filesystem::path &link)
-{
-    std::error_code ec;
-    std::filesystem::create_symlink(target, link, ec);
-    return !ec;
-}
-
-std::filesystem::path linked_robot(const include_tree::tree &held, std::string_view body)
-{
-    held.write("src/robot.xacro", robot(body));
-    std::filesystem::create_directories(held.root() / "install");
-    const std::filesystem::path link = held.root() / "install" / "robot.xacro";
-    return linked(held.root() / "src" / "robot.xacro", link) ? link : std::filesystem::path{};
-}
 
 }
 
@@ -186,5 +172,28 @@ TEST_CASE("a relative include in a document under a linked directory resolves be
     meios::source_stack sources;
 
     REQUIRE(renders_link(expand_file(held.root() / "install" / "urdf" / "robot.xacro", sources, log), "generated"));
+    REQUIRE(xacro_probe::errors(records) == 0);
+}
+
+TEST_CASE("the directory command names the located directory of the file it is written in", "[xacro][structural][include][identity][dirname]")
+{
+    const include_tree::tree held;
+    const std::string names_directory = "<link name=\"$(dirname)\"/>";
+    held.write("pkg/sub/inner.xacro", robot(names_directory));
+    held.write("doc/sub2/beside.xacro", robot(names_directory));
+    held.write("cwd/pkg/sub/inner.xacro", robot("<link name=\"working_directory\"/>"));
+    const std::filesystem::path top = held.write("doc/top.xacro", robot(include("package://pkg/sub/inner.xacro") + include("sub2/beside.xacro") + names_directory));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    meios::source_stack sources{meios::directory_source{held.root(), log}};
+    std::filesystem::create_directories(held.root() / "elsewhere");
+    const include_tree::expansion_result beside_same_name = include_tree::expand_file_from(held.root() / "cwd", top, sources, log);
+    const include_tree::expansion_result unrelated        = include_tree::expand_file_from(held.root() / "elsewhere", top, sources, log);
+
+    REQUIRE((beside_same_name.has_value() && unrelated.has_value()));
+    REQUIRE(beside_same_name->document == unrelated->document);
+    for(const std::filesystem::path &directory :
+        {std::filesystem::weakly_canonical(held.root() / "pkg" / "sub"), std::filesystem::weakly_canonical(held.root() / "doc" / "sub2"), top.parent_path()})
+        REQUIRE(renders_link(unrelated, directory.generic_string()));
     REQUIRE(xacro_probe::errors(records) == 0);
 }
