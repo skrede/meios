@@ -9,6 +9,8 @@
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
+#include <meios/io/source_handle.h>
+#include <meios/io/directory_source.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -38,14 +40,17 @@ struct document_probe
     bool reads_documents;
     std::string_view id;
     bool binds_directory;
+    bool serves_directory;
 };
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 9> document_probes{
-        document_probe{true, "non_text_mapping_key"},        document_probe{false, "argument_without_default"}, document_probe{false, "argument_helper_call"},
-        document_probe{false, "argument_above_declaration"}, document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
-        document_probe{false, "include_sole_block"},         document_probe{false, "dirname_command"},          document_probe{false, "include_outside_link"},
+inline constexpr std::array<document_probe, 10> document_probes{
+        document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
+        document_probe{false, "argument_helper_call"},     document_probe{false, "argument_above_declaration"},
+        document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
+        document_probe{false, "include_sole_block"},       document_probe{false, "dirname_command"},
+        document_probe{false, "include_outside_link"},     document_probe{false, "include_package_filename", false, true},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -88,6 +93,8 @@ inline std::string observed_document(const document_probe &one)
 {
     meios::log_sink silent;
     meios::source_stack sources;
+    if(one.serves_directory && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
+        sources.push_back(meios::source_handle{meios::directory_source{MEIOS_XACRO_PROBE_DIR, silent}});
     meios::eval_scope scope = document_scope(one);
     const std::filesystem::path fixture = probe_file(one.id, ".xacro");
     const std::string source = slurp(fixture);

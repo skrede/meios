@@ -380,6 +380,14 @@ looked for only through the configured sources, so an include stays inside the r
 configured, and where none of them holds it the load refuses. This is a reviewed divergence, so the
 comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
+**A `package://` include filename resolves here and is refused there.** The reference does not read
+`package://` in an include filename as a package reference: it joins the spelling onto the directory
+of the including document as a relative path and refuses where nothing is there. Here the spelling is
+split into a package and a path within it and resolved through the configured sources, as a
+package-qualified include. `$(find <pkg>)/...` is the spelling both read, so it is the one to write in
+a description meant to load under both. This is a reviewed divergence, the `include_package_filename`
+row, so the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
 **`$(dirname)` renders here and refuses there.** The reference never hands its directory command a
 file and refuses it wherever it is written. Here it renders the directory of the file it is written
 in: at the top, the parent of the document path as the load was handed it, and inside an include the
