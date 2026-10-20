@@ -136,6 +136,25 @@ TEST_CASE("a package under a ROS_PACKAGE_PATH entry that is itself a link reads"
     REQUIRE(errors(records) == 0);
 }
 
+TEST_CASE("a document the ROS layer served through an in-package link anchors its includes where it was named", "[ros][link]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path ws     = package_p(held);
+    const std::filesystem::path target = held.write("ws/p/q/a.xacro", include_tree::robot(include_tree::include("b.xacro")));
+    held.write("ws/p/q/b.xacro", include_tree::binds("canonical_dir_b"));
+    held.write("ws/p/urdf/b.xacro", include_tree::binds("named_dir_b"));
+    if(!include_tree::linked(target, ws / "p" / "urdf" / "a.xacro"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<message_record> records;
+    meios::log_sink_f log{message_recorder{records}};
+
+    CHECK(renders(expand_through(from_package_path(ws, log), held, "$(find p)/urdf/a.xacro", log), "named_dir_b"));
+    REQUIRE(errors(records) == 0);
+}
+
 TEST_CASE("a link leading out of its ROS package still refuses as uncontained", "[ros][link]")
 {
     const include_tree::tree held;

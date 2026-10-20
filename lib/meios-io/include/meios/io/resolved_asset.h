@@ -13,6 +13,7 @@ class resolved_asset
 public:
     explicit resolved_asset(std::filesystem::path path)
             : m_path(std::move(path))
+            , m_named()
             , m_source_root()
             , m_source_relative()
     {
@@ -20,6 +21,15 @@ public:
 
     resolved_asset(std::filesystem::path path, std::filesystem::path source_root, std::filesystem::path source_relative)
             : m_path(std::move(path))
+            , m_named()
+            , m_source_root(std::move(source_root))
+            , m_source_relative(std::move(source_relative))
+    {
+    }
+
+    resolved_asset(std::filesystem::path path, std::filesystem::path source_root, std::filesystem::path source_relative, std::filesystem::path named)
+            : m_path(std::move(path))
+            , m_named(std::move(named))
             , m_source_root(std::move(source_root))
             , m_source_relative(std::move(source_relative))
     {
@@ -40,8 +50,15 @@ public:
         return m_source_relative;
     }
 
+    // The path the lookup joined before any link was resolved; empty where it joined none.
+    const std::optional<std::filesystem::path> &named() const noexcept
+    {
+        return m_named;
+    }
+
 private:
     std::filesystem::path m_path;
+    std::optional<std::filesystem::path> m_named;
     std::optional<std::filesystem::path> m_source_root;
     std::optional<std::filesystem::path> m_source_relative;
 };

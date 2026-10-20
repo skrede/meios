@@ -40,9 +40,9 @@ std::string undecided_message(std::string_view package, std::string_view relativ
             " failed: " + cause.native.message();
 }
 
-resolved_asset admitted(const detail::contained_read &read)
+resolved_asset admitted(const detail::contained_read &read, const std::filesystem::path &candidate)
 {
-    return resolved_asset{read.real, read.root, read.real.lexically_relative(read.root)};
+    return resolved_asset{read.real, read.root, read.real.lexically_relative(read.root), candidate};
 }
 
 bool is_absent(const std::error_code &error)
@@ -116,7 +116,7 @@ source_lookup_result detail::try_locate_contained(const std::filesystem::path &r
         return unexpected<operation_failure>({operation_kind::status, error});
     if(!std::filesystem::exists(status))
         return std::optional<resolved_asset>{};
-    return std::optional{admitted(**decided)};
+    return std::optional{admitted(**decided, candidate)};
 }
 
 std::optional<resolved_asset> detail::locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative,

@@ -32,17 +32,15 @@ std::filesystem::path beside_anchor(const expand_ctx &ctx, const std::string &pa
     return anchor.is_absolute() ? anchor : std::filesystem::path{};
 }
 
-bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, const std::string &written, pugi::xml_node out)
-{
-    std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
-    if(!found)
-        return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, !beside_anchor(ctx, package, written).empty()));
-    const std::filesystem::path named = found->asset.path();
-    return enter_include(ctx, in, located_include{ std::move(found->asset), named, served_document{ found->layer, package, normalized } }, out);
-}
-
 namespace
 {
+
+// A served document anchors its relative reads where its lookup joined it, as upstream does, while
+// the canonical path stays its identity; a layer that joined no path anchors at the one it located.
+std::filesystem::path served_name(const resolved_asset &hit)
+{
+    return hit.named().value_or(hit.path());
+}
 
 bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &spelling, const std::filesystem::path &looked, const operation_failure &cause)
 {
@@ -88,10 +86,19 @@ bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_docum
     if(!served)
         return fail(ctx, in, diagnostic_code::unresolved_include,
                     "xacro:include could not resolve \"" + written + "\": looked for it in the package \"" + sibling->package + "\" that served the document that writes it");
-    const std::filesystem::path named = served->path();
+    const std::filesystem::path named = served_name(*served);
     return enter_include(ctx, in, located_include{ std::move(*served), named, std::move(*sibling) }, out);
 }
 
+}
+
+bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, const std::string &written, pugi::xml_node out)
+{
+    std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
+    if(!found)
+        return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, !beside_anchor(ctx, package, written).empty()));
+    const std::filesystem::path named = served_name(found->asset);
+    return enter_include(ctx, in, located_include{ std::move(found->asset), named, served_document{ found->layer, package, normalized } }, out);
 }
 
 // A file beside the document is the one the spelling names, joined as written so a `..` resolves where the operating system resolves it, and no configured root's copy stands in
@@ -110,14 +117,16 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     if(*link)
         return include_outside(ctx, in, **link, written, out);
     if(probe.uncontained)
-        return fail(ctx, in, diagnostic_code::uncontained_asset, "xacro:include target \"" + written + "\" leaves the directory of the document that writes it");
+        return fail(ctx, in, diagnostic_code::uncontained_asset,
+                    "xacro:include target \"" + written +
+                            "\" leaves every directory that admits it: the one the document that writes it was named in, the one it lives in, and each configured package root");
     std::optional<served_document> sibling;
     if(ctx.served)
         sibling = sibling_of(*ctx.served, normalized);
     if(probe.hit)
         return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, sibling }, out);
     if(std::optional<resolved_asset> served = sibling ? probe_served(ctx.sources, *sibling) : std::nullopt)
-        return enter_include(ctx, in, located_include{ *served, served->path(), sibling }, out);
+        return enter_include(ctx, in, located_include{ *served, served_name(*served), sibling }, out);
     return include_from_sources(ctx, in, {}, normalized, written, out);
 }
 
