@@ -145,11 +145,18 @@ under the one it really lives in, or under a configured package root.** The docu
 are tried first and the configured roots after them, in the order they were configured; the first that
 contains the canonical target admits it, and the order decides only which directory is reported, never
 which file is read. It is the one rule an include and an auxiliary document beside their document are
-held to as well. A relative mesh beside a description opened through a symlinked install tree therefore
-resolves to the file the install links to, and a mesh linked beside the description into a configured
-root resolves through that root. Containment is judged on the *canonicalized* candidate, never on the
-authored spelling, so a climb-out spelled through a real subdirectory and a symlink whose target leaves
-the root are both caught where a textual prefix test would miss them.
+held to as well, for a spelling that stays inside the document's directory as written. A relative mesh
+beside a description opened through a symlinked install tree therefore resolves to the file the install
+links to, and a mesh linked beside the description into a configured root resolves through that root. A
+leading `..` is where the three part: an include's meets the climb gate first, while a mesh's or an
+auxiliary document's is admitted wherever it lands under one of these directories. Measured on a mesh
+written `../meshes/m.stl` in a document that lies under a configured root, the mesh resolves under that
+root, and with no configured root it refuses under `uncontained_asset`. A mesh spelled through a path
+element that is not a directory, `f.txt/../m.stl` or `f.txt/m.stl` with `f.txt` a regular file, does
+not resolve, and its record carries the operating system's reason, as the `load_linked_mesh` case pins
+for the first. Containment is judged on the *canonicalized* candidate, never on the authored spelling,
+so a climb-out spelled through a real subdirectory and a symlink whose target leaves the root are both
+caught where a textual prefix test would miss them.
 
 **One rule covers a relative climb-out and an absolute path alike**, which is the point: the form a
 path was written in cannot change what it is allowed to reach. `meshes/../../../stray.stl` and

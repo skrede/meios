@@ -31,13 +31,16 @@ Measured on both shapes with that root, a `package://` mesh refuses under `uncon
 `uncontained_asset` record before the load refuses, the include under `unresolved_include` and the
 auxiliary document as unreachable; a `$(find)` auxiliary document refuses there as well. The pinned
 reference reads the `$(find)` include and the `$(find)` auxiliary document through `install/share` on
-both shapes, because it opens a path wherever its links lead. The remedy is to configure the source tree
-as the root, which lets a description read every file under it: on both shapes each of those references
-resolves once `src` is the root. A root that is itself a link is read through the directory it leads
-to, so a root given as a link to the source tree serves them too. The ROS layer registers a package
-whose directory is a link under the directory the link leads to; no case drives per-file links through
-it. Nothing builds a real `--symlink-install` workspace, so what a real build lays down beyond these
-shapes is not covered.
+both shapes, because it opens a path wherever its links lead. The remedy is to configure the source
+tree as the root, which lets a description read every file under it: on both shapes each of those
+references resolves once `src` is the root. A root that is itself a link is read through the directory
+it leads to, so a root given as a link to the source tree serves them too. The ROS layer registers a
+package whose directory is a link under the directory the link leads to. Through `ROS_PACKAGE_PATH`, a
+package file that is a link staying inside its package reads as it does through a configured root, a
+package under an entry that is itself a link reads, and a package file whose link leads out of its
+package refuses, with an `uncontained_asset` record naming the package and the path within it. Nothing
+builds a real `--symlink-install` workspace, so what a real build lays down beyond these shapes is not
+covered.
 
 **A relative asset path anchors to the top-level input document, not to the file it was written in.**
 After include and macro expansion a description is commonly assembled from many files, and a
@@ -53,107 +56,161 @@ refuses to climb above that directory unless the caller admits the climb.** The 
 file was named by, and so does this evaluator: inside a macro body the anchor is the document that
 calls the macro, a nested include reads the file beside the include that names it, and a document
 opened through a link anchors at the link rather than at the file the link points to. A document a
-source layer served is read beside the file it was materialized as, and where nothing is there its
-sibling is asked of the layer that served it, under that document's package and directory. A filename
-that climbs out of the document's directory refuses here as climbing above the directory of the
-document that writes it: measured on a document whose included file includes
+package lookup served, `package://` or `$(find)` through a directory, bundle or ROS layer, anchors the
+same way, at the path the lookup named it by, `root/package/relative`, even where that path is a link;
+the file the link leads to stays its identity, the file its cycle check keys and its read opens.
+Measured on a package file that is a link into another directory, each of the two directories holding a
+same-named sibling, its nested include and its auxiliary document read the sibling beside the named
+path, which is the file the reference reads through `$(find)`. A document a memory source served is
+read beside the file that source materialized for it. Where nothing is beside a served document, its
+sibling is asked of the layer that served it, under that document's package and directory. A file
+beside the document that another directory admitted, a configured root reached through a link say,
+carries no record of that layer, so a miss beside that file is not answered from the layer: measured
+with the serving layer's directory holding the missed name, the load refuses, as the reference does. A
+filename that climbs out of the document's directory refuses here as climbing above the directory of
+the document that writes it: measured on a document whose included file includes
 `../include_parent_directory.leaf.xacro`, upstream renders the property that file binds and here the
 load refuses under `xacro_structural_error`, which is the `include_parent_directory` row the manifest
-carries. A caller that sets `include_options::climb_above_document`, on `load_options::includes` or as
-the trailing argument of `meios::expand`, admits the climb as the reference reads it: a spelling that
-leaves the document's directory is joined as written onto it and read where the operating system
-resolves it, and a climb that names nothing refuses without consulting a configured source. That same
-document then renders as upstream renders it, which is the `include_parent_directory_climbed` verdict.
-For a document served by a layer that names no path for it, the admitted climb is answered by that
-layer alone, inside the document's package, so it loads or refuses the same whatever was included
-before it; a climb out of the package has an entry of its own below. A document a directory or a
-bundle source served has a path, and its admitted climb is read where the operating system resolves
-it, as a document opened from disk is. A `..` that stays inside the directory has an entry of its own
-below too. Admitting the climb is a security choice, not a parity one. A description can then name any
-file the process can open, short of the package bound a document served without a path keeps, so set
-it only for descriptions you trust as much as the process itself.
+carries. An auxiliary document's leading `..` is not held by that gate: it is admitted wherever it
+lands under one of the directories the outside-link entry below lists, so it loads under a configured
+root holding the file, as the reference loads it, and with no configured root refuses as unreachable
+where the reference reads it. A caller that sets `include_options::climb_above_document`, on
+`load_options::includes` or as the trailing argument of `meios::expand`, admits the climb as the
+reference reads it: a spelling that leaves the document's directory is joined as written onto it and
+read where the operating system resolves it, and a climb that names nothing refuses without consulting
+a configured source. That same document then renders as upstream renders it, which is the
+`include_parent_directory_climbed` verdict. Where a served document's admitted climb is answered is
+decided by the type of the layer that served it, and the layer is asked nothing to decide it. A layer
+whose type names no paths, a memory source, holds what it served only as the bytes it materialized, so
+the climb in such a document is answered by that layer alone, inside the document's package, and loads
+or refuses the same whatever was included before it; a climb out of the package has an entry of its own
+below. A directory, bundle or ROS layer names paths, and an admitted climb in a document one of them
+served is read where the operating system resolves it, as a document opened from disk is: measured
+through the ROS layer alone, a climb inside the package and one out of it each read the file the
+reference reads. That holds through a beside link into another configured root: measured on a package
+file whose sibling is a link into a second configured root and climbs from there, the load reads the
+file the climb names from the link's own directory with no error record, and the reference reads the
+same file. A `..` that stays inside the directory has an entry of its own below too. Admitting the
+climb is a security choice, not a parity one. A description can then name any file the process can
+open, short of the package bound a byte-served document keeps, so set it only for descriptions you
+trust as much as the process itself.
 
 **A `..` that climbs back inside the document's directory is read where the operating system resolves
-it, except through a directory that does not exist.** A filename such as `sub/../x.xacro` does not
-leave the document's directory as written. An include, an auxiliary document and a mesh each join it
-onto that directory as written, as the reference joins an include or an auxiliary document, and judge
-it where the operating system resolves it, by the rule the outside-link entry below states, with
-`climb_above_document` set or unset. With `sub` a link to a directory under a configured package root,
-each of the three reads the file the link leads to, and a file the include reads anchors its own
-relative includes at the spelling as written. With `sub` a link to a directory under nothing that
-admits it, each refuses unless the caller follows outside links, and then reads where the link leads.
-Measured against the pinned reference with `sub` a link to a directory elsewhere, an `x.xacro` beside
-the document and another one level above where the link leads, the reference renders the property the
-second binds, and so does this side with outside links followed. One shape still differs. Where `sub`
-does not exist, the standard library canonicalizes the missing tail by its spelling
-([fs.op.weakly.canonical]), so `sub/..` cancels and the file beside the document is read here, by all
-three readers; measured the same way, the reference refuses an include or an auxiliary document of it
-for want of `doc/sub/../x.xacro`.
+it, and refused through a path element that is not a directory, as the reference refuses it; two shapes
+still differ.** A filename such as `sub/../x.xacro` does not leave the document's directory as written.
+An include, an auxiliary document and a mesh each join it onto that directory as written, as the
+reference joins an include or an auxiliary document, and judge it where the operating system resolves
+it, by the rule the outside-link entry below states, with `climb_above_document` set or unset. With
+`sub` a link to a directory under a configured package root, each of the three reads the file the link
+leads to, and a file the include reads anchors its own relative includes at the spelling as written.
+With `sub` a link to a directory under nothing that admits it, each refuses unless the caller follows
+outside links, and then reads where the link leads. Measured against the pinned reference with `sub` a
+link to a directory elsewhere, an `x.xacro` beside the document and another one level above where the
+link leads, the reference renders the property the second binds, and so does this side with outside
+links followed. Where a path element exists but is not a directory, `f.txt/../x.xacro` or
+`f.txt/x.xacro` with `f.txt` a regular file, the operating system reports that it is not a directory,
+and an include and an auxiliary document refuse on that, with `..` or without it, as the reference
+refuses all four with `[Errno 20] Not a directory`; a mesh spelled so does not resolve, and its record
+carries the same reason. No configured root's copy stands in for such a spelling, as the fallback entry
+below states. At the command line an auxiliary document refused so prints only that it cannot be
+reached; the reason is in the load's diagnostics, which the command line does not print. Two shapes
+still differ. Where `sub` does not exist, the standard library canonicalizes the missing tail by its
+spelling ([fs.op.weakly.canonical]), so `sub/..` cancels and the file beside the document is read here,
+by all three readers; measured the same way, the reference refuses an include or an auxiliary document
+of it for want of `doc/sub/../x.xacro`. And where `sub` is a link and nothing is at the spelling as the
+operating system reads it, that miss takes the lookups the fallback entry below describes, and they
+look for the spelling's lexical reduction, `x.xacro`: measured with `sub` a link to `a/b`, nothing at
+`a/x.xacro` and a configured root holding `x.xacro`, an include and an auxiliary document of
+`sub/../x.xacro` render the root's copy here, whether or not an `x.xacro` stands beside the document,
+and refuse with no configured root, while the reference refuses each for want of `doc/sub/../x.xacro`.
+The same holds in a document a package lookup served: measured with an include of `sub/../x.xacro` in
+it and an `x.xacro` beside the path it was named by, that file renders here, and the reference refuses.
 
 **Under the climb option, a climb out of a byte-served document's package refuses, whatever was
-included before it.** A byte-served document is one the layer that served it names no path for: it
-holds the document only as the bytes it materialized. A memory source is one; a directory source and a
-bundle source name a path, so their documents are not. With `climb_above_document` set, the layer that
-served a byte-served document is the only place a climb in that document is answered. Inside the
-document's package the layer resolves it; out of the package the include refuses under
-`xacro_structural_error`, naming the spelling and the package, and never reads what an earlier lookup
-left in the source's scratch tree. Without that rule the answer would depend on whether an earlier
-include had made the layer write the file. The reference has no source layers, so this has no
-counterpart there to compare against.
+included before it.** A byte-served document is one served by a layer whose type names no paths: such a
+layer holds the document only as the bytes it materialized. Whether a layer names paths is read from
+its type, and the layer is asked nothing to decide it. A memory source names none. A directory, bundle
+or ROS layer names paths, so a document one of them served is not byte-served, whatever is at the path
+it was served from. With `climb_above_document` set, the layer that served a byte-served document is
+the only place a climb in that document is answered. Inside the document's package the layer resolves
+it; out of the package the include refuses under `xacro_structural_error`, naming the spelling and the
+package, and never reads what an earlier lookup left in the source's scratch tree. Without that rule
+the answer would depend on whether an earlier include had made the layer write the file. The reference
+has no source layers, so this has no counterpart there to compare against.
 
 **A link beside the document whose target lies under neither of the document's directories nor any
 configured package root refuses, for an include, an auxiliary document or a mesh, unless the caller
 follows outside links.** The reference opens an include or an auxiliary document beside its document
-wherever a link standing there points. Here the three readers share one rule. A file beside a document
+wherever a link standing there points. Here the three readers share one rule for a spelling that stays
+inside the document's directory as written. A leading `..` is where they part, as the relative-include
+entry above describes: an include's meets the climb gate first, while an auxiliary document's or a
+mesh's is admitted wherever it lands under one of the directories this rule lists, so with no
+configured root an auxiliary document's refuses where the reference reads it. A file beside a document
 is admitted where its canonical target lies under the directory the document was named in, under the
 one it really lives in, or under a configured package root, tried in that order; the first that
-contains the target admits it, and the order decides only which directory is reported, never which
-file is read. The configured roots are `load_options::package_roots` under `meios::load`, and the
-trailing `package_roots` a caller hands `meios::expand`; with none, only the document's two directories
-admit. A colcon `--symlink-install` tree opened through `install/` therefore resolves its siblings with
-the default options, because they link into the directory the document really lives in, and a sibling
+contains the target admits it, and the order decides only which directory is reported, never which file
+is read. The configured roots are `load_options::package_roots` under `meios::load`, and the trailing
+`package_roots` a caller hands `meios::expand`; with none, only the document's two directories admit. A
+colcon `--symlink-install` tree opened through `install/` therefore resolves its siblings with the
+default options, because they link into the directory the document really lives in, and a sibling
 linking into a configured root is read through that root, which makes every file under the root
 reachable from beside the document. A sibling linking anywhere else refuses in all three: an include
 and a mesh under `uncontained_asset`, an auxiliary document with an `uncontained_asset` record before
-the load refuses it as unreachable. No configured root's same-named copy stands in for an include or
-an auxiliary document. Measured on a document whose included file includes `part.xacro`, a link to a
-file one directory up: upstream renders the property that file binds and here the load refuses, which
-is the `include_outside_link` row the manifest carries. A caller that sets
+the load refuses it as unreachable. No configured root's same-named copy stands in for an include or an
+auxiliary document. Measured on a document whose included file includes `part.xacro`, a link to a file
+one directory up: upstream renders the property that file binds and here the load refuses, which is the
+`include_outside_link` row the manifest carries. A caller that sets
 `include_options::follow_outside_links`, on `load_options::includes` or on `parse_context::includes`
 when driving the parser directly, has all three take such a link where the operating system resolves
 it, as the reference reads an include or an auxiliary document, and the same document then renders as
-upstream renders it, which is the `include_outside_link_followed` verdict. A followed link's answer is
-final. Where nothing is at its target, the include refuses under `unresolved_include`, naming the link
-it followed, and the auxiliary document as unreachable; where an auxiliary document's target is a
-directory, it refuses under `cannot_open` with the operating system's cause. In neither case does a
-configured root's same-named copy stand in. A dangling link is a followed link with nothing at its end:
-with the option set, an include or an auxiliary document of one refuses so, and a mesh of one is a
-missing asset, never a root's copy. A spelling that climbs out lexically, or an absolute path landing
-outside, stays refused with the option set: the option follows a link, not a spelling. With the option
-unset, a dangling link is what the standard says `weakly_canonical` makes of it
-([fs.op.weakly.canonical]): an absent file beside the document. An include or an auxiliary document of
-one then takes the lookups that follow a miss, which the next entry describes, and a mesh of one is a
-missing asset. Following links is the same kind of security choice as admitting a climb: whoever can
-place a link beside a description can then have it read any file the process can open.
+upstream renders it, which is the `include_outside_link_followed` verdict. With the option set, any
+link on the spelling's way makes the followed answer final, a link that stays inside the document's
+directory included: measured with `sub` a link to an empty directory beside the document and a
+configured root holding `sub/leaf.xacro` and `sub/cfg.yaml`, an include of `sub/leaf.xacro` and an
+auxiliary document of `sub/cfg.yaml` each refuse, where with the option unset each renders the root's
+copy; the reference refuses both. Where nothing is at a followed link's target, the include refuses
+under `unresolved_include`, naming the link it followed, and the auxiliary document as unreachable;
+where an auxiliary document's target is a directory, it refuses under `cannot_open` with the operating
+system's cause. In neither case does a configured root's same-named copy stand in. A dangling link is a
+followed link with nothing at its end: with the option set, an include or an auxiliary document of one
+refuses so, and a mesh of one is a missing asset, never a root's copy. A spelling that climbs out
+lexically, or an absolute path landing outside, stays refused with the option set: the option admits
+where a link leads, never where a spelling leads. With the option unset, a dangling link is what the
+standard says `weakly_canonical` makes of it ([fs.op.weakly.canonical]): an absent file beside the
+document. An include or an auxiliary document of one then takes the lookups that follow a miss, which
+the next entry describes, and a mesh of one is a missing asset. Following links is the same kind of
+security choice as admitting a climb: whoever can place a link beside a description can then have it
+read any file the process can open.
 
-**Where nothing is beside the document, a relative include is looked for through the configured sources,
-which the reference never consults, so a document the reference refuses can render here.** The reference
-reads a relative include beside its document or not at all. Here a miss beside the document, or for a
-document a source layer served a miss beside the file it was materialized as and in the layer that
-served it, falls back to the configured sources, and a file one of them holds renders where the
-reference refuses for want of it. The manifest carries no row for this, because the whole-document
-comparison configures no source on either side, and with none configured both sides refuse alike; the
-include tests carry it instead. A dangling link beside the document, with outside links unset, is one
-case of nothing beside it, as the entry above states: an include of it falls through to the serving
-layer and the configured sources, and an auxiliary document of it to the configured roots, so a root's
-same-named copy renders where the reference refuses for want of the link's target. That is a remaining
-divergence from the reference. Setting `include_options::follow_outside_links` makes such a link refuse
-as the reference does, since a followed link's answer is final. Two anchors belong to the same rule. A
-document expanded under no name, handed to `meios::expand` with an empty document path, looks for
-nothing beside it and goes straight to the configured sources, where the reference's library entry
-anchors such a document at the working directory. And a document named by a relative path anchors its
-relative includes at the working directory, as the reference's does. No pinned corpus document reaches
-an include that is not package-qualified, so none of them is affected.
+**Where nothing is beside the document, a relative include is looked for through the configured
+sources, which the reference never consults, so a document the reference refuses can render here.** The
+reference reads a relative include beside its document or not at all. Here a miss beside the document
+falls back to the configured sources, and a file one of them holds renders where the reference refuses
+for want of it. For a document a source layer served, the miss is first asked of that layer, under the
+document's package and directory, and only then of the configured sources. A file read beside such a
+document passes its own misses to that layer too only where the directory the document was named in
+admitted it; one another directory admitted, a configured root reached through a link say, does not,
+and its misses go to the configured sources alone. The manifest carries no row for this, because the
+whole-document comparison configures no source on either side, and with none configured both sides
+refuse alike; the include tests carry it instead. The fallback answers a genuine miss, and only that. A
+spelling through a path element that is not a directory, `f.txt/x.xacro` or `f.txt/../x.xacro`, refuses
+before any fallback, as the reference refuses it, even where a configured root holds the name: measured
+with a configured root holding both `x.xacro` and `f.txt/x.xacro`, an include of either spelling
+refuses, and so does an auxiliary document of either, while an auxiliary document of a name genuinely
+absent beside the document still reads from the root. A miss through a link beside the document is a
+genuine miss: where nothing is at `sub/../x.xacro` as the operating system reads it, the lookups ask
+for its lexical reduction, `x.xacro`, and a root's copy renders, as the `..` entry above measures. A
+dangling link beside the document, with outside links unset, is one case of nothing beside it, as the
+entry above states: an include of it falls through to the serving layer and the configured sources, and
+an auxiliary document of it to the configured roots, so a root's same-named copy renders where the
+reference refuses for want of the link's target. That is a remaining divergence from the reference.
+Setting `include_options::follow_outside_links` makes such a link refuse as the reference does, since a
+followed link's answer is final. Two anchors belong to the same rule. A document expanded under no
+name, handed to `meios::expand` with an empty document path, looks for nothing beside it and goes
+straight to the configured sources, where the reference's library entry anchors such a document at the
+working directory. And a document named by a relative path anchors its relative includes at the working
+directory, as the reference's does. No pinned corpus document reaches an include that is not
+package-qualified, so none of them is affected.
 
 **A relative auxiliary document written in a description a byte source served resolves only once that
 source has written the file.** A source that serves bytes writes an entry into its scratch tree the
@@ -794,13 +851,13 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Claim | Carried by |
 |---|---|
 | No runtime remote fetch | Nothing, and that is the claim: it is an absent capability. Every source the library has is driven by `io_sources.*` and `io_source_stack.*`, and none of them takes a URL. |
-| A symlink-installed workspace is measured on crafted layouts, not on a live colcon build | Both layouts opened through the install tree: `load_linked_install.a relative include loads beside a document opened through a linked install directory`, `load_linked_install.a relative include loads beside a document opened through per-file install links`, the two `load_linked_install` auxiliary-document cases of the same shapes, `load_linked_mesh.a relative mesh resolves beside a document opened through a linked install directory` and `load_linked_mesh.a relative mesh resolves beside a document opened through per-file install links`. The sibling linking into neither directory: `load_linked_install.an install link leading into neither directory of its document refuses an include unless outside links are followed`, `load_linked_install.an auxiliary document linked into neither directory of its document refuses unless outside links are followed` and `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options`. The package-qualified reference through `install/share`: `load_linked_root.a package reference through a root whose files link out of it refuses as uncontained`, which links each file under `install/share` into the source tree and asserts the `package://` mesh's `uncontained_asset` refusal, the `package://` auxiliary document's refusal with its one `uncontained_asset` record, and both resolving once the source tree is the root, beside `xacro_include_read.a package include of a link pointing out of its configured root refuses as uncontained` for the include. The `$(find)` spellings, the linked-directory shape and the reference's readings are carried by the measurement the entry states, the `meios` command line and pinned xacro 2.1.1 on crafted trees of both shapes. The root that is itself a link: `load_linked_root.a package root given as a link serves its package includes`, `load_linked_root.a package root given as a link serves its package-form auxiliary documents`, `load_linked_root.a package root given as a link resolves a package mesh` and `load_linked_root.a directory source and a bundle source over a linked root report its real directory and read the asset through it`. The ROS layer's linked package directory: `ros_source.a colcon --symlink-install package dir resolves to the real files`. Nothing builds a real `--symlink-install` workspace, and nothing drives per-file links through the ROS layer — which is the claim. |
+| A symlink-installed workspace is measured on crafted layouts, not on a live colcon build | Both layouts opened through the install tree: `load_linked_install.a relative include loads beside a document opened through a linked install directory`, `load_linked_install.a relative include loads beside a document opened through per-file install links`, the two `load_linked_install` auxiliary-document cases of the same shapes, `load_linked_mesh.a relative mesh resolves beside a document opened through a linked install directory` and `load_linked_mesh.a relative mesh resolves beside a document opened through per-file install links`. The sibling linking into neither directory: `load_linked_install.an install link leading into neither directory of its document refuses an include unless outside links are followed`, `load_linked_install.an auxiliary document linked into neither directory of its document refuses unless outside links are followed` and `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options`. The package-qualified reference through `install/share`: `load_linked_root.a package reference through a root whose files link out of it refuses as uncontained`, which links each file under `install/share` into the source tree and asserts the `package://` mesh's `uncontained_asset` refusal, the `package://` auxiliary document's refusal with its one `uncontained_asset` record, and both resolving once the source tree is the root, beside `xacro_include_read.a package include of a link pointing out of its configured root refuses as uncontained` for the include. The `$(find)` spellings, the linked-directory shape and the reference's readings are carried by the measurement the entry states, the `meios` command line and pinned xacro 2.1.1 on crafted trees of both shapes. The root that is itself a link: `load_linked_root.a package root given as a link serves its package includes`, `load_linked_root.a package root given as a link serves its package-form auxiliary documents`, `load_linked_root.a package root given as a link resolves a package mesh` and `load_linked_root.a directory source and a bundle source over a linked root report its real directory and read the asset through it`. The ROS layer's linked package directory: `ros_source.a colcon --symlink-install package dir resolves to the real files`. Its per-file links: `ros_package_link.an in-package link reads through ROS_PACKAGE_PATH as through a configured root`, `ros_package_link.a package under a ROS_PACKAGE_PATH entry that is itself a link reads` and `ros_package_link.a link leading out of its ROS package still refuses as uncontained`. Nothing builds a real `--symlink-install` workspace — which is the claim. |
 | A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
-| A relative include resolves beside its document and refuses to climb above it unless the caller admits the climb | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The admitted climb is held to upstream by the `include_parent_directory_climbed` agreement verdict of `native_differential`, the same document loaded with the climb admitted and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller admitting a climb reads an include above the document's directory`, `load_include_options.an admitted climb that names nothing refuses and consults no source` and `load_include_options.an admitted climb resolves through a linked directory as the operating system does`, which opens a document through a linked directory and climbs out of it, refused unset and read where the operating system resolves it admitted. The climb in a document a layer serves without a path, inside its package, is carried by `load_include_options.a served document's climb inside its package resolves through its layer whatever was included first`, in both include orders; the climb in a document a bundle source served, read where the operating system resolves it, by `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; and `load_include_options.the include options default to refusing a climb` pins the default. The resolution itself is held to upstream by five of the `include_` agreement verdicts (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution`, `xacro_include_precedence` and `xacro_include_identity` cases. The served document is carried by `xacro_include_served.a relative include in a document a byte source served resolves through that source` and `xacro_include_served.a served document's sibling resolves the same whether or not an earlier include wrote it`. |
-| A `..` that climbs back inside the document's directory is read where the operating system resolves it, except through a directory that does not exist | Through a link to a directory under nothing that admits it, for the include: `load_include_options.a spelling back through a linked directory is judged where the operating system resolves it`, refused with the options unset and with the climb alone and reading where the link leads with outside links followed; for the auxiliary document and the mesh: `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root refuses unless outside links are followed` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root refuses unless outside links are followed`. Through a link into a configured root: `load_beside_root.an include spelled back through a linked directory into a configured root reads where the link leads, and its nested include anchors there`, `load_beside_root.an auxiliary document spelled back through a linked directory into a configured root loads where the link leads` and `load_beside_root.a mesh spelled back through a linked directory into a configured root resolves where the link leads`. The directory that does not exist: `load_beside_root.a spelling through a directory that does not exist reads the file beside the document`, for all three readers, beside `load_include_options.a climb that stays inside the document's directory takes the ordinary lookups with the climb admitted` and `load_include_options.a served document's climb that stays inside its directory resolves through its layer with the climb admitted`. The reference's readings, through the link and with no `sub`, are carried by the measurement the entry states; no manifest row compares them. |
-| Under the climb option, a climb out of a byte-served document's package refuses | `load_include_options.a served document's climb out of its package refuses whatever was included first`, which asserts the refusal in both include orders over a memory source. The definition, that a bundle source's document is not byte-served: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`. |
-| A link beside the document whose target lies under neither of its directories nor any configured root refuses unless the caller follows outside links | The `include_outside_link` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a link beside the document that escapes it refuses without falling through`. The followed link is held to upstream by the `include_outside_link_followed` agreement verdict of `native_differential`, the same document loaded with outside links followed and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller following outside links reads a sibling link that leaves the document's directory`; `load_include_options.the include options default to refusing an outside link` pins the default. The fixture's link is a committed symbolic link, so the comparison runs where the fresh-render job runs, on Linux. The one rule and a configured root's admission, for the three readers: `load_beside_root.an include linked beside its description into a configured root loads`, `load_beside_root.an auxiliary document linked beside its description into a configured root loads` and `load_beside_root.a mesh linked beside its description into a configured root resolves`; the roots an expansion is handed, and none: `load_beside_root.a beside include linking into the roots an expansion is given is read, and refused with none`. The colcon sentence and the refusal in all three: the include and auxiliary-document cases of `load_linked_install`, `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options` and `load_linked_mesh.a mesh linked into neither directory of its document resolves with outside links followed`. The stand-in sentence for an auxiliary document: `yaml_resource_containment.an escaping link beside the document refuses even where a configured root holds the name` and `yaml_resource_containment.a configured root reached through a link reads the resource it contains`. The followed answer: `load_include_options.a followed directory link to an absent target refuses even where a configured root holds the name`, `yaml_resource_followed.a followed link to a directory lacking the spec ends the sweep where a configured root holds the name` and `yaml_resource_followed.a followed link naming a directory ends the sweep where a configured root holds the name`. The dangling link with the option set: `load_include_options.a dangling sibling link with outside links followed refuses even where a configured root holds the name` and `yaml_resource_followed.a dangling link with outside links followed ends the sweep where a configured root holds the name`; a dangling mesh link in both option states: `load_linked_mesh.a dangling mesh link beside its document is a missing asset, never a root's copy, in both option states`; with the option unset, the fallback entry's two cases. The spelling sentence: `yaml_resource_containment.a traversal spec stays refused with outside links followed` and `load_linked_mesh.a mesh path climbing out of its document's directories stays refused with outside links followed` for the lexical climb-out; no case sets the option over an absolute path landing outside, and `yaml_resource_containment.an absolute spec is judged by where it lands, not by how it looks` pins that refusal with it unset. |
-| A relative include falls back to the configured sources where the reference refuses | No manifest row, because the whole-document comparison configures no source. `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source` and `xacro_include_served.a sibling the serving layer lacks falls back to the configured sources`; upstream has nothing to compare either with. The dangling link with outside links unset: `load_include_options.a dangling sibling link with outside links unset falls through to the configured sources` and `yaml_resource_followed.a dangling link with outside links unset falls through to a configured root`; the option's refusal by the followed dangling cases the outside-link entry names. The unnamed document is carried by `xacro_include_resolution.a document expanded under no name looks for nothing beside it`, and the relative document path by `xacro_include_resolution.a document named by a relative path anchors its relative includes at the working directory`. |
+| A relative include resolves beside its document and refuses to climb above it unless the caller admits the climb | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The admitted climb is held to upstream by the `include_parent_directory_climbed` agreement verdict of `native_differential`, the same document loaded with the climb admitted and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller admitting a climb reads an include above the document's directory`, `load_include_options.an admitted climb that names nothing refuses and consults no source` and `load_include_options.an admitted climb resolves through a linked directory as the operating system does`, which opens a document through a linked directory and climbs out of it, refused unset and read where the operating system resolves it admitted. The climb in a document a memory source served, inside its package, is carried by `load_include_options.a served document's climb inside its package resolves through its layer whatever was included first`, in both include orders. That the layer's type decides it, asking the layer nothing: `load_served_layer.a layer's type alone says whether it names paths`, over a directory, a bundle and a memory source, and a test-local source that names no paths. The climb in a document a bundle source served, read where the operating system resolves it: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; through a beside link into a second configured root: `load_served_layer.a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote`. The ROS layer's climb, in its package and out of it, is carried by the measurement the entry states, a program loading through that layer alone against pinned xacro 2.1.1; no case drives it. `load_include_options.the include options default to refusing a climb` pins the default. An auxiliary document's leading `..`: `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`, beside `load_beside_root.an include's leading .. landing under a configured root meets the climb gate`; the reference's reading of both is carried by the measurement the entry states. The resolution itself is held to upstream by five of the `include_` agreement verdicts (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution`, `xacro_include_precedence` and `xacro_include_identity` cases. The anchor of a package-served document: `load_package_anchor.a document a package lookup served through an in-root link anchors its includes where it was named` and `load_package_anchor.a document a package lookup served through an in-root link anchors its auxiliary documents where it was named`, each by both package spellings, with `load_package_anchor.a package-served document reached through an in-root link is keyed by its canonical file` for the identity and `ros_package_link.a document the ROS layer served through an in-package link anchors its includes where it was named` for the ROS layer; the reference's reading through `$(find)` is carried by the measurement the entry states. The served document is carried by `xacro_include_served.a relative include in a document a byte source served resolves through that source` and `xacro_include_served.a served document's sibling resolves the same whether or not an earlier include wrote it`; a sibling where nothing is beside the named path by `load_served_layer.a sibling of a document served through an in-root link refuses where nothing is beside its named path`, and the file another directory admitted by `load_served_layer.a beside hit a configured root admitted carries no served record, so the serving layer does not answer its miss`. |
+| A `..` that climbs back inside the document's directory is read where the operating system resolves it, and refused through a path element that is not a directory; two shapes still differ | Through a link to a directory under nothing that admits it, for the include: `load_include_options.a spelling back through a linked directory is judged where the operating system resolves it`, refused with the options unset and with the climb alone and reading where the link leads with outside links followed; for the auxiliary document and the mesh: `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root refuses unless outside links are followed` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root refuses unless outside links are followed`. Through a link into a configured root: `load_beside_root.an include spelled back through a linked directory into a configured root reads where the link leads, and its nested include anchors there`, `load_beside_root.an auxiliary document spelled back through a linked directory into a configured root loads where the link leads` and `load_beside_root.a mesh spelled back through a linked directory into a configured root resolves where the link leads`. The path element that is not a directory, with `..` and without it: `xacro_include_read.an include spelled through a file that is not a directory refuses, and no configured source's copy stands in` and `yaml_resource.a spelling through a file that is not a directory refuses, and no configured root's copy stands in`, each over both spellings; the mesh: `load_linked_mesh.a mesh spelled through a file that is not a directory does not resolve, and its record names why`. The command line printing only the primary line is carried by the measurement the entry states. The directory that does not exist: `load_beside_root.a spelling through a directory that does not exist reads the file beside the document`, for all three readers, beside `load_include_options.a climb that stays inside the document's directory takes the ordinary lookups with the climb admitted` and `load_include_options.a served document's climb that stays inside its directory resolves through its layer with the climb admitted`. The miss through a link looked for under the lexical reduction is carried by the measurement the entry states, the `meios` command line against pinned xacro 2.1.1; no case pins it. The reference's readings, through the link, through the regular file and with no `sub`, are carried by the measurement the entry states; no manifest row compares them. |
+| Under the climb option, a climb out of a byte-served document's package refuses | `load_include_options.a served document's climb out of its package refuses whatever was included first`, which asserts the refusal in both include orders over a memory source. The definition, read from a layer's type: `load_served_layer.a layer's type alone says whether it names paths`, which asserts that a directory and a bundle source name paths, that a memory source and a test-local source with no paths do not, and that asking logs nothing. A bundle source's document read from disk: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; a directory source's, through a beside link: `load_served_layer.a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote`. The ROS layer is carried by the measurement the relative-include entry states. |
+| A link beside the document whose target lies under neither of its directories nor any configured root refuses unless the caller follows outside links | The `include_outside_link` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a link beside the document that escapes it refuses without falling through`. The followed link is held to upstream by the `include_outside_link_followed` agreement verdict of `native_differential`, the same document loaded with outside links followed and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller following outside links reads a sibling link that leaves the document's directory`; `load_include_options.the include options default to refusing an outside link` pins the default. The fixture's link is a committed symbolic link, so the comparison runs where the fresh-render job runs, on Linux. The one rule and a configured root's admission, for the three readers: `load_beside_root.an include linked beside its description into a configured root loads`, `load_beside_root.an auxiliary document linked beside its description into a configured root loads` and `load_beside_root.a mesh linked beside its description into a configured root resolves`; the roots an expansion is handed, and none: `load_beside_root.a beside include linking into the roots an expansion is given is read, and refused with none`. Where a leading `..` parts them: `load_beside_root.an include's leading .. landing under a configured root meets the climb gate` and `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`; the reference's reading of the auxiliary document by the measurement the relative-include entry states, and the mesh's admission by the measurement the [containment](asset-resolution.md#containment) rule states; no case pins the mesh's. The colcon sentence and the refusal in all three: the include and auxiliary-document cases of `load_linked_install`, `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options` and `load_linked_mesh.a mesh linked into neither directory of its document resolves with outside links followed`. The stand-in sentence for an auxiliary document: `yaml_resource_containment.an escaping link beside the document refuses even where a configured root holds the name` and `yaml_resource_containment.a configured root reached through a link reads the resource it contains`. The followed answer through a link that stays inside the document's directory, in both option states: `load_beside_root.a miss through a link that stays inside the document's directory is final with outside links followed` and `load_beside_root.an auxiliary document's miss through a link that stays inside the document's directory is final with outside links followed`; the reference's refusal by the measurement the entry states. The followed answer through a link leading out: `load_include_options.a followed directory link to an absent target refuses even where a configured root holds the name`, `yaml_resource_followed.a followed link to a directory lacking the spec ends the sweep where a configured root holds the name` and `yaml_resource_followed.a followed link naming a directory ends the sweep where a configured root holds the name`. The dangling link with the option set: `load_include_options.a dangling sibling link with outside links followed refuses even where a configured root holds the name` and `yaml_resource_followed.a dangling link with outside links followed ends the sweep where a configured root holds the name`; a dangling mesh link in both option states: `load_linked_mesh.a dangling mesh link beside its document is a missing asset, never a root's copy, in both option states`; with the option unset, the fallback entry's two cases. The spelling sentence: `yaml_resource_containment.a traversal spec stays refused with outside links followed` and `load_linked_mesh.a mesh path climbing out of its document's directories stays refused with outside links followed` for the lexical climb-out; no case sets the option over an absolute path landing outside, and `yaml_resource_containment.an absolute spec is judged by where it lands, not by how it looks` pins that refusal with it unset. |
+| A relative include falls back to the configured sources where the reference refuses | No manifest row, because the whole-document comparison configures no source. `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source` and `xacro_include_served.a sibling the serving layer lacks falls back to the configured sources`; upstream has nothing to compare either with. The file another directory admitted, whose miss is not asked of the serving layer: `load_served_layer.a beside hit a configured root admitted carries no served record, so the serving layer does not answer its miss`. The spelling through a path element that is not a directory, refused before any fallback even where a configured root holds the name: `xacro_include_read.an include spelled through a file that is not a directory refuses, and no configured source's copy stands in` and `yaml_resource.a spelling through a file that is not a directory refuses, and no configured root's copy stands in`, each over both spellings, the second also reading a genuine miss from the root. The miss through a link looked for under the lexical reduction: the measurement the `..` entry states. The dangling link with outside links unset: `load_include_options.a dangling sibling link with outside links unset falls through to the configured sources` and `yaml_resource_followed.a dangling link with outside links unset falls through to a configured root`; the option's refusal by the followed dangling cases the outside-link entry names. The unnamed document is carried by `xacro_include_resolution.a document expanded under no name looks for nothing beside it`, and the relative document path by `xacro_include_resolution.a document named by a relative path anchors its relative includes at the working directory`. |
 | A relative auxiliary document in a byte-served description resolves only once its source has written the file | `yaml_resource.a relative spec in a byte-served document resolves only once its source has written the file`, which asserts both the refusal before the file is written and the text after. |
 | An absolute include filename is looked for only through the configured sources | The `include_absolute_path` row of the divergence manifest, driven as a whole document through both implementations, each binding the argument the include is built from to the directory it reads the document from, beside `xacro_include_resolution.an absolute include spelling is not looked for beside its document`, which pins this side's refusal and its message. |
 | A `package://` include filename resolves here through the configured sources, where the reference refuses it | The `include_package_filename` row of the divergence manifest, driven as a whole document through both implementations, this side serving the fixture directory as a configured source for that probe alone. The auxiliary-document sentence is carried by the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line with `--package-path` on one crafted tree; no manifest row compares it, because the document probes read auxiliary documents through a loader that consults no source. |
