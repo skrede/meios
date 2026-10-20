@@ -37,6 +37,10 @@ contained_read_result contain_beside(const std::filesystem::path &document, cons
 // escape the containment decision found for it can only have been made by a link.
 std::optional<std::filesystem::path> beside_link(const std::filesystem::path &document, const std::filesystem::path &spec);
 
+// Sees through symlink_status, so it names a link to nothing, which weakly_canonical reports as an
+// absent file ([fs.op.weakly.canonical]); a spelling beside_link names no join for passes no link.
+expected<std::optional<std::filesystem::path>, operation_failure> first_beside_link(const std::filesystem::path &document, const std::filesystem::path &spec);
+
 }
 
 #endif

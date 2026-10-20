@@ -7,6 +7,8 @@
 #include "meios/io/directory_source.h"
 #include "meios/io/beside_containment.h"
 
+#include "meios/expected.h"
+
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/operation_failure.h"
 
@@ -49,15 +51,30 @@ bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &spellin
                     + std::string(to_string(cause.operation)) + " failed: " + cause.native.message());
 }
 
-// The layer that served the document would not serve where the link points, so it carries no served record.
-bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &linked, const std::string &normalized, const std::string &written, pugi::xml_node out)
+// The layer that served the document would not serve where the link points, so it carries no served record, and a followed link's answer is final.
+bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &linked, const std::string &written, pugi::xml_node out)
 {
     const beside_probe probe = probe_unbounded(linked);
     if(probe.cause)
-        return refuse_probe(ctx, in, normalized, linked, *probe.cause);
+        return refuse_probe(ctx, in, written, linked, *probe.cause);
     if(!probe.hit)
-        return include_from_sources(ctx, in, {}, normalized, written, out);
+        return fail(ctx, in, diagnostic_code::unresolved_include,
+                    "xacro:include could not resolve \"" + written + "\": followed a link to \"" + linked.string() + "\" and found nothing there");
     return enter_include(ctx, in, located_include{ *probe.hit, linked, std::nullopt }, out);
+}
+
+using followed_link = expected<std::optional<std::filesystem::path>, operation_failure>;
+
+followed_link follow_beside(const expand_ctx &ctx, const std::filesystem::path &document, const beside_probe &probe, const std::string &normalized)
+{
+    if(!ctx.includes.follow_outside_links || probe.hit)
+        return std::optional<std::filesystem::path>{};
+    if(probe.uncontained)
+        return beside_link(document, normalized);
+    followed_link walked = first_beside_link(document, normalized);
+    if(!walked || !*walked)
+        return walked;
+    return beside_link(document, normalized);
 }
 
 // The layer answers alone: a disk probe would find the file only if something earlier had made the layer write it.
@@ -77,21 +94,22 @@ bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_docum
 
 }
 
-// A file beside the document is the one the spelling names, so one whose target lies under neither the directory the document was named in nor
-// the one it really lives in refuses, unless the caller follows outside links, rather than letting a configured root's same-named copy stand in.
-// weakly_canonical reports a dangling link as an absent file beside the document, which then falls through to the configured sources like one.
+// A file beside the document is the one the spelling names, so no configured root's copy stands in for it: a link out of both the directory it was named in and the one it
+// lives in refuses unless outside links are followed. [fs.op.weakly.canonical] decides existence through status(), which follows links, so with them unset a dangling link
+// canonicalizes as an absent file beside the document and falls through to the serving layer and configured sources; followed, where a link on its way leads is the final answer.
 bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
     const std::filesystem::path document = absolute_base(ctx.scope.active_document());
     const beside_probe probe             = probe_beside(document, normalized);
     if(probe.cause)
-        return refuse_probe(ctx, in, normalized, anchor / normalized, *probe.cause);
-    const std::optional<std::filesystem::path> link = probe.uncontained && ctx.includes.follow_outside_links ? beside_link(document, normalized) : std::nullopt;
-    if(link)
-        return include_outside(ctx, in, *link, normalized, written, out);
+        return refuse_probe(ctx, in, written, anchor / normalized, *probe.cause);
+    const followed_link link = follow_beside(ctx, document, probe, normalized);
+    if(!link)
+        return refuse_probe(ctx, in, written, anchor / normalized, link.error());
+    if(*link)
+        return include_outside(ctx, in, **link, written, out);
     if(probe.uncontained)
-        return fail(ctx, in, diagnostic_code::uncontained_asset,
-                    "xacro:include target \"" + normalized + "\" leaves the directory of the document that writes it");
+        return fail(ctx, in, diagnostic_code::uncontained_asset, "xacro:include target \"" + written + "\" leaves the directory of the document that writes it");
     std::optional<served_document> sibling;
     if(ctx.served)
         sibling = sibling_of(*ctx.served, normalized);

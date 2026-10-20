@@ -86,6 +86,14 @@ std::optional<text_resource_result> from_root(std::string_view spec, const std::
     return read_contained(contain_under(base, base / std::filesystem::path(spec)), seen);
 }
 
+bool passes_link(const std::filesystem::path &document, std::string_view spec, sweep &seen)
+{
+    const expected<std::optional<std::filesystem::path>, operation_failure> walked = first_beside_link(document, std::filesystem::path(spec));
+    if(!walked)
+        remember(seen, {text_read_failure_kind::status, walked.error()});
+    return !walked || *walked;
+}
+
 text_resource_result refuse_uncontained(std::string_view spec, log_sink &log)
 {
     log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, "refused resource \"" + std::string(spec) + "\" outside containment roots");
@@ -139,18 +147,21 @@ private:
     const text_reader_operations &m_operations;
     const std::vector<std::filesystem::path> &m_roots;
 
-    // A link beside the document that leads out of both of its directories names the file the spelling means, so unless the caller follows it,
-    // it refuses here rather than letting a configured root's same-named copy stand in.
+    // A link beside the document that leads out of both of its directories names the file the spelling means, so it refuses here unless the caller follows it; a followed link's
+    // answer, a dangling one's included, is final, so a configured root's same-named copy never stands in for it.
     std::optional<text_resource_result> from_document(std::string_view spec, const std::filesystem::path &document, sweep &seen)
     {
         const std::filesystem::path base                = absolute_base(document);
         const contained_read_result contained           = contain_beside(base, std::filesystem::path(spec));
         const std::optional<std::filesystem::path> link = contained && !*contained ? beside_link(base, std::filesystem::path(spec)) : std::nullopt;
-        if(!link)
-            return read_contained(contained, seen);
-        if(!m_includes.follow_outside_links)
+        if(link && !m_includes.follow_outside_links)
             return refuse_uncontained(spec, m_log);
-        return present(*link, seen) ? settle(read_text_file(*link, m_operations, m_maximum), seen) : std::nullopt;
+        std::optional<text_resource_result> read = link ? std::nullopt : read_contained(contained, seen);
+        if(link && present(*link, seen))
+            read = settle(read_text_file(*link, m_operations, m_maximum), seen);
+        if(read || !m_includes.follow_outside_links || !(link || passes_link(base, spec, seen)))
+            return read;
+        return conclude_sweep(spec, seen, m_log);
     }
 
     text_resource_result from_containment(std::string_view spec, const std::filesystem::path &document)

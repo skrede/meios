@@ -34,10 +34,21 @@ bool linked_climb_tree(const include_tree::tree &held)
     return !ec;
 }
 
-bool canonicalized_under(const std::filesystem::path &link, const std::filesystem::path &directory)
+bool dangling_tree(const include_tree::tree &held)
 {
-    const std::filesystem::path placed = std::filesystem::weakly_canonical(link).lexically_relative(std::filesystem::weakly_canonical(directory));
-    return !placed.empty() && *placed.begin() != std::filesystem::path("..");
+    held.write("root/leaf.xacro", include_tree::binds("fallback"));
+    held.write("root/gone/leaf.xacro", include_tree::binds("fallback"));
+    held.write("doc/top.xacro", include_tree::reads_leaf("leaf.xacro"));
+    held.write("doc/deep.xacro", include_tree::reads_leaf("gone/leaf.xacro"));
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(held.root() / "outside" / "gone", held.root() / "doc" / "gone", ec);
+    return !ec && include_tree::linked(held.root() / "outside" / "leaf.xacro", held.root() / "doc" / "leaf.xacro");
+}
+
+bool refuses_followed(const include_tree::expansion_result &out, const std::string &written, const std::filesystem::path &followed)
+{
+    return !out.has_value() && out.error().code == meios::diagnostic_code::unresolved_include && out.error().message.starts_with("xacro:include could not resolve \"" + written + '"') &&
+            out.error().message.find(followed.string()) != std::string::npos;
 }
 
 }
@@ -63,13 +74,15 @@ TEST_CASE("a caller following outside links reads a sibling link that leaves the
     REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
 }
 
-TEST_CASE("a dangling sibling link is looked for in the configured sources when outside links are followed", "[urdf][xacro][include][options]")
+TEST_CASE("a followed directory link to an absent target refuses even where a configured root holds the name", "[urdf][xacro][include][options]")
 {
     const include_tree::tree held;
-    held.write("root/leaf.xacro", include_tree::binds("fallback"));
-    std::filesystem::create_directories(held.root() / "outside");
-    const std::filesystem::path top = held.write("doc/top.xacro", include_tree::reads_leaf("leaf.xacro"));
-    if(!include_tree::linked(held.root() / "outside" / "leaf.xacro", held.root() / "doc" / "leaf.xacro"))
+    held.write("root/sub/leaf.xacro", include_tree::binds("root_copy"));
+    std::filesystem::create_directories(held.root() / "elsewhere");
+    const std::filesystem::path top = held.write("doc/top.xacro", include_tree::reads_leaf("sub/leaf.xacro"));
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(held.root() / "elsewhere", held.root() / "doc" / "sub", ec);
+    if(ec)
     {
         SUCCEED("this host cannot create a symlink");
         return;
@@ -78,35 +91,43 @@ TEST_CASE("a dangling sibling link is looked for in the configured sources when 
     meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
 
-    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, following()), "fallback"));
-    REQUIRE(xacro_probe::errors(records) == 0);
-}
-
-TEST_CASE("a dangling sibling link with outside links unset falls through or refuses as the standard library canonicalizes it", "[urdf][xacro][include][options]")
-{
-    const include_tree::tree held;
-    held.write("root/leaf.xacro", include_tree::binds("fallback"));
-    const std::filesystem::path top  = held.write("doc/top.xacro", include_tree::reads_leaf("leaf.xacro"));
-    const std::filesystem::path link = held.root() / "doc" / "leaf.xacro";
-    if(!include_tree::linked(held.root() / "outside" / "leaf.xacro", link))
-    {
-        SUCCEED("this host cannot create a symlink");
-        return;
-    }
-    const bool beside = canonicalized_under(link, held.root() / "doc");
-    std::vector<xacro_probe::captured> records;
-    meios::log_sink_f log{ xacro_probe::recorder{ records } };
-    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
-
+    REQUIRE(refuses_followed(expand_with(top, sources, log, following()), "sub/leaf.xacro", top.parent_path() / "sub/leaf.xacro"));
     const include_tree::expansion_result unset = expand_with(top, sources, log, meios::include_options{});
-    if(beside)
-    {
-        REQUIRE(include_tree::renders_link(unset, "fallback"));
-        REQUIRE(xacro_probe::errors(records) == 0);
-        return;
-    }
     REQUIRE_FALSE(unset.has_value());
     REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
+}
+
+TEST_CASE("a dangling sibling link with outside links followed refuses even where a configured root holds the name", "[urdf][xacro][include][options]")
+{
+    const include_tree::tree held;
+    if(!dangling_tree(held))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    const std::filesystem::path doc = held.root() / "doc";
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+
+    REQUIRE(refuses_followed(expand_with(doc / "top.xacro", sources, log, following()), "leaf.xacro", doc / "leaf.xacro"));
+    REQUIRE(refuses_followed(expand_with(doc / "deep.xacro", sources, log, following()), "gone/leaf.xacro", doc / "gone/leaf.xacro"));
+}
+
+TEST_CASE("a dangling sibling link with outside links unset falls through to the configured sources", "[urdf][xacro][include][options]")
+{
+    const include_tree::tree held;
+    if(!dangling_tree(held))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+
+    REQUIRE(include_tree::renders_link(expand_with(held.root() / "doc" / "top.xacro", sources, log, meios::include_options{}), "fallback"));
+    REQUIRE(xacro_probe::errors(records) == 0);
 }
 
 TEST_CASE("an admitted climb resolves through a linked directory as the operating system does", "[urdf][xacro][include][options]")
