@@ -29,13 +29,7 @@ expansion_result expand_over(const char *source, meios::source_stack &sources,
     return meios::expand(source, scope, sources, document, meios::expansion_limits{}, log);
 }
 
-expansion_result expand_rooted(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log, const std::vector<std::filesystem::path> &roots)
-{
-    meios::eval_scope scope;
-    return meios::expand(include_tree::read_file(document), scope, sources, document, meios::expansion_limits{}, meios::eval_policy::fail, {}, log, meios::include_options{}, roots);
-}
-
-void refuses_through_file(const std::string &spelling)
+expansion_result expand_through_file(const std::string &spelling)
 {
     const include_tree::tree held;
     held.write("doc/f.txt", "plain");
@@ -47,7 +41,12 @@ void refuses_through_file(const std::string &spelling)
     std::vector<xacro_probe::captured> records;
     meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources{ meios::directory_source{ roots.front(), log } };
-    const expansion_result out = expand_rooted(document, sources, log, roots);
+    meios::eval_scope scope;
+    return meios::expand(include_tree::read_file(document), scope, sources, document, meios::expansion_limits{}, meios::eval_policy::fail, {}, log, meios::include_options{}, roots);
+}
+
+void refuses_through_file(const expansion_result &out, const std::string &spelling)
+{
     for(const char *name : { "beside_through_file", "root_copy", "root_nested" })
         REQUIRE_FALSE(include_tree::renders_link(out, name));
     REQUIRE_FALSE(out.has_value());
@@ -180,14 +179,20 @@ TEST_CASE("a package include of a link pointing out of its configured root refus
 TEST_CASE("an include spelled through a file that is not a directory with no parent element refuses, and no configured source's copy stands in",
           "[xacro][structural][include][read]")
 {
-    refuses_through_file("f.txt/x.xacro");
+    const std::string spelling = "f.txt/x.xacro";
+    refuses_through_file(expand_through_file(spelling), spelling);
 }
 
-TEST_CASE("an include spelled back out of a file that is not a directory refuses, and no configured source's copy stands in",
+TEST_CASE("an include spelled back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured source's copy stands in",
           "[xacro][structural][include][read]")
 {
+    const std::string spelling = "f.txt/../x.xacro";
+    const expansion_result out = expand_through_file(spelling);
 #ifdef _WIN32
-    SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
+    REQUIRE(include_tree::renders_link(out, "beside_through_file"));
+    REQUIRE_FALSE(include_tree::renders_link(out, "root_copy"));
+    REQUIRE_FALSE(include_tree::renders_link(out, "root_nested"));
+#else
+    refuses_through_file(out, spelling);
 #endif
-    refuses_through_file("f.txt/../x.xacro");
 }

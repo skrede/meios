@@ -53,14 +53,15 @@ bool unresolved_through_non_directory(const meios::captured_diagnostic &record)
     return record.code == meios::diagnostic_code::unresolved_asset && record.cause && record.cause->native == std::errc::not_a_directory;
 }
 
-void refuses_through_file(const std::string &spelling)
+load_outcome load_through_file(const include_tree::tree &held, const std::string &spelling)
 {
-    const include_tree::tree held;
     held.write("doc/f.txt", "plain");
     held.write("doc/m.stl", stl());
-    const std::filesystem::path document = held.write("doc/robot.urdf", mesh_robot(spelling));
+    return meios::load(held.write("doc/robot.urdf", mesh_robot(spelling)));
+}
 
-    const load_outcome refused = meios::load(document);
+void refuses_through_file(const include_tree::tree &held, const load_outcome &refused)
+{
     REQUIRE_FALSE(resolves_to(refused, held.root() / "doc" / "m.stl"));
     REQUIRE_FALSE(refused.has_value());
     REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
@@ -167,13 +168,18 @@ TEST_CASE("a dangling mesh link beside its document is a missing asset, never a 
 
 TEST_CASE("a mesh spelled through a file that is not a directory with no parent element does not resolve, and its record names why", "[urdf][load][mesh]")
 {
-    refuses_through_file("f.txt/m.stl");
+    const include_tree::tree held;
+    refuses_through_file(held, load_through_file(held, "f.txt/m.stl"));
 }
 
-TEST_CASE("a mesh spelled back out of a file that is not a directory does not resolve, and its record names why", "[urdf][load][mesh]")
+TEST_CASE("a mesh spelled back out of a file that is not a directory does not resolve on POSIX, its record naming why, and resolves beside the document on Windows", "[urdf][load][mesh]")
 {
+    const include_tree::tree held;
+    const load_outcome loaded = load_through_file(held, "f.txt/../m.stl");
 #ifdef _WIN32
-    SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
+    REQUIRE(loaded.has_value());
+    REQUIRE(resolves_to(loaded, held.root() / "doc" / "m.stl"));
+#else
+    refuses_through_file(held, loaded);
 #endif
-    refuses_through_file("f.txt/../m.stl");
 }

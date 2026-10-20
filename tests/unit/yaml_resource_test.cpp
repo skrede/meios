@@ -24,7 +24,14 @@ using yaml_resource_test::tally;
 namespace
 {
 
-void refuses_through_file(const char *spelling)
+struct through_file_reads
+{
+    meios::text_resource_result through;
+    meios::text_resource_result missed;
+    tally counts;
+};
+
+through_file_reads read_through_file(const char *spelling)
 {
     const std::filesystem::path root = seed_tree();
     std::filesystem::create_directories(root / "other" / "f.txt");
@@ -41,11 +48,16 @@ void refuses_through_file(const char *spelling)
     const meios::text_resource_result through = under.loader(spelling, document);
     const meios::text_resource_result missed  = under.loader("y.yaml", document);
     std::filesystem::remove_all(root);
-    REQUIRE_FALSE(through.has_value());
-    REQUIRE(through.error() == meios::text_resource_failure::unreachable);
-    REQUIRE(counts.errors >= 1);
-    REQUIRE(says(counts, std::make_error_code(std::errc::not_a_directory).message()));
-    REQUIRE(missed.value() == std::string("from: genuine_miss"));
+    return {through, missed, counts};
+}
+
+void refuses_through_file(const through_file_reads &reads)
+{
+    REQUIRE_FALSE(reads.through.has_value());
+    REQUIRE(reads.through.error() == meios::text_resource_failure::unreachable);
+    REQUIRE(reads.counts.errors >= 1);
+    REQUIRE(says(reads.counts, std::make_error_code(std::errc::not_a_directory).message()));
+    REQUIRE(reads.missed.value() == std::string("from: genuine_miss"));
 }
 
 }
@@ -171,13 +183,16 @@ TEST_CASE("a package-form spec naming a link inside its root is read through the
 
 TEST_CASE("a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in", "[yaml][resource]")
 {
-    refuses_through_file("f.txt/x.yaml");
+    refuses_through_file(read_through_file("f.txt/x.yaml"));
 }
 
-TEST_CASE("a spelling back out of a file that is not a directory refuses, and no configured root's copy stands in", "[yaml][resource]")
+TEST_CASE("a spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured root's copy stands in", "[yaml][resource]")
 {
+    const through_file_reads reads = read_through_file("f.txt/../x.yaml");
 #ifdef _WIN32
-    SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
+    REQUIRE(reads.through.value() == std::string("from: beside_through_file"));
+    REQUIRE(reads.missed.value() == std::string("from: genuine_miss"));
+#else
+    refuses_through_file(reads);
 #endif
-    refuses_through_file("f.txt/../x.yaml");
 }
