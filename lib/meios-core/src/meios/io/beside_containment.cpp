@@ -1,5 +1,9 @@
 #include "beside_containment.h"
 
+#include "meios/io/directory_source.h"
+
+#include <span>
+#include <utility>
 #include <optional>
 #include <filesystem>
 #include <system_error>
@@ -19,6 +23,27 @@ bool escapes(const std::filesystem::path &root, const std::filesystem::path &rea
 bool absent(const std::filesystem::file_status &status, const std::error_code &error)
 {
     return status.type() == std::filesystem::file_type::not_found || error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
+}
+
+std::optional<contained_read> admit(const std::filesystem::path &directory, const std::filesystem::path &candidate, std::optional<operation_failure> &retained)
+{
+    contained_read_result decided = contain_under(directory, candidate);
+    if(decided)
+        return std::move(*decided);
+    if(!retained)
+        retained = decided.error();
+    return std::nullopt;
+}
+
+std::optional<contained_read> admit_real(const std::filesystem::path &document, const std::filesystem::path &candidate, std::optional<operation_failure> &retained)
+{
+    std::error_code error;
+    const std::filesystem::path real = std::filesystem::weakly_canonical(document, error);
+    if(!error)
+        return admit(real.parent_path(), candidate, retained);
+    if(!retained)
+        retained = operation_failure{operation_kind::canonicalize, error};
+    return std::nullopt;
 }
 
 }
@@ -42,18 +67,20 @@ contained_read_result contain_under(const std::filesystem::path &root, const std
     return std::optional{contained_read{real, base}};
 }
 
-contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec)
+contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec, std::span<const std::filesystem::path> roots)
 {
-    const std::filesystem::path named     = document.parent_path();
-    const std::filesystem::path candidate = named / spec;
-    contained_read_result as_named        = contain_under(named, candidate);
-    if(!as_named || *as_named)
-        return as_named;
-    std::error_code error;
-    const std::filesystem::path real = std::filesystem::weakly_canonical(document, error);
-    if(error)
-        return unexpected<operation_failure>({operation_kind::canonicalize, error});
-    return contain_under(real.parent_path(), candidate);
+    const std::filesystem::path candidate = document.parent_path() / spec;
+    std::optional<operation_failure> retained;
+    std::optional<contained_read> found;
+    if(!document.empty())
+        found = admit(document.parent_path(), candidate, retained);
+    if(!found && !document.empty())
+        found = admit_real(document, candidate, retained);
+    for(auto root = roots.begin(); !found && root != roots.end(); ++root)
+        found = admit(absolute_base(*root), candidate, retained);
+    if(found || !retained)
+        return found;
+    return unexpected<operation_failure>(*retained);
 }
 
 std::optional<std::filesystem::path> beside_link(const std::filesystem::path &document, const std::filesystem::path &spec)

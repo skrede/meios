@@ -8,6 +8,7 @@
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/operation_failure.h"
 
+#include <span>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -31,7 +32,10 @@ contained_read_result contain_under(const std::filesystem::path &root, const std
 // uncontained, and a hit carries the canonical root and the canonical target relative to it.
 std::optional<resolved_asset> locate_contained(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log);
 
-contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec);
+// Admits the target where the document was named, then where it really lives, then under each root in
+// order; the first directory containing it answers, and a directory the filesystem could not
+// canonicalize yields to the next, its failure answered only when none contains the target.
+contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec, std::span<const std::filesystem::path> roots = {});
 
 // Names the join only where the spelling stays inside the directory the document was named in, so an
 // escape the containment decision found for it can only have been made by a link.

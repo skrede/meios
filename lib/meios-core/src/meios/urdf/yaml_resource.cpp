@@ -147,12 +147,12 @@ private:
     const text_reader_operations &m_operations;
     const std::vector<std::filesystem::path> &m_roots;
 
-    // A link beside the document that leads out of both of its directories names the file the spelling means, so it refuses here unless the caller follows it; a followed link's
+    // A link beside the document that leads out of every directory admitting it names the file the spelling means, so it refuses here unless the caller follows it; a followed link's
     // answer, a dangling one's included, is final, so a configured root's same-named copy never stands in for it.
     std::optional<text_resource_result> from_document(std::string_view spec, const std::filesystem::path &document, sweep &seen)
     {
         const std::filesystem::path base                = absolute_base(document);
-        const contained_read_result contained           = contain_beside(base, std::filesystem::path(spec));
+        const contained_read_result contained           = contain_beside(base, std::filesystem::path(spec), m_roots);
         const std::optional<std::filesystem::path> link = contained && !*contained ? beside_link(base, std::filesystem::path(spec)) : std::nullopt;
         if(link && !m_includes.follow_outside_links)
             return refuse_uncontained(spec, m_log);

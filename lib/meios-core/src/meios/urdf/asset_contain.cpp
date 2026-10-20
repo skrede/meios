@@ -15,51 +15,14 @@ namespace meios::detail
 namespace
 {
 
-// A root the filesystem could not traverse neither contains nor excludes the candidate: it
-// retains its failure for an exhausted search and yields to the next root, which discards it.
-bool contains(const std::filesystem::path &root, const std::filesystem::path &candidate, std::optional<std::filesystem::path> &real, std::optional<operation_failure> &retained)
-{
-    contained_path_result under = try_contained_under(root, candidate);
-    if(!under)
-    {
-        if(!retained)
-            retained = under.error();
-        return false;
-    }
-    real = std::move(*under);
-    return real.has_value();
-}
-
-// The document's directory is judged as it was named and as where the document really lives,
-// the rule an include and an auxiliary document beside it are held to.
-bool beside_document(const std::filesystem::path &candidate, const parse_context &ctx, std::optional<std::filesystem::path> &real, std::optional<operation_failure> &retained)
-{
-    if(ctx.document.empty())
-        return false;
-    const contained_read_result beside = contain_beside(absolute_base(ctx.document), candidate);
-    if(!beside)
-    {
-        if(!retained)
-            retained = beside.error();
-        return false;
-    }
-    if(*beside)
-        real = (*beside)->real;
-    return real.has_value();
-}
-
 contained_path_result first_container(const std::filesystem::path &candidate, const parse_context &ctx)
 {
-    std::optional<std::filesystem::path> real;
-    std::optional<operation_failure> retained;
-    for(const std::filesystem::path &root : ctx.package_roots)
-        if(contains(absolute_base(root), candidate, real, retained))
-            return real;
-    if(beside_document(candidate, ctx, real, retained))
-        return real;
-    if(retained)
-        return unexpected<operation_failure>(*retained);
-    return std::optional<std::filesystem::path>{};
+    const contained_read_result contained = contain_beside(absolute_base(ctx.document), candidate, ctx.package_roots);
+    if(!contained)
+        return unexpected<operation_failure>(contained.error());
+    if(!*contained)
+        return std::optional<std::filesystem::path>{};
+    return std::optional{(*contained)->real};
 }
 
 std::optional<std::filesystem::path> followed_link(const std::filesystem::path &spelling, const parse_context &ctx)
