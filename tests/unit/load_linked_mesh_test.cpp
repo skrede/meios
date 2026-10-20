@@ -9,7 +9,9 @@
 
 #include <string>
 #include <variant>
+#include <algorithm>
 #include <filesystem>
+#include <system_error>
 
 namespace
 {
@@ -44,6 +46,11 @@ bool resolves_to(const load_outcome &loaded, const std::filesystem::path &expect
         return false;
     const auto *mesh = std::get_if<meios::mesh<>>(&loaded->robot.links[0].visuals[0].geom.shape);
     return mesh != nullptr && mesh->resolved_path && std::filesystem::equivalent(*mesh->resolved_path, expected);
+}
+
+bool unresolved_through_non_directory(const meios::captured_diagnostic &record)
+{
+    return record.code == meios::diagnostic_code::unresolved_asset && record.cause && record.cause->native == std::errc::not_a_directory;
 }
 
 }
@@ -142,4 +149,21 @@ TEST_CASE("a dangling mesh link beside its document is a missing asset, never a 
         REQUIRE_FALSE(refused.has_value());
         REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
     }
+}
+
+TEST_CASE("a mesh spelled through a file that is not a directory does not resolve, and its record names why", "[urdf][load][mesh]")
+{
+#ifdef _WIN32
+    SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
+#endif
+    const include_tree::tree held;
+    held.write("doc/f.txt", "plain");
+    held.write("doc/m.stl", stl());
+    const std::filesystem::path document = held.write("doc/robot.urdf", mesh_robot("f.txt/../m.stl"));
+
+    const load_outcome refused = meios::load(document);
+    REQUIRE_FALSE(resolves_to(refused, held.root() / "doc" / "m.stl"));
+    REQUIRE_FALSE(refused.has_value());
+    REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
+    REQUIRE(std::ranges::any_of(refused.error().diagnostics, unresolved_through_non_directory));
 }

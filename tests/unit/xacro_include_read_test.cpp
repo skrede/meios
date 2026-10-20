@@ -29,6 +29,12 @@ expansion_result expand_over(const char *source, meios::source_stack &sources,
     return meios::expand(source, scope, sources, document, meios::expansion_limits{}, log);
 }
 
+expansion_result expand_rooted(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log, const std::vector<std::filesystem::path> &roots)
+{
+    meios::eval_scope scope;
+    return meios::expand(include_tree::read_file(document), scope, sources, document, meios::expansion_limits{}, meios::eval_policy::fail, {}, log, meios::include_options{}, roots);
+}
+
 }
 
 TEST_CASE("an xacro:include naming a directory refuses with the non-regular classification",
@@ -147,4 +153,36 @@ TEST_CASE("a package include of a link pointing out of its configured root refus
     REQUIRE(out.error().message == "xacro:include could not resolve \"p/a.xacro\"");
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::uncontained_asset) == 1);
     REQUIRE(xacro_probe::errors(records) == 2);
+}
+
+TEST_CASE("an include spelled through a file that is not a directory refuses, and no configured source's copy stands in",
+          "[xacro][structural][include][read]")
+{
+#ifdef _WIN32
+    SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
+#endif
+    const include_tree::tree held;
+    held.write("doc/f.txt", "plain");
+    held.write("doc/x.xacro", include_tree::binds("beside_through_file"));
+    held.write("root/x.xacro", include_tree::binds("root_copy"));
+    held.write("root/f.txt/x.xacro", include_tree::binds("root_nested"));
+    const std::vector<std::filesystem::path> roots{ held.root() / "root" };
+    for(const std::string spelling : { "f.txt/../x.xacro", "f.txt/x.xacro" })
+    {
+        DYNAMIC_SECTION(spelling)
+        {
+            const std::filesystem::path document = held.write("doc/top.xacro", include_tree::reads_leaf(spelling));
+            std::vector<xacro_probe::captured> records;
+            meios::log_sink_f log{ xacro_probe::recorder{ records } };
+            meios::source_stack sources{ meios::directory_source{ roots.front(), log } };
+            const expansion_result out = expand_rooted(document, sources, log, roots);
+            for(const char *name : { "beside_through_file", "root_copy", "root_nested" })
+                REQUIRE_FALSE(include_tree::renders_link(out, name));
+            REQUIRE_FALSE(out.has_value());
+            REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
+            REQUIRE(out.error().message.starts_with("xacro:include could not look for \"" + spelling + '"'));
+            REQUIRE(out.error().cause.has_value());
+            REQUIRE(out.error().cause->native == std::errc::not_a_directory);
+        }
+    }
 }

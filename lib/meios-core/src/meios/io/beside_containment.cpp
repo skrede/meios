@@ -46,6 +46,17 @@ std::optional<contained_read> admit_real(const std::filesystem::path &document, 
     return std::nullopt;
 }
 
+// The reference opens the spelling as written, so an element that is not a directory refuses it, where
+// weakly_canonical stops at that element and reduces the rest by its spelling [fs.op.weakly.canonical].
+std::optional<operation_failure> refuse_non_directory(const std::filesystem::path &joined)
+{
+    std::error_code error;
+    const std::filesystem::file_status status = std::filesystem::status(joined, error);
+    if(status.type() == std::filesystem::file_type::not_found && error == std::errc::not_a_directory)
+        return operation_failure{operation_kind::status, error};
+    return std::nullopt;
+}
+
 }
 
 // A containment decision is only meaningful between two absolute paths: canonicalizing a
@@ -70,6 +81,9 @@ contained_read_result contain_under(const std::filesystem::path &root, const std
 contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec, std::span<const std::filesystem::path> roots)
 {
     const std::filesystem::path candidate = document.parent_path() / spec;
+    if(!document.empty() && candidate.is_absolute())
+        if(std::optional<operation_failure> refused = refuse_non_directory(candidate))
+            return unexpected<operation_failure>(*refused);
     std::optional<operation_failure> retained;
     std::optional<contained_read> found;
     if(!document.empty())
@@ -81,6 +95,11 @@ contained_read_result contain_beside(const std::filesystem::path &document, cons
     if(found || !retained)
         return found;
     return unexpected<operation_failure>(*retained);
+}
+
+bool through_non_directory(const operation_failure &failure)
+{
+    return failure.operation == operation_kind::status && failure.native == std::errc::not_a_directory;
 }
 
 std::optional<std::filesystem::path> beside_link(const std::filesystem::path &document, const std::filesystem::path &spec)
