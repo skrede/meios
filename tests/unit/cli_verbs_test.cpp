@@ -214,14 +214,15 @@ TEST_CASE("cli_verbs: deps fails loudly on an unopenable path and emits no stdou
     REQUIRE(out.str().empty());
 }
 
-TEST_CASE("cli_verbs: info summarizes links, joints, and degrees of freedom")
+TEST_CASE("cli_verbs: info summarizes links, joints, and both degree-of-freedom counts")
 {
     verb_context ctx;
     ctx.id = "info";
     ctx.positionals = { fixture("branched_all_joints.urdf") };
     cout_capture out;
     REQUIRE(cli::run_info(ctx) == 0);
-    REQUIRE(out.str().find("dof:") != std::string::npos);
+    REQUIRE(out.str().find("total_dof:") != std::string::npos);
+    REQUIRE(out.str().find("independent_dof:") != std::string::npos);
 }
 
 TEST_CASE("cli_verbs: info --format json emits a machine-readable summary")
@@ -236,6 +237,7 @@ TEST_CASE("cli_verbs: info --format json emits a machine-readable summary")
     REQUIRE(printed.find("\"name\":\"branched_all_joints\"") != std::string::npos);
     REQUIRE(printed.find("\"joints_by_kind\":") != std::string::npos);
     REQUIRE(printed.find("dof:") == std::string::npos);
+    REQUIRE(printed.find("\"total_dof\":") != std::string::npos);
 }
 
 TEST_CASE("cli_verbs: info exits nonzero and prints each failure's typed code exactly once")

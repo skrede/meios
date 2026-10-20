@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot name="floating_planar_mimic">
+  <link name="base_link"/>
+  <link name="free_body"/>
+  <link name="plane_body"/>
+  <link name="upper"/>
+  <link name="lower"/>
+
+  <joint name="base_to_free" type="floating">
+    <parent link="base_link"/>
+    <child link="free_body"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="free_to_plane" type="planar">
+    <parent link="free_body"/>
+    <child link="plane_body"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <joint name="j1" type="revolute">
+    <parent link="plane_body"/>
+    <child link="upper"/>
+    <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <joint name="j2" type="revolute">
+    <parent link="upper"/>
+    <child link="lower"/>
+    <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+    <mimic joint="j1"/>
+  </joint>
+</robot>

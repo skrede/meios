@@ -689,6 +689,20 @@ default: each produces an artifact that names or needs the asset.
 shell script. What that script calls back into is `meios __complete`, which is hidden, carries no
 help entry, and is the thing the paragraphs above mean whenever they name the completion engine.
 
+**`info` counts degrees of freedom by each joint's motion group, and neither count is actuation.**
+`meios info` reports `total_dof` and `independent_dof`, in text and under `--format json`.
+`total_dof` is the sum, over the joints, of the dimension of the group each joint moves in: a fixed
+joint is trivial and adds 0; a revolute or continuous joint moves in SO(2) and a prismatic one in ℝ,
+and each adds 1; a planar joint moves in SE(2) = ℝ² ⋊ SO(2) and adds 3; a floating joint moves in
+SE(3) and adds 6. `independent_dof` is that total less one coordinate for every joint carrying
+`<mimic>` whose group has any. A mimic is the holonomic constraint q_m = k·q + c, which fixes one
+coordinate, so a mimic on a fixed joint removes nothing. Two joints that each mimic the other each
+remove one, which removes one too many where their multipliers multiply to one, because the two
+constraints are then the same constraint; URDF does not forbid that shape. The model `info` reports
+is a tree, because a broken topology fails the verb, so no loop-closure term enters either count.
+Actuation is declared in `<transmission>`, outside URDF's kinematic tree, which is why neither count
+is called actuated: a passive joint and a driven one count alike.
+
 ## What the description corpus proves
 
 **The blocking corpus reaches five vendors, plus one description this project wrote itself.** Every
@@ -835,7 +849,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes sixty-five claims — the bold sentence that opens each entry above — and this table
+This page makes sixty-six claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -917,6 +931,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | `info` and the completion engine fail loudly on a broken topology | `cli_verbs.info exits nonzero and prints each failure's typed code exactly once`, `cli_tree.tree exits nonzero and prints each failure's typed code exactly once`, and `cli_tree.an unknown --root link exits nonzero and renders nothing`. |
 | Unresolved meshes do not stop the reporting verbs | Half carried. The four lowering sites are one assignment each in the verbs' own sources, and `cli_table_drift: resolve names every accepted asset form and deps carries the override surface` holds the surface; no case drives a reporting verb over a document whose mesh does not resolve. |
 | The completion engine is not a verb you can type | `cli_verbs.completion bash equals the golden and calls __complete`, `cli_table_drift: the completion verb is part of the shared surface`, and the three `completion_emit` golden cases. |
+| `info` counts degrees of freedom by each joint's motion group | `cli_info: info reports the total and the independent degrees of freedom`, `cli_info: info --format json carries both counts and drops the single count`, `cli_info: a floating, a planar and two revolute joints, one mimicking the other, report eleven and ten`, and `cli_info: a mimic removes one coordinate from a planar joint and none from a fixed one`. The sentence on two joints that each mimic the other is carried by nothing; no case drives that shape. |
 
 ### What the description corpus proves
 

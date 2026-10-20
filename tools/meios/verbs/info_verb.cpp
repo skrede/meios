@@ -1,4 +1,5 @@
 #include "verbs.h"
+#include "joint_dof.h"
 #include "json_escape.h"
 #include "deferred_error_sink.h"
 
@@ -41,15 +42,6 @@ std::string_view joint_kind_name(joint_kind kind)
     return "unknown";
 }
 
-std::size_t degrees_of_freedom(const model<double> &robot)
-{
-    std::size_t dof = 0;
-    for(const joint<double> &edge : robot.joints)
-        if(edge.kind != joint_kind::fixed)
-            ++dof;
-    return dof;
-}
-
 void print_joint_histogram(const model<double> &robot, std::ostream &out)
 {
     std::map<std::string_view, std::size_t> histogram;
@@ -87,7 +79,8 @@ void print_info(const model<double> &robot, std::ostream &out)
     out << "links: " << robot.links.size() << '\n';
     out << "joints: " << robot.joints.size() << '\n';
     out << "materials: " << robot.materials.size() << '\n';
-    out << "dof: " << degrees_of_freedom(robot) << '\n';
+    out << "total_dof: " << total_dof(robot) << '\n';
+    out << "independent_dof: " << independent_dof(robot) << '\n';
     print_joint_histogram(robot, out);
     print_mesh_list(robot, out);
 }
@@ -142,7 +135,8 @@ void print_info_json(const model<double> &robot, std::ostream &out)
         << ",\"links\":" << robot.links.size()
         << ",\"joints\":" << robot.joints.size()
         << ",\"materials\":" << robot.materials.size()
-        << ",\"dof\":" << degrees_of_freedom(robot) << ",\"joints_by_kind\":";
+        << ",\"total_dof\":" << total_dof(robot)
+        << ",\"independent_dof\":" << independent_dof(robot) << ",\"joints_by_kind\":";
     write_histogram_json(robot, out);
     out << ",\"meshes\":";
     write_meshes_json(robot, out);

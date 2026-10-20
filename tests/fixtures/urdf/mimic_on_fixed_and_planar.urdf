@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<robot name="mimic_on_fixed_and_planar">
+  <link name="base_link"/>
+  <link name="arm"/>
+  <link name="plane_body"/>
+  <link name="bracket"/>
+
+  <joint name="j1" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+  <joint name="base_to_plane" type="planar">
+    <parent link="base_link"/>
+    <child link="plane_body"/>
+    <origin xyz="0.1 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <mimic joint="j1"/>
+  </joint>
+
+  <joint name="arm_to_bracket" type="fixed">
+    <parent link="arm"/>
+    <child link="bracket"/>
+    <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    <mimic joint="j1"/>
+  </joint>
+</robot>
