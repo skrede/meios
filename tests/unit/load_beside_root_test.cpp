@@ -171,3 +171,18 @@ TEST_CASE("a spelling through a directory that does not exist reads the file bes
     REQUIRE(beside_root_fixture::loads_link(meios::load(yaml_document(held, "doc/robot.xacro", "sub/../cfg.yaml"), meios::load_options{}), "beside"));
 #endif
 }
+
+TEST_CASE("a document named by a relative path with a directory resolves its sibling mesh from the parent working directory", "[urdf][load][mesh]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path target = held.write("sub/meshes/base.stl", "solid m\nendsolid m\n");
+    held.write("sub/document.urdf", "<robot name=\"probe\"><link name=\"base\"><visual><geometry><mesh filename=\"meshes/base.stl\"/></geometry></visual></link></robot>");
+    const std::filesystem::path saved = std::filesystem::current_path();
+
+    std::filesystem::current_path(held.root());
+    const load_outcome loaded = meios::load("sub/document.urdf");
+    std::filesystem::current_path(saved);
+
+    INFO((loaded ? std::string("loaded") : loaded.error().message));
+    REQUIRE(resolves_to(loaded, target));
+}

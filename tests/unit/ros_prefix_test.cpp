@@ -9,6 +9,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <vector>
 #include <optional>
 #include <filesystem>
@@ -75,6 +76,27 @@ TEST_CASE("an empty ament prefix environment value registers nothing", "[ros]")
 
     portable_setenv("ROS_PACKAGE_PATH", "");
     portable_setenv("AMENT_PREFIX_PATH", "");
+    std::filesystem::current_path(tree.path());
+    meios::ros_package_source source = meios::ros_package_source::from_environment(log);
+    const bool known                 = has_package(source.packages(), "arm");
+    const bool located               = source.locate("arm", mesh).has_value();
+    std::filesystem::current_path(saved);
+
+    REQUIRE_FALSE(known);
+    REQUIRE_FALSE(located);
+}
+
+TEST_CASE("an empty entry between ament prefix separators registers nothing from the working directory", "[ros]")
+{
+    const meios::scratch_dir tree = make_tree();
+    ament_package(tree.path(), "arm");
+    const std::filesystem::path saved = std::filesystem::current_path();
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    const char separator = std::filesystem::path::preferred_separator == '\\' ? ';' : ':';
+
+    portable_setenv("ROS_PACKAGE_PATH", "");
+    portable_setenv("AMENT_PREFIX_PATH", std::string(2, separator).c_str());
     std::filesystem::current_path(tree.path());
     meios::ros_package_source source = meios::ros_package_source::from_environment(log);
     const bool known                 = has_package(source.packages(), "arm");

@@ -21,6 +21,35 @@ using yaml_resource_test::says;
 using yaml_resource_test::seed_tree;
 using yaml_resource_test::tally;
 
+namespace
+{
+
+void refuses_through_file(const char *spelling)
+{
+    const std::filesystem::path root = seed_tree();
+    std::filesystem::create_directories(root / "other" / "f.txt");
+    std::ofstream(root / "docs" / "f.txt") << "plain";
+    std::ofstream(root / "docs" / "x.yaml") << "from: beside_through_file";
+    std::ofstream(root / "other" / "x.yaml") << "from: root_copy";
+    std::ofstream(root / "other" / "f.txt" / "x.yaml") << "from: root_nested_yaml";
+    std::ofstream(root / "other" / "y.yaml") << "from: genuine_miss";
+    tally counts;
+    meios::log_sink_f sink{std::ref(counts)};
+    probe under(sink, root, {root / "other"});
+    const std::filesystem::path document = root / "docs" / "robot.xacro";
+
+    const meios::text_resource_result through = under.loader(spelling, document);
+    const meios::text_resource_result missed  = under.loader("y.yaml", document);
+    std::filesystem::remove_all(root);
+    REQUIRE_FALSE(through.has_value());
+    REQUIRE(through.error() == meios::text_resource_failure::unreachable);
+    REQUIRE(counts.errors >= 1);
+    REQUIRE(says(counts, std::make_error_code(std::errc::not_a_directory).message()));
+    REQUIRE(missed.value() == std::string("from: genuine_miss"));
+}
+
+}
+
 TEST_CASE("a package-qualified spec resolves through the source stack", "[yaml][resource]")
 {
     const std::filesystem::path root = seed_tree();
@@ -140,39 +169,15 @@ TEST_CASE("a package-form spec naming a link inside its root is read through the
     REQUIRE(counts.errors == 0);
 }
 
-TEST_CASE("a spelling through a file that is not a directory refuses, and no configured root's copy stands in", "[yaml][resource]")
+TEST_CASE("a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in", "[yaml][resource]")
+{
+    refuses_through_file("f.txt/x.yaml");
+}
+
+TEST_CASE("a spelling back out of a file that is not a directory refuses, and no configured root's copy stands in", "[yaml][resource]")
 {
 #ifdef _WIN32
     SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
 #endif
-    const std::filesystem::path root = seed_tree();
-    std::filesystem::create_directories(root / "other" / "f.txt");
-    std::ofstream(root / "docs" / "f.txt") << "plain";
-    std::ofstream(root / "docs" / "x.yaml") << "from: beside_through_file";
-    std::ofstream(root / "other" / "x.yaml") << "from: root_copy";
-    std::ofstream(root / "other" / "f.txt" / "x.yaml") << "from: root_nested_yaml";
-    std::ofstream(root / "other" / "y.yaml") << "from: genuine_miss";
-    tally counts;
-    meios::log_sink_f sink{std::ref(counts)};
-    probe under(sink, root, {root / "other"});
-    const std::filesystem::path document = root / "docs" / "robot.xacro";
-
-    for(const char *spelling : {"f.txt/../x.yaml", "f.txt/x.yaml"})
-    {
-        DYNAMIC_SECTION(spelling)
-        {
-            const meios::text_resource_result through = under.loader(spelling, document);
-            std::filesystem::remove_all(root);
-            REQUIRE_FALSE(through.has_value());
-            REQUIRE(through.error() == meios::text_resource_failure::unreachable);
-            REQUIRE(counts.errors >= 1);
-            REQUIRE(says(counts, std::make_error_code(std::errc::not_a_directory).message()));
-        }
-    }
-    SECTION("a genuine miss beside the document is still read from the configured root")
-    {
-        const meios::text_resource_result missed = under.loader("y.yaml", document);
-        std::filesystem::remove_all(root);
-        REQUIRE(missed.value() == std::string("from: genuine_miss"));
-    }
+    refuses_through_file("f.txt/../x.yaml");
 }

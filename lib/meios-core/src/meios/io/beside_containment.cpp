@@ -4,6 +4,7 @@
 
 #include <span>
 #include <utility>
+#include <iterator>
 #include <optional>
 #include <filesystem>
 #include <system_error>
@@ -46,14 +47,24 @@ std::optional<contained_read> admit_real(const std::filesystem::path &document, 
     return std::nullopt;
 }
 
-// The reference opens the spelling as written, so an element that is not a directory refuses it, where
-// weakly_canonical stops at that element and reduces the rest by its spelling [fs.op.weakly.canonical].
+// The reference opens the spelling as written, so an element that is not a directory refuses it where weakly_canonical would stop and reduce the rest [fs.op.weakly.canonical].
+// The walk asks each element rather than reading ENOTDIR, which only POSIX reports; an element a `..` follows is left to the path API, which reduces the pair first on Windows.
 std::optional<operation_failure> refuse_non_directory(const std::filesystem::path &joined)
 {
-    std::error_code error;
-    const std::filesystem::file_status status = std::filesystem::status(joined, error);
-    if(status.type() == std::filesystem::file_type::not_found && error == std::errc::not_a_directory)
-        return operation_failure{operation_kind::status, error};
+    const std::filesystem::path relative = joined.relative_path();
+    std::filesystem::path prefix         = joined.root_path();
+    for(auto element = relative.begin(); element != relative.end() && std::next(element) != relative.end(); ++element)
+    {
+        prefix /= *element;
+        std::error_code error;
+        const std::filesystem::file_status status = std::filesystem::status(prefix, error);
+        if(error == std::errc::not_a_directory)
+            return operation_failure{operation_kind::status, error};
+        if(error || status.type() == std::filesystem::file_type::not_found)
+            return std::nullopt;
+        if(!std::filesystem::is_directory(status) && *std::next(element) != "..")
+            return operation_failure{operation_kind::status, std::make_error_code(std::errc::not_a_directory)};
+    }
     return std::nullopt;
 }
 

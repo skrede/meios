@@ -3,6 +3,7 @@
 
 #include <meios/urdf.h>
 
+#include <meios/io/source_stack.h>
 #include <meios/io/bundle_source.h>
 #include <meios/io/memory_source.h>
 #include <meios/io/source_handle.h>
@@ -12,6 +13,7 @@
 
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/capturing_log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -40,11 +42,37 @@ struct bytes_only
     }
 };
 
-meios::load_options climbing_under(std::vector<std::filesystem::path> roots)
+// Serves a package file from a second tree where the first lacks it, as an overlaid workspace does.
+struct overlaid
+{
+    std::vector<std::filesystem::path> roots;
+
+    static meios::capability_descriptor capabilities()
+    {
+        return {meios::source_kind::directory, false};
+    }
+
+    std::optional<std::filesystem::path> path_of(std::string_view package, std::string_view relative) const
+    {
+        for(const std::filesystem::path &root : roots)
+            if(std::filesystem::exists(root / package / relative))
+                return root / package / relative;
+        return std::nullopt;
+    }
+
+    std::optional<meios::resolved_asset> locate(std::string_view package, std::string_view relative)
+    {
+        if(const std::optional<std::filesystem::path> found = path_of(package, relative))
+            return meios::resolved_asset{*found, found->parent_path(), found->filename(), *found};
+        return std::nullopt;
+    }
+};
+
+meios::load_options under(std::vector<std::filesystem::path> roots, bool climbing = false)
 {
     meios::load_options opts;
     opts.package_roots                 = std::move(roots);
-    opts.includes.climb_above_document = true;
+    opts.includes.climb_above_document = climbing;
     return opts;
 }
 
@@ -67,9 +95,9 @@ void refuses_unresolved(const load_outcome &loaded, const std::string &written)
     CHECK(loaded.error().message.find('"' + written + '"') != std::string::npos);
 }
 
-std::filesystem::path top_reading_package(const include_tree::tree &held)
+std::filesystem::path top_reading_package(const include_tree::tree &held, std::string_view spelling = "$(find p)/urdf/a.xacro")
 {
-    return held.write("T/top.xacro", include_tree::reads_leaf("$(find p)/urdf/a.xacro"));
+    return held.write("T/top.xacro", include_tree::reads_leaf(spelling));
 }
 
 }
@@ -101,7 +129,7 @@ TEST_CASE("a beside link into a second configured root climbs as the reference r
 
     std::vector<xacro_probe::captured> records;
     meios::log_sink_f log{xacro_probe::recorder{records}};
-    const load_outcome loaded = meios::load(top_reading_package(held), climbing_under({held.root() / "R1", held.root() / "R2"}), log);
+    const load_outcome loaded = meios::load(top_reading_package(held), under({held.root() / "R1", held.root() / "R2"}, true), log);
     CHECK(only_link(loaded) == "via_r1");
     CHECK(xacro_probe::errors(records) == 0);
 }
@@ -120,7 +148,7 @@ TEST_CASE("a sibling of a document served through an in-root link refuses where 
         return;
     }
 
-    refuses_unresolved(meios::load(top_reading_package(held), climbing_under({held.root() / "R"})), "b.xacro");
+    refuses_unresolved(meios::load(top_reading_package(held), under({held.root() / "R"}, true)), "b.xacro");
 }
 
 TEST_CASE("a beside hit a configured root admitted carries no served record, so the serving layer does not answer its miss", "[urdf][load][include][link]")
@@ -136,7 +164,36 @@ TEST_CASE("a beside hit a configured root admitted carries no served record, so 
         return;
     }
 
-    meios::load_options opts;
-    opts.package_roots = {held.root() / "R"};
-    refuses_unresolved(meios::load(top_reading_package(held), opts), "c.xacro");
+    refuses_unresolved(meios::load(top_reading_package(held), under({held.root() / "R"})), "c.xacro");
+}
+
+TEST_CASE("a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it", "[urdf][load][include][link]")
+{
+    const include_tree::tree held;
+    held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
+    held.write("R/p/urdf/a/b.xacro", include_tree::robot(include_tree::include("c.xacro")));
+    held.write("R/p/urdf/b.xacro", include_tree::binds("lexical_b"));
+    held.write("R/p/urdf/c.xacro", include_tree::binds("layer_lexical_c"));
+    std::filesystem::create_directories(held.root() / "R/p/urdf/a/b");
+    if(!include_tree::linked("a/b", held.root() / "R/p/urdf/sub"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    refuses_unresolved(meios::load(top_reading_package(held, "$(find p)/urdf/top.xacro"), under({held.root() / "R"})), "c.xacro");
+    refuses_unresolved(meios::load(top_reading_package(held, "package://p/urdf/top.xacro"), under({held.root() / "R"})), "c.xacro");
+}
+
+TEST_CASE("a sibling spelled without a parent element keeps the served record, so the serving layer answers its miss", "[urdf][load][include][source]")
+{
+    const include_tree::tree held;
+    held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("a/b.xacro")));
+    held.write("R/p/urdf/a/b.xacro", include_tree::robot(include_tree::include("c.xacro")));
+    held.write("O/p/urdf/a/c.xacro", include_tree::binds("overlay_c"));
+
+    meios::log_sink silent;
+    meios::capturing_log_sink log{silent};
+    meios::source_stack sources{overlaid{{held.root() / "R", held.root() / "O"}}};
+    CHECK(only_link(meios::load(top_reading_package(held, "$(find p)/urdf/top.xacro"), {}, sources, log)) == "overlay_c");
 }

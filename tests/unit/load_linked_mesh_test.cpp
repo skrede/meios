@@ -53,6 +53,20 @@ bool unresolved_through_non_directory(const meios::captured_diagnostic &record)
     return record.code == meios::diagnostic_code::unresolved_asset && record.cause && record.cause->native == std::errc::not_a_directory;
 }
 
+void refuses_through_file(const std::string &spelling)
+{
+    const include_tree::tree held;
+    held.write("doc/f.txt", "plain");
+    held.write("doc/m.stl", stl());
+    const std::filesystem::path document = held.write("doc/robot.urdf", mesh_robot(spelling));
+
+    const load_outcome refused = meios::load(document);
+    REQUIRE_FALSE(resolves_to(refused, held.root() / "doc" / "m.stl"));
+    REQUIRE_FALSE(refused.has_value());
+    REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
+    REQUIRE(std::ranges::any_of(refused.error().diagnostics, unresolved_through_non_directory));
+}
+
 }
 
 TEST_CASE("a relative mesh resolves beside a document opened through per-file install links", "[urdf][load][mesh][link]")
@@ -151,19 +165,15 @@ TEST_CASE("a dangling mesh link beside its document is a missing asset, never a 
     }
 }
 
-TEST_CASE("a mesh spelled through a file that is not a directory does not resolve, and its record names why", "[urdf][load][mesh]")
+TEST_CASE("a mesh spelled through a file that is not a directory with no parent element does not resolve, and its record names why", "[urdf][load][mesh]")
+{
+    refuses_through_file("f.txt/m.stl");
+}
+
+TEST_CASE("a mesh spelled back out of a file that is not a directory does not resolve, and its record names why", "[urdf][load][mesh]")
 {
 #ifdef _WIN32
     SKIP("the Windows path API reduces .. before the filesystem sees the element that is not a directory");
 #endif
-    const include_tree::tree held;
-    held.write("doc/f.txt", "plain");
-    held.write("doc/m.stl", stl());
-    const std::filesystem::path document = held.write("doc/robot.urdf", mesh_robot("f.txt/../m.stl"));
-
-    const load_outcome refused = meios::load(document);
-    REQUIRE_FALSE(resolves_to(refused, held.root() / "doc" / "m.stl"));
-    REQUIRE_FALSE(refused.has_value());
-    REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
-    REQUIRE(std::ranges::any_of(refused.error().diagnostics, unresolved_through_non_directory));
+    refuses_through_file("f.txt/../m.stl");
 }
