@@ -156,11 +156,12 @@ element that is not a directory, `f.txt` a regular file, does not resolve, and i
 element as not a directory: `f.txt/m.stl` on every operating system, because each element before the
 last is checked, and `f.txt/../m.stl` where the operating system reports `f.txt` as not a directory, as
 a POSIX system does. On Windows the path interfaces are assumed to reduce `f.txt/..` first, so that
-`m.stl` beside the document would resolve; nothing has measured that, and the first Windows run of the
-suite decides it. `load_linked_mesh.a mesh spelled through a file that is not a directory with no
-parent element does not resolve, and its record names why` pins the first spelling on every platform,
-and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does not resolve, and
-its record names why` the second, skipped on Windows. Containment is judged on the *canonicalized*
+`m.stl` beside the document would resolve. `load_linked_mesh.a mesh spelled through a file that is not
+a directory with no parent element does not resolve, and its record names why` pins the first spelling
+on every platform, and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does
+not resolve on POSIX, its record naming why, and resolves beside the document on Windows` the second,
+asserting the assumed reading on Windows, so a Windows run of the suite decides it; none has run, and
+it is unmeasured. Containment is judged on the *canonicalized*
 candidate, never on the authored spelling, so a climb-out spelled through a real subdirectory and a
 symlink whose target leaves the root are both caught where a textual prefix test would miss them.
 

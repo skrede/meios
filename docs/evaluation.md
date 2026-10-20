@@ -342,19 +342,26 @@ binds a call's attributes in document order, then takes the call's expanded chil
 arguments, then the defaults, and only then refuses a parameter still unbound; the same order is taken
 here, all of it in the caller's scope before the macro's body is entered. A property written among a
 call's children is therefore not visible to the call's attributes, which refuse it as an undefined name
-on both sides, while a default reads it. An attribute naming no declared parameter, a namespace
-declaration or a block parameter's name included, refuses with the reference's "Invalid parameter", and
-an element no block parameter takes refuses with "Unused block", naming the first left over; a child
-that expands to nothing, a property say, takes no block parameter. Where two of these refusals meet in
-one call, the one the reference raises first is raised here. Each is reported under
-`xacro_structural_error` at the call's own `file:line`, for a macro defined in another file as well; a
-parameter left unbound is refused under the same code in this side's own words. Thirteen `macro_call_`
-agreement probes hold this against a fresh upstream render: an undeclared attribute, a namespace
-declaration and a block parameter's name written as attributes; one and two surplus elements; an
-undeclared attribute before a missing parameter, a refusing block child, an absent block and a refusing
-attribute, and a surplus element before a missing parameter; an attribute reading a child's property, a
-default reading one, and a child that is only a property. The `xacro_macro_call` cases pin the
-location, the included macro among them.
+on both sides, while a default reads it. A default reads a parameter the call supplied too, as the
+invocation's own scope holds it, so `b:=${a}` with both supplied renders, and one reading a parameter
+the call left out refuses. An attribute naming no declared parameter, a namespace declaration or a
+block parameter's name included, refuses with the reference's "Invalid parameter", and an element no
+block parameter takes refuses with "Unused block", naming the first left over; a child that expands to
+nothing, a property say, takes no block parameter. Where two of these refusals meet in one call, the
+one the reference raises first is raised here. Each is reported under `xacro_structural_error` at the
+call's own `file:line`, for a macro defined in another file as well; a parameter left unbound is
+refused under the same code in this side's own words. A default that refuses is reported at the call's
+own `file:line` too, under its own cause, whether or not the call supplied its parameter, for a macro
+defined in another file as well. Thirteen `macro_call_` agreement probes hold this against a fresh
+upstream render: an undeclared attribute, a namespace declaration and a block parameter's name written
+as attributes; one and two surplus elements; an undeclared attribute before a missing parameter, a
+refusing block child, an absent block and a refusing attribute, and a surplus element before a missing
+parameter; an attribute reading a child's property, a default reading one, and a child that is only a
+property. The `macro_default_reads_supplied_parameter` probe holds a default's reading of a supplied
+parameter, beside the `xacro_macro_defaults` cases, which pin the omitted one's refusal too. The
+`xacro_macro_call` cases pin the location, the included macro among them, and `xacro_macro_call.a
+default that refuses while the call supplied its parameter is reported at the call, for a macro defined
+in another file` the supplied parameter's refusing default.
 
 **A macro's parameter list reads as the reference's pattern reads it.** The reference splits `params`
 with its `re_macro_arg` pattern, and the scanner here follows that pattern rather than splitting at
@@ -369,22 +376,49 @@ follows a parameter is not read, because the pattern's last group stops at a new
 `macro_default_empty`, `macro_default_spans_whitespace`, `macro_default_argument_command` and
 `macro_param_spaced_separator` agreement probes hold the span, separator and empty shapes against a
 fresh upstream render; the `xacro_macro_params` cases pin those, the unclosed quote and the newline;
-and the two forward markers are carried by a measurement against the pinned reference alone. One
-separator still differs: a space outside ASCII, which [known limitations](known-limitations.md)
-records.
+and the two forward markers are carried by a measurement against the pinned reference alone. A `params`
+attribute holding only whitespace refuses under `xacro_structural_error` at the definition once the
+expansion reaches it, called or not, as the reference refuses it with "list index out of range", while
+one in a definition the expansion never reaches is never read; an empty `params` and a list ending in
+whitespace read as before. The `macro_params_only_whitespace` and
+`macro_params_only_whitespace_never_reached` agreement probes hold both against a fresh upstream
+render, beside the `xacro_macro_defaults` cases. One separator still differs: a space outside ASCII,
+which [known limitations](known-limitations.md) records.
 
 **A run of dollars escapes or refuses as the reference's lexer has it.** A run of two or more `$`
 before `{` or `(` writes one `$` fewer and the opener, and lexing goes on after it: `$${x}` renders
 `${x}`, `$$(arg y)` renders `$(arg y)` and `$$$${x}` renders `$$${x}`. A `$$` before anything else, or
 ending the text, refuses with the reference's "invalid expression" under `expression_error`, at the
 run's own column and under every evaluation policy, inside an expression body as well, so `a$$x`, `a$$`
-and `${'$$'}` each refuse on both sides. A single `$` before anything but an opener stays text, as `$x`
-does on both sides. The `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
-`dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, beside the
-`xacro_dollar_run` cases and `arg_scan.scan_args lists no argument a run of dollars escapes`, which
-keeps an escaped `$(arg …)` out of the argument listing. `${'$${x}'}` renders `${x}` here and refuses
-there, which is the closing brace inside a string literal, recorded below; it adds no difference of its
-own.
+and `${'$$'}` each refuse on both sides. In an argument's default it refuses at the declaration,
+whether or not the argument is read, unless a caller's argument leaves that default unread. The token
+straight after a span is lexed before the span is evaluated, because the reference's lexer reads one
+token ahead: `${nope}$$x` refuses with "invalid expression: $$x" on both sides rather than for the
+undefined name, and `${nope}${x` refuses as an unterminated span here and with "invalid expression:
+${x" there. Exactly one token is looked at, so `${nope}a$$x` refuses for the undefined name on both
+sides. A single `$` before anything but an opener stays text, as `$x` does on both sides. The
+`dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
+`dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, with
+`dollar_run_in_argument_default`, `dollar_run_in_unused_argument_default` and
+`dollar_run_in_redeclared_argument_default` for an argument's default, and
+`dollar_run_after_undefined_name`, `dollar_run_after_unset_argument`,
+`dollar_run_after_division_by_zero` and `unterminated_span_after_undefined_name` for the token after a
+span, beside the `xacro_dollar_run`, `xacro_arg_declaration` and `xacro_lex_lookahead` cases and
+`arg_scan.scan_args lists no argument a run of dollars escapes`, which keeps an escaped `$(arg …)` out
+of the argument listing. `${'$${x}'}` renders `${x}` here and refuses there, which is the closing brace
+inside a string literal, recorded below; it adds no difference of its own.
+
+**An argument's default is read at the first declaration the expansion reaches, as the reference reads
+it.** A later declaration of the same name binds nothing, so a second default neither replaces the
+first nor rescues one that refuses, and a declaration the expansion never reaches, in a branch not
+taken or a macro never called, binds nothing where a reached declaration follows it. A declaration in
+an included file the expansion reaches first binds before the including document's own, and one in a
+macro body binds on the first call. The `argument_redeclared_after_refusing_default`,
+`argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`,
+`argument_declared_in_uncalled_macro` and `argument_declared_in_include_first` agreement probes hold
+this against a fresh upstream render, beside the `xacro_arg_declaration` cases. What a use above every
+reached declaration reads, and what a declaration the expansion never reaches still lends where none is
+reached, [known limitations](known-limitations.md) records.
 
 **An include filename is a package lookup only where it begins with `$(find …)`.** That command's
 package text is substituted before the lookup, so `$(find ${pk})/urdf/a.xacro` with `pk` bound to `p`
@@ -427,14 +461,18 @@ install tree therefore reads the siblings that link into the directory it really
 sibling linked into a configured root is read through that root. A document a directory, bundle or ROS
 layer served is read beside the path it was named by, and one a memory source served beside the file
 that source materialized for it. Only where nothing is there is the sibling asked of the layer that
-served the document, and a file read beside such a document passes its own misses to that layer only
-where its spelling holds no `..` element and the directory the document was named in admitted it, so
-neither a file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a
-linked `sub` is answered from the layer, and the second refuses its miss as the reference refuses it,
-as the `load_served_layer` and `cli_package_path` cases pin. Where neither holds the file, the filename
-is then looked for through the configured sources, which the reference does not consult, so a document
-the reference refuses for want of that file can render here. That fallback answers a genuine miss only:
-a spelling through a path element that is not a directory refuses before any fallback even where a
+served the document, and not even then where the spelling holds a `..` element and that layer names
+paths, as a directory, bundle or ROS layer does: such a miss goes to the configured sources alone, so
+`sub/../c.xacro` in the document, through a linked `sub` with nothing at `a/c.xacro`, refuses as the
+reference refuses it, while a layer that serves bytes is still asked, as the `load_served_layer` cases
+pin for both. A file read beside such a document passes its own misses to that layer only where its
+spelling holds no `..` element and the directory the document was named in admitted it, so neither a
+file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a linked `sub`
+is answered from the layer, and the second refuses its miss as the reference refuses it, as the
+`load_served_layer` and `cli_package_path` cases pin. Where neither holds the file, the filename is
+then looked for through the configured sources, which the reference does not consult, so a document the
+reference refuses for want of that file can render here. That fallback answers a genuine miss only: a
+spelling through a path element that is not a directory refuses before any fallback even where a
 configured root holds the name, as the reference refuses it, within the platform bound stated below for
 the `..` spelling. A document expanded under no name looks for nothing beside it, where the reference's
 library entry anchors it at the working directory. A `..` that climbs back inside the directory,
@@ -445,19 +483,24 @@ directory, a regular file `f.txt`, `f.txt/x.xacro` refuses on every operating sy
 element before the last is checked and one that exists and is not a directory refuses;
 `f.txt/../x.xacro` refuses where the operating system reports `f.txt` as not a directory, as a POSIX
 system does, and on Windows the path interfaces are assumed to reduce `f.txt/..` first and read the
-file beside the document, as the reference would there, which the first Windows run of the suite
-decides. On Linux both sides refuse both spellings with "Not a directory", as the `xacro_include_read`
-and `yaml_resource` cases pin, a case per spelling, the `..` one skipped on Windows. Two shapes still
-differ. Through a `sub` that does not exist the missing tail is reduced by its spelling, and the file
-beside the document is read where the reference refuses. And where `sub` is a link and nothing is at
-`sub/../x.xacro` as the operating system reads it, the miss is looked for under the spelling's lexical
-reduction, `x.xacro`, in the layer that served the document and in the configured sources, so a copy
-one of them holds can render where the reference refuses; [known limitations](known-limitations.md)
-gives the measured shapes. Two lookups the reference makes are refused here by default: a filename
-climbing above that directory with `..` refuses as climbing above the directory of the document that
-writes it, and a link beside the document whose target lies under none of the directories that admit it
-refuses under `uncontained_asset`. The reference reads both. Each is a reviewed divergence, so the
-comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+file beside the document, as the reference would there. On Linux both sides refuse both spellings with
+"Not a directory", as the `xacro_include_read` and `yaml_resource` cases pin, a case per spelling. The
+`..` ones, `xacro_include_read.an include spelled back out of a file that is not a directory refuses on
+POSIX and reads the file beside the document on Windows, and no configured source's copy stands in` and
+`yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
+file beside the document on Windows, and no configured root's copy stands in`, assert the assumed
+reading on Windows, so a Windows run of the suite decides it; none has run, and it is unmeasured. Two
+shapes still differ. Through a `sub` that does not exist the missing tail is reduced by its spelling,
+and the file beside the document is read where the reference refuses. And where `sub` is a link and
+nothing is at `sub/../x.xacro` as the operating system reads it, the miss is looked for under the
+spelling's lexical reduction, `x.xacro`, in the configured sources, and in the layer that served the
+document only where that layer serves bytes, so a copy one of them holds can render where the reference
+refuses; [known limitations](known-limitations.md) gives the measured shapes. Two lookups the reference
+makes are refused here by default: a filename climbing above that directory with `..` refuses as
+climbing above the directory of the document that writes it, and a link beside the document whose
+target lies under none of the directories that admit it refuses under `uncontained_asset`. The
+reference reads both. Each is a reviewed divergence, so the comparison fails if it stops reproducing
+exactly as much as it fails if a new one appears.
 
 **Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
 carries `climb_above_document`, which admits a relative include whose spelling leaves its document's
@@ -624,26 +667,35 @@ What is compared, exactly:
   argument, a property default under a parameter, the vendor idiom of a property defaulting to its own
   argument, the reads of an argument other than through `$(arg n)`, and ten over `$(eval)` — an
   argument beside a property of its name, text in a sum and in a conditional, the conversion over ASCII
-  and over other decimal digits, the names that shadow an argument, and the four refusals — and seven over the other commands: a
-  command written inside one, a parenthesis or a dollar sign left in one's text, and an argument name
-  an expression span supplies. Four of them hold the argument command to one name: a second word written
-  over an unset and over a bound argument, and a span-built name with and without a space. Beside them
-  sit six documents over a block argument the macro never inserts: a property, a global write, an emitting call and an include inside it, and an unbound name under each
+  and over other decimal digits, the names that shadow an argument, and the four refusals — and seven
+  over the other commands: a command written inside one, a parenthesis or a dollar sign left in one's
+  text, and an argument name an expression span supplies. Four of them hold the argument command to one
+  name: a second word written over an unset and over a bound argument, and a span-built name with and
+  without a space. Beside them sit six documents over a block argument the macro never inserts: a
+  property, a global write, an emitting call and an include inside it, and an unbound name under each
   kind of block parameter. Four more hold a relative include to the reference's anchor, one of them
   driven a second time with a configured root holding a same-named file: a file beside its document, a
   nested include, an include written in a macro body, and a document opened through a link. Two more
   are loaded under a caller's include options: the climbing document with the climb admitted, and a
   document whose included file includes a link leading out of its directory, with outside links
-  followed. Seventeen more hold a macro call to the reference's binding: the thirteen `macro_call_`
+  followed. Twenty more hold a macro call to the reference's binding: the thirteen `macro_call_`
   documents over undeclared attributes, surplus elements, the order between refusals and a child's
-  property, and four over the parameter list, `macro_default_empty`, `macro_default_spans_whitespace`,
-  `macro_default_argument_command` and `macro_param_spaced_separator`. Five hold a run of dollars to
-  the reference's lexer: the four `dollar_run_` documents and `include_escaped_find`, an include whose
-  run of dollars escapes its `$(find …)`. The meios side is what the load path builds, under the caller
-  arguments a consumer would hand it, written back out by the serializer the command line flattens with;
-  the expansion alone is held to the same render beside it. Two refusals
-  agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
-  document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
+  property, `macro_default_reads_supplied_parameter`, a default reading a parameter the call supplied,
+  and six over the parameter list, `macro_default_empty`, `macro_default_spans_whitespace`,
+  `macro_default_argument_command`, `macro_param_spaced_separator`, `macro_params_only_whitespace` and
+  `macro_params_only_whitespace_never_reached`. Twelve hold a run of dollars to the reference's lexer:
+  `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end`,
+  `dollar_run_inside_expression`, `include_escaped_find`, an include whose run of dollars escapes its
+  `$(find …)`, the three `dollar_run_in_` documents, a stray run in an argument's default read, unread
+  and redeclared, and four over the token after a span, the three `dollar_run_after_` documents and
+  `unterminated_span_after_undefined_name`. Five more hold an argument's default to the declaration the
+  expansion reaches first: the two `argument_redeclared_` documents,
+  `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro` and
+  `argument_declared_in_include_first`. The meios side is what the load path builds, under the caller
+  arguments a consumer would hand it, written back out by the serializer the command line flattens
+  with; the expansion alone is held to the same render beside it. Two refusals agree only on their
+  cause: upstream's own wording and this side's diagnostic code, both named per document, so a fixture
+  missing from both sides or a refusal for an unrelated reason fails the run.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -734,10 +786,13 @@ root holding the file and, with no configured root, refuses where the reference 
 `load_beside_root` cases pin. A spelling through a path element that is not a directory, `f.txt` a
 regular file, refuses as it refuses there, and no configured root's copy stands in: `f.txt/x.yaml` on
 every operating system, and `f.txt/../x.yaml` where the operating system reports `f.txt` as not a
-directory, with Windows, whose path interfaces are assumed to reduce `f.txt/..` first, decided by the
-suite's first run there. The two `yaml_resource` cases, one per spelling, pin it, the `..` one skipped
-on Windows. A link beside the document leading under none of those directories refuses under
-`uncontained_asset` with no configured root's same-named copy standing in, unless the caller sets
+directory, with Windows, whose path interfaces are assumed to reduce `f.txt/..` first and read the file
+beside the document. The two `yaml_resource` cases, one per spelling, pin it, and the `..` one,
+`yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
+file beside the document on Windows, and no configured root's copy stands in`, asserts the assumed
+reading on Windows, so a Windows run of the suite decides it; none has run, and it is unmeasured. A
+link beside the document leading under none of those directories refuses under `uncontained_asset` with
+no configured root's same-named copy standing in, unless the caller sets
 `include_options::follow_outside_links`. A followed link's answer is final: a link to nothing, a
 dangling one included, ends the lookup as unreachable, and a link naming a directory refuses under
 `cannot_open`, with no configured root's copy read in either place. A `package://` spec naming a link
