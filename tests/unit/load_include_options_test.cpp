@@ -6,7 +6,7 @@
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
-#include <meios/io/memory_source.h>
+#include <meios/io/bundle_source.h>
 #include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/log_sink.h>
@@ -16,13 +16,12 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 #include <filesystem>
-#include <string_view>
 #include <initializer_list>
 
 using include_options_fixture::climbing;
 using include_options_fixture::expand_with;
+using include_options_fixture::served_climb;
 using include_options_fixture::expand_top_with;
 using include_options_fixture::parent_directory_probe;
 
@@ -30,14 +29,6 @@ namespace
 {
 
 using load_outcome = meios::expected<meios::load_result, meios::load_error>;
-
-meios::memory_source served_climb(meios::log_sink &log, std::string_view spelling, std::string package, std::string relative, std::string_view leaf)
-{
-    meios::memory_source held{ log };
-    held.add("pkg", "urdf/a.xacro", include_tree::robot(include_tree::include(spelling)));
-    held.add(std::move(package), std::move(relative), include_tree::binds(leaf));
-    return held;
-}
 
 const std::string top_a = include_tree::include("package://pkg/urdf/a.xacro");
 
@@ -159,13 +150,28 @@ TEST_CASE("a served document's climb out of its package refuses whatever was inc
     meios::source_stack alone{ served_climb(log, "../../other/x.xacro", "other", "x.xacro", "other") };
     meios::source_stack after{ served_climb(log, "../../other/x.xacro", "other", "x.xacro", "other") };
 
-    for(const include_tree::expansion_result &out : { expand_top_with(top_a, alone, log, climbing()), expand_top_with(include_tree::include("package://other/x.xacro") + top_a, after, log, climbing()) })
+    const include_tree::expansion_result cold = expand_top_with(top_a, alone, log, climbing());
+    const include_tree::expansion_result warm = expand_top_with(include_tree::include("package://other/x.xacro") + top_a, after, log, climbing());
+    for(const include_tree::expansion_result &out : { cold, warm })
     {
         REQUIRE_FALSE(out.has_value());
         REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
         REQUIRE(out.error().message.find("\"../../other/x.xacro\"") != std::string::npos);
         REQUIRE(out.error().message.find("\"pkg\"") != std::string::npos);
     }
+}
+
+TEST_CASE("a bundle-served document's admitted climb reads where the operating system resolves it", "[urdf][xacro][include][options]")
+{
+    const include_tree::tree held;
+    held.write("root/pkg/urdf/a.xacro", include_tree::robot(include_tree::include("../../other/x.xacro")));
+    held.write("root/other/x.xacro", include_tree::binds("other"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    meios::source_stack sources{ meios::bundle_source{ held.root() / "root", log } };
+
+    REQUIRE(include_tree::renders_link(expand_top_with(top_a, sources, log, climbing()), "other"));
+    REQUIRE(xacro_probe::errors(records) == 0);
 }
 
 TEST_CASE("a climb the operating system cannot look for names where it looked", "[urdf][xacro][include][options]")
@@ -180,5 +186,7 @@ TEST_CASE("a climb the operating system cannot look for names where it looked", 
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
     REQUIRE(out.error().message.find("beside") == std::string::npos);
+    REQUIRE(out.error().message.starts_with("xacro:include could not look for \""));
     REQUIRE(out.error().message.find(" at \"") != std::string::npos);
+    REQUIRE(out.error().cause.has_value());
 }

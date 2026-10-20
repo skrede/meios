@@ -6,10 +6,12 @@
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
+#include <meios/io/memory_source.h>
 
 #include <meios/diagnostic/log_sink.h>
 
 #include <string>
+#include <utility>
 #include <filesystem>
 #include <string_view>
 
@@ -33,6 +35,14 @@ inline meios::include_options following()
     meios::include_options includes;
     includes.follow_outside_links = true;
     return includes;
+}
+
+inline meios::memory_source served_climb(meios::log_sink &log, std::string_view spelling, std::string package, std::string relative, std::string_view leaf)
+{
+    meios::memory_source held{ log };
+    held.add("pkg", "urdf/a.xacro", include_tree::robot(include_tree::include(spelling)));
+    held.add(std::move(package), std::move(relative), include_tree::binds(leaf));
+    return held;
 }
 
 inline include_tree::expansion_result expand_with(const std::filesystem::path &document, meios::source_stack &sources, meios::log_sink &log, const meios::include_options &includes)

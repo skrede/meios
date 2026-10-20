@@ -98,7 +98,7 @@ std::optional<resolved_asset> probe_served(source_stack &sources, const served_d
 
 bool serves_bytes(source_stack &sources, const served_document &served)
 {
-    return sources.layers()[served.layer].capabilities().kind != source_kind::directory;
+    return !sources.layers()[served.layer].path_of(served.package, served.relative).has_value();
 }
 
 std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written)
