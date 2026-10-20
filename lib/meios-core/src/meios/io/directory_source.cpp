@@ -61,6 +61,16 @@ std::filesystem::path detail::absolute_base(const std::filesystem::path &root)
     return ec ? root : full;
 }
 
+std::filesystem::path detail::configured_root(const std::filesystem::path &root)
+{
+    const std::filesystem::path full = absolute_base(root);
+    std::filesystem::path kept       = full.root_path();
+    for(const std::filesystem::path &element : full.relative_path())
+        if(element != ".")
+            kept /= element;
+    return kept;
+}
+
 std::optional<std::filesystem::path> detail::contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
     contained_path_result result = try_contained_under(root, candidate);
@@ -130,7 +140,7 @@ std::optional<resolved_asset> detail::locate_contained(const std::filesystem::pa
 }
 
 directory_source::directory_source(std::filesystem::path root, log_sink &log)
-        : m_root(detail::absolute_base(root))
+        : m_root(detail::configured_root(root))
         , m_log(log)
 {
 }

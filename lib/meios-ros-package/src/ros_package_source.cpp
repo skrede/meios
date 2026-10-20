@@ -37,7 +37,7 @@ std::optional<resolved_asset> ros_package_source::locate(std::string_view packag
     const auto entry = m_bases.find(std::string(package));
     if(entry == m_bases.end())
         return std::nullopt;
-    return detail::locate_contained(entry->second, entry->second / relative, package, relative, m_log.get());
+    return detail::locate_contained(entry->second, relative.empty() ? entry->second : entry->second / relative, package, relative, m_log.get());
 }
 
 bool ros_package_source::answers(std::string_view package, std::string_view relative) const

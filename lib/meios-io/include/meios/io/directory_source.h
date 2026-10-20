@@ -28,14 +28,18 @@ using contained_path_result = expected<std::optional<std::filesystem::path>, ope
 // a root that names nothing keeps naming nothing.
 std::filesystem::path absolute_base(const std::filesystem::path &root);
 
+// Only `.` elements are removed: a `..` after a link names the link target's parent, so collapsing
+// it lexically could name a different directory.
+std::filesystem::path configured_root(const std::filesystem::path &root);
+
 contained_path_result try_contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate);
 
 // Canonicalizes both and answers the canonicalized candidate only when it stays
 // within the root, logging nothing. weakly_canonical resolves symlinks, so an
 // in-root link whose real target leaves the root canonicalizes to an out-of-root
-// path and is rejected here. The ros layer registers a package under its resolved
-// directory, which admits a package directory reached through a link; a link to a
-// file inside a root is judged where it leads. A filesystem error (e.g. an
+// path and is rejected here. The root is canonicalized too, so a package directory
+// the ros layer registered through a link admits the files under its target; a link
+// to a file inside a root is judged where it leads. A filesystem error (e.g. an
 // over-long attacker path) fails closed: the candidate is rejected rather than
 // accepted uncanonicalized.
 std::optional<std::filesystem::path> contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate);

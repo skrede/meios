@@ -96,6 +96,8 @@ std::filesystem::recursive_directory_iterator crawl_iterator(
     return std::filesystem::recursive_directory_iterator(root, options, ec);
 }
 
+// A package is registered at the spelling it was crawled at, as the reference's package lookup
+// reports it, while the visited set stays canonical so a link cycle still terminates.
 void crawl_ros1_root(const std::filesystem::path &root,
                      std::map<std::string, std::filesystem::path> &out, log_sink &log)
 {
@@ -117,7 +119,7 @@ void crawl_ros1_root(const std::filesystem::path &root,
             continue;
         std::string name = package_name(manifest, log);
         if(!name.empty())
-            out.emplace(std::move(name), std::move(real));
+            out.emplace(std::move(name), it->path());
         it.disable_recursion_pending();
     }
 }
@@ -156,9 +158,9 @@ std::map<std::string, std::filesystem::path> detail::discover_packages(
 {
     std::map<std::string, std::filesystem::path> bases;
     for(const std::filesystem::path &prefix : ament_prefixes)
-        read_ament_prefix(absolute_base(prefix), bases);
+        read_ament_prefix(configured_root(prefix), bases);
     for(const std::filesystem::path &root : ros1_roots)
-        crawl_ros1_root(absolute_base(root), bases, log);
+        crawl_ros1_root(configured_root(root), bases, log);
     return bases;
 }
 

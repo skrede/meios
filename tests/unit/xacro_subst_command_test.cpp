@@ -27,7 +27,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         const substitution_result out =
             meios::substitute("$(find pkg)/x.stl", scope, sources, document, log);
         REQUIRE(out.has_value());
-        REQUIRE(out->text == std::filesystem::weakly_canonical(root / "pkg").generic_string() + "/x.stl");
+        REQUIRE(out->text == (root / "pkg").generic_string() + "/x.stl");
     }
 
     SECTION("$(find ${pkg}) resolves the inner expression before dispatch")
@@ -36,7 +36,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         const substitution_result out =
             meios::substitute("$(find ${pkgname})/x.stl", scope, sources, document, log);
         REQUIRE(out.has_value());
-        REQUIRE(out->text == std::filesystem::weakly_canonical(root / "pkg").generic_string() + "/x.stl");
+        REQUIRE(out->text == (root / "pkg").generic_string() + "/x.stl");
     }
 
     SECTION("$(find) on a byte-backed layer loud-fails rather than naming a directory")

@@ -12,6 +12,7 @@
 #include <vector>
 #include <filesystem>
 #include <string_view>
+#include <system_error>
 
 namespace
 {
@@ -111,4 +112,31 @@ TEST_CASE("a package-served document reached through an in-root link is keyed by
     INFO(refused.error().message);
     REQUIRE(refused.error().code == meios::diagnostic_code::xacro_structural_error);
     REQUIRE(refused.error().message.find(std::filesystem::weakly_canonical(held.root() / "R" / "q" / "a.xacro").string()) != std::string::npos);
+}
+
+TEST_CASE("the find command through a linked root renders the root as it was configured", "[urdf][load][find][link]")
+{
+    const include_tree::tree held;
+    held.write("R/p/urdf/a.xacro", include_tree::robot(""));
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(held.root() / "R", held.root() / "Rl", ec);
+    if(ec)
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    const std::filesystem::path document = held.write("doc/robot.xacro", include_tree::robot("<link name=\"$(find p)\"/>"));
+
+    CHECK(only_link(meios::load(document, rooted_at(held.root() / "Rl"))) == (held.root() / "Rl" / "p").generic_string());
+}
+
+TEST_CASE("a configured root's current-directory elements do not reach the find command's text", "[urdf][load][find]")
+{
+    const include_tree::tree held;
+    held.write("R/p/urdf/a.xacro", include_tree::robot(""));
+    const std::filesystem::path document = held.write("doc/robot.xacro", include_tree::robot("<link name=\"$(find p)\"/>"));
+
+    const std::string rendered = only_link(meios::load(document, rooted_at(held.root() / "." / "R")));
+    CHECK(rendered.find("/./") == std::string::npos);
+    CHECK(rendered == (held.root() / "R" / "p").generic_string());
 }

@@ -10,7 +10,7 @@ namespace meios
 {
 
 bundle_source::bundle_source(std::filesystem::path root, log_sink &log)
-        : m_root(detail::absolute_base(root))
+        : m_root(detail::configured_root(root))
         , m_log(log)
 {
 }

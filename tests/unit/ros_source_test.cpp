@@ -20,6 +20,7 @@
 #include <optional>
 #include <algorithm>
 #include <filesystem>
+#include <system_error>
 
 static_assert(meios::package_source<meios::ros_package_source>);
 static_assert(meios::provides_path<meios::ros_package_source>);
@@ -139,4 +140,41 @@ TEST_CASE("stack order encodes explicit-first precedence and shadows lower layer
     const std::string content((std::istreambuf_iterator<char>(resolved)), std::istreambuf_iterator<char>());
     REQUIRE(content == "explicit\n");
     REQUIRE(std::any_of(records.begin(), records.end(), [](const record &noted) { return noted.level == meios::level::info; }));
+}
+
+TEST_CASE("a ROS1 crawl through a linked root names its packages where they were crawled", "[ros]")
+{
+    const meios::scratch_dir tree = make_tree();
+    ros1_package(tree.path() / "R" / "p", "p");
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(tree.path() / "R", tree.path() / "Rl", ec);
+    if(ec)
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({tree.path() / "Rl"}, {}, log);
+
+    const std::optional<meios::resolved_asset> hit = source.locate("p", "");
+    REQUIRE(hit.has_value());
+    REQUIRE(hit->named().has_value());
+    REQUIRE(hit->named()->generic_string() == (tree.path() / "Rl" / "p").generic_string());
+    REQUIRE(std::filesystem::equivalent(hit->path(), tree.path() / "R" / "p"));
+}
+
+TEST_CASE("a ROS root's current-directory elements do not reach a located package's name", "[ros]")
+{
+    const meios::scratch_dir tree = make_tree();
+    ros1_package(tree.path() / "R" / "p", "p");
+    std::vector<record> records;
+    meios::log_sink_f log{recorder{records}};
+    meios::ros_package_source source({tree.path() / "." / "R"}, {}, log);
+
+    const std::optional<meios::resolved_asset> hit = source.locate("p", "");
+    REQUIRE(hit.has_value());
+    REQUIRE(hit->named().has_value());
+    REQUIRE(hit->named()->generic_string().find("/./") == std::string::npos);
+    REQUIRE(hit->named()->generic_string() == (tree.path() / "R" / "p").generic_string());
 }

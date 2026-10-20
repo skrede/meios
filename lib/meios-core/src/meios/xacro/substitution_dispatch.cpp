@@ -56,7 +56,7 @@ std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
     if(!hit)
         return fail(ctx, diagnostic_code::unresolved_find,
                     "$(find " + std::string(parts.first) + ") did not resolve");
-    return hit->path().generic_string();
+    return hit->named().value_or(hit->path()).generic_string();
 }
 
 // A collection has no text form, so the argument is reported unresolved rather than written into
