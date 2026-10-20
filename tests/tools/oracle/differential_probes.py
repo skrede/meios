@@ -1,6 +1,8 @@
 # The probe tables differential.py renders. Spelled exactly as the C++ comparator's own tables
 # spell them, so an id names the same fixture and the same rendered file whichever side wrote it.
 
+import os
+
 from recorder.corpus import REPO
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
@@ -39,13 +41,27 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "include_sole_block",
                    "dirname_command",
                    "include_outside_link",
-                   "include_package_filename")
+                   "include_package_filename",
+                   "find_relative_root",
+                   "find_dotted_root")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # A committed fixture cannot spell a machine's absolute path, so these probes are handed the
 # directory they are staged in under this argument name.
 PROBE_DIRECTORY_ARGUMENT = "probe_directory"
 DIRECTORY_BOUND_PROBES = ("include_absolute_path",)
+
+# These probes are handed their package root as a caller hands one, from the directory they are
+# staged in: the relative root as written, and the dotted root joined under that directory, which a
+# committed fixture cannot spell. A relative root resolves against that working directory.
+RELATIVE_ROOT_PROBES = {"find_relative_root": "find_relative_root.d"}
+DOTTED_ROOT_PROBES = {"find_dotted_root": "./find_dotted_root.d"}
+
+
+def probe_root(case_id, directory):
+    if case_id in DOTTED_ROOT_PROBES:
+        return os.path.join(str(directory), DOTTED_ROOT_PROBES[case_id])
+    return RELATIVE_ROOT_PROBES.get(case_id)
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
 # and the caller mapping where the binding needs one. A probe both sides refuse agrees only on the

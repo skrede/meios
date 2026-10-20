@@ -8,6 +8,7 @@
 import os
 import sys
 import shutil
+import contextlib
 import argparse
 import tempfile
 import subprocess
@@ -21,7 +22,7 @@ from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
                                  PROBE_DIR, AGREEMENT_PROBES, PROBE_DIRECTORY_ARGUMENT,
-                                 DIRECTORY_BOUND_PROBES)
+                                 DIRECTORY_BOUND_PROBES, probe_root)
 
 
 def sanitize(case_id):
@@ -77,6 +78,27 @@ def stage_probe(tmp, case_id):
     return tmp / document.name
 
 
+# The package index reads its roots at call time, so a probe's own root and working directory hold
+# only while it renders; every other probe keeps the corpus roots and the worker's directory.
+@contextlib.contextmanager
+def probe_package_root(tmp, case_id):
+    root = probe_root(case_id, tmp)
+    if root is None:
+        yield
+        return
+    saved_directory, saved_roots = os.getcwd(), os.environ.get("ORACLE_PACKAGE_ROOTS")
+    try:
+        os.environ["ORACLE_PACKAGE_ROOTS"] = root
+        os.chdir(tmp)
+        yield
+    finally:
+        os.chdir(saved_directory)
+        if saved_roots is None:
+            os.environ.pop("ORACLE_PACKAGE_ROOTS", None)
+        else:
+            os.environ["ORACLE_PACKAGE_ROOTS"] = saved_roots
+
+
 # Driven through process_file rather than render(), which wraps a body in its own <robot> and
 # would defeat the point of a document-level probe.
 def render_document_probe(tmp, out, case_id):
@@ -85,7 +107,9 @@ def render_document_probe(tmp, out, case_id):
     staged = stage_probe(tmp, case_id)
     mappings = {PROBE_DIRECTORY_ARGUMENT: str(tmp)} if case_id in DIRECTORY_BOUND_PROBES else None
     try:
-        write_text(out, case_id, ".txt", xacro.process_file(str(staged), mappings=mappings).toxml())
+        with probe_package_root(tmp, case_id):
+            rendered = xacro.process_file(str(staged), mappings=mappings).toxml()
+        write_text(out, case_id, ".txt", rendered)
     except Exception as failure:
         write_refusal(out, case_id, ".txt", failure)
 
