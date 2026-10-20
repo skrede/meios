@@ -126,6 +126,19 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"dollar_run_at_end", "dollar_run_at_end", {}, meios::diagnostic_code::expression_error, "invalid expression: $$"},
         agreement_probe{"dollar_run_inside_expression", "dollar_run_inside_expression", {}, meios::diagnostic_code::expression_error, "invalid expression: $$'"},
         agreement_probe{"include_escaped_find", "include_escaped_find", {}, meios::diagnostic_code::unresolved_include, "No such file or directory", "include_escaped_find.d"},
+        agreement_probe{"dollar_run_in_argument_default", "dollar_run_in_argument_default", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{"dollar_run_in_unused_argument_default", "dollar_run_in_unused_argument_default", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{
+                "dollar_run_in_redeclared_argument_default", "dollar_run_in_redeclared_argument_default", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{"argument_redeclared_after_refusing_default",
+                        "argument_redeclared_after_refusing_default",
+                        {},
+                        meios::diagnostic_code::undefined_property,
+                        "name 'nope' is not defined"},
+        agreement_probe{"argument_redeclared_after_expression_default", "argument_redeclared_after_expression_default", {}},
+        agreement_probe{"argument_declared_in_skipped_branch", "argument_declared_in_skipped_branch", {}},
+        agreement_probe{"argument_declared_in_uncalled_macro", "argument_declared_in_uncalled_macro", {}},
+        agreement_probe{"argument_declared_in_include_first", "argument_declared_in_include_first", {}},
 };
 
 }

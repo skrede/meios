@@ -136,4 +136,12 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("dollar_run_before_text", "dollar_run_before_text", None),
                     ("dollar_run_at_end", "dollar_run_at_end", None),
                     ("dollar_run_inside_expression", "dollar_run_inside_expression", None),
-                    ("include_escaped_find", "include_escaped_find", None))
+                    ("include_escaped_find", "include_escaped_find", None),
+                    ("dollar_run_in_argument_default", "dollar_run_in_argument_default", None),
+                    ("dollar_run_in_unused_argument_default", "dollar_run_in_unused_argument_default", None),
+                    ("dollar_run_in_redeclared_argument_default", "dollar_run_in_redeclared_argument_default", None),
+                    ("argument_redeclared_after_refusing_default", "argument_redeclared_after_refusing_default", None),
+                    ("argument_redeclared_after_expression_default", "argument_redeclared_after_expression_default", None),
+                    ("argument_declared_in_skipped_branch", "argument_declared_in_skipped_branch", None),
+                    ("argument_declared_in_uncalled_macro", "argument_declared_in_uncalled_macro", None),
+                    ("argument_declared_in_include_first", "argument_declared_in_include_first", None))

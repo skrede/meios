@@ -20,12 +20,14 @@
 #include <pugixml.hpp>
 
 #include <map>
+#include <set>
 #include <memory>
 #include <string>
 #include <vector>
 #include <utility>
 #include <optional>
 #include <filesystem>
+#include <functional>
 #include <string_view>
 
 namespace meios
@@ -108,6 +110,8 @@ struct expand_ctx
                const std::shared_ptr<evaluator_handle> &inject, log_sink &lg);
 
     eval_scope &scope;
+    // The argument names the pre-pass lent and no declaration the walk reached has bound since.
+    std::set<std::string, std::less<>> seeded_args;
     source_stack &sources;
     const expansion_limits &limits;
     const include_options &includes;

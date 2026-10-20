@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="argument_declared_in_include_first.inc.xacro"/>
+  <xacro:arg name="a" default="t"/>
+  <link name="l_$(arg a)"/>
+</robot>

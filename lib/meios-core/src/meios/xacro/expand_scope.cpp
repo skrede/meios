@@ -22,10 +22,20 @@ namespace meios::detail
 namespace
 {
 
-bool has_substitution(std::string_view text)
+bool needs_lexing(std::string_view text)
 {
-    return text.find("$(") != std::string_view::npos
+    return text.find("$$") != std::string_view::npos
+        || text.find("$(") != std::string_view::npos
         || text.find("${") != std::string_view::npos;
+}
+
+bool take_seeded(expand_ctx &ctx, std::string_view name)
+{
+    const auto lent = ctx.seeded_args.find(name);
+    if(lent == ctx.seeded_args.end())
+        return false;
+    ctx.seeded_args.erase(lent);
+    return true;
 }
 
 std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name)
@@ -100,13 +110,10 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
                                                                   : ctx.scope.lookup(name));
 }
 
-// The main pass is single-forward, so a `$(arg x)` used above its own
-// `<xacro:arg>` declaration would resolve before the default is seen. A pre-pass
-// over the already-materialized tree seeds every declared literal default (names no
-// argument binds yet) so use-before-declaration resolves. A default
-// carrying a nested substitution is left for declare_arg to resolve at its
-// declaration, where the sources and document needed to substitute it are in hand.
-void seed_declared_args(eval_scope &scope, pugi::xml_node node)
+// The main pass is single-forward, so a `$(arg x)` used above its own `<xacro:arg>` declaration
+// would resolve before the default is seen. Only a default that lexes to itself is lent ahead;
+// every other default is left for its declaration, where it is lexed.
+void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
 {
     for(pugi::xml_node child : node.children())
     {
@@ -116,10 +123,13 @@ void seed_declared_args(eval_scope &scope, pugi::xml_node node)
         {
             pugi::xml_attribute name = child.attribute("name");
             pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !scope.has_argument(name.value()) && !has_substitution(fallback.value()))
-                scope.bind_argument(name.value(), value{strip_authored_markers(fallback.value())});
+            if(name && fallback && !ctx.scope.has_argument(name.value()) && !needs_lexing(fallback.value()))
+            {
+                ctx.scope.bind_argument(name.value(), value{strip_authored_markers(fallback.value())});
+                ctx.seeded_args.emplace(name.value());
+            }
         }
-        seed_declared_args(scope, child);
+        seed_declared_args(ctx, child);
     }
 }
 
@@ -149,10 +159,8 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     return true;
 }
 
-// A declared default binds only when no argument of the name is bound yet, so a
-// caller override or an earlier declaration wins; the declaration itself emits nothing.
-// The default is resolved through substitution first, so a nested
-// $(find)/$(arg)/${} default becomes real text rather than a raw literal.
+// The first declaration the walk reaches binds, as the reference's does, so a caller override or
+// an earlier reached declaration wins; a value the pre-pass lent does not count as a binding.
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     std::string_view name = in.attribute("name").value();
@@ -160,7 +168,7 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "<xacro:arg> requires a name attribute");
     pugi::xml_attribute fallback = in.attribute("default");
-    if(!fallback || ctx.scope.has_argument(name))
+    if(!fallback || (!take_seeded(ctx, name) && ctx.scope.has_argument(name)))
         return true;
     bool ok = true;
     const std::string authored = strip_authored_markers(fallback.value());
