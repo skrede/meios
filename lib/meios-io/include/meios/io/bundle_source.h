@@ -29,6 +29,8 @@ public:
     std::optional<std::filesystem::path> path_of(std::string_view package,
                                                  std::string_view relative) const;
 
+    bool answers(std::string_view package, std::string_view relative) const;
+
 private:
     std::filesystem::path m_root;
     std::reference_wrapper<log_sink> m_log;

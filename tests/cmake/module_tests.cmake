@@ -48,6 +48,9 @@ foreach(stem IN ITEMS
         catch_discover_tests(${stem}_test TEST_PREFIX "${stem}.")
     endif()
 endforeach()
+if(TARGET io_source_stack_test)
+    target_sources(io_source_stack_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/io_source_answers_test.cpp)
+endif()
 
 # Catch discovery transports properties as name/value pairs, so a platform-specific
 # scalar avoids splitting a semicolon-separated environment list into other properties.

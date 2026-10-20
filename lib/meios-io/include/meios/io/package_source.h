@@ -58,6 +58,11 @@ concept provides_path = package_source<S> && requires(const S s, std::string_vie
 };
 
 template<typename S>
+concept answers_quietly = package_source<S> && requires(const S s, std::string_view pkg, std::string_view rel) {
+    { s.answers(pkg, rel) } -> std::convertible_to<bool>;
+};
+
+template<typename S>
 concept enumerates_packages = package_source<S> && requires(const S s) {
     { s.packages() } -> std::convertible_to<std::vector<std::string>>;
 };

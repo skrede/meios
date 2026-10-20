@@ -40,6 +40,11 @@ struct observed_layer
             served.get() = rank;
         return found;
     }
+
+    bool answers(std::string_view package, std::string_view relative) const
+    {
+        return layer.get().answers(package, relative);
+    }
 };
 
 beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset found, bool in_named_directory)

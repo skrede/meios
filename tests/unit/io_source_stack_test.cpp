@@ -11,9 +11,11 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <utility>
 #include <optional>
 #include <filesystem>
+#include <functional>
 #include <string_view>
 
 namespace
@@ -68,6 +70,30 @@ struct path_fixture
     }
 };
 
+struct counting_source
+{
+    std::reference_wrapper<std::int32_t> located;
+    std::reference_wrapper<std::int32_t> asked;
+    bool hits;
+
+    meios::capability_descriptor capabilities() const
+    {
+        return { meios::source_kind::memory, false };
+    }
+
+    std::optional<meios::resolved_asset> locate(std::string_view, std::string_view)
+    {
+        ++located.get();
+        return hits ? std::optional{ meios::resolved_asset{ std::filesystem::path{ "counted" } } } : std::nullopt;
+    }
+
+    bool answers(std::string_view, std::string_view) const
+    {
+        ++asked.get();
+        return hits;
+    }
+};
+
 }
 
 TEST_CASE("source_stack resolves top-down and index 0 wins", "[io][stack]")
@@ -86,6 +112,8 @@ TEST_CASE("source_stack resolves top-down and index 0 wins", "[io][stack]")
     REQUIRE(hit.has_value());
     REQUIRE(hit->path() == std::filesystem::path{ "high" });
     REQUIRE(infos == 1);
+    REQUIRE(stack.try_locate("pkg", "file", seam).value()->path() == std::filesystem::path{ "high" });
+    REQUIRE(infos == 2);
 }
 
 TEST_CASE("a lower layer answers when higher layers miss, without a shadow log", "[io][stack]")
@@ -136,4 +164,34 @@ TEST_CASE("a moved-from source_handle reports not valid", "[io][stack]")
     meios::source_handle moved{ std::move(handle) };
     REQUIRE(moved.valid());
     REQUIRE_FALSE(handle.valid());
+}
+
+TEST_CASE("a layer below the hit is asked only whether it would answer", "[io][stack]")
+{
+    int infos            = 0;
+    std::int32_t located = 0;
+    std::int32_t asked   = 0;
+    meios::log_sink_f log{ info_counter{ infos } };
+    meios::source_stack stack{ fixture_source{ "high", { { "pkg", "file" } } }, counting_source{ located, asked, true } };
+
+    REQUIRE(stack.locate("pkg", "file", log)->path() == std::filesystem::path{ "high" });
+    REQUIRE(stack.try_locate("pkg", "file", log).value()->path() == std::filesystem::path{ "high" });
+    REQUIRE(located == 0);
+    REQUIRE(asked == 2);
+    REQUIRE(infos == 2);
+}
+
+TEST_CASE("a layer that misses above the hit is asked through locate", "[io][stack]")
+{
+    int infos            = 0;
+    std::int32_t located = 0;
+    std::int32_t asked   = 0;
+    meios::log_sink_f log{ info_counter{ infos } };
+    meios::source_stack stack{ counting_source{ located, asked, false }, fixture_source{ "low", { { "pkg", "file" } } } };
+
+    REQUIRE(stack.locate("pkg", "file", log)->path() == std::filesystem::path{ "low" });
+    REQUIRE(stack.try_locate("pkg", "file", log).value()->path() == std::filesystem::path{ "low" });
+    REQUIRE(located == 2);
+    REQUIRE(asked == 0);
+    REQUIRE(infos == 0);
 }

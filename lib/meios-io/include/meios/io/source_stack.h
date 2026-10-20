@@ -20,7 +20,8 @@ namespace meios
 
 // Variadic front door that erases a pack of sources into an ordered vector.
 // Index 0 is the highest precedence; a lower-precedence layer that could also
-// answer a query is surfaced as an info shadow diagnostic, never silently hidden.
+// answer a query is surfaced as an info shadow diagnostic, never silently hidden. A shadow is
+// asked through answers, so a lower layer's own refusal cannot fail a lookup a higher one answered.
 class source_stack
 {
 public:
@@ -61,16 +62,10 @@ public:
     std::optional<resolved_asset> locate(std::string_view pkg, std::string_view rel, log_sink &log)
     {
         std::optional<resolved_asset> hit;
-        for(std::size_t rank = 0; rank < m_layers.size(); ++rank)
-        {
-            std::optional<resolved_asset> found = m_layers[rank].locate(pkg, rel);
-            if(!found)
-                continue;
-            if(!hit)
-                hit = std::move(found);
-            else
-                log.log(level::info, shadow_message(pkg, rel, rank));
-        }
+        std::size_t rank = 0;
+        for(; rank < m_layers.size() && !hit; ++rank)
+            hit = m_layers[rank].locate(pkg, rel);
+        note_shadows(pkg, rel, rank, log);
         return hit;
     }
 
@@ -78,8 +73,10 @@ public:
     {
         std::optional<resolved_asset> hit;
         std::optional<operation_failure> first_failure;
-        for(std::size_t rank = 0; rank < m_layers.size(); ++rank)
-            consider(m_layers[rank].try_locate(pkg, rel), hit, first_failure, pkg, rel, rank, log);
+        std::size_t rank = 0;
+        for(; rank < m_layers.size() && !hit; ++rank)
+            consider(m_layers[rank].try_locate(pkg, rel), hit, first_failure);
+        note_shadows(pkg, rel, rank, log);
         if(hit)
             return hit;
         if(first_failure)
@@ -90,24 +87,25 @@ public:
 private:
     std::vector<source_handle> m_layers;
 
-    static void consider(source_lookup_result found, std::optional<resolved_asset> &hit, std::optional<operation_failure> &failure, std::string_view pkg, std::string_view rel,
-                         std::size_t rank, log_sink &log)
+    static void consider(source_lookup_result found, std::optional<resolved_asset> &hit, std::optional<operation_failure> &failure)
     {
         if(!found)
         {
-            if(!hit && !failure)
+            if(!failure)
                 failure = found.error();
             return;
         }
         if(!*found)
             return;
-        if(hit)
-            log.log(level::info, shadow_message(pkg, rel, rank));
-        else
-        {
-            hit = std::move(*found);
-            failure.reset();
-        }
+        hit = std::move(*found);
+        failure.reset();
+    }
+
+    void note_shadows(std::string_view pkg, std::string_view rel, std::size_t from, log_sink &log)
+    {
+        for(std::size_t rank = from; rank < m_layers.size(); ++rank)
+            if(m_layers[rank].answers(pkg, rel))
+                log.log(level::info, shadow_message(pkg, rel, rank));
     }
 
     static std::string shadow_message(std::string_view pkg, std::string_view rel, std::size_t rank)

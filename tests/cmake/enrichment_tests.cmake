@@ -90,6 +90,7 @@ if(TARGET meios_ros-package)
     set(ros_package_link_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/ros_package_link_test.cpp)
     if(EXISTS ${ros_package_link_src})
         add_executable(ros_package_link_test ${ros_package_link_src})
+        target_sources(ros_package_link_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/ros_package_shadow_test.cpp)
         target_link_libraries(ros_package_link_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::ros-package
                 Catch2::Catch2WithMain)

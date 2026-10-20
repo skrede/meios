@@ -32,8 +32,9 @@ namespace meios
 // publication that would reach a file another entry holds is refused before anything is written.
 // Entries are immutable unless the source was built with update_behavior::replace, which is
 // source-wide and fixed at construction.
-// It never satisfies provides_path: it cannot answer without writing, and its diagnostics carry
-// an empty location because a source layer has no document position to anchor to. It declines the
+// It never satisfies provides_path: it cannot name a path without writing, though a shadow query
+// is answered from the table and writes nothing. Its diagnostics carry an empty location because
+// a source layer has no document position to anchor to. It declines the
 // lookup whose relative half is empty — the one asking where a package is — and refuses an offer
 // naming no file beneath its own package or landing where publications stage: neither names a
 // file it can serve.
@@ -62,8 +63,11 @@ public:
 
     memory_source &add(std::string package, std::string relative, std::string bytes)
     {
-        if(refused_unserveable(package, relative))
+        if(const std::optional<std::string> refusal = detail::unserveable_offer(package, relative))
+        {
+            refuse(diagnostic_code::malformed_asset_uri, *refusal);
             return *this;
+        }
         const key wanted                                = detail::normalized_key(package, relative);
         const std::map<key, std::string>::iterator held = m_entries.find(wanted);
         if(held != m_entries.end())
@@ -90,6 +94,11 @@ public:
         return write_entry(wanted, entry->second, package, relative);
     }
 
+    bool answers(std::string_view package, std::string_view relative) const
+    {
+        return !relative.empty() && m_entries.contains(detail::normalized_key(package, relative));
+    }
+
 private:
     update_behavior m_behavior;
     detail::scratch_mirror m_mirror;
@@ -110,30 +119,6 @@ private:
     {
         refuse(diagnostic_code::asset_write_failed, cause,
                "could not create a scratch directory for a byte-backed source: " + cause.native.message());
-    }
-
-    // Every branch is the same judgment: the offer names no file the source can serve. The
-    // staging half is answered here rather than at the publication because the collision is made
-    // by the offer, and the file that would prove it does not exist until a later resolution.
-    bool refused_unserveable(const std::string &package, const std::string &relative)
-    {
-        if(relative.empty())
-            refuse(diagnostic_code::malformed_asset_uri,
-                   "refused an entry for package \"" + package +
-                           "\" offered under an empty relative path, which names the "
-                           "package directory rather than a file");
-        else if(detail::names_scratch_staging(package, relative))
-            refuse(diagnostic_code::malformed_asset_uri,
-                   "refused an entry for package \"" + package + "\" offered under \"" + relative +
-                           "\", which names the directory the source stages publications in rather "
-                           "than a file it can serve");
-        else if(detail::names_no_file_under_package(package, relative))
-            refuse(diagnostic_code::malformed_asset_uri,
-                   "refused an entry for package \"" + package + "\" offered under \"" + relative +
-                           "\", which names no file beneath that package");
-        else
-            return false;
-        return true;
     }
 
     static std::filesystem::path request_path(std::string_view package, std::string_view relative)

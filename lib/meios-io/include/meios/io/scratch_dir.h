@@ -7,6 +7,7 @@
 
 #include <string>
 #include <utility>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -92,6 +93,9 @@ scratch_key normalized_key(std::string_view package, std::string_view relative);
 // of its package composes to an ordinary-looking path inside a different package's directory,
 // which a composition-based test cannot see.
 bool names_no_file_under_package(std::string_view package, std::string_view relative);
+
+// Answers the refusal for an offer naming no file a byte-backed source can serve, or nothing.
+std::optional<std::string> unserveable_offer(std::string_view package, std::string_view relative);
 
 // Answers a fresh directory narrowed to its owner, or a refusal naming the step that failed
 // and carrying that step's own native code. A root that could not be narrowed is removed

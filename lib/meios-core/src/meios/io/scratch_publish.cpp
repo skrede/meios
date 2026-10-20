@@ -1,6 +1,7 @@
 #include "meios/io/scratch_operations.h"
 
 #include <string>
+#include <optional>
 #include <algorithm>
 #include <filesystem>
 #include <string_view>
@@ -96,6 +97,25 @@ bool names_no_file_under_package(std::string_view, std::string_view relative)
         return true;
     const std::string leading = named.begin()->string();
     return leading == "." || leading == "..";
+}
+
+// Every branch is the same judgment: the offer names no file the source can serve. The staging half
+// is answered at the offer rather than at the publication because the collision is made by the
+// offer, and the file that would prove it does not exist until a later resolution.
+std::optional<std::string> unserveable_offer(std::string_view package, std::string_view relative)
+{
+    const std::string offered = std::string(package);
+    if(relative.empty())
+        return "refused an entry for package \"" + offered +
+                "\" offered under an empty relative path, which names the "
+                "package directory rather than a file";
+    if(names_scratch_staging(package, relative))
+        return "refused an entry for package \"" + offered + "\" offered under \"" + std::string(relative) +
+                "\", which names the directory the source stages publications in rather "
+                "than a file it can serve";
+    if(names_no_file_under_package(package, relative))
+        return "refused an entry for package \"" + offered + "\" offered under \"" + std::string(relative) + "\", which names no file beneath that package";
+    return std::nullopt;
 }
 
 // The target is never removed or truncated ahead of the rename: that would leave the path naming

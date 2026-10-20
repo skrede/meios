@@ -47,6 +47,8 @@ public:
 
     std::optional<resolved_asset> locate(std::string_view package, std::string_view relative);
 
+    bool answers(std::string_view package, std::string_view relative) const;
+
     std::optional<std::filesystem::path> path_of(std::string_view package,
                                                  std::string_view relative) const;
 

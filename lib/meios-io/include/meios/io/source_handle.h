@@ -18,7 +18,7 @@ namespace meios
 {
 
 // Move-only value type that erases any package_source behind a manual vtable.
-// The optional capabilities (path_of, packages) are resolved at this boundary
+// The optional capabilities (path_of, answers, packages) are resolved at this boundary
 // via if constexpr, so a bytes-only source needs no virtual to opt out.
 class source_handle
 {
@@ -67,6 +67,13 @@ public:
         return m_self->do_path(pkg, rel);
     }
 
+    // Non-const because a source without answers is asked through its non-const locate.
+    bool answers(std::string_view pkg, std::string_view rel)
+    {
+        assert(valid() && "answers() on a moved-from source_handle");
+        return m_self->do_answers(pkg, rel);
+    }
+
     // Answered from the source's type alone; the source is asked nothing.
     bool names_paths() const
     {
@@ -94,6 +101,7 @@ private:
         virtual std::optional<resolved_asset> do_locate(std::string_view, std::string_view)            = 0;
         virtual source_lookup_result do_try_locate(std::string_view, std::string_view)                 = 0;
         virtual std::optional<std::filesystem::path> do_path(std::string_view, std::string_view) const = 0;
+        virtual bool do_answers(std::string_view, std::string_view)                                    = 0;
         virtual bool do_names_paths() const                                                            = 0;
         virtual std::vector<std::string> do_enumerate() const                                          = 0;
     };
@@ -136,6 +144,14 @@ private:
                 (void)rel;
                 return std::nullopt;
             }
+        }
+
+        bool do_answers(std::string_view pkg, std::string_view rel) override
+        {
+            if constexpr(answers_quietly<S>)
+                return m_src.answers(pkg, rel);
+            else
+                return m_src.locate(pkg, rel).has_value();
         }
 
         bool do_names_paths() const override

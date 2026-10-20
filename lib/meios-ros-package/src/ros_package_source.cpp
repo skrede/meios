@@ -40,6 +40,16 @@ std::optional<resolved_asset> ros_package_source::locate(std::string_view packag
     return detail::locate_contained(entry->second, entry->second / relative, package, relative, m_log.get());
 }
 
+bool ros_package_source::answers(std::string_view package, std::string_view relative) const
+{
+    const auto entry = m_bases.find(std::string(package));
+    if(entry == m_bases.end())
+        return false;
+    const detail::contained_path_result real = detail::try_contained_under(entry->second, relative.empty() ? entry->second : entry->second / relative);
+    std::error_code ec;
+    return real && *real && std::filesystem::exists(**real, ec) && !ec;
+}
+
 std::vector<std::string> ros_package_source::packages() const
 {
     std::vector<std::string> names;
