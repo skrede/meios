@@ -103,14 +103,15 @@ private:
 // macro bodies stay live across files.
 struct expand_ctx
 {
-    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim,
-               const include_options &inc, eval_policy policy,
+    expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, const include_options &inc,
+               const std::vector<std::filesystem::path> &roots, eval_policy policy,
                const std::shared_ptr<evaluator_handle> &inject, log_sink &lg);
 
     eval_scope &scope;
     source_stack &sources;
     const expansion_limits &limits;
     const include_options &includes;
+    const std::vector<std::filesystem::path> &package_roots;
     // One load, one set of evaluator ceilings and counters: nothing a caller may share
     // between two loads reaches them.
     evaluator_limits eval_limits;

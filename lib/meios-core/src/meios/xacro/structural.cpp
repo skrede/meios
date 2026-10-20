@@ -12,6 +12,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 #include <sstream>
 #include <filesystem>
 #include <string_view>
@@ -60,9 +61,10 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
                                             const std::filesystem::path &document,
                                             const expansion_limits &limits, eval_policy policy,
                                             const std::shared_ptr<evaluator_handle> &backend,
-                                            log_sink &log, const include_options &includes)
+                                            log_sink &log, const include_options &includes,
+                                            const std::vector<std::filesystem::path> &package_roots)
 {
-    detail::expand_ctx ctx(scope, sources, limits, includes, policy, backend, log);
+    detail::expand_ctx ctx(scope, sources, limits, includes, package_roots, policy, backend, log);
     pugi::xml_document &doc = ctx.park();
     pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
     if(!parsed)

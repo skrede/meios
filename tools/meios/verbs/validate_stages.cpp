@@ -10,6 +10,8 @@
 #include "meios/xacro/budget.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/structural.h"
+#include "meios/xacro/eval_policy.h"
+#include "meios/xacro/include_options.h"
 
 #include "meios/io/source_stack.h"
 #include "meios/io/text_reader.h"
@@ -77,7 +79,7 @@ bool xacro_expands(std::string_view bytes, const std::filesystem::path &path,
     eval_scope scope;
     source_stack sources = build_sources(roots, sink);
     const expected<expansion, expansion_error> expanded =
-        expand(bytes, scope, sources, path, expansion_limits{}, sink);
+        expand(bytes, scope, sources, path, expansion_limits{}, eval_policy::fail, {}, sink, include_options(), roots);
     return expanded.has_value();
 }
 

@@ -65,16 +65,16 @@ bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
 
 using followed_link = expected<std::optional<std::filesystem::path>, operation_failure>;
 
-followed_link follow_beside(const expand_ctx &ctx, const std::filesystem::path &document, const beside_probe &probe, const std::string &normalized)
+followed_link follow_beside(const expand_ctx &ctx, const std::filesystem::path &document, const beside_probe &probe, const std::string &written)
 {
     if(!ctx.includes.follow_outside_links || probe.hit)
         return std::optional<std::filesystem::path>{};
     if(probe.uncontained)
-        return beside_link(document, normalized);
-    followed_link walked = first_beside_link(document, normalized);
+        return beside_link(document, written);
+    followed_link walked = first_beside_link(document, written);
     if(!walked || !*walked)
         return walked;
-    return beside_link(document, normalized);
+    return beside_link(document, written);
 }
 
 // The layer answers alone: a disk probe would find the file only if something earlier had made the layer write it.
@@ -94,18 +94,19 @@ bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_docum
 
 }
 
-// A file beside the document is the one the spelling names, so no configured root's copy stands in for it: a link out of both the directory it was named in and the one it
-// lives in refuses unless outside links are followed. [fs.op.weakly.canonical] decides existence through status(), which follows links, so with them unset a dangling link
-// canonicalizes as an absent file beside the document and falls through to the serving layer and configured sources; followed, where a link on its way leads is the final answer.
+// A file beside the document is the one the spelling names, joined as written so a `..` resolves where the operating system resolves it, and no configured root's copy stands in
+// for it: a link out of the directory it was named in, the one it lives in and every configured root refuses unless outside links are followed. [fs.op.weakly.canonical]
+// decides existence through status(), which follows links, so with them unset a dangling link canonicalizes as an absent file beside the document and falls through to the
+// serving layer and configured sources; followed, where a link on its way leads is the final answer.
 bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
     const std::filesystem::path document = absolute_base(ctx.scope.active_document());
-    const beside_probe probe             = probe_beside(document, normalized);
+    const beside_probe probe             = probe_beside(document, written, ctx.package_roots);
     if(probe.cause)
-        return refuse_probe(ctx, in, written, anchor / normalized, *probe.cause);
-    const followed_link link = follow_beside(ctx, document, probe, normalized);
+        return refuse_probe(ctx, in, written, anchor / written, *probe.cause);
+    const followed_link link = follow_beside(ctx, document, probe, written);
     if(!link)
-        return refuse_probe(ctx, in, written, anchor / normalized, link.error());
+        return refuse_probe(ctx, in, written, anchor / written, link.error());
     if(*link)
         return include_outside(ctx, in, **link, written, out);
     if(probe.uncontained)
@@ -114,7 +115,7 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     if(ctx.served)
         sibling = sibling_of(*ctx.served, normalized);
     if(probe.hit)
-        return enter_include(ctx, in, located_include{ *probe.hit, anchor / normalized, sibling }, out);
+        return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, sibling }, out);
     if(std::optional<resolved_asset> served = sibling ? probe_served(ctx.sources, *sibling) : std::nullopt)
         return enter_include(ctx, in, located_include{ *served, served->path(), sibling }, out);
     return include_from_sources(ctx, in, {}, normalized, written, out);

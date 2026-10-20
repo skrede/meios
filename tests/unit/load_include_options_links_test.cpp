@@ -151,7 +151,7 @@ TEST_CASE("an admitted climb resolves through a linked directory as the operatin
     REQUIRE(include_tree::renders_link(expand_with(inner, sources, log, climbing()), expected));
 }
 
-TEST_CASE("a climb back inside a linked directory is resolved by its spelling with the climb admitted or not", "[urdf][xacro][include][options]")
+TEST_CASE("a spelling back through a linked directory is judged where the operating system resolves it", "[urdf][xacro][include][options]")
 {
     const include_tree::tree held;
     if(!linked_climb_tree(held))
@@ -164,7 +164,11 @@ TEST_CASE("a climb back inside a linked directory is resolved by its spelling wi
     meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources;
 
-    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, meios::include_options{}), "lexical"));
-    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, climbing()), "lexical"));
-    REQUIRE(xacro_probe::errors(records) == 0);
+    const include_tree::expansion_result unset = expand_with(top, sources, log, meios::include_options{});
+    REQUIRE_FALSE(unset.has_value());
+    REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
+    const include_tree::expansion_result climbed = expand_with(top, sources, log, climbing());
+    REQUIRE_FALSE(climbed.has_value());
+    REQUIRE(climbed.error().code == meios::diagnostic_code::uncontained_asset);
+    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, following()), "through_link"));
 }

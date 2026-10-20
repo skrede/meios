@@ -6,6 +6,7 @@
 #include "meios/io/package_source.h"
 #include "meios/io/beside_containment.h"
 
+#include <span>
 #include <string>
 #include <cstddef>
 #include <utility>
@@ -57,9 +58,9 @@ beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset
 
 // Logs nothing: a miss falls through to the configured sources, and a logged rejection would
 // latch as the terminal cause even when one of them then resolves the include.
-beside_probe probe_beside(const std::filesystem::path &document, const std::string &normalized)
+beside_probe probe_beside(const std::filesystem::path &document, const std::string &spelling, std::span<const std::filesystem::path> roots)
 {
-    const contained_read_result contained = contain_beside(document, normalized);
+    const contained_read_result contained = contain_beside(document, spelling, roots);
     if(!contained)
         return { std::nullopt, contained.error(), false };
     if(!*contained)

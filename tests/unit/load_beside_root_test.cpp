@@ -1,5 +1,6 @@
 #include "xacro_read_probe.h"
 #include "xacro_include_tree.h"
+#include "load_beside_root_fixture.h"
 
 #include <meios/urdf.h>
 
@@ -12,31 +13,13 @@
 #include <vector>
 #include <variant>
 #include <filesystem>
-#include <system_error>
+
+using beside_root_fixture::rooted;
+using beside_root_fixture::linked_sub;
+using beside_root_fixture::load_outcome;
 
 namespace
 {
-
-using load_outcome = meios::expected<meios::load_result, meios::load_error>;
-
-meios::load_options rooted(const include_tree::tree &held, bool follow)
-{
-    meios::load_options opts;
-    opts.package_roots                 = {held.root() / "root"};
-    opts.includes.follow_outside_links = follow;
-    return opts;
-}
-
-// doc/sub links to the directory d below parent, so the spelling sub/.. names parent where the
-// operating system resolves it and doc where it is read lexically.
-bool linked_sub(const include_tree::tree &held, const std::string &parent)
-{
-    std::filesystem::create_directories(held.root() / parent / "d");
-    std::filesystem::create_directories(held.root() / "doc");
-    std::error_code ec;
-    std::filesystem::create_directory_symlink(held.root() / parent / "d", held.root() / "doc" / "sub", ec);
-    return !ec;
-}
 
 std::filesystem::path mesh_document(const include_tree::tree &held, const std::string &filename)
 {
@@ -101,17 +84,14 @@ TEST_CASE("a mesh spelled back through a linked directory leading under no confi
 
 #ifdef MEIOS_HAS_YAML
 
+using beside_root_fixture::loads_link;
+
 namespace
 {
 
 std::filesystem::path yaml_document(const include_tree::tree &held, const std::string &spec)
 {
     return held.write("doc/robot.xacro", include_tree::robot("<link name=\"${xacro.load_yaml('" + spec + "')['name']}\"/>"));
-}
-
-bool loads_link(const load_outcome &loaded, const std::string &name)
-{
-    return loaded.has_value() && loaded->robot.links.size() == 1 && loaded->robot.links[0].name == name;
 }
 
 }
