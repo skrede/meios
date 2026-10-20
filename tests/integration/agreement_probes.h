@@ -139,6 +139,11 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"argument_declared_in_skipped_branch", "argument_declared_in_skipped_branch", {}},
         agreement_probe{"argument_declared_in_uncalled_macro", "argument_declared_in_uncalled_macro", {}},
         agreement_probe{"argument_declared_in_include_first", "argument_declared_in_include_first", {}},
+        agreement_probe{"dollar_run_after_undefined_name", "dollar_run_after_undefined_name", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{"dollar_run_after_unset_argument", "dollar_run_after_unset_argument", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{"dollar_run_after_division_by_zero", "dollar_run_after_division_by_zero", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{
+                "unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: ${x"},
 };
 
 }

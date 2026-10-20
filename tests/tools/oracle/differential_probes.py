@@ -144,4 +144,8 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("argument_redeclared_after_expression_default", "argument_redeclared_after_expression_default", None),
                     ("argument_declared_in_skipped_branch", "argument_declared_in_skipped_branch", None),
                     ("argument_declared_in_uncalled_macro", "argument_declared_in_uncalled_macro", None),
-                    ("argument_declared_in_include_first", "argument_declared_in_include_first", None))
+                    ("argument_declared_in_include_first", "argument_declared_in_include_first", None),
+                    ("dollar_run_after_undefined_name", "dollar_run_after_undefined_name", None),
+                    ("dollar_run_after_unset_argument", "dollar_run_after_unset_argument", None),
+                    ("dollar_run_after_division_by_zero", "dollar_run_after_division_by_zero", None),
+                    ("unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", None))

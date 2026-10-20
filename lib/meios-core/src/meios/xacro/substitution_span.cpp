@@ -39,13 +39,6 @@ std::string_view leading_command(std::string_view inner)
     return inner.substr(start, end - start);
 }
 
-// Upstream's command pattern is ^\$\([^\)]*\): a command ends at its first closing parenthesis
-// whatever it holds, quotes included, so a call or a span written inside one truncates it there.
-std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
-{
-    return raw.find(')', opener + 1);
-}
-
 bool refuse_held(subst_ctx &ctx, std::string_view held)
 {
     const std::string message = "a command's text holds '" + std::string(held) + "', which a command cannot hold: it ends at its first ')'";
@@ -79,6 +72,28 @@ bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at)
                               + " substitution span at offset " + std::to_string(at);
     ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
     record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
+    return false;
+}
+
+bool refuse_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::size_t base)
+{
+    refine_span_column(ctx, base + dollar);
+    const std::string message = "invalid expression: " + std::string(raw.substr(dollar));
+    ctx.log.log(level::error, diagnostic_code::expression_error, ctx.at, message);
+    record_terminal(ctx, diagnostic_code::expression_error, message);
+    // Upstream's lexer refuses under every policy, so no enclosing span may keep this verbatim.
+    ctx.last_kind = eval_failure_kind::error;
+    return false;
+}
+
+// The reference's lexer reads one token ahead, so a token after a span that does not lex refuses before the span is evaluated.
+bool refuse_follower(subst_ctx &ctx, std::string_view raw, std::size_t at, std::size_t base)
+{
+    if(raw[at + 1] == '$')
+        return refuse_dollar_run(ctx, raw, at, base);
+    refine_span_column(ctx, base + at);
+    fail_unterminated(ctx, raw[at + 1], at);
+    ctx.last_kind = eval_failure_kind::error;
     return false;
 }
 
@@ -148,6 +163,8 @@ bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::
                                       : find_cmd_close(raw, dollar + 1);
     if(close == std::string_view::npos)
         return fail_unterminated(ctx, opener, dollar);
+    if(!lexes_at(raw, close + 1))
+        return refuse_follower(ctx, raw, close + 1, base);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
     std::optional<std::string> result = resolve_span(ctx, opener, inner, span_offset);
     if(result)
@@ -170,13 +187,7 @@ bool expand_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar,
         cursor = end + 1;
         return true;
     }
-    refine_span_column(ctx, base + dollar);
-    const std::string message = "invalid expression: " + std::string(raw.substr(dollar));
-    ctx.log.log(level::error, diagnostic_code::expression_error, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::expression_error, message);
-    // Upstream's lexer refuses under every policy, so no enclosing span may keep this verbatim.
-    ctx.last_kind = eval_failure_kind::error;
-    return false;
+    return refuse_dollar_run(ctx, raw, dollar, base);
 }
 
 }

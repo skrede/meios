@@ -38,6 +38,31 @@ inline std::size_t find_expr_close(std::string_view raw, std::size_t opener)
     return std::string_view::npos;
 }
 
+// Upstream's command pattern is ^\$\([^\)]*\): a command ends at its first closing parenthesis
+// whatever it holds, quotes included, so a call or a span written inside one truncates it there.
+inline std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
+{
+    return raw.find(')', opener + 1);
+}
+
+// Upstream's tokens, tried in order: ^\$\$+(\{|\(), ^\$\{[^\}]*\}, ^\$\([^\)]*\), [^$]+|\$[^{($]+|\$$.
+inline bool lexes_at(std::string_view raw, std::size_t at)
+{
+    if(at + 1 >= raw.size() || raw[at] != '$')
+        return true;
+    const char next = raw[at + 1];
+    if(next == '$')
+    {
+        const std::size_t end = raw.find_first_not_of('$', at);
+        return end != std::string_view::npos && (raw[end] == '{' || raw[end] == '(');
+    }
+    if(next == '{')
+        return find_expr_close(raw, at + 1) != std::string_view::npos;
+    if(next == '(')
+        return find_cmd_close(raw, at + 1) != std::string_view::npos;
+    return true;
+}
+
 }
 
 #endif
