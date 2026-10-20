@@ -33,6 +33,11 @@ inline bool linked_sub(const include_tree::tree &held, const std::string &parent
     return !ec;
 }
 
+inline std::filesystem::path yaml_document(const include_tree::tree &held, const std::string &at, const std::string &spec)
+{
+    return held.write(at, include_tree::robot("<link name=\"${xacro.load_yaml('" + spec + "')['name']}\"/>"));
+}
+
 inline bool loads_link(const load_outcome &loaded, const std::string &name)
 {
     return loaded.has_value() && loaded->robot.links.size() == 1 && loaded->robot.links[0].name == name;

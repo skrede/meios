@@ -13,8 +13,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <string>
 #include <vector>
 #include <filesystem>
+#include <system_error>
 
 using beside_root_fixture::rooted;
 using beside_root_fixture::linked_sub;
@@ -36,6 +38,19 @@ include_tree::expansion_result expand_rooted(const std::filesystem::path &docume
 {
     meios::eval_scope scope;
     return meios::expand(include_tree::read_file(document), scope, sources, document, meios::expansion_limits{}, meios::eval_policy::fail, {}, log, meios::include_options{}, roots);
+}
+
+bool linked_inside(const include_tree::tree &held)
+{
+    std::filesystem::create_directories(held.root() / "doc" / "real");
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(held.root() / "doc" / "real", held.root() / "doc" / "sub", ec);
+    return !ec;
+}
+
+bool refuses(const load_outcome &loaded, meios::diagnostic_code code, const std::string &wording)
+{
+    return !loaded.has_value() && loaded.error().code == code && loaded.error().message.find(wording) != std::string::npos;
 }
 
 }
@@ -93,3 +108,48 @@ TEST_CASE("an include spelled back through a linked directory into a configured 
         UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
     REQUIRE(loads_link(loaded, "nested_through_link"));
 }
+
+TEST_CASE("an include's leading .. landing under a configured root meets the climb gate", "[urdf][load][include]")
+{
+    const include_tree::tree held;
+    held.write("root/p/config/x.xacro", include_tree::binds("inc_cfg"));
+    const std::filesystem::path document = held.write("root/p/urdf/robot.xacro", include_tree::reads_leaf("../config/x.xacro"));
+
+    REQUIRE(refuses(meios::load(document, rooted(held, false)), meios::diagnostic_code::xacro_structural_error, "climbs above the directory of the document that writes it"));
+}
+
+TEST_CASE("a miss through a link that stays inside the document's directory is final with outside links followed", "[urdf][load][include][link]")
+{
+    const include_tree::tree held;
+    held.write("root/sub/leaf.xacro", include_tree::binds("root_copy"));
+    const std::filesystem::path top = held.write("doc/top.xacro", include_tree::reads_leaf("sub/leaf.xacro"));
+    if(!linked_inside(held))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    REQUIRE(loads_link(meios::load(top, rooted(held, false)), "root_copy"));
+    REQUIRE(refuses(meios::load(top, rooted(held, true)), meios::diagnostic_code::unresolved_include, "followed a link"));
+}
+
+#ifdef MEIOS_HAS_YAML
+
+TEST_CASE("an auxiliary document's miss through a link that stays inside the document's directory is final with outside links followed", "[urdf][load][yaml][link]")
+{
+    const include_tree::tree held;
+    held.write("root/sub/cfg.yaml", "name: root_copy_yaml\n");
+    const std::filesystem::path document = beside_root_fixture::yaml_document(held, "doc/robot.xacro", "sub/cfg.yaml");
+    if(!linked_inside(held))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    REQUIRE(loads_link(meios::load(document, rooted(held, false)), "root_copy_yaml"));
+    const load_outcome refused = meios::load(document, rooted(held, true));
+    REQUIRE_FALSE(refused.has_value());
+    REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
+}
+
+#endif

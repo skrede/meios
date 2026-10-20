@@ -85,22 +85,13 @@ TEST_CASE("a mesh spelled back through a linked directory leading under no confi
 #ifdef MEIOS_HAS_YAML
 
 using beside_root_fixture::loads_link;
-
-namespace
-{
-
-std::filesystem::path yaml_document(const include_tree::tree &held, const std::string &spec)
-{
-    return held.write("doc/robot.xacro", include_tree::robot("<link name=\"${xacro.load_yaml('" + spec + "')['name']}\"/>"));
-}
-
-}
+using beside_root_fixture::yaml_document;
 
 TEST_CASE("an auxiliary document linked beside its description into a configured root loads", "[urdf][load][yaml][link]")
 {
     const include_tree::tree held;
     const std::filesystem::path target   = held.write("root/common/cfg.yaml", "name: from_root_link\n");
-    const std::filesystem::path document = yaml_document(held, "cfg.yaml");
+    const std::filesystem::path document = yaml_document(held, "doc/robot.xacro", "cfg.yaml");
     if(!include_tree::linked(target, held.root() / "doc" / "cfg.yaml"))
     {
         SUCCEED("this host cannot create a symlink");
@@ -118,7 +109,7 @@ TEST_CASE("an auxiliary document spelled back through a linked directory into a 
     const include_tree::tree held;
     held.write("root/common/cfg.yaml", "name: through_link\n");
     held.write("doc/cfg.yaml", "name: lexical\n");
-    const std::filesystem::path document = yaml_document(held, "sub/../cfg.yaml");
+    const std::filesystem::path document = yaml_document(held, "doc/robot.xacro", "sub/../cfg.yaml");
     if(!linked_sub(held, "root/common"))
     {
         SUCCEED("this host cannot create a symlink");
@@ -136,7 +127,7 @@ TEST_CASE("an auxiliary document spelled back through a linked directory leading
     const include_tree::tree held;
     std::filesystem::create_directories(held.root() / "root");
     held.write("elsewhere/cfg.yaml", "name: through_link\n");
-    const std::filesystem::path document = yaml_document(held, "sub/../cfg.yaml");
+    const std::filesystem::path document = yaml_document(held, "doc/robot.xacro", "sub/../cfg.yaml");
     if(!linked_sub(held, "elsewhere"))
     {
         SUCCEED("this host cannot create a symlink");
@@ -152,6 +143,18 @@ TEST_CASE("an auxiliary document spelled back through a linked directory leading
     REQUIRE(loads_link(meios::load(document, rooted(held, true)), "through_link"));
 }
 
+TEST_CASE("an auxiliary document's leading .. landing under a configured root loads, and refuses with none", "[urdf][load][yaml]")
+{
+    const include_tree::tree held;
+    held.write("root/p/config/c.yaml", "name: from_cfg\n");
+    const std::filesystem::path document = yaml_document(held, "root/p/urdf/robot.xacro", "../config/c.yaml");
+
+    REQUIRE(loads_link(meios::load(document, rooted(held, false)), "from_cfg"));
+    const load_outcome refused = meios::load(document, meios::load_options{});
+    REQUIRE_FALSE(refused.has_value());
+    REQUIRE(refused.error().code == meios::diagnostic_code::unresolved_asset);
+}
+
 #endif
 
 TEST_CASE("a spelling through a directory that does not exist reads the file beside the document", "[urdf][load][link]")
@@ -165,6 +168,6 @@ TEST_CASE("a spelling through a directory that does not exist reads the file bes
     REQUIRE(resolves_to(meios::load(mesh_document(held, "sub/../m.stl"), meios::load_options{}), mesh));
 #ifdef MEIOS_HAS_YAML
     held.write("doc/cfg.yaml", "name: beside\n");
-    REQUIRE(beside_root_fixture::loads_link(meios::load(yaml_document(held, "sub/../cfg.yaml"), meios::load_options{}), "beside"));
+    REQUIRE(beside_root_fixture::loads_link(meios::load(yaml_document(held, "doc/robot.xacro", "sub/../cfg.yaml"), meios::load_options{}), "beside"));
 #endif
 }
