@@ -11,6 +11,7 @@
 #include <meios/bundle/asset_bytes.h>
 
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -171,3 +172,29 @@ TEST_CASE("a package root given as a link serves its package-form auxiliary docu
 }
 
 #endif
+
+TEST_CASE("a package reference through a root whose files link out of it refuses as uncontained", "[urdf][load][link]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path share    = held.root() / "install" / "share";
+    const std::filesystem::path mesh     = held.write("src/p/meshes/m.stl", "solid m\nendsolid m\n");
+    const std::filesystem::path document = held.write("doc/robot.urdf", mesh_robot());
+    std::filesystem::create_directories(share / "p" / "meshes");
+    if(!include_tree::linked(mesh, share / "p/meshes/m.stl") || !include_tree::linked(held.write("src/p/cfg.yaml", "pkg: pkg_yaml\n"), share / "p/cfg.yaml"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    const load_outcome refused = meios::load(document, rooted_at(share));
+    REQUIRE((!refused.has_value() && refused.error().code == meios::diagnostic_code::uncontained_asset));
+    REQUIRE(resolves_to(meios::load(document, rooted_at(held.root() / "src")), mesh));
+#ifdef MEIOS_HAS_YAML
+    const std::filesystem::path by_package = held.write("doc/package.xacro", yaml_robot("package://p/cfg.yaml", "pkg"));
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{xacro_probe::recorder{records}};
+    REQUIRE_FALSE(meios::load(by_package, rooted_at(share), log).has_value());
+    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::uncontained_asset) == 1);
+    REQUIRE(link_names(meios::load(by_package, rooted_at(held.root() / "src"))) == std::set<std::string>{"pkg_yaml"});
+#endif
+}

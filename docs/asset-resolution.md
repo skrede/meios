@@ -140,14 +140,16 @@ spelling is vanishingly rare in descriptions, so it is named here rather than ac
 
 ## Containment
 
-**A path that reaches the filesystem must resolve under a configured package root or under the
-directory the input document was named in or the one it really lives in.** Roots are tried in the order
-they were configured, and the document's directory last, in both of its spellings, the rule an include
-and an auxiliary document beside it are held to. A relative mesh beside a description opened through a
-symlinked install tree therefore resolves to the file the install links to. Containment is judged on
-the *canonicalized* candidate, never on the authored spelling, so a climb-out spelled through a real
-subdirectory and a symlink whose target leaves the root are both caught where a textual prefix test
-would miss them.
+**A path that reaches the filesystem must resolve under the directory the input document was named in,
+under the one it really lives in, or under a configured package root.** The document's two directories
+are tried first and the configured roots after them, in the order they were configured; the first that
+contains the canonical target admits it, and the order decides only which directory is reported, never
+which file is read. It is the one rule an include and an auxiliary document beside their document are
+held to as well. A relative mesh beside a description opened through a symlinked install tree therefore
+resolves to the file the install links to, and a mesh linked beside the description into a configured
+root resolves through that root. Containment is judged on the *canonicalized* candidate, never on the
+authored spelling, so a climb-out spelled through a real subdirectory and a symlink whose target leaves
+the root are both caught where a textual prefix test would miss them.
 
 **One rule covers a relative climb-out and an absolute path alike**, which is the point: the form a
 path was written in cannot change what it is allowed to reach. `meshes/../../../stray.stl` and
@@ -158,14 +160,15 @@ registers it as a package root, so authority is granted per directory and named,
 by lowering a setting. There is no option that turns containment off.
 
 **A caller can follow a link beside the document, and only a link.** With
-`include_options::follow_outside_links` set, on `load_options::includes` or on
-`parse_context::includes` for a caller driving the parser, a relative mesh beside the document that is
-a link leading out of both of the document's directories resolves where the link leads. That lets a
+`include_options::follow_outside_links` set, on `load_options::includes` or on `parse_context::includes`
+for a caller driving the parser, a relative mesh beside the document that is a link leading under
+neither of the document's directories nor any configured root resolves where the link leads. That lets a
 description reach any file a link standing there names, so it is a decision about who can place files
 beside the description. A relative path climbing out and an absolute path landing outside stay refused
 with the option set: it follows a link's escape and leaves the check standing for every other path. The
 option is off unless the calling program sets it, and it reaches an include and an auxiliary document
-the same way.
+the same way. A mesh link whose target is absent, a dangling one included, is a missing asset under the
+missing-asset policy in both option states, never a configured root's same-named copy.
 
 **No policy setting softens a containment refusal.** `uncontained_asset` is logged at error level
 unconditionally and refuses the load at every value of the missing-asset policy. That policy governs
@@ -181,9 +184,15 @@ no other form. That third root therefore has no reachable case here, and this pa
 enforcement nothing can exercise.
 
 **The `package://` form is contained by the source that answers it, not by the rule above.** A package
-lookup goes to the source stack, and each source decides what its own root contains — a directory
-source refuses a package-plus-relative pair that canonicalizes outside its root, under the same
-`uncontained_asset` code. What comes back from a source is not re-checked against the configured roots.
+lookup goes to the source stack, and each source decides what its own root contains — a directory source
+refuses a package-plus-relative pair that canonicalizes outside its root, under the same
+`uncontained_asset` code. A root is judged where it really is, so a root that is itself a link resolves
+a `package://` mesh through the directory the link leads to. A file inside the root is judged where its
+own link leads: measured on a tree laid out as a colcon `--symlink-install` install, whose files under
+`install/share` link into the source tree, a `package://` mesh refuses under `uncontained_asset` with
+`install/share` as the root, because its link leads out of that root, and resolves once the source tree
+is the root instead. Configuring the source tree as the root is the remedy, and it grants reach to every
+file under that tree. What comes back from a source is not re-checked against the configured roots.
 Containment is the source's own answer and is settled there; whether the thing a source named is an
 asset at all is a different question, and it is asked where that answer leaves the resolver.
 

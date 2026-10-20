@@ -153,3 +153,18 @@ TEST_CASE("an auxiliary document spelled back through a linked directory leading
 }
 
 #endif
+
+TEST_CASE("a spelling through a directory that does not exist reads the file beside the document", "[urdf][load][link]")
+{
+    const include_tree::tree held;
+    held.write("doc/x.xacro", include_tree::binds("beside"));
+    const std::filesystem::path include = held.write("doc/top.xacro", include_tree::reads_leaf("sub/../x.xacro"));
+    const std::filesystem::path mesh    = held.write("doc/m.stl", "solid m\nendsolid m\n");
+
+    REQUIRE(beside_root_fixture::loads_link(meios::load(include, meios::load_options{}), "beside"));
+    REQUIRE(resolves_to(meios::load(mesh_document(held, "sub/../m.stl"), meios::load_options{}), mesh));
+#ifdef MEIOS_HAS_YAML
+    held.write("doc/cfg.yaml", "name: beside\n");
+    REQUIRE(beside_root_fixture::loads_link(meios::load(yaml_document(held, "sub/../cfg.yaml"), meios::load_options{}), "beside"));
+#endif
+}

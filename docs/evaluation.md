@@ -341,38 +341,50 @@ comparison fails if it stops reproducing exactly as much as it fails if a new on
 sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
 being processed (the including document, and inside a macro body the document that calls the macro), at
 the path that file was named by, and consults nothing else. The same anchor is taken here, so a nested
-include reads the file beside the include that names it, a document opened through a link anchors at
-the link, and a configured root holding a same-named file does not stand in for the file beside the
-document. A file beside the document is contained in the directory the document was named in or in the
-one it really lives in, judged on where a link leads, so a document opened through a symlinked install
-tree reads the siblings that link into the directory it really lives in. A document a source layer
-served, a byte source or any other, is read beside the file it was materialized as, and only where
+include reads the file beside the include that names it, a document opened through a link anchors at the
+link, and a configured root holding a same-named file does not stand in for the file beside the
+document. A file beside the document is admitted where its canonical target lies under the directory the
+document was named in, under the one it really lives in, or under a configured package root, which under
+`meios::load` are `load_options::package_roots` and for a caller of `meios::expand` the trailing
+`package_roots` it passes; with none, only the document's two directories admit. A document opened
+through a symlinked install tree therefore reads the siblings that link into the directory it really
+lives in, and a sibling linked into a configured root is read through that root. A document a source
+layer served, a byte source or any other, is read beside the file it was materialized as, and only where
 nothing is there is its sibling asked of that layer. Where neither holds the file, the filename is then
 looked for through the configured sources, which the reference does not consult, so a document the
 reference refuses for want of that file can render here. A document expanded under no name looks for
 nothing beside it, where the reference's library entry anchors it at the working directory. A `..` that
-climbs back inside the directory, `sub/../x.xacro`, is resolved by its spelling either way, where the
-reference lets the operating system resolve it through whatever `sub` is. Two lookups the reference
-makes are refused here by default: a filename climbing above that directory with `..` refuses as
-climbing above the directory of the document that writes it, and a link beside the document whose
-target lies under neither of its directories refuses under `uncontained_asset`. The reference reads
-both. Each is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as
-it fails if a new one appears.
+climbs back inside the directory, `sub/../x.xacro`, is joined as written and judged where the operating
+system resolves it, as the reference reads it, so through a linked `sub` it is read where the link leads
+if one of those admitting directories holds that, and refused as an outside link otherwise. Through a
+`sub` that does not exist the missing tail is reduced by its spelling, and the file beside the document
+is read where the reference refuses. Two lookups the reference makes are refused here by default: a
+filename climbing above that directory with `..` refuses as climbing above the directory of the document
+that writes it, and a link beside the document whose target lies under none of the directories that
+admit it refuses under `uncontained_asset`. The reference reads both. Each is a reviewed divergence, so
+the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
 **Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
 carries `climb_above_document`, which admits a relative include whose spelling leaves its document's
-directory, joined as written and read where the operating system resolves it; for a document a byte
-source served, such a climb is answered by that layer inside the document's package and refused under
-`xacro_structural_error` out of it. It carries `follow_outside_links` too, which takes a link beside
-the document wherever it leads, for an include, an auxiliary document and a mesh alike. It follows only
-an escape a link made: a lexical climb-out and an absolute path landing outside stay refused with it
-set. With one set, the document its refusal stopped renders as the reference renders it, and the
-comparison holds each opted-in document to a fresh upstream render beside the default refusal of the
-same document. Both are `false` on `load_options::includes`, on every `meios::expand` call that does
-not pass them, and on `parse_context::includes` wherever a caller building that context for the parser
-leaves it out. Only the calling program sets them: a description cannot, and the `meios` command line
-exposes neither. Setting one lets a description read any file the process can open, so it is a decision
-about how far the description is trusted, not about parity.
+directory, joined as written and read where the operating system resolves it. For a document served by a
+layer that names no path for it, such a climb is answered by that layer inside the document's package
+and refused under `xacro_structural_error` out of it; a document a directory or a bundle source served
+has a path, and reads the climb where the operating system resolves it. It carries
+`follow_outside_links` too, which takes a link beside the document wherever it leads, for an include, an
+auxiliary document and a mesh alike. A followed link's answer is final: where nothing is at its target,
+a dangling link included, or an auxiliary document's target is a directory, the load refuses, and no
+configured root's same-named copy stands in. With the option unset, a dangling link is an absent file
+beside the document and falls through to the lookups after a miss, as [known
+limitations](known-limitations.md) states. The option follows only an escape a link made: a lexical
+climb-out and an absolute path landing outside stay refused with it set. With one set, the document its
+refusal stopped renders as the reference renders it, and the comparison holds each opted-in document to
+a fresh upstream render beside the default refusal of the same document. Both are `false` on
+`load_options::includes`, on every `meios::expand` call that does not pass them, and on
+`parse_context::includes` wherever a caller building that context for the parser leaves it out. Only the
+calling program sets them: a description cannot, and the `meios` command line exposes neither. Setting
+one lets a description read any file the process can open, except that a climb in a document a layer
+serves without a path stays inside that document's package, so it is a decision about how far the
+description is trusted, not about parity.
 
 **An absolute include filename refuses here and is read there.** The reference opens an include
 written as an absolute path where it points. Here the leading separator is dropped and the rest is
@@ -590,7 +602,7 @@ Three spec forms are accepted:
 |------|------------|------------------|
 | `package://<pkg>/<rel>` | through the source stack, the same resolution a mesh or an include takes | no divider at all, an empty package half, an empty relative half, and a relative half opening on a further separator, under `malformed_asset_uri` |
 | `$(find <pkg>)/<rel>` | the same — both spellings split to a package/relative pair and take one lookup | the same four under the same code; this row is the spec form, never the bare `$(find <pkg>)` substitution command |
-| anything else | probed against the calling document's directory, as it was named and as it really lives, then against each configured containment root | — |
+| anything else | probed beside the calling document, admitted under the directory it was named in, the one it really lives in or a configured containment root, then probed against each configured containment root | — |
 
 A spelling refused by shape is decided before the source stack is asked, so no lookup, no containment
 decision and no filesystem call runs for it — the same order the asset grammar keeps.
@@ -607,13 +619,17 @@ and so are a `../` escape and a symlink inside a root whose real target leaves i
 "lands inside a root" rather than "does not look absolute", because the two substitution entry points
 hand the resolver different shapes for the same authored form. A resource one root excludes and another
 holds the place for is reported as missing rather than as escaping, since the second root answered the
-containment question the first one raised. The probe beside the calling document is contained under the
-directory the document was named in or the one it really lives in, as an include's is, and a link there
-leading out of both refuses under `uncontained_asset` with no configured root's same-named copy
-standing in, unless the caller sets `include_options::follow_outside_links`. A link inside a configured
-package root named through `package://` is not read, while a `$(find)` spelling reaches this reader
-already substituted to a path and is judged where it lands; [known limitations](known-limitations.md)
-gives the measured shapes.
+containment question the first one raised. The probe beside the calling document is admitted under the
+directory the document was named in, the one it really lives in, or a configured root, by the rule an
+include beside its document is held to, and a link there leading under none of them refuses under
+`uncontained_asset` with no configured root's same-named copy standing in, unless the caller sets
+`include_options::follow_outside_links`. A followed link's answer is final: a link to nothing, a
+dangling one included, ends the lookup as unreachable, and a link naming a directory refuses under
+`cannot_open`, with no configured root's copy read in either place. A `package://` spec naming a link
+inside a configured root is read through the root, and one naming a link that leads out of the root
+refuses, with an `uncontained_asset` record; a `$(find)` spelling reaches this reader already
+substituted to a path and is judged where it lands. [Known limitations](known-limitations.md) gives the
+measured shapes.
 
 **Which document a relative spec resolves against.** The document it is written in — which is not
 always the top-level one:
