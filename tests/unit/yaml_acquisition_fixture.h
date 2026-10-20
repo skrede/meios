@@ -151,7 +151,7 @@ inline void require_source_authorization(tree_guard &tree)
     meios::capturing_log_sink capture{silent};
     meios::directory_source directory{tree.path(), capture};
     const std::optional<meios::resolved_asset> directory_hit = directory.locate("pkg", "cfg.yaml");
-    REQUIRE(directory_hit->source_root() == tree.path());
+    REQUIRE(directory_hit->source_root() == std::filesystem::weakly_canonical(tree.path()));
     REQUIRE(directory_hit->source_relative() == std::filesystem::path("pkg/cfg.yaml"));
     meios::source_stack directory_sources{directory};
     const std::vector<std::filesystem::path> roots;

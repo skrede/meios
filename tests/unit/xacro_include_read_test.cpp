@@ -107,7 +107,7 @@ TEST_CASE("an empty regular xacro:include is read and still reaches the parser",
     REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::xacro_parse_error) == 1);
 }
 
-TEST_CASE("a package include of a link pointing inside its configured root is not read",
+TEST_CASE("a package include of a link pointing inside its configured root is read through the root",
           "[xacro][structural][include][read]")
 {
     const include_tree::tree held;
@@ -122,12 +122,8 @@ TEST_CASE("a package include of a link pointing inside its configured root is no
     meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
 
     const expansion_result out = include_tree::expand_text(include_tree::reads_leaf("package://p/a.xacro"), held.root() / "doc" / "top.xacro", sources, log);
-    REQUIRE_FALSE(out.has_value());
-    REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
-    REQUIRE(out.error().message.starts_with("xacro:include could not read \""));
-    REQUIRE(out.error().cause.has_value());
-    REQUIRE(xacro_probe::coded(records, meios::diagnostic_code::uncontained_asset) == 0);
-    REQUIRE(xacro_probe::errors(records) == 1);
+    REQUIRE(include_tree::renders_link(out, "leaf"));
+    REQUIRE(xacro_probe::errors(records) == 0);
 }
 
 TEST_CASE("a package include of a link pointing out of its configured root refuses as uncontained",

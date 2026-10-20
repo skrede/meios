@@ -1,7 +1,5 @@
 #include "beside_containment.h"
 
-#include "meios/io/directory_source.h"
-
 #include <optional>
 #include <filesystem>
 #include <system_error>
@@ -9,20 +7,34 @@
 namespace meios::detail
 {
 
+namespace
+{
+
+bool escapes(const std::filesystem::path &root, const std::filesystem::path &real)
+{
+    const std::filesystem::path relative = real.lexically_relative(root);
+    return relative.empty() || *relative.begin() == std::filesystem::path("..");
+}
+
+}
+
+// A containment decision is only meaningful between two absolute paths: canonicalizing a
+// path with no existing prefix succeeds and leaves it relative, at which point the escape
+// test measures it against the process working directory rather than against a root.
 contained_read_result contain_under(const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
-    if(!root.is_absolute())
+    if(!root.is_absolute() || !candidate.is_absolute())
         return std::optional<contained_read>{};
     std::error_code error;
     const std::filesystem::path base = std::filesystem::weakly_canonical(root, error);
     if(error)
         return unexpected<operation_failure>({operation_kind::canonicalize, error});
-    const contained_path_result contained = try_contained_under(base, candidate);
-    if(!contained)
-        return unexpected<operation_failure>(contained.error());
-    if(!*contained)
+    const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, error);
+    if(error)
+        return unexpected<operation_failure>({operation_kind::canonicalize, error});
+    if(escapes(base, real))
         return std::optional<contained_read>{};
-    return std::optional{contained_read{**contained, base}};
+    return std::optional{contained_read{real, base}};
 }
 
 contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec)

@@ -1,8 +1,8 @@
+#include "beside_containment.h"
+
 #include "meios/io/bundle_source.h"
 #include "meios/io/directory_source.h"
 
-#include <string>
-#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -10,19 +10,6 @@
 
 namespace meios
 {
-
-namespace
-{
-
-std::filesystem::path package_request(std::string_view package, std::string_view relative)
-{
-    std::filesystem::path request = std::string(package);
-    if(!relative.empty())
-        request /= std::string(relative);
-    return request;
-}
-
-}
 
 bundle_source::bundle_source(std::filesystem::path root, log_sink &log)
         : m_root(detail::absolute_base(root))
@@ -37,11 +24,7 @@ capability_descriptor bundle_source::capabilities() const
 
 std::optional<resolved_asset> bundle_source::locate(std::string_view package, std::string_view relative)
 {
-    std::optional<std::filesystem::path> candidate = detail::contained_candidate(m_root, package, relative, m_log.get());
-    std::error_code ec;
-    if(!candidate || !std::filesystem::exists(*candidate, ec))
-        return std::nullopt;
-    return resolved_asset{*candidate, m_root, package_request(package, relative)};
+    return detail::locate_contained(m_root, package, relative, m_log.get());
 }
 
 std::optional<std::filesystem::path> bundle_source::path_of(std::string_view package, std::string_view relative) const

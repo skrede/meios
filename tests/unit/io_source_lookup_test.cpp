@@ -162,7 +162,7 @@ TEST_CASE("built-in source hits carry root-relative authorization", "[io][lookup
         REQUIRE(*hit->source_relative() == std::filesystem::path("pkg") / "meshes" / "x.stl");
         REQUIRE(real_path(*hit->source_root() / *hit->source_relative()) == real_path(hit->path()));
     }
-    REQUIRE(*hits.front()->source_root() == meios::detail::absolute_base(tree.path()));
+    REQUIRE(*hits.front()->source_root() == std::filesystem::weakly_canonical(tree.path()));
     REQUIRE_FALSE(directory.try_locate("absent-package", "absent-file")->has_value());
     REQUIRE_FALSE(errored(records));
 }

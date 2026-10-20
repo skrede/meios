@@ -117,7 +117,7 @@ TEST_CASE("a relative spec in a byte-served document resolves only once its sour
     REQUIRE(counts.errors == 1);
 }
 
-TEST_CASE("a package-form spec naming a link inside its root is not read", "[yaml][resource]")
+TEST_CASE("a package-form spec naming a link inside its root is read through the root", "[yaml][resource]")
 {
     const std::filesystem::path root = seed_tree();
     std::error_code ec;
@@ -133,10 +133,8 @@ TEST_CASE("a package-form spec naming a link inside its root is not read", "[yam
     probe under(sink, root, {});
 
     const meios::text_resource_result linked = under.loader("package://pkg/linked.yaml", root / "docs" / "robot.xacro");
-    REQUIRE_FALSE(linked.has_value());
-    CHECK(linked.error() == meios::text_resource_failure::unreachable);
-    REQUIRE(counts.errors == 1);
-    REQUIRE(says(counts, "cannot read resource \""));
-
     std::filesystem::remove_all(root);
+
+    REQUIRE(linked.value() == std::string("from: package"));
+    REQUIRE(counts.errors == 0);
 }

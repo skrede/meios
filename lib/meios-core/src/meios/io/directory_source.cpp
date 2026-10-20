@@ -1,3 +1,5 @@
+#include "beside_containment.h"
+
 #include "meios/io/directory_source.h"
 
 #include "meios/expected.h"
@@ -20,14 +22,6 @@ namespace meios
 namespace
 {
 
-bool escapes_root(const std::filesystem::path &root, const std::filesystem::path &candidate)
-{
-    std::filesystem::path relative = candidate.lexically_relative(root);
-    if(relative.empty())
-        return true;
-    return *relative.begin() == std::filesystem::path("..");
-}
-
 std::string reject_message(std::string_view package, std::string_view relative)
 {
     return "rejected package path \"" + std::string(package) + '/' + std::string(relative) + "\" that escapes the configured source root";
@@ -41,12 +35,9 @@ std::filesystem::path package_candidate(const std::filesystem::path &root, std::
     return candidate;
 }
 
-std::filesystem::path package_request(std::string_view package, std::string_view relative)
+resolved_asset admitted(const detail::contained_read &read)
 {
-    std::filesystem::path request = std::string(package);
-    if(!relative.empty())
-        request /= std::string(relative);
-    return request;
+    return resolved_asset{read.real, read.root, read.real.lexically_relative(read.root)};
 }
 
 bool is_absent(const std::error_code &error)
@@ -65,9 +56,6 @@ std::filesystem::path detail::absolute_base(const std::filesystem::path &root)
     return ec ? root : full;
 }
 
-// A containment decision is only meaningful between two absolute paths: canonicalizing a
-// path with no existing prefix succeeds and leaves it relative, at which point the escape
-// test measures it against the process working directory rather than against a root.
 std::optional<std::filesystem::path> detail::contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
     contained_path_result result = try_contained_under(root, candidate);
@@ -76,18 +64,12 @@ std::optional<std::filesystem::path> detail::contained_under(const std::filesyst
 
 detail::contained_path_result detail::try_contained_under(const std::filesystem::path &root, const std::filesystem::path &candidate)
 {
-    if(!root.is_absolute() || !candidate.is_absolute())
+    contained_read_result decided = contain_under(root, candidate);
+    if(!decided)
+        return unexpected<operation_failure>(decided.error());
+    if(!*decided)
         return std::nullopt;
-    std::error_code ec;
-    const std::filesystem::path base = std::filesystem::weakly_canonical(root, ec);
-    if(ec)
-        return unexpected<operation_failure>({operation_kind::canonicalize, ec});
-    const std::filesystem::path real = std::filesystem::weakly_canonical(candidate, ec);
-    if(ec)
-        return unexpected<operation_failure>({operation_kind::canonicalize, ec});
-    if(escapes_root(base, real))
-        return std::nullopt;
-    return std::optional{real};
+    return std::optional{std::move((*decided)->real)};
 }
 
 std::optional<std::filesystem::path> detail::contained_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log)
@@ -100,6 +82,20 @@ std::optional<std::filesystem::path> detail::contained_candidate(const std::file
         return std::nullopt;
     }
     return real;
+}
+
+std::optional<resolved_asset> detail::locate_contained(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log)
+{
+    const contained_read_result decided = contain_under(root, package_candidate(root, package, relative));
+    if(!decided || !*decided)
+    {
+        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, reject_message(package, relative));
+        return std::nullopt;
+    }
+    std::error_code ec;
+    if(!std::filesystem::exists((*decided)->real, ec))
+        return std::nullopt;
+    return admitted(**decided);
 }
 
 directory_source::directory_source(std::filesystem::path root, log_sink &log)
@@ -115,32 +111,28 @@ capability_descriptor directory_source::capabilities()
 
 std::optional<resolved_asset> directory_source::locate(std::string_view package, std::string_view relative)
 {
-    std::optional<std::filesystem::path> candidate = detail::contained_candidate(m_root, package, relative, m_log.get());
-    std::error_code ec;
-    if(!candidate || !std::filesystem::exists(*candidate, ec))
-        return std::nullopt;
-    return resolved_asset{*candidate, m_root, package_request(package, relative)};
+    return detail::locate_contained(m_root, package, relative, m_log.get());
 }
 
 source_lookup_result directory_source::try_locate(std::string_view package, std::string_view relative)
 {
-    detail::contained_path_result candidate = detail::try_contained_under(m_root, package_candidate(m_root, package, relative));
-    if(!candidate)
-        return unexpected<operation_failure>(candidate.error());
-    if(!*candidate)
+    const detail::contained_read_result decided = detail::contain_under(m_root, package_candidate(m_root, package, relative));
+    if(!decided)
+        return unexpected<operation_failure>(decided.error());
+    if(!*decided)
     {
         m_log.get().log(level::error, diagnostic_code::uncontained_asset, source_location{}, reject_message(package, relative));
         return std::optional<resolved_asset>{};
     }
     std::error_code error;
-    const std::filesystem::file_status status = std::filesystem::status(**candidate, error);
+    const std::filesystem::file_status status = std::filesystem::status((*decided)->real, error);
     if(is_absent(error))
         return std::optional<resolved_asset>{};
     if(error)
         return unexpected<operation_failure>({operation_kind::status, error});
     if(!std::filesystem::exists(status))
         return std::optional<resolved_asset>{};
-    return std::optional{resolved_asset{**candidate, m_root, package_request(package, relative)}};
+    return std::optional{admitted(**decided)};
 }
 
 std::optional<std::filesystem::path> directory_source::path_of(std::string_view package, std::string_view relative) const

@@ -49,7 +49,9 @@ std::optional<std::filesystem::path> contained_candidate(const std::filesystem::
 
 // Resolves package://<pkg>/<rel> against a single configured root directory,
 // returning a real filesystem path (so it satisfies provides_path). A traversal
-// candidate that escapes the root is rejected, never returned.
+// candidate that escapes the root is rejected, never returned. A hit carries the canonical root
+// and the canonical target relative to it, which is what a reader that follows no link below the
+// root opens.
 class directory_source
 {
 public:
