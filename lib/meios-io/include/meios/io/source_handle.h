@@ -67,6 +67,13 @@ public:
         return m_self->do_path(pkg, rel);
     }
 
+    // Answered from the source's type alone; the source is asked nothing.
+    bool names_paths() const
+    {
+        assert(valid() && "names_paths() on a moved-from source_handle");
+        return m_self->do_names_paths();
+    }
+
     std::vector<std::string> packages() const
     {
         assert(valid() && "packages() on a moved-from source_handle");
@@ -87,6 +94,7 @@ private:
         virtual std::optional<resolved_asset> do_locate(std::string_view, std::string_view)            = 0;
         virtual source_lookup_result do_try_locate(std::string_view, std::string_view)                 = 0;
         virtual std::optional<std::filesystem::path> do_path(std::string_view, std::string_view) const = 0;
+        virtual bool do_names_paths() const                                                            = 0;
         virtual std::vector<std::string> do_enumerate() const                                          = 0;
     };
 
@@ -128,6 +136,11 @@ private:
                 (void)rel;
                 return std::nullopt;
             }
+        }
+
+        bool do_names_paths() const override
+        {
+            return provides_path<S>;
         }
 
         std::vector<std::string> do_enumerate() const override

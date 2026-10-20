@@ -42,16 +42,16 @@ struct observed_layer
     }
 };
 
-beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset found)
+beside_probe probe_status(const std::filesystem::path &candidate, resolved_asset found, bool in_named_directory)
 {
     std::error_code error;
     const std::filesystem::file_status status = std::filesystem::status(candidate, error);
     const bool absent = error == std::errc::no_such_file_or_directory || error == std::errc::not_a_directory;
     if(error && !absent)
-        return { std::nullopt, operation_failure{ operation_kind::status, error }, false };
+        return { std::nullopt, operation_failure{ operation_kind::status, error }, false, false };
     if(absent || !std::filesystem::exists(status))
-        return { std::nullopt, std::nullopt, false };
-    return { std::move(found), std::nullopt, false };
+        return { std::nullopt, std::nullopt, false, false };
+    return { std::move(found), std::nullopt, false, in_named_directory };
 }
 
 }
@@ -62,17 +62,17 @@ beside_probe probe_beside(const std::filesystem::path &document, const std::stri
 {
     const contained_read_result contained = contain_beside(document, spelling, roots);
     if(!contained)
-        return { std::nullopt, contained.error(), false };
+        return { std::nullopt, contained.error(), false, false };
     if(!*contained)
-        return { std::nullopt, std::nullopt, true };
+        return { std::nullopt, std::nullopt, true, false };
     const contained_read &found = **contained;
-    return probe_status(found.real, resolved_asset{ found.real, found.root, found.real.lexically_relative(found.root) });
+    return probe_status(found.real, resolved_asset{ found.real, found.root, found.real.lexically_relative(found.root) }, found.in_named_directory);
 }
 
 // A hit carries no source root, so it is read as the operating system opens the path.
 beside_probe probe_unbounded(const std::filesystem::path &candidate)
 {
-    return probe_status(candidate, resolved_asset{ candidate });
+    return probe_status(candidate, resolved_asset{ candidate }, false);
 }
 
 std::optional<served_hit> locate_served(source_stack &sources, std::string_view package, std::string_view relative, log_sink &log)
@@ -99,7 +99,7 @@ std::optional<resolved_asset> probe_served(source_stack &sources, const served_d
 
 bool serves_bytes(source_stack &sources, const served_document &served)
 {
-    return !sources.layers()[served.layer].path_of(served.package, served.relative).has_value();
+    return !sources.layers()[served.layer].names_paths();
 }
 
 std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written)

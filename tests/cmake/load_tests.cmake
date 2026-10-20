@@ -1,6 +1,6 @@
 foreach(stem IN ITEMS load_error silent_default overload_resolution load_failure_propagation
         load_policy_refusal load_report load_arg_domain xacro_include_served load_include_options
-        load_linked_install load_linked_mesh load_linked_root load_beside_root load_package_anchor)
+        load_linked_install load_linked_mesh load_linked_root load_beside_root load_package_anchor load_served_layer)
     set(load_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${load_test_src})
         add_executable(${stem}_test ${load_test_src})

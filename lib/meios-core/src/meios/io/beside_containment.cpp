@@ -75,7 +75,7 @@ contained_read_result contain_under(const std::filesystem::path &root, const std
         return unexpected<operation_failure>({operation_kind::canonicalize, error});
     if(escapes(base, real))
         return std::optional<contained_read>{};
-    return std::optional{contained_read{real, base}};
+    return std::optional{contained_read{real, base, false}};
 }
 
 contained_read_result contain_beside(const std::filesystem::path &document, const std::filesystem::path &spec, std::span<const std::filesystem::path> roots)
@@ -88,6 +88,8 @@ contained_read_result contain_beside(const std::filesystem::path &document, cons
     std::optional<contained_read> found;
     if(!document.empty())
         found = admit(document.parent_path(), candidate, retained);
+    if(found)
+        found->in_named_directory = true;
     if(!found && !document.empty())
         found = admit_real(document, candidate, retained);
     for(auto root = roots.begin(); !found && root != roots.end(); ++root)

@@ -124,7 +124,7 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     if(ctx.served)
         sibling = sibling_of(*ctx.served, normalized);
     if(probe.hit)
-        return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, sibling }, out);
+        return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, probe.in_named_directory ? sibling : std::nullopt }, out);
     if(std::optional<resolved_asset> served = sibling ? probe_served(ctx.sources, *sibling) : std::nullopt)
         return enter_include(ctx, in, located_include{ *served, served_name(*served), sibling }, out);
     return include_from_sources(ctx, in, {}, normalized, written, out);

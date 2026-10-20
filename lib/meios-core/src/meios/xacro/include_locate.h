@@ -26,6 +26,7 @@ struct beside_probe
     std::optional<resolved_asset> hit;
     std::optional<operation_failure> cause;
     bool uncontained;
+    bool in_named_directory;
 };
 
 // The layer is a rank in the expansion's source stack, which no step of the expansion reorders.
@@ -61,7 +62,7 @@ served_document sibling_of(const served_document &served, const std::string &nor
 
 std::optional<resolved_asset> probe_served(source_stack &sources, const served_document &sibling);
 
-// A layer that names no path for the document it served holds it only as the bytes it materialized.
+// A layer whose type names no paths holds what it served only as the bytes it materialized.
 bool serves_bytes(source_stack &sources, const served_document &served);
 
 // Empty when the spelling, joined onto the served document's directory, leaves its package.
