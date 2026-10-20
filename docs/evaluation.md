@@ -337,6 +337,77 @@ block. Here a block parameter binds what the expanded call holds, and only inser
 supplied refuses, which it does on both sides. The include shape is a reviewed divergence, so the
 comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
+**A macro call binds in the reference's order, and refuses where the reference refuses.** The reference
+binds a call's attributes in document order, then takes the call's expanded children as its block
+arguments, then the defaults, and only then refuses a parameter still unbound; the same order is taken
+here, all of it in the caller's scope before the macro's body is entered. A property written among a
+call's children is therefore not visible to the call's attributes, which refuse it as an undefined name
+on both sides, while a default reads it. An attribute naming no declared parameter, a namespace
+declaration or a block parameter's name included, refuses with the reference's "Invalid parameter", and
+an element no block parameter takes refuses with "Unused block", naming the first left over; a child
+that expands to nothing, a property say, takes no block parameter. Where two of these refusals meet in
+one call, the one the reference raises first is raised here. Each is reported under
+`xacro_structural_error` at the call's own `file:line`, for a macro defined in another file as well; a
+parameter left unbound is refused under the same code in this side's own words. Thirteen `macro_call_`
+agreement probes hold this against a fresh upstream render: an undeclared attribute, a namespace
+declaration and a block parameter's name written as attributes; one and two surplus elements; an
+undeclared attribute before a missing parameter, a refusing block child, an absent block and a refusing
+attribute, and a surplus element before a missing parameter; an attribute reading a child's property, a
+default reading one, and a child that is only a property. The `xacro_macro_call` cases pin the
+location, the included macro among them.
+
+**A macro's parameter list reads as the reference's pattern reads it.** The reference splits `params`
+with its `re_macro_arg` pattern, and the scanner here follows that pattern rather than splitting at
+every space. A default that opens with one `${…}` or `$(…)` span binds that span whole, a space inside
+it included, so `a:=${1 + 2} b:=2` binds `a` to `3` and `a:=$(arg y) b:=2` binds it to the argument. A
+space may stand on either side of the separator: `a := 1`, `a= 1` and `a :=1` each bind `1`. An empty
+default, `a:=`, is no default, so a call omitting `a` refuses as missing it. A parameter whose quote
+never closes, `tag:='world`, is read whole as a name with no default, so a call omitting it refuses as
+missing `tag:='world`, as the reference refuses it. `a:=^d` takes `a` from the enclosing scope or else
+`d`, and `a:=^|` alone takes it from the enclosing scope or refuses. And text after a newline that
+follows a parameter is not read, because the pattern's last group stops at a newline. The
+`macro_default_empty`, `macro_default_spans_whitespace`, `macro_default_argument_command` and
+`macro_param_spaced_separator` agreement probes hold the span, separator and empty shapes against a
+fresh upstream render; the `xacro_macro_params` cases pin those, the unclosed quote and the newline;
+and the two forward markers are carried by a measurement against the pinned reference alone. One
+separator still differs: a space outside ASCII, which [known limitations](known-limitations.md)
+records.
+
+**A run of dollars escapes or refuses as the reference's lexer has it.** A run of two or more `$`
+before `{` or `(` writes one `$` fewer and the opener, and lexing goes on after it: `$${x}` renders
+`${x}`, `$$(arg y)` renders `$(arg y)` and `$$$${x}` renders `$$${x}`. A `$$` before anything else, or
+ending the text, refuses with the reference's "invalid expression" under `expression_error`, at the
+run's own column and under every evaluation policy, inside an expression body as well, so `a$$x`, `a$$`
+and `${'$$'}` each refuse on both sides. A single `$` before anything but an opener stays text, as `$x`
+does on both sides. The `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
+`dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, beside the
+`xacro_dollar_run` cases and `arg_scan.scan_args lists no argument a run of dollars escapes`, which
+keeps an escaped `$(arg …)` out of the argument listing. `${'$${x}'}` renders `${x}` here and refuses
+there, which is the closing brace inside a string literal, recorded below; it adds no difference of its
+own.
+
+**An include filename is a package lookup only where it begins with `$(find …)`.** That command's
+package text is substituted before the lookup, so `$(find ${pk})/urdf/a.xacro` with `pk` bound to `p`
+reads the package `p`'s file on both sides. A `$(find` anywhere else is part of a relative spelling:
+`$$(find p)/urdf/a.xacro`, whose run of dollars escapes it, and `sub/$(find p)/urdf/a.xacro` each
+refuse under `unresolved_include`, as the reference refuses them for want of the file the spelling
+names. A `package://` filename's package text is taken as written, so `package://${pk}/…` refuses here,
+and the reference refuses every `package://` filename. The `include_escaped_find` agreement probe holds
+the escaped spelling against a fresh upstream render, and the three `xacro_dollar_run` include cases
+pin the leading find, its substituted package text and the `package://` text taken as written.
+
+**`$(find)` writes a package's directory as its root was configured, except that a relative root is
+written absolute and a `.` element dropped.** Through a configured root that is a link the text keeps
+the link, `<…>/Rl/p`, as the reference's does, and through a `ROS_PACKAGE_PATH` entry that is a link it
+keeps the spelling the crawl found the package at; containment and the read go by the directory the
+link leads to. A root is made absolute and its `.` elements dropped when it is configured, so a
+relative root, `R` from the directory holding it, renders `<working directory>/R/p` here and `R/p`
+there, and `<…>/./R` renders `<…>/R/p` here and `<…>/./R/p` there. Both are reviewed divergences, the
+`find_relative_root` and `find_dotted_root` rows, each probe handing both sides the same root spelling
+from the same directory, so the comparison fails if either stops reproducing exactly as much as it
+fails if a new one appears; the `load_package_anchor`, `ros_source` and `cli_package_path` cases pin
+the linked, dotted and relative spellings.
+
 **A relative include resolves against the document that writes it, then through the configured
 sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
 being processed (the including document, and inside a macro body the document that calls the macro), at
@@ -357,30 +428,36 @@ sibling linked into a configured root is read through that root. A document a di
 layer served is read beside the path it was named by, and one a memory source served beside the file
 that source materialized for it. Only where nothing is there is the sibling asked of the layer that
 served the document, and a file read beside such a document passes its own misses to that layer only
-where the directory the document was named in admitted it, so a file a configured root admitted through
-a link is not answered from the layer, as the `load_served_layer` cases pin. Where neither holds the
-file, the filename is then looked for through the configured sources, which the reference does not
-consult, so a document the reference refuses for want of that file can render here. That fallback
-answers a genuine miss only: a spelling through a path element that is not a directory, with `..` or
-without it, refuses before any fallback even where a configured root holds the name, as the reference
-refuses it. A document expanded under no name looks for nothing beside it, where the reference's
+where its spelling holds no `..` element and the directory the document was named in admitted it, so
+neither a file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a
+linked `sub` is answered from the layer, and the second refuses its miss as the reference refuses it,
+as the `load_served_layer` and `cli_package_path` cases pin. Where neither holds the file, the filename
+is then looked for through the configured sources, which the reference does not consult, so a document
+the reference refuses for want of that file can render here. That fallback answers a genuine miss only:
+a spelling through a path element that is not a directory refuses before any fallback even where a
+configured root holds the name, as the reference refuses it, within the platform bound stated below for
+the `..` spelling. A document expanded under no name looks for nothing beside it, where the reference's
 library entry anchors it at the working directory. A `..` that climbs back inside the directory,
 `sub/../x.xacro`, is joined as written and judged where the operating system resolves it, as the
 reference reads it, so through a linked `sub` it is read where the link leads if one of those admitting
 directories holds that, and refused as an outside link otherwise. Through a path element that is not a
-directory, a regular file `f.txt` in `f.txt/../x.xacro` or `f.txt/x.xacro`, both sides refuse with the
-operating system's "Not a directory", as the `xacro_include_read` and `yaml_resource` cases pin for
-both spellings. Two shapes still differ. Through a `sub` that does not exist the missing tail is
-reduced by its spelling, and the file beside the document is read where the reference refuses. And
-where `sub` is a link and nothing is at `sub/../x.xacro` as the operating system reads it, the miss is
-looked for under the spelling's lexical reduction, `x.xacro`, in the layer that served the document and
-in the configured sources, so a copy one of them holds can render where the reference refuses; [known
-limitations](known-limitations.md) gives the measured shapes. Two lookups the reference makes are
-refused here by default: a filename climbing above that directory with `..` refuses as climbing above
-the directory of the document that writes it, and a link beside the document whose target lies under
-none of the directories that admit it refuses under `uncontained_asset`. The reference reads both. Each
-is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it fails
-if a new one appears.
+directory, a regular file `f.txt`, `f.txt/x.xacro` refuses on every operating system, because each
+element before the last is checked and one that exists and is not a directory refuses;
+`f.txt/../x.xacro` refuses where the operating system reports `f.txt` as not a directory, as a POSIX
+system does, and on Windows the path interfaces are assumed to reduce `f.txt/..` first and read the
+file beside the document, as the reference would there, which the first Windows run of the suite
+decides. On Linux both sides refuse both spellings with "Not a directory", as the `xacro_include_read`
+and `yaml_resource` cases pin, a case per spelling, the `..` one skipped on Windows. Two shapes still
+differ. Through a `sub` that does not exist the missing tail is reduced by its spelling, and the file
+beside the document is read where the reference refuses. And where `sub` is a link and nothing is at
+`sub/../x.xacro` as the operating system reads it, the miss is looked for under the spelling's lexical
+reduction, `x.xacro`, in the layer that served the document and in the configured sources, so a copy
+one of them holds can render where the reference refuses; [known limitations](known-limitations.md)
+gives the measured shapes. Two lookups the reference makes are refused here by default: a filename
+climbing above that directory with `..` refuses as climbing above the directory of the document that
+writes it, and a link beside the document whose target lies under none of the directories that admit it
+refuses under `uncontained_asset`. The reference reads both. Each is a reviewed divergence, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
 **Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
 carries `climb_above_document`, which admits a relative include whose spelling leaves its document's
@@ -557,8 +634,14 @@ What is compared, exactly:
   nested include, an include written in a macro body, and a document opened through a link. Two more
   are loaded under a caller's include options: the climbing document with the climb admitted, and a
   document whose included file includes a link leading out of its directory, with outside links
-  followed. The meios side is what the load path builds, under the caller arguments a consumer would hand it, written back out by the serializer the
-  command line flattens with; the expansion alone is held to the same render beside it. Two refusals
+  followed. Seventeen more hold a macro call to the reference's binding: the thirteen `macro_call_`
+  documents over undeclared attributes, surplus elements, the order between refusals and a child's
+  property, and four over the parameter list, `macro_default_empty`, `macro_default_spans_whitespace`,
+  `macro_default_argument_command` and `macro_param_spaced_separator`. Five hold a run of dollars to
+  the reference's lexer: the four `dollar_run_` documents and `include_escaped_find`, an include whose
+  run of dollars escapes its `$(find …)`. The meios side is what the load path builds, under the caller
+  arguments a consumer would hand it, written back out by the serializer the command line flattens with;
+  the expansion alone is held to the same render beside it. Two refusals
   agree only on their cause: upstream's own wording and this side's diagnostic code, both named per
   document, so a fixture missing from both sides or a refusal for an unrelated reason fails the run.
 
@@ -648,17 +731,20 @@ include beside its document is held to. That rule holds for a spelling that stay
 directory as written: an include's leading `..` meets the climb gate first, while an auxiliary
 document's is admitted wherever it lands under one of those directories, so it loads under a configured
 root holding the file and, with no configured root, refuses where the reference reads it, as the
-`load_beside_root` cases pin. A spelling through a path element that is not a directory,
-`f.txt/../x.yaml` or `f.txt/x.yaml` with `f.txt` a regular file, refuses here as it refuses there, and
-no configured root's copy stands in, which the `yaml_resource` case pins. A link beside the document
-leading under none of those directories refuses under `uncontained_asset` with no configured root's
-same-named copy standing in, unless the caller sets `include_options::follow_outside_links`. A followed
-link's answer is final: a link to nothing, a dangling one included, ends the lookup as unreachable, and
-a link naming a directory refuses under `cannot_open`, with no configured root's copy read in either
-place. A `package://` spec naming a link inside a configured root is read through the root, and one
-naming a link that leads out of the root refuses, with an `uncontained_asset` record; a `$(find)`
-spelling reaches this reader already substituted to a path and is judged where it lands. [Known
-limitations](known-limitations.md) gives the measured shapes.
+`load_beside_root` cases pin. A spelling through a path element that is not a directory, `f.txt` a
+regular file, refuses as it refuses there, and no configured root's copy stands in: `f.txt/x.yaml` on
+every operating system, and `f.txt/../x.yaml` where the operating system reports `f.txt` as not a
+directory, with Windows, whose path interfaces are assumed to reduce `f.txt/..` first, decided by the
+suite's first run there. The two `yaml_resource` cases, one per spelling, pin it, the `..` one skipped
+on Windows. A link beside the document leading under none of those directories refuses under
+`uncontained_asset` with no configured root's same-named copy standing in, unless the caller sets
+`include_options::follow_outside_links`. A followed link's answer is final: a link to nothing, a
+dangling one included, ends the lookup as unreachable, and a link naming a directory refuses under
+`cannot_open`, with no configured root's copy read in either place. A `package://` spec naming a link
+inside a configured root is read through the root, and one naming a link that leads out of the root
+refuses, with an `uncontained_asset` record; a `$(find)` spelling reaches this reader already
+substituted to a path and is judged where it lands. [Known limitations](known-limitations.md) gives the
+measured shapes.
 
 **Which document a relative spec resolves against.** The document it is written in — which is not
 always the top-level one:

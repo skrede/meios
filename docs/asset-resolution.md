@@ -152,11 +152,17 @@ leading `..` is where the three part: an include's meets the climb gate first, w
 auxiliary document's is admitted wherever it lands under one of these directories. Measured on a mesh
 written `../meshes/m.stl` in a document that lies under a configured root, the mesh resolves under that
 root, and with no configured root it refuses under `uncontained_asset`. A mesh spelled through a path
-element that is not a directory, `f.txt/../m.stl` or `f.txt/m.stl` with `f.txt` a regular file, does
-not resolve, and its record carries the operating system's reason, as the `load_linked_mesh` case pins
-for the first. Containment is judged on the *canonicalized* candidate, never on the authored spelling,
-so a climb-out spelled through a real subdirectory and a symlink whose target leaves the root are both
-caught where a textual prefix test would miss them.
+element that is not a directory, `f.txt` a regular file, does not resolve, and its record names that
+element as not a directory: `f.txt/m.stl` on every operating system, because each element before the
+last is checked, and `f.txt/../m.stl` where the operating system reports `f.txt` as not a directory, as
+a POSIX system does. On Windows the path interfaces are assumed to reduce `f.txt/..` first, so that
+`m.stl` beside the document would resolve; nothing has measured that, and the first Windows run of the
+suite decides it. `load_linked_mesh.a mesh spelled through a file that is not a directory with no
+parent element does not resolve, and its record names why` pins the first spelling on every platform,
+and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does not resolve, and
+its record names why` the second, skipped on Windows. Containment is judged on the *canonicalized*
+candidate, never on the authored spelling, so a climb-out spelled through a real subdirectory and a
+symlink whose target leaves the root are both caught where a textual prefix test would miss them.
 
 **One rule covers a relative climb-out and an absolute path alike**, which is the point: the form a
 path was written in cannot change what it is allowed to reach. `meshes/../../../stray.stl` and
