@@ -109,9 +109,7 @@ std::optional<std::size_t> default_end(std::string_view spec, std::size_t at)
 
 std::string_view unquote(std::string_view text)
 {
-    if(text.size() < 2 || text.front() != text.back())
-        return text;
-    if(text.front() != '\'' && text.front() != '"')
+    if(text.size() < 2 || text.front() != text.back() || (text.front() != '\'' && text.front() != '"'))
         return text;
     return text.substr(1, text.size() - 2);
 }
@@ -181,8 +179,10 @@ bool parse_block(std::string_view name, macro_def &def)
 
 }
 
-void parse_params(std::string_view spec, macro_def &def)
+bool parse_params(std::string_view spec, macro_def &def)
 {
+    if(!spec.empty() && skip_space(spec, 0) == spec.size())
+        return false;
     for(std::size_t at = skip_space(spec, 0); at < spec.size(); at = skip_space(spec, at))
     {
         param_spec read = read_spec(spec, at);
@@ -193,6 +193,7 @@ void parse_params(std::string_view spec, macro_def &def)
         def.params.emplace_back(read.name);
         def.defaults.push_back(std::move(read.written));
     }
+    return true;
 }
 
 }

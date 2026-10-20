@@ -25,12 +25,12 @@ expansion_result expand_doc(const std::string &body, meios::log_sink &log)
     return meios::expand(head + body + "</robot>", scope, sources, "inline.xacro", meios::expansion_limits{}, log);
 }
 
-expansion_result expand_calling_include(const std::string &body, meios::log_sink &log)
+const char *one_parameter = R"(<xacro:macro name="m" params="a"><link name="${a}"/></xacro:macro>)";
+
+expansion_result expand_calling_include(const std::string &body, meios::log_sink &log, const std::string &macro_file = one_parameter)
 {
     meios::memory_source parts{ log };
-    parts.add("pkg", "m.xacro",
-              R"(<robot xmlns:xacro="http://www.ros.org/wiki/xacro">)"
-              R"(<xacro:macro name="m" params="a"><link name="${a}"/></xacro:macro></robot>)");
+    parts.add("pkg", "m.xacro", R"(<robot xmlns:xacro="http://www.ros.org/wiki/xacro">)" + macro_file + "</robot>");
     meios::source_stack sources{ std::move(parts) };
     meios::eval_scope scope;
     return meios::expand(head + body + "</robot>", scope, sources, "top.xacro", meios::expansion_limits{}, log);
@@ -43,8 +43,6 @@ void require_refused_at(const expansion_result &out, const char *file, int line)
     REQUIRE(out.error().loc.file.filename() == file);
     REQUIRE(out.error().loc.line == line);
 }
-
-const char *one_parameter = R"(<xacro:macro name="m" params="a"><link name="${a}"/></xacro:macro>)";
 
 const char *one_block = R"(<xacro:macro name="m" params="a *blk"><link name="${a}"/></xacro:macro>)";
 
@@ -110,6 +108,19 @@ TEST_CASE("a missing parameter of a macro defined in an included file is reporte
         expand_calling_include("<xacro:include filename=\"$(find pkg)/m.xacro\"/>\n\n\n<xacro:m/>", silent);
     require_refused_at(out, "top.xacro", 4);
     REQUIRE(out.error().message.find("missing required parameter 'a'") != std::string::npos);
+}
+
+TEST_CASE("a default that refuses while the call supplied its parameter is reported at the call, for a macro defined "
+          "in another file",
+          "[xacro][macro][call]")
+{
+    meios::log_sink silent;
+    const expansion_result out = expand_calling_include("<xacro:include filename=\"$(find pkg)/m.xacro\"/>\n\n\n\n\n\n\n\n<xacro:m a=\"x\"/>", silent,
+                                                        "\n\n\n<xacro:macro name=\"m\" params=\"a:=${nope}\"><link name=\"${a}\"/></xacro:macro>");
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+    REQUIRE(out.error().loc.file.filename() == "top.xacro");
+    REQUIRE(out.error().loc.line == 9);
 }
 
 TEST_CASE("elements a call passes beyond the macro's block parameters refuse, naming the first left over",

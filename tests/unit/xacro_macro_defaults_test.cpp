@@ -3,6 +3,7 @@
 #include <meios/io/source_stack.h>
 
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -26,6 +27,14 @@ expansion_result call_with(const std::string &spec, const std::string &call, mei
         R"(<robot name="r" xmlns:xacro="http://www.ros.org/wiki/xacro">)"
         R"(<xacro:macro name="m" params=")" + spec
       + R"("><link name="${p}"/></xacro:macro><xacro:m )" + call + "/></robot>";
+    return meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
+}
+
+expansion_result expand_body(const std::string &body, meios::log_sink &log)
+{
+    meios::source_stack sources{};
+    meios::eval_scope scope;
+    const std::string source = R"(<robot name="r" xmlns:xacro="http://www.ros.org/wiki/xacro">)" + body + "</robot>";
     return meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
 }
 
@@ -113,4 +122,54 @@ TEST_CASE("the minimized overridden-default document refuses in the reference's 
     const expansion_result out = expand_probe("overridden_default.xacro", silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().message == "name 'nobody_bound_here' is not defined");
+}
+
+TEST_CASE("a default reads a parameter the call supplied, as the invocation's own scope holds it",
+          "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    const expansion_result out = call_with("q p:=${q}", R"(q="1" p="2")", silent);
+    REQUIRE(out.has_value());
+    REQUIRE(out->document.find(R"(name="2")") != std::string::npos);
+}
+
+TEST_CASE("a default reading a parameter the call left out refuses", "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    const expansion_result out = call_with("q p:=${q}", R"(q="1")", silent);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+}
+
+TEST_CASE("a params attribute holding only whitespace refuses at the definition, called or not",
+          "[xacro][structural][macro]")
+{
+    const std::string defined[] = { R"(<xacro:macro name="m" params="  "/>)", R"(<xacro:macro name="m" params="&#10;"/>)",
+                                    R"(<xacro:macro name="m" params="&#9;"/>)",
+                                    R"(<xacro:macro name="m" params="  "><link name="l"/></xacro:macro><xacro:m/>)" };
+    for(const std::string &shape : defined)
+    {
+        meios::log_sink silent;
+        const expansion_result out = expand_body("\n" + shape + R"(<link name="l"/>)", silent);
+        REQUIRE_FALSE(out.has_value());
+        REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
+        REQUIRE(out.error().message.find("'m'") != std::string::npos);
+        REQUIRE(out.error().loc.line == 2);
+    }
+}
+
+TEST_CASE("an empty params attribute, a spec ending in whitespace, and a definition the expansion never reaches "
+          "still render",
+          "[xacro][structural][macro]")
+{
+    meios::log_sink silent;
+    REQUIRE(expand_body(R"(<xacro:macro name="m" params=""><link name="l"/></xacro:macro><xacro:m/>)", silent).has_value());
+    for(const char *spec : { "p ", " p  " })
+    {
+        const expansion_result out = call_with(spec, R"(p="1")", silent);
+        REQUIRE(out.has_value());
+        REQUIRE(out->document.find(R"(name="1")") != std::string::npos);
+    }
+    REQUIRE(expand_body(R"(<xacro:if value="false"><xacro:macro name="m" params="  "/></xacro:if><link name="l"/>)", silent)
+                .has_value());
 }

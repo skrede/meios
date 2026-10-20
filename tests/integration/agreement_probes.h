@@ -144,6 +144,9 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"dollar_run_after_division_by_zero", "dollar_run_after_division_by_zero", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
         agreement_probe{
                 "unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: ${x"},
+        agreement_probe{"macro_params_only_whitespace", "macro_params_only_whitespace", {}, meios::diagnostic_code::xacro_structural_error, "list index out of range"},
+        agreement_probe{"macro_params_only_whitespace_never_reached", "macro_params_only_whitespace_never_reached", {}},
+        agreement_probe{"macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", {}},
 };
 
 }

@@ -148,4 +148,7 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("dollar_run_after_undefined_name", "dollar_run_after_undefined_name", None),
                     ("dollar_run_after_unset_argument", "dollar_run_after_unset_argument", None),
                     ("dollar_run_after_division_by_zero", "dollar_run_after_division_by_zero", None),
-                    ("unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", None))
+                    ("unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", None),
+                    ("macro_params_only_whitespace", "macro_params_only_whitespace", None),
+                    ("macro_params_only_whitespace_never_reached", "macro_params_only_whitespace_never_reached", None),
+                    ("macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", None))

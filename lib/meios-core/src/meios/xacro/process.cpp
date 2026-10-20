@@ -89,7 +89,7 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(name == "xacro:property")
         return define_property(ctx, in, document);
     if(name == "xacro:macro")
-        return (define_macro(ctx, in), true);
+        return define_macro(ctx, in);
     if(name == "xacro:arg")
         return declare_arg(ctx, in, document);
     if(name == "xacro:include")
