@@ -49,6 +49,24 @@ struct standalone_session
 namespace detail
 {
 
+namespace
+{
+
+bool lex_dollar(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
+                std::size_t &cursor, std::size_t base)
+{
+    const char next = raw[dollar + 1];
+    if(next == '$')
+        return expand_dollar_run(ctx, raw, dollar, out, cursor, base);
+    if(next == '{' || next == '(')
+        return expand_span(ctx, raw, dollar, out, cursor, base);
+    out.push_back('$');
+    cursor = dollar + 1;
+    return true;
+}
+
+}
+
 bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t base)
 {
     std::size_t cursor = 0;
@@ -58,14 +76,7 @@ bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t ba
         if(dollar == std::string_view::npos || dollar + 1 >= raw.size())
             break;
         out.append(raw.substr(cursor, dollar - cursor));
-        char opener = raw[dollar + 1];
-        if(opener != '{' && opener != '(')
-        {
-            out.push_back('$');
-            cursor = dollar + 1;
-            continue;
-        }
-        if(!expand_span(ctx, raw, dollar, out, cursor, base))
+        if(!lex_dollar(ctx, raw, dollar, out, cursor, base))
             return false;
     }
     out.append(raw.substr(cursor));

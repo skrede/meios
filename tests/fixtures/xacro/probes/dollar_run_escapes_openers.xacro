@@ -1,0 +1,13 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="x" value="vx"/>
+  <xacro:arg name="y" default="Y"/>
+  <link name="$${x}"/>
+  <link name="$$(arg y)"/>
+  <link name="$$$${x}"/>
+  <link name="$${${x}}"/>
+  <link name="$x$${x}"/>
+  <joint name="j1" type="fixed"><parent link="$${x}"/><child link="$$(arg y)"/><origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/></joint>
+  <joint name="j2" type="fixed"><parent link="$${x}"/><child link="$$$${x}"/><origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/></joint>
+  <joint name="j3" type="fixed"><parent link="$${x}"/><child link="$${${x}}"/><origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/></joint>
+  <joint name="j4" type="fixed"><parent link="$${x}"/><child link="$x$${x}"/><origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/></joint>
+</robot>

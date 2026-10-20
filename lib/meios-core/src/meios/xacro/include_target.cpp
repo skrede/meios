@@ -24,17 +24,16 @@ include_target split_target(std::string_view raw)
         std::string_view rest = raw.substr(10);
         std::size_t slash = rest.find('/');
         if(slash == std::string_view::npos)
-            return { std::string(rest), {} };
-        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)) };
+            return { std::string(rest), {}, false };
+        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)), false };
     }
-    std::size_t find = raw.find("$(find ");
-    std::size_t close = find == std::string_view::npos ? find : raw.find(')', find);
+    std::size_t close = raw.rfind("$(find ", 0) == 0 ? raw.find(')') : std::string_view::npos;
     if(close == std::string_view::npos)
-        return { {}, std::string(raw) };
+        return { {}, std::string(raw), false };
     std::string_view after = raw.substr(close + 1);
     if(!after.empty() && after.front() == '/')
         after.remove_prefix(1);
-    return { std::string(raw.substr(find + 7, close - find - 7)), std::string(after) };
+    return { std::string(raw.substr(7, close - 7)), std::string(after), true };
 }
 
 std::string normalize_relative(std::string_view rel, bool &escaped)

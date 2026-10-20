@@ -159,4 +159,24 @@ bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::
     return leave_verbatim(ctx, raw, dollar, close, out, cursor);
 }
 
+bool expand_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
+                       std::size_t &cursor, std::size_t base)
+{
+    const std::size_t end = raw.find_first_not_of('$', dollar);
+    if(end != std::string_view::npos && (raw[end] == '{' || raw[end] == '('))
+    {
+        out.append(end - dollar - 1, '$');
+        out.push_back(raw[end]);
+        cursor = end + 1;
+        return true;
+    }
+    refine_span_column(ctx, base + dollar);
+    const std::string message = "invalid expression: " + std::string(raw.substr(dollar));
+    ctx.log.log(level::error, diagnostic_code::expression_error, ctx.at, message);
+    record_terminal(ctx, diagnostic_code::expression_error, message);
+    // Upstream's lexer refuses under every policy, so no enclosing span may keep this verbatim.
+    ctx.last_kind = eval_failure_kind::error;
+    return false;
+}
+
 }

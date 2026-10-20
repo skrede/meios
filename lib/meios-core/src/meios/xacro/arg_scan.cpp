@@ -61,7 +61,9 @@ void scan_text(std::string_view text, std::vector<arg_declaration> &out)
         const std::size_t close = text.find(')', pos);
         if(close == std::string_view::npos)
             break;
-        note_reference(text.substr(pos + tag.size(), close - pos - tag.size()), out);
+        // A run of dollars before the opener escapes it.
+        if(pos == 0 || text[pos - 1] != '$')
+            note_reference(text.substr(pos + tag.size(), close - pos - tag.size()), out);
         pos = text.find(tag, close + 1);
     }
 }

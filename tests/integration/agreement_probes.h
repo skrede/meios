@@ -121,6 +121,11 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"macro_default_spans_whitespace", "macro_default_spans_whitespace", {}},
         agreement_probe{"macro_default_argument_command", "macro_default_argument_command", {}},
         agreement_probe{"macro_param_spaced_separator", "macro_param_spaced_separator", {}},
+        agreement_probe{"dollar_run_escapes_openers", "dollar_run_escapes_openers", {}},
+        agreement_probe{"dollar_run_before_text", "dollar_run_before_text", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{"dollar_run_at_end", "dollar_run_at_end", {}, meios::diagnostic_code::expression_error, "invalid expression: $$"},
+        agreement_probe{"dollar_run_inside_expression", "dollar_run_inside_expression", {}, meios::diagnostic_code::expression_error, "invalid expression: $$'"},
+        agreement_probe{"include_escaped_find", "include_escaped_find", {}, meios::diagnostic_code::unresolved_include, "No such file or directory", "include_escaped_find.d"},
 };
 
 }

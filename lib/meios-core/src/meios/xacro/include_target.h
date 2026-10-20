@@ -12,6 +12,7 @@ struct include_target
 {
     std::string package;
     std::string relative;
+    bool from_find;
 };
 
 include_target split_target(std::string_view raw);

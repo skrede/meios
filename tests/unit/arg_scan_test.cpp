@@ -128,3 +128,14 @@ TEST_CASE("a reference whose name a substitution builds is not listed as an argu
     REQUIRE(args.size() == 1);
     CHECK(args[0].name == "d");
 }
+
+TEST_CASE("scan_args lists no argument a run of dollars escapes", "[xacro][arg_scan]")
+{
+    meios::log_sink silent;
+    const std::string_view head = R"(<robot name="r" xmlns:xacro="http://ros.org/wiki/xacro">)";
+    const std::string escaped = std::string(head) + R"XML(<link name="$$(arg y)"/></robot>)XML";
+    const std::string written = std::string(head) + R"XML(<link name="$(arg y)"/></robot>)XML";
+
+    CHECK(find(meios::scan_args(std::string_view(escaped), silent), "y") == nullptr);
+    CHECK(find(meios::scan_args(std::string_view(written), silent), "y") != nullptr);
+}

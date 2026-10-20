@@ -210,3 +210,8 @@ macro_call_property_child_no_block	agreement
 macro_default_spans_whitespace	agreement
 macro_default_argument_command	agreement
 macro_param_spaced_separator	agreement
+dollar_run_escapes_openers	agreement
+dollar_run_before_text	agreement
+dollar_run_at_end	agreement
+dollar_run_inside_expression	agreement
+include_escaped_find	agreement

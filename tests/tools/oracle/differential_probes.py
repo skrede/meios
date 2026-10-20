@@ -115,4 +115,9 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("macro_call_property_child_no_block", "macro_call_property_child_no_block", None),
                     ("macro_default_spans_whitespace", "macro_default_spans_whitespace", None),
                     ("macro_default_argument_command", "macro_default_argument_command", None),
-                    ("macro_param_spaced_separator", "macro_param_spaced_separator", None))
+                    ("macro_param_spaced_separator", "macro_param_spaced_separator", None),
+                    ("dollar_run_escapes_openers", "dollar_run_escapes_openers", None),
+                    ("dollar_run_before_text", "dollar_run_before_text", None),
+                    ("dollar_run_at_end", "dollar_run_at_end", None),
+                    ("dollar_run_inside_expression", "dollar_run_inside_expression", None),
+                    ("include_escaped_find", "include_escaped_find", None))

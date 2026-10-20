@@ -176,6 +176,10 @@ bool scan(subst_ctx &ctx, std::string_view raw, std::string &out, std::size_t ba
 bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
                  std::size_t &cursor, std::size_t base);
 
+// Upstream's lexer token ^\$\$+(\{|\() escapes the opener; a run before anything else is no token.
+bool expand_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
+                       std::size_t &cursor, std::size_t base);
+
 // Internal substitute that charges the load's own session and carries the forward-scan
 // refinement inputs so an attribute-hosted failing token's column can refine the node
 // anchor. The public substitute() overloads keep the node anchor, do not widen for this,

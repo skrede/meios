@@ -85,6 +85,18 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, located_include &found, const st
     return descend(ctx, doc, parked, key, found, out);
 }
 
+// Upstream joins a package:// filename as a relative path, and here it resolves through the sources as
+// the recorded divergence states, so substituting its package text would widen that divergence.
+bool substitute_target(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, include_target &target)
+{
+    bool ok = true;
+    if(target.from_find)
+        target.package = substitute_attr(ctx, in, target.package, document, ok);
+    if(ok)
+        target.relative = substitute_attr(ctx, in, target.relative, document, ok);
+    return ok;
+}
+
 bool refuse_cycle(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key)
 {
     return fail(ctx, in, diagnostic_code::xacro_structural_error,
@@ -107,10 +119,9 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(!ctx.charge_work(in))
         return false;
     include_target target = split_target(in.attribute("filename").value());
-    bool ok = true;
-    std::string relative = substitute_attr(ctx, in, target.relative, document, ok);
-    if(!ok)
+    if(!substitute_target(ctx, in, document, target))
         return false;
+    const std::string &relative = target.relative;
     const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);
     bool escaped = false;
     std::string normalized = normalize_relative(relative, escaped);
