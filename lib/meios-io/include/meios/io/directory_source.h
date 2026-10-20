@@ -45,6 +45,15 @@ std::optional<std::filesystem::path> contained_under(const std::filesystem::path
 // the path-backed sources.
 std::optional<std::filesystem::path> contained_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log);
 
+std::filesystem::path package_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative);
+
+// Both log an escape and answer it empty; a failure is answered on the error arm by the typed form and
+// logged with its cause by the logging form. The package and relative path only name the record.
+source_lookup_result try_locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative, log_sink &log);
+
+std::optional<resolved_asset> locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative,
+                                               log_sink &log);
+
 }
 
 // Resolves package://<pkg>/<rel> against a single configured root directory,

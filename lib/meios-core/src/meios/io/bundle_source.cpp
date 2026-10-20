@@ -1,5 +1,3 @@
-#include "beside_containment.h"
-
 #include "meios/io/bundle_source.h"
 #include "meios/io/directory_source.h"
 
@@ -24,7 +22,7 @@ capability_descriptor bundle_source::capabilities() const
 
 std::optional<resolved_asset> bundle_source::locate(std::string_view package, std::string_view relative)
 {
-    return detail::locate_contained(m_root, package, relative, m_log.get());
+    return detail::locate_contained(m_root, detail::package_candidate(m_root, package, relative), package, relative, m_log.get());
 }
 
 std::optional<std::filesystem::path> bundle_source::path_of(std::string_view package, std::string_view relative) const
