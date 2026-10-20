@@ -3,7 +3,6 @@
 #include "meios/io/directory_source.h"
 
 #include <string>
-#include <utility>
 #include <filesystem>
 #include <system_error>
 
@@ -33,18 +32,12 @@ std::optional<std::filesystem::path> ros_package_source::path_of(std::string_vie
     return candidate;
 }
 
-// The discovered package base is the root a checked open may descend from, and the caller's
-// own relative half is the request within it; neither is recovered from the returned path,
-// which a symlink-install workspace resolves to a directory outside that base.
 std::optional<resolved_asset> ros_package_source::locate(std::string_view package, std::string_view relative)
 {
     const auto entry = m_bases.find(std::string(package));
     if(entry == m_bases.end())
         return std::nullopt;
-    std::optional<std::filesystem::path> candidate = path_of(package, relative);
-    if(!candidate)
-        return std::nullopt;
-    return resolved_asset{std::move(*candidate), entry->second, std::filesystem::path(relative)};
+    return detail::locate_contained(entry->second, entry->second / relative, package, relative, m_log.get());
 }
 
 std::vector<std::string> ros_package_source::packages() const

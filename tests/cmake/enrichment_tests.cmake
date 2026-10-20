@@ -86,6 +86,17 @@ if(TARGET meios_ros-package)
         meios_warnings(ros_prefix_test)
         catch_discover_tests(ros_prefix_test TEST_PREFIX "ros_prefix.")
     endif()
+
+    set(ros_package_link_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/ros_package_link_test.cpp)
+    if(EXISTS ${ros_package_link_src})
+        add_executable(ros_package_link_test ${ros_package_link_src})
+        target_link_libraries(ros_package_link_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::ros-package
+                Catch2::Catch2WithMain)
+        meios_enable_coverage(ros_package_link_test)
+        meios_warnings(ros_package_link_test)
+        catch_discover_tests(ros_package_link_test TEST_PREFIX "ros_package_link.")
+    endif()
 endif()
 
 if(TARGET meios_archive-zip)

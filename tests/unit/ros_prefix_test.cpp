@@ -10,7 +10,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <vector>
-#include <cstdlib>
 #include <optional>
 #include <filesystem>
 
@@ -22,17 +21,8 @@ using acquisition_test::recorder;
 using ros_test::ament_package;
 using ros_test::has_package;
 using ros_test::mesh;
+using ros_test::portable_setenv;
 using ros_test::require_authorized;
-
-void portable_setenv(const char *name, const char *value)
-{
-#ifdef _WIN32
-    _putenv_s(name, value);
-#else
-    setenv(name, value, 1);
-#endif
-}
-
 }
 
 TEST_CASE("a relative ament prefix resolves and authorizes against the same base", "[ros]")

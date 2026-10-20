@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdlib>
 #include <fstream>
 #include <optional>
 #include <algorithm>
@@ -20,6 +21,15 @@ namespace ros_test
 {
 
 constexpr std::string_view mesh = "meshes/x.stl";
+
+inline void portable_setenv(const char *name, const char *value)
+{
+#ifdef _WIN32
+    _putenv_s(name, value);
+#else
+    setenv(name, value, 1);
+#endif
+}
 
 inline void write_file(const std::filesystem::path &path, std::string_view content)
 {
@@ -48,14 +58,14 @@ inline bool has_package(const std::vector<std::string> &names, std::string_view 
     return std::find(names.begin(), names.end(), std::string(wanted)) != names.end();
 }
 
-// A hit authorizes a later checked open with the base the discovery layer found and the
-// caller's own relative half, neither of them recovered from the presentation path.
+// A hit carries the canonical base and the canonical target relative to it, so the root is
+// compared canonically and holds where the temporary directory is reached through a link.
 inline void require_authorized(const std::optional<meios::resolved_asset> &hit, const std::filesystem::path &base)
 {
     REQUIRE(hit.has_value());
     REQUIRE(hit->path().is_absolute());
     REQUIRE(std::filesystem::exists(hit->path()));
-    REQUIRE(hit->source_root() == std::optional{base});
+    REQUIRE(hit->source_root() == std::optional{std::filesystem::weakly_canonical(base)});
     REQUIRE(hit->source_relative() == std::optional{std::filesystem::path(mesh)});
     REQUIRE(acquisition_test::real_path(base / mesh) == acquisition_test::real_path(hit->path()));
 }
