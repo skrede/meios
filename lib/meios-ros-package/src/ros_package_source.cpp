@@ -4,10 +4,21 @@
 
 #include <string>
 #include <filesystem>
+#include <string_view>
 #include <system_error>
 
 namespace meios
 {
+
+namespace
+{
+
+std::filesystem::path package_file(const std::filesystem::path &base, std::string_view relative)
+{
+    return relative.empty() ? base : base / relative;
+}
+
+}
 
 ros_package_source::ros_package_source(std::vector<std::filesystem::path> ros1_roots, std::vector<std::filesystem::path> ament_prefixes, log_sink &log)
         : m_bases(detail::discover_packages(ros1_roots, ament_prefixes, log))
@@ -37,7 +48,7 @@ std::optional<resolved_asset> ros_package_source::locate(std::string_view packag
     const auto entry = m_bases.find(std::string(package));
     if(entry == m_bases.end())
         return std::nullopt;
-    return detail::locate_contained(entry->second, relative.empty() ? entry->second : entry->second / relative, package, relative, m_log.get());
+    return detail::locate_contained(entry->second, package_file(entry->second, relative), package, relative, m_log.get());
 }
 
 bool ros_package_source::answers(std::string_view package, std::string_view relative) const
@@ -45,9 +56,7 @@ bool ros_package_source::answers(std::string_view package, std::string_view rela
     const auto entry = m_bases.find(std::string(package));
     if(entry == m_bases.end())
         return false;
-    const detail::contained_path_result real = detail::try_contained_under(entry->second, relative.empty() ? entry->second : entry->second / relative);
-    std::error_code ec;
-    return real && *real && std::filesystem::exists(**real, ec) && !ec;
+    return detail::answers_contained(entry->second, package_file(entry->second, relative));
 }
 
 std::vector<std::string> ros_package_source::packages() const

@@ -63,7 +63,7 @@ public:
 
     memory_source &add(std::string package, std::string relative, std::string bytes)
     {
-        if(const std::optional<std::string> refusal = detail::unserveable_offer(package, relative))
+        if(const std::optional<std::string> refusal = detail::unservable_offer(package, relative))
         {
             refuse(diagnostic_code::malformed_asset_uri, *refusal);
             return *this;

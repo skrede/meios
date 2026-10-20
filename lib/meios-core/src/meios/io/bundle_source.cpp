@@ -36,9 +36,7 @@ std::optional<std::filesystem::path> bundle_source::path_of(std::string_view pac
 
 bool bundle_source::answers(std::string_view package, std::string_view relative) const
 {
-    const detail::contained_path_result real = detail::try_contained_under(m_root, detail::package_candidate(m_root, package, relative));
-    std::error_code ec;
-    return real && *real && std::filesystem::exists(**real, ec) && !ec;
+    return detail::answers_contained(m_root, detail::package_candidate(m_root, package, relative));
 }
 
 }

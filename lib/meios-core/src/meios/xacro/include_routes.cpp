@@ -14,8 +14,8 @@
 
 #include <pugixml.hpp>
 
-#include <string>
 #include <ranges>
+#include <string>
 #include <utility>
 #include <optional>
 #include <algorithm>
@@ -44,7 +44,8 @@ std::filesystem::path served_name(const resolved_asset &hit)
     return hit.named().value_or(hit.path());
 }
 
-// Through a `..` the operating system may resolve a link first, so the lexical sibling record would name a file other than the one opened.
+// Through a `..` the operating system may resolve a link first, so the lexical sibling record would name a file other than the one opened;
+// a byte-served document has no links, so its lexical sibling is the file named.
 bool spelled_without_parent(const std::string &written)
 {
     return std::ranges::none_of(std::filesystem::path(written), [](const std::filesystem::path &element) { return element == ".."; });
@@ -129,7 +130,7 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
                     "xacro:include target \"" + written +
                             "\" leaves every directory that admits it: the one the document that writes it was named in, the one it lives in, and each configured package root");
     std::optional<served_document> sibling;
-    if(ctx.served)
+    if(ctx.served && (spelled_without_parent(written) || serves_bytes(ctx.sources, *ctx.served)))
         sibling = sibling_of(*ctx.served, normalized);
     if(probe.hit)
         return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, probe.in_named_directory && spelled_without_parent(written) ? sibling : std::nullopt }, out);

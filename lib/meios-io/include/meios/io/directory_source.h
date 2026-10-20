@@ -58,6 +58,9 @@ source_lookup_result try_locate_contained(const std::filesystem::path &root, con
 std::optional<resolved_asset> locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative,
                                                log_sink &log);
 
+// Answers whether the candidate exists inside the root, and logs and writes nothing.
+bool answers_contained(const std::filesystem::path &root, const std::filesystem::path &candidate);
+
 }
 
 // Resolves package://<pkg>/<rel> against a single configured root directory,

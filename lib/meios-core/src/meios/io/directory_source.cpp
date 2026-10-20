@@ -139,6 +139,13 @@ std::optional<resolved_asset> detail::locate_contained(const std::filesystem::pa
     return std::nullopt;
 }
 
+bool detail::answers_contained(const std::filesystem::path &root, const std::filesystem::path &candidate)
+{
+    const contained_path_result real = try_contained_under(root, candidate);
+    std::error_code ec;
+    return real && *real && std::filesystem::exists(**real, ec) && !ec;
+}
+
 directory_source::directory_source(std::filesystem::path root, log_sink &log)
         : m_root(detail::configured_root(root))
         , m_log(log)
@@ -171,9 +178,7 @@ std::optional<std::filesystem::path> directory_source::path_of(std::string_view 
 
 bool directory_source::answers(std::string_view package, std::string_view relative) const
 {
-    const detail::contained_path_result real = detail::try_contained_under(m_root, detail::package_candidate(m_root, package, relative));
-    std::error_code ec;
-    return real && *real && std::filesystem::exists(**real, ec) && !ec;
+    return detail::answers_contained(m_root, detail::package_candidate(m_root, package, relative));
 }
 
 }

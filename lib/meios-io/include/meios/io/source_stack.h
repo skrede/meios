@@ -19,9 +19,10 @@ namespace meios
 {
 
 // Variadic front door that erases a pack of sources into an ordered vector.
-// Index 0 is the highest precedence; a lower-precedence layer that could also
-// answer a query is surfaced as an info shadow diagnostic, never silently hidden. A shadow is
-// asked through answers, so a lower layer's own refusal cannot fail a lookup a higher one answered.
+// Index 0 is the highest precedence; a lower-precedence layer that could also answer a query is
+// surfaced as an info shadow diagnostic, never silently hidden. A layer that models answers is asked
+// through it alone, so its own refusal cannot fail a lookup a higher one answered; a layer that does
+// not is asked through locate, with whatever that logs or writes.
 class source_stack
 {
 public:

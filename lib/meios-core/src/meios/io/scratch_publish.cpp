@@ -102,7 +102,7 @@ bool names_no_file_under_package(std::string_view, std::string_view relative)
 // Every branch is the same judgment: the offer names no file the source can serve. The staging half
 // is answered at the offer rather than at the publication because the collision is made by the
 // offer, and the file that would prove it does not exist until a later resolution.
-std::optional<std::string> unserveable_offer(std::string_view package, std::string_view relative)
+std::optional<std::string> unservable_offer(std::string_view package, std::string_view relative)
 {
     const std::string offered = std::string(package);
     if(relative.empty())
