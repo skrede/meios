@@ -3,6 +3,7 @@
 #include <meios/io/source_stack.h>
 
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -66,10 +67,29 @@ const char *block_spellings =
     "<xacro:insert_block name=\"extra\"/></xacro:macro>"
     "<xacro:m><origin xyz=\"1 2 3\"/><group><mass value=\"1\"/></group></xacro:m></robot>";
 
-const char *unterminated_quote =
-    "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
-    "<xacro:macro name=\"m\" params=\"prefix tag:='world\"><link name=\"${tag}\"/>"
-    "</xacro:macro><xacro:m prefix=\"a\"/></robot>";
+expansion_result expand_params(const std::string &params)
+{
+    meios::log_sink silent;
+    const std::string source = "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+                               "<xacro:arg name=\"y\" default=\"Y\"/><xacro:property name=\"x\" value=\"v\"/>"
+                               "<xacro:macro name=\"m\" params=\"" + params + "\"><link name=\"l_${a}\"/></xacro:macro><xacro:m/></robot>";
+    return expand_source(source.c_str(), silent);
+}
+
+void require_binds(const std::string &params, const std::string &expected)
+{
+    const expansion_result out = expand_params(params);
+    REQUIRE(out.has_value());
+    REQUIRE(out->document.find("name=\"l_" + expected + "\"") != std::string::npos);
+}
+
+void require_missing(const std::string &params, const std::string &name)
+{
+    const expansion_result out = expand_params(params);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
+    REQUIRE(out.error().message.find("missing required parameter '" + name + "'") != std::string::npos);
+}
 
 }
 
@@ -149,11 +169,32 @@ TEST_CASE("both block-parameter spellings still bind their call children",
     REQUIRE(out->document.find("<group") == std::string::npos);
 }
 
-TEST_CASE("an unterminated quote leaves its opening quote in the bound value and refuses nothing",
-          "[xacro][structural][macro]")
+TEST_CASE("a default opening with a ${} or $() span binds whole, whitespace inside the span included", "[xacro][structural][macro]")
 {
-    meios::log_sink silent;
-    const expansion_result out = expand_source(unterminated_quote, silent);
-    REQUIRE(out.has_value());
-    REQUIRE(out->document.find("name=\"'world\"") != std::string::npos);
+    require_binds("a:=${1 + 2} b:=2", "3");
+    require_binds("a:=$(arg y) b:=2", "Y");
+    require_binds("a:=^|${1 + 2}", "3");
+    require_binds("a:=${x}_y", "v_y");
+}
+
+TEST_CASE("whitespace may surround the separator between a name and its default", "[xacro][structural][macro]")
+{
+    require_binds("a := 1", "1");
+    require_binds("a= 1", "1");
+    require_binds("a :=1", "1");
+}
+
+TEST_CASE("an empty default is no default, so a call omitting the parameter refuses as missing it", "[xacro][structural][macro]")
+{
+    require_missing("a:=", "a");
+}
+
+TEST_CASE("an unterminated quote leaves the parameter without a default spec, and a call omitting it refuses as missing it", "[xacro][structural][macro]")
+{
+    require_missing("tag:='world", "tag:='world");
+}
+
+TEST_CASE("what follows a newline after a matched spec is no parameter", "[xacro][structural][macro]")
+{
+    require_binds("b:=2 a:=1&#10;c", "1");
 }
