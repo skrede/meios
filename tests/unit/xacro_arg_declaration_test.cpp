@@ -151,3 +151,10 @@ TEST_CASE("a declaration in a macro body binds on the first call only", "[xacro]
     require_link(rendered, "one_x");
     require_link(rendered, "two_x");
 }
+
+TEST_CASE("a reached declaration reads its own default with no lent value bound", "[xacro][arg][declaration]")
+{
+    require_refused(refused(declared("$(arg a)y") + declared("x") + used), diagnostic_code::unresolved_arg);
+    require_link(flattened(document(declared("y") + declared("x") + used)), "l_y");
+    require_link(flattened(document(declared("x") + used)), "l_x");
+}

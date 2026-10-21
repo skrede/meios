@@ -18,6 +18,8 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
 
 void seed_declared_args(expand_ctx &ctx, pugi::xml_node node);
 
+std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name);
+
 std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index = std::nullopt);

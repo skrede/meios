@@ -151,4 +151,5 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("unterminated_span_after_undefined_name", "unterminated_span_after_undefined_name", None),
                     ("macro_params_only_whitespace", "macro_params_only_whitespace", None),
                     ("macro_params_only_whitespace_never_reached", "macro_params_only_whitespace_never_reached", None),
-                    ("macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", None))
+                    ("macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", None),
+                    ("argument_default_reads_itself_before_redeclaration", "argument_default_reads_itself_before_redeclaration", None))

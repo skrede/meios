@@ -21,6 +21,18 @@
 namespace meios::detail
 {
 
+std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name)
+{
+    std::size_t idx = 0;
+    for(pugi::xml_attribute a : in.attributes())
+    {
+        if(std::string_view(a.name()) == name)
+            return idx;
+        ++idx;
+    }
+    return std::nullopt;
+}
+
 std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index)

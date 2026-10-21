@@ -77,6 +77,11 @@ public:
         return m_arguments.find(std::string(name)) != m_arguments.end();
     }
 
+    void unbind_argument(std::string_view name)
+    {
+        m_arguments.erase(std::string(name));
+    }
+
     void install_text_loader(text_resource_loader loader)
     {
         m_load_text_cb = std::move(loader);

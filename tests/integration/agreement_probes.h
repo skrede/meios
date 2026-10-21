@@ -147,6 +147,11 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"macro_params_only_whitespace", "macro_params_only_whitespace", {}, meios::diagnostic_code::xacro_structural_error, "list index out of range"},
         agreement_probe{"macro_params_only_whitespace_never_reached", "macro_params_only_whitespace_never_reached", {}},
         agreement_probe{"macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", {}},
+        agreement_probe{"argument_default_reads_itself_before_redeclaration",
+                        "argument_default_reads_itself_before_redeclaration",
+                        {},
+                        meios::diagnostic_code::unresolved_arg,
+                        "Undefined substitution argument a"},
 };
 
 }

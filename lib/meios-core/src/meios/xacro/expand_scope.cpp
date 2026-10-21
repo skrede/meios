@@ -22,34 +22,6 @@ namespace meios::detail
 namespace
 {
 
-bool needs_lexing(std::string_view text)
-{
-    return text.find("$$") != std::string_view::npos
-        || text.find("$(") != std::string_view::npos
-        || text.find("${") != std::string_view::npos;
-}
-
-bool take_seeded(expand_ctx &ctx, std::string_view name)
-{
-    const auto lent = ctx.seeded_args.find(name);
-    if(lent == ctx.seeded_args.end())
-        return false;
-    ctx.seeded_args.erase(lent);
-    return true;
-}
-
-std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name)
-{
-    std::size_t idx = 0;
-    for(pugi::xml_attribute a : in.attributes())
-    {
-        if(std::string_view(a.name()) == name)
-            return idx;
-        ++idx;
-    }
-    return std::nullopt;
-}
-
 // The prior an ancestor frame must record is the value it actually holds, which the
 // writing invocation's own parameter may be masking in the shared flat scope.
 // When the written name is a parameter of the writing macro, use the outer value that
@@ -110,29 +82,6 @@ void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_vie
                                                                   : ctx.scope.lookup(name));
 }
 
-// The main pass is single-forward, so a `$(arg x)` used above its own `<xacro:arg>` declaration
-// would resolve before the default is seen. Only a default that lexes to itself is lent ahead;
-// every other default is left for its declaration, where it is lexed.
-void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
-{
-    for(pugi::xml_node child : node.children())
-    {
-        if(child.type() != pugi::node_element)
-            continue;
-        if(std::string_view(child.name()) == "xacro:arg")
-        {
-            pugi::xml_attribute name = child.attribute("name");
-            pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !ctx.scope.has_argument(name.value()) && !needs_lexing(fallback.value()))
-            {
-                ctx.scope.bind_argument(name.value(), value{strip_authored_markers(fallback.value())});
-                ctx.seeded_args.emplace(name.value());
-            }
-        }
-        seed_declared_args(ctx, child);
-    }
-}
-
 // The reference's grab_property treats the written value and the fallback as mutually exclusive
 // and binds a fallback only where no property of the name exists; an argument of the same name
 // does not suppress it. A property carrying neither attribute binds the empty string.
@@ -156,27 +105,6 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
         return false;
     record_scoped(ctx, in.attribute("scope").value(), name);
     ctx.scope.set(name, bound);
-    return true;
-}
-
-// The first declaration the walk reaches binds, as the reference's does, so a caller override or
-// an earlier reached declaration wins; a value the pre-pass lent does not count as a binding.
-bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
-{
-    std::string_view name = in.attribute("name").value();
-    if(name.empty())
-        return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "<xacro:arg> requires a name attribute");
-    pugi::xml_attribute fallback = in.attribute("default");
-    if(!fallback || (!take_seeded(ctx, name) && ctx.scope.has_argument(name)))
-        return true;
-    bool ok = true;
-    const std::string authored = strip_authored_markers(fallback.value());
-    const value resolved =
-        substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
-    if(!ok)
-        return false;
-    ctx.scope.bind_argument(name, resolved);
     return true;
 }
 
