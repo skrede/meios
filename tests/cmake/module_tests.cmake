@@ -5,7 +5,7 @@ foreach(stem IN ITEMS
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
         xacro_macro_defaults xacro_macro_redeclared xacro_macro_call xacro_block xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
         xacro_include_spelling xacro_include_bytes xacro_include_resolution
-        xacro_include_precedence xacro_include_identity xacro_subst
+        xacro_include_precedence xacro_include_identity xacro_include_target xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
         xacro_budget xacro_depth xacro_arg xacro_arg_declaration xacro_arg_domain xacro_eval_command xacro_unsupported
         xacro_unsupported_location xacro_command_body
@@ -32,10 +32,10 @@ foreach(stem IN ITEMS
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()
-        # The forward-scan helper and the yaml resolver are compiled core-private symbols,
-        # so these stems alone reach into meios-core/src; only forward-scan's helper takes
-        # pugixml handles, so only it links pugixml directly.
-        if(stem STREQUAL "forward_scan" OR stem STREQUAL "yaml_resource"
+        # The forward-scan helper, the include-path helpers and the yaml resolver are compiled
+        # core-private symbols, so these stems alone reach into meios-core/src; only forward-scan's
+        # helper takes pugixml handles, so only it links pugixml directly.
+        if(stem STREQUAL "forward_scan" OR stem STREQUAL "xacro_include_target" OR stem STREQUAL "yaml_resource"
                 OR stem STREQUAL "yaml_resource_containment" OR stem STREQUAL "yaml_resource_followed"
                 OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
