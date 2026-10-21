@@ -65,7 +65,7 @@ bool refuse_follower(subst_ctx &ctx, std::string_view raw, std::size_t at, std::
     if(raw[at + 1] == '$')
         return refuse_dollar_run(ctx, raw, at, base);
     refine_span_column(ctx, base + at);
-    return fail_unterminated(ctx, raw[at + 1], at);
+    return fail_unterminated(ctx, raw[at + 1], base + at);
 }
 
 bool expand_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,

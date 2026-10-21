@@ -240,3 +240,7 @@ include_find_in_literal	agreement
 include_find_composed	agreement
 include_find_two_words	agreement
 find_command_second_word	agreement
+include_find_tab_before_package	agreement
+include_find_tab_after_package	agreement
+find_command_tab_before_package	agreement
+arg_command_tab_before_name	agreement

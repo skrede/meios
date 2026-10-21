@@ -80,6 +80,17 @@ TEST_CASE("a find given a second word refuses naming it", "[xacro][include][spel
     require_refused(expand_body("<link name=\"$(find p urdf)\"/>"), meios::diagnostic_code::unresolved_find, "\"urdf\"");
 }
 
+TEST_CASE("a tab beside a find's package is part of a word, so the find does not reach its package", "[xacro][include][spelling]")
+{
+    const expansion_result before = expand_including("$(find&#9;p)/urdf/c.xacro");
+    const expansion_result after  = expand_including("$(find p&#9;)/urdf/c.xacro");
+    CHECK_FALSE(include_tree::renders_link(before, "p_urdf_c"));
+    CHECK_FALSE(include_tree::renders_link(after, "p_urdf_c"));
+    require_refused(before, meios::diagnostic_code::unknown_substitution, "unknown substitution command");
+    require_refused(after, meios::diagnostic_code::unresolved_find, "did not resolve");
+    require_refused(expand_body("<link name=\"$(find&#9;p)\"/>"), meios::diagnostic_code::unknown_substitution, "unknown substitution command");
+}
+
 TEST_CASE("a path that climbs out of a find's package refuses", "[xacro][include][spelling]")
 {
     const expansion_result out = expand_including("$(find p)/../q/a.xacro");
@@ -92,6 +103,8 @@ TEST_CASE("an include filename refuses at its first refusing token, at an offset
     const std::pair<const char *, const char *> unterminated[] = {
         { "$(find ${nope})${x", "at offset 15" },
         { "$(find p)/urdf/${x", "at offset 15" },
+        { "$(find ${pk}${x)/urdf/c.xacro", "at offset 12" },
+        { "$(find p)/$(arg ${x)", "at offset 16" },
     };
     for(const auto &[filename, names] : unterminated)
     {

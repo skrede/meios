@@ -67,6 +67,9 @@ PACKAGE_ROOT_PROBES = {one: one + ".d" for one in ("include_find_padded_package"
                                                    "include_find_composed",
                                                    "include_find_two_words",
                                                    "find_command_second_word",
+                                                   "include_find_tab_before_package",
+                                                   "include_find_tab_after_package",
+                                                   "find_command_tab_before_package",
                                                    "include_find_climbs_out_of_package",
                                                    "include_glob_filename")}
 
@@ -176,4 +179,8 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_find_in_literal", "include_find_in_literal", None),
                     ("include_find_composed", "include_find_composed", None),
                     ("include_find_two_words", "include_find_two_words", None),
-                    ("find_command_second_word", "find_command_second_word", None))
+                    ("find_command_second_word", "find_command_second_word", None),
+                    ("include_find_tab_before_package", "include_find_tab_before_package", None),
+                    ("include_find_tab_after_package", "include_find_tab_after_package", None),
+                    ("find_command_tab_before_package", "find_command_tab_before_package", None),
+                    ("arg_command_tab_before_name", "arg_command_tab_before_name", None))

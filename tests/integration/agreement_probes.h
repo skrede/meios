@@ -164,6 +164,25 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{"include_find_two_words", "include_find_two_words", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument", "include_find_two_words.d"},
         agreement_probe{
                 "find_command_second_word", "find_command_second_word", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument", "find_command_second_word.d"},
+        agreement_probe{"include_find_tab_before_package",
+                        "include_find_tab_before_package",
+                        {},
+                        meios::diagnostic_code::unknown_substitution,
+                        "Unknown substitution command",
+                        "include_find_tab_before_package.d"},
+        agreement_probe{"include_find_tab_after_package",
+                        "include_find_tab_after_package",
+                        {},
+                        meios::diagnostic_code::unresolved_find,
+                        "PackageNotFoundError",
+                        "include_find_tab_after_package.d"},
+        agreement_probe{"find_command_tab_before_package",
+                        "find_command_tab_before_package",
+                        {},
+                        meios::diagnostic_code::unknown_substitution,
+                        "Unknown substitution command",
+                        "find_command_tab_before_package.d"},
+        agreement_probe{"arg_command_tab_before_name", "arg_command_tab_before_name", {}, meios::diagnostic_code::unknown_substitution, "Unknown substitution command"},
 };
 
 }

@@ -81,13 +81,13 @@ std::string names_no_directory(std::string_view package)
 // Upstream splits a command on spaces and refuses a find unless exactly one argument remains.
 std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
 {
-    const std::string_view package = rest.substr(0, rest.find_first_of(" \t"));
+    const std::string_view package = rest.substr(0, rest.find(' '));
     if(package.empty())
         return refuse(ctx, diagnostic_code::unresolved_find, "$(find) requires a package name");
     if(package.size() != rest.size())
         return refuse(ctx, diagnostic_code::unresolved_find,
                       "$(find " + std::string(package) + ") takes exactly one package name, but was also given \""
-                          + std::string(trim(rest.substr(package.size()))) + '"');
+                          + std::string(rest.substr(rest.find_first_not_of(' ', package.size()))) + '"');
     if(ctx.include)
         return find_for_include(ctx, *ctx.include, package);
     const std::optional<resolved_asset> hit = ctx.sources.locate(package, "", ctx.log);

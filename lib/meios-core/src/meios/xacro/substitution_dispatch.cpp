@@ -26,12 +26,22 @@ namespace detail
 namespace
 {
 
+// Upstream separates a command's words with split(' ') and drops the empty fields, so a tab is part
+// of a word.
+std::string_view strip_spaces(std::string_view text)
+{
+    const std::size_t begin = text.find_first_not_of(' ');
+    if(begin == std::string_view::npos)
+        return {};
+    return text.substr(begin, text.find_last_not_of(' ') - begin + 1);
+}
+
 std::pair<std::string_view, std::string_view> split_first(std::string_view text)
 {
-    std::size_t space = text.find_first_of(" \t");
+    const std::size_t space = text.find(' ');
     if(space == std::string_view::npos)
         return { text, {} };
-    return { text.substr(0, space), trim(text.substr(space)) };
+    return { text.substr(0, space), strip_spaces(text.substr(space)) };
 }
 
 std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std::string &message)
@@ -101,7 +111,7 @@ std::optional<std::string> cmd_optenv(subst_ctx &ctx, std::string_view rest)
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner)
 {
-    std::pair<std::string_view, std::string_view> parts = split_first(trim(inner));
+    std::pair<std::string_view, std::string_view> parts = split_first(strip_spaces(inner));
     std::string_view cmd = parts.first;
     if(cmd == "find")
         return cmd_find(ctx, parts.second);

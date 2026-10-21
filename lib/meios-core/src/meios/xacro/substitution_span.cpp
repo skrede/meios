@@ -19,10 +19,10 @@ namespace
 
 std::string_view leading_command(std::string_view inner)
 {
-    std::size_t start = inner.find_first_not_of(" \t");
+    const std::size_t start = inner.find_first_not_of(' ');
     if(start == std::string_view::npos)
         return {};
-    std::size_t end = inner.find_first_of(" \t", start);
+    const std::size_t end = inner.find(' ', start);
     return inner.substr(start, end - start);
 }
 
@@ -56,18 +56,16 @@ bool refuse_nested_command(subst_ctx &ctx, std::string_view inner, std::size_t s
 // output — never fabricated, never blanked — so the resolved text visibly carries
 // the unevaluated expression. A genuine error still fails; a conditional is resolved
 // with fail policy elsewhere, so leniency reaches text/attribute spans only.
-bool leave_verbatim(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::size_t close,
-                    std::string &out, std::size_t &cursor)
+bool leave_verbatim(subst_ctx &ctx, std::string_view span, std::size_t span_offset, std::string &out)
 {
     if(ctx.last_kind != eval_failure_kind::unsupported
        || (ctx.mode != eval_policy::warn && ctx.mode != eval_policy::skip))
         return false;
     if(ctx.mode == eval_policy::warn)
         ctx.log.log(level::warn, diagnostic_code::unsupported_expression, ctx.at,
-            "left an unsupported substitution verbatim at offset " + std::to_string(dollar)
+            "left an unsupported substitution verbatim at offset " + std::to_string(span_offset)
                 + " in " + ctx.document.string());
-    out.append(raw.substr(dollar, close - dollar + 1));
-    cursor = close + 1;
+    out.append(span);
     return true;
 }
 
@@ -119,18 +117,17 @@ bool expand_span(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::
     std::size_t close = opener == '{' ? find_expr_close(raw, dollar + 1)
                                       : find_cmd_close(raw, dollar + 1);
     if(close == std::string_view::npos)
-        return fail_unterminated(ctx, opener, dollar);
+        return fail_unterminated(ctx, opener, span_offset);
     if(!lexes_at(raw, close + 1))
         return refuse_follower(ctx, raw, close + 1, base);
     std::string_view inner = raw.substr(dollar + 2, close - dollar - 2);
     std::optional<std::string> result = resolve_span(ctx, opener, inner, span_offset);
     if(result)
-    {
         out.append(*result);
-        cursor = close + 1;
-        return true;
-    }
-    return leave_verbatim(ctx, raw, dollar, close, out, cursor);
+    else if(!leave_verbatim(ctx, raw.substr(dollar, close - dollar + 1), span_offset, out))
+        return false;
+    cursor = close + 1;
+    return true;
 }
 
 }
