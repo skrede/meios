@@ -155,13 +155,12 @@ root, and with no configured root it refuses under `uncontained_asset`. A mesh s
 element that is not a directory, `f.txt` a regular file, does not resolve, and its record names that
 element as not a directory: `f.txt/m.stl` on every operating system, because each element before the
 last is checked, and `f.txt/../m.stl` where the operating system reports `f.txt` as not a directory, as
-a POSIX system does. On Windows the path interfaces are assumed to reduce `f.txt/..` first, so that
-`m.stl` beside the document would resolve. `load_linked_mesh.a mesh spelled through a file that is not
-a directory with no parent element does not resolve, and its record names why` pins the first spelling
-on every platform, and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does
-not resolve on POSIX, its record naming why, and resolves beside the document on Windows` the second,
-asserting the assumed reading on Windows, so a Windows run of the suite decides it; none has run, and
-it is unmeasured. Containment is judged on the *canonicalized*
+a POSIX system does. On Windows the path interfaces reduce `f.txt/..` first, and measured there the
+mesh resolves to the `m.stl` beside the document. `load_linked_mesh.a mesh spelled through a file that
+is not a directory with no parent element does not resolve, and its record names why` pins the first
+spelling on every platform, and `load_linked_mesh.a mesh spelled back out of a file that is not a
+directory does not resolve on POSIX, its record naming why, and resolves beside the document on
+Windows` the second, asserting that reading on Windows. Containment is judged on the *canonicalized*
 candidate, never on the authored spelling, so a climb-out spelled through a real subdirectory and a
 symlink whose target leaves the root are both caught where a textual prefix test would miss them.
 
@@ -386,7 +385,17 @@ is named, the reference carries a relative half, the lookup happens, and a direc
 graded absent by the policy above under `unresolved_asset` rather than being called malformed. Where
 that segment is empty — `package://<pkg>//` — the relative half opens with a separator and names no
 asset beneath the package, so the spelling is decided by shape at the grammar stage, before any source
-is asked, any containment decision is made or the missing-asset policy is consulted. A `<mesh>` and a
+is asked, any containment decision is made or the missing-asset policy is consulted. A relative half
+rooted some other way passes that shape check, on Windows a drive (`package://<pkg>/D:/…`) or a
+backslash, and the source then refuses it as escaping the root, under `uncontained_asset`, as it
+refuses a rooted relative half on every platform; so a relative half never replaces the root it is
+joined onto, even where the path it names lies inside that root, and a folder bundle refuses a rooted
+destination name the same way, as the archive writer already refuses a rooted entry name.
+`io_package_join.a rooted relative part names no candidate under the Windows grammar, a drive or a
+backslash included` asserts the drive and backslash readings on every host, and `io_package_join.a
+directory or bundle source refuses a rooted relative part as an escape, even one naming a file inside
+its root` and `io_package_join.a folder bundle refuses a rooted destination name, even one inside its
+root, and writes nothing there` the refusals. A `<mesh>` and a
 `<texture>` ask for a file, and a package directory is not one. At the source layer, the genuinely empty relative used by the bare
 `$(find <pkg>)` substitution command is answered with the package directory by a directory-rooted
 source holding the package, while a source holding bytes declines it; that split is deliberate, and

@@ -554,8 +554,10 @@ install tree therefore reads the siblings that link into the directory it really
 sibling linked into a configured root is read through that root. A document a directory, bundle or ROS
 layer served is read beside the path it was named by. Only where nothing is there is the sibling asked
 of the layer that served the document, and not even then where the spelling holds a `..` element: such
-a miss goes to the configured sources alone, so `sub/../c.xacro` in the document, through a linked
-`sub` with nothing at `a/c.xacro`, refuses as the reference refuses it. A relative include in a
+a miss goes to the configured sources alone, so on POSIX `sub/../c.xacro` in the document, through a
+linked `sub` with nothing at `a/c.xacro`, refuses as the reference refuses it. On Windows the path
+interfaces reduce `sub/..` before any link is consulted, so that spelling names the `c.xacro` beside
+the named path, and measured there the load succeeds instead of refusing. A relative include in a
 document a memory source served, a layer that serves bytes, is asked of that layer first, with or
 without a `..` element, and nothing beside the file the layer materialized decides it, so it resolves
 the same whatever an earlier include made the layer write, and only what the layer lacks goes to the
@@ -565,39 +567,46 @@ layer that served it whatever an earlier include wrote, and no lower layer's fil
 read beside a document a path-naming layer served passes its own misses to that layer only where its
 spelling holds no `..` element and the directory the document was named in admitted it, so neither a
 file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a linked `sub`
-is answered from the layer, and the second refuses its miss as the reference refuses it, as the
-`load_served_layer` and `cli_package_path` cases pin. Where neither holds the file, the filename is
-then looked for through the configured sources, which the reference does not consult, so a document the
-reference refuses for want of that file can render here. That fallback answers a genuine miss only: a
-spelling through a path element that is not a directory refuses before any fallback even where a
-configured root holds the name, as the reference refuses it, within the platform bound stated below for
-the `..` spelling. A document expanded under no name looks for nothing beside it, where the reference's
-library entry anchors it at the working directory. A `..` that climbs back inside the directory,
-`sub/../x.xacro`, is joined as written and judged where the operating system resolves it, as the
-reference reads it, so through a linked `sub` it is read where the link leads if one of those admitting
-directories holds that, and refused as an outside link otherwise. Through a path element that is not a
+is answered from the layer, and on POSIX the second refuses its miss as the reference refuses it. On
+Windows `sub/../b.xacro` names the `b.xacro` beside the named path instead, and measured there through
+`$(find)` the load succeeds instead of refusing. The `load_served_layer` and `cli_package_path` cases
+pin both readings, which file the Windows loads read included. Where neither holds the file, the
+filename is then looked for through the configured sources, which the reference does not consult, so a
+document the reference refuses for want of that file can render here. That fallback answers a genuine
+miss only: a spelling through a path element that is not a directory refuses before any fallback even
+where a configured root holds the name, as the reference refuses it, within the platform bound stated
+below for the `..` spelling. A document expanded under no name looks for nothing beside it, where the
+reference's library entry anchors it at the working directory. A `..` that climbs back inside the
+directory, `sub/../x.xacro`, is joined as written and judged where the operating system resolves it, as
+the reference reads it, so on POSIX, through a linked `sub`, it is read where the link leads if one of
+those admitting directories holds that, and refused as an outside link otherwise. On Windows the path
+interfaces reduce `sub/..` before any link is consulted, so the spelling names the file beside the
+document whatever `sub` links to, and no link is followed: measured there, an include of it with an
+`x.xacro` beside the document loads where POSIX refuses it, and one through a link into a configured
+root with none beside the document refuses for want of it. Through a path element that is not a
 directory, a regular file `f.txt`, `f.txt/x.xacro` refuses on every operating system, because each
 element before the last is checked and one that exists and is not a directory refuses;
 `f.txt/../x.xacro` refuses where the operating system reports `f.txt` as not a directory, as a POSIX
-system does, and on Windows the path interfaces are assumed to reduce `f.txt/..` first and read the
-file beside the document, as the reference would there. On Linux both sides refuse both spellings with
+system does, and on Windows the path interfaces reduce `f.txt/..` first and read the file beside the
+document, as the reference would there. On Linux both sides refuse both spellings with
 "Not a directory", as the `xacro_include_read` and `yaml_resource` cases pin, a case per spelling. The
 `..` ones, `xacro_include_read.an include spelled back out of a file that is not a directory refuses on
 POSIX and reads the file beside the document on Windows, and no configured source's copy stands in` and
 `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
-file beside the document on Windows, and no configured root's copy stands in`, assert the assumed
-reading on Windows, so a Windows run of the suite decides it; none has run, and it is unmeasured. Two
-shapes still differ. Through a `sub` that does not exist the missing tail is reduced by its spelling,
-and the file beside the document is read where the reference refuses. And where `sub` is a link and
-nothing is at `sub/../x.xacro` as the operating system reads it, the miss is looked for under the
-spelling's lexical reduction, `x.xacro`, in the configured sources, so a copy one of them holds can
-render where the reference refuses, and a layer that served the document as bytes is asked for that
-reduction first, as above; [known limitations](known-limitations.md) gives the measured shapes. Two lookups the reference
-makes are refused here by default: a filename climbing above that directory with `..` refuses as
-climbing above the directory of the document that writes it, and a link beside the document whose
-target lies under none of the directories that admit it refuses under `uncontained_asset`. The
-reference reads both. Each is a reviewed divergence, so the comparison fails if it stops reproducing
-exactly as much as it fails if a new one appears.
+file beside the document on Windows, and no configured root's copy stands in`, assert that reading on
+Windows, where it is measured: the include and the auxiliary document read the file beside the document
+with no configured root's copy standing in, and the auxiliary document's genuine miss still reads from
+the root. Two shapes still differ. Through a `sub` that does not exist the missing tail is reduced by
+its spelling, and the file beside the document is read where the reference refuses. And where `sub` is
+a link and nothing is at `sub/../x.xacro` as the operating system reads it, the miss is looked for
+under the spelling's lexical reduction, `x.xacro`, in the configured sources, so a copy one of them
+holds can render where the reference refuses, and a layer that served the document as bytes is asked
+for that reduction first, as above; [known limitations](known-limitations.md) gives the measured
+shapes. Two lookups the reference makes are refused here by default: a filename climbing above that
+directory with `..` refuses as climbing above the directory of the document that writes it, and a link
+beside the document whose target lies under none of the directories that admit it refuses under
+`uncontained_asset`. The reference reads both. Each is a reviewed divergence, so the comparison fails
+if it stops reproducing exactly as much as it fails if a new one appears.
 
 **Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
 carries `climb_above_document`, which admits a relative include whose spelling leaves its document's
@@ -626,11 +635,12 @@ Setting one lets a description read any file the process can open, except that a
 layer naming no paths served stays inside that document's package, so it is a decision about how far
 the description is trusted, not about parity.
 
-**An absolute include filename refuses here and is read there.** The reference opens an include
-written as an absolute path where it points. Here the leading separator is dropped and the rest is
-looked for only through the configured sources, so an include stays inside the roots the caller
-configured, and where none of them holds it the load refuses. This is a reviewed divergence, so the
-comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+**An absolute include filename refuses here and is read there.** The reference opens an include written
+as an absolute path where it points. Here the root is dropped, the leading separator and on Windows a
+drive letter and colon before it, and the rest is looked for only through the configured sources, so an
+include stays inside the roots the caller configured, and where none of them holds it the load refuses.
+This is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it
+fails if a new one appears.
 
 **A `package://` include filename resolves here and is refused there.** The reference does not read
 `package://` in an include filename as a package reference: it joins the spelling onto the directory
@@ -984,11 +994,11 @@ root holding the file and, with no configured root, refuses where the reference 
 `load_beside_root` cases pin. A spelling through a path element that is not a directory, `f.txt` a
 regular file, refuses as it refuses there, and no configured root's copy stands in: `f.txt/x.yaml` on
 every operating system, and `f.txt/../x.yaml` where the operating system reports `f.txt` as not a
-directory, with Windows, whose path interfaces are assumed to reduce `f.txt/..` first and read the file
-beside the document. The two `yaml_resource` cases, one per spelling, pin it, and the `..` one,
-`yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
-file beside the document on Windows, and no configured root's copy stands in`, asserts the assumed
-reading on Windows, so a Windows run of the suite decides it; none has run, and it is unmeasured. A
+directory. Windows, whose path interfaces reduce `f.txt/..` first, reads the file beside the document,
+with no configured root's copy standing in, and still reads a genuine miss from the root, as measured
+there. The two `yaml_resource` cases, one per spelling, pin it, and the `..` one, `yaml_resource.a
+spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the
+document on Windows, and no configured root's copy stands in`, asserts that reading on Windows. A
 link beside the document leading under none of those directories refuses under `uncontained_asset` with
 no configured root's same-named copy standing in, unless the caller sets
 `include_options::follow_outside_links`. A followed link's answer is final: a link to nothing, a
