@@ -58,7 +58,11 @@ order is what leaves `1` an integer rather than a true, and `yes` and `no` strin
 booleans. So `<xacro:property name="hand" value="false"/>`
 followed by `${'' if hand else prefix}` takes the branch a reader expects; a non-empty string would
 take the other one. The same reading is applied to whatever an expression evaluates to, so
-`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
+`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does. A property's value is evaluated
+where the property is written, against the bindings above it, where the reference stores the text and
+evaluates it when the name is read, so a property whose value fails refuses here even if nothing
+reads it, and one naming a property written below it refuses here and renders there;
+[known limitations](known-limitations.md#expression-evaluation) records the measurement.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An
 argument — a declared default, or an override a caller hands the load — binds the characters that
@@ -396,14 +400,24 @@ straight after a span is lexed before the span is evaluated, because the referen
 token ahead: `${nope}$$x` refuses with "invalid expression: $$x" on both sides rather than for the
 undefined name, and `${nope}${x` refuses as an unterminated span here and with "invalid expression:
 ${x" there. Exactly one token is looked at, so `${nope}a$$x` refuses for the undefined name on both
-sides. A single `$` before anything but an opener stays text, as `$x` does on both sides. The
+sides. A following `${` token ends at its first `}`, as the reference's pattern has it, so
+`${nope}${'a}'` and `${nope}${a{b}` refuse for the undefined name on both sides, while a span's own
+close stays quote-aware, the difference recorded below. In an include filename the token after a
+leading `$(find …)` is lexed before that command's package text is evaluated, and the package is
+resolved before the rest of the filename is read, as the reference evaluates the find first:
+`$(find ${nope})$$x` refuses with "invalid expression" on both sides, and `$(find nopkg)/${nope}.xacro`
+and `$(find )/c.xacro` refuse for the package on both sides, under `unresolved_find` here. A single `$`
+before anything but an opener stays text, as `$x` does on both sides. The
 `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
 `dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, with
 `dollar_run_in_argument_default`, `dollar_run_in_unused_argument_default` and
-`dollar_run_in_redeclared_argument_default` for an argument's default, and
+`dollar_run_in_redeclared_argument_default` for an argument's default,
 `dollar_run_after_undefined_name`, `dollar_run_after_unset_argument`,
 `dollar_run_after_division_by_zero` and `unterminated_span_after_undefined_name` for the token after a
-span, beside the `xacro_dollar_run`, `xacro_arg_declaration` and `xacro_lex_lookahead` cases and
+span, `include_dollar_run_after_find` and `include_unterminated_span_after_find` for the token after an
+include's find, and `include_missing_package_before_undefined_name` and `include_find_without_package`
+for its package resolved first, beside the `xacro_dollar_run`, `xacro_arg_declaration`,
+`xacro_lex_lookahead` and `xacro_include_find` cases and
 `arg_scan.scan_args lists no argument a run of dollars escapes`, which keeps an escaped `$(arg …)` out
 of the argument listing. `${'$${x}'}` renders `${x}` here and refuses there, which is the closing brace
 inside a string literal, recorded below; it adds no difference of its own.
@@ -413,10 +427,12 @@ it.** A later declaration of the same name binds nothing, so a second default ne
 first nor rescues one that refuses, and a declaration the expansion never reaches, in a branch not
 taken or a macro never called, binds nothing where a reached declaration follows it. A declaration in
 an included file the expansion reaches first binds before the including document's own, and one in a
-macro body binds on the first call. The `argument_redeclared_after_refusing_default`,
-`argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`,
-`argument_declared_in_uncalled_macro` and `argument_declared_in_include_first` agreement probes hold
-this against a fresh upstream render, beside the `xacro_arg_declaration` cases. What a use above every
+macro body binds on the first call. The declaration the expansion reaches reads its default with no
+lent value bound, so a `$(arg a)` in it refuses as unset, as the reference refuses it. The
+`argument_redeclared_after_refusing_default`, `argument_redeclared_after_expression_default`,
+`argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro`,
+`argument_declared_in_include_first` and `argument_default_reads_itself_before_redeclaration`
+agreement probes hold this against a fresh upstream render, beside the `xacro_arg_declaration` cases. What a use above every
 reached declaration reads, and what a declaration the expansion never reaches still lends where none is
 reached, [known limitations](known-limitations.md) records.
 
@@ -459,13 +475,17 @@ lives in, or under a configured package root, which under `meios::load` are
 passes; with none, only the document's two directories admit. A document opened through a symlinked
 install tree therefore reads the siblings that link into the directory it really lives in, and a
 sibling linked into a configured root is read through that root. A document a directory, bundle or ROS
-layer served is read beside the path it was named by, and one a memory source served beside the file
-that source materialized for it. Only where nothing is there is the sibling asked of the layer that
-served the document, and not even then where the spelling holds a `..` element and that layer names
-paths, as a directory, bundle or ROS layer does: such a miss goes to the configured sources alone, so
-`sub/../c.xacro` in the document, through a linked `sub` with nothing at `a/c.xacro`, refuses as the
-reference refuses it, while a layer that serves bytes is still asked, as the `load_served_layer` cases
-pin for both. A file read beside such a document passes its own misses to that layer only where its
+layer served is read beside the path it was named by. Only where nothing is there is the sibling asked
+of the layer that served the document, and not even then where the spelling holds a `..` element: such
+a miss goes to the configured sources alone, so `sub/../c.xacro` in the document, through a linked
+`sub` with nothing at `a/c.xacro`, refuses as the reference refuses it. A relative include in a
+document a memory source served, a layer that serves bytes, is asked of that layer first, with or
+without a `..` element, and nothing beside the file the layer materialized decides it, so it resolves
+the same whatever an earlier include made the layer write, and only what the layer lacks goes to the
+configured sources. The `load_served_layer` cases pin both, the second by
+`load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the
+layer that served it whatever an earlier include wrote, and no lower layer's file stands in`. A file
+read beside a document a path-naming layer served passes its own misses to that layer only where its
 spelling holds no `..` element and the directory the document was named in admitted it, so neither a
 file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a linked `sub`
 is answered from the layer, and the second refuses its miss as the reference refuses it, as the
@@ -493,9 +513,9 @@ reading on Windows, so a Windows run of the suite decides it; none has run, and 
 shapes still differ. Through a `sub` that does not exist the missing tail is reduced by its spelling,
 and the file beside the document is read where the reference refuses. And where `sub` is a link and
 nothing is at `sub/../x.xacro` as the operating system reads it, the miss is looked for under the
-spelling's lexical reduction, `x.xacro`, in the configured sources, and in the layer that served the
-document only where that layer serves bytes, so a copy one of them holds can render where the reference
-refuses; [known limitations](known-limitations.md) gives the measured shapes. Two lookups the reference
+spelling's lexical reduction, `x.xacro`, in the configured sources, so a copy one of them holds can
+render where the reference refuses, and a layer that served the document as bytes is asked for that
+reduction first, as above; [known limitations](known-limitations.md) gives the measured shapes. Two lookups the reference
 makes are refused here by default: a filename climbing above that directory with `..` refuses as
 climbing above the directory of the document that writes it, and a link beside the document whose
 target lies under none of the directories that admit it refuses under `uncontained_asset`. The
@@ -688,10 +708,15 @@ What is compared, exactly:
   `dollar_run_inside_expression`, `include_escaped_find`, an include whose run of dollars escapes its
   `$(find …)`, the three `dollar_run_in_` documents, a stray run in an argument's default read, unread
   and redeclared, and four over the token after a span, the three `dollar_run_after_` documents and
-  `unterminated_span_after_undefined_name`. Five more hold an argument's default to the declaration the
-  expansion reaches first: the two `argument_redeclared_` documents,
-  `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro` and
-  `argument_declared_in_include_first`. The meios side is what the load path builds, under the caller
+  `unterminated_span_after_undefined_name`. Four more hold an include filename's leading `$(find …)` to
+  the reference's order: `include_dollar_run_after_find` and `include_unterminated_span_after_find`
+  over the token after it, and `include_missing_package_before_undefined_name` and
+  `include_find_without_package` over its package resolved before the rest of the filename. Six more
+  hold an argument's default to the declaration the expansion reaches first: the two
+  `argument_redeclared_` documents, `argument_declared_in_skipped_branch`,
+  `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
+  `argument_default_reads_itself_before_redeclaration`, whose default reads its own name before a
+  later declaration. The meios side is what the load path builds, under the caller
   arguments a consumer would hand it, written back out by the serializer the command line flattens
   with; the expansion alone is held to the same render beside it. Two refusals agree only on their
   cause: upstream's own wording and this side's diagnostic code, both named per document, so a fixture
