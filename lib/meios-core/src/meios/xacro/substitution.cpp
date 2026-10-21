@@ -1,4 +1,5 @@
 #include "eval_session.h"
+#include "substitution_lex.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/substitution.h"

@@ -1,13 +1,17 @@
+#include "xacro_read_probe.h"
+
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
 
+#include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 #include <utility>
 
 namespace
@@ -18,13 +22,18 @@ using expansion_result = meios::expected<meios::expansion, meios::expansion_erro
 const std::string head = "<robot name=\"p\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">\n"
                          "<xacro:property name=\"x\" value=\"vx\"/><xacro:arg name=\"y\" default=\"Y\"/>\n";
 
-expansion_result expand_doc(const std::string &body, meios::eval_policy policy = meios::eval_policy::fail)
+expansion_result expand_doc(const std::string &body, meios::eval_policy policy, meios::log_sink &log)
 {
-    meios::log_sink_f log{ [](auto &&...) {} };
     meios::source_stack sources{};
     meios::eval_scope scope;
     return meios::expand(head + body + "</robot>", scope, sources, "inline.xacro",
                          meios::expansion_limits{}, policy, {}, log);
+}
+
+expansion_result expand_doc(const std::string &body, meios::eval_policy policy = meios::eval_policy::fail)
+{
+    meios::log_sink_f log{ [](auto &&...) {} };
+    return expand_doc(body, policy, log);
 }
 
 expansion_result expand_name(const std::string &name, meios::eval_policy policy = meios::eval_policy::fail)
@@ -73,7 +82,8 @@ TEST_CASE("an unterminated span straight after a span refuses before the span is
 
 TEST_CASE("a token that lexes after a failing span leaves the span's own cause", "[xacro][lex_lookahead]")
 {
-    for(const char *raw : { "${nope}a$$x", "${nope}$x$$y", "${nope}$${x}$$y", "${nope}$$$(x", "${nope}$", "${nope}${x}$$y" })
+    for(const char *raw : { "${nope}a$$x", "${nope}$x$$y", "${nope}$${x}$$y", "${nope}$$$(x", "${nope}$", "${nope}${x}$$y",
+                            "${nope}${'a}'", "${nope}${a{b}" })
     {
         INFO("raw: " << raw);
         require_refused(expand_name(raw), meios::diagnostic_code::undefined_property, "name 'nope' is not defined");
@@ -118,4 +128,19 @@ TEST_CASE("an expression the core leaves verbatim under a lenient policy is stil
     const expansion_result out = expand_name("${[1, 2]}$x", meios::eval_policy::warn);
     REQUIRE(out.has_value());
     CHECK(out->document.find("name=\"${[1, 2]}$x\"") != std::string::npos);
+}
+
+TEST_CASE("an unterminated span inside a command is not reported as kept verbatim under a lenient policy",
+          "[xacro][lex_lookahead]")
+{
+    std::vector<xacro_probe::captured> records;
+    meios::log_sink_f log{ xacro_probe::recorder{ records } };
+    const expansion_result out = expand_doc("<link name=\"${[1, 2]}$(arg ${x)\"/>", meios::eval_policy::warn, log);
+    REQUIRE_FALSE(out.has_value());
+    CHECK(out.error().code == meios::diagnostic_code::unterminated_substitution);
+    CHECK(xacro_probe::coded(records, meios::diagnostic_code::unterminated_substitution) == 1);
+    CHECK(xacro_probe::coded(records, meios::diagnostic_code::unsupported_expression) == 1);
+    for(const xacro_probe::captured &r : records)
+        if(r.code == meios::diagnostic_code::unterminated_substitution)
+            CHECK(r.lvl == meios::level::error);
 }

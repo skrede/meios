@@ -46,6 +46,7 @@ inline std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
 }
 
 // Upstream's tokens, tried in order: ^\$\$+(\{|\(), ^\$\{[^\}]*\}, ^\$\([^\)]*\), [^$]+|\$[^{($]+|\$$.
+// Only this lookahead token ends at its first brace; a span's own close is still found quote-aware.
 inline bool lexes_at(std::string_view raw, std::size_t at)
 {
     if(at + 1 >= raw.size() || raw[at] != '$')
@@ -57,7 +58,7 @@ inline bool lexes_at(std::string_view raw, std::size_t at)
         return end != std::string_view::npos && (raw[end] == '{' || raw[end] == '(');
     }
     if(next == '{')
-        return find_expr_close(raw, at + 1) != std::string_view::npos;
+        return raw.find('}', at + 2) != std::string_view::npos;
     if(next == '(')
         return find_cmd_close(raw, at + 1) != std::string_view::npos;
     return true;
