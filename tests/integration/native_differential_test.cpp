@@ -2,6 +2,7 @@
 #include "differential_seed.h"
 #include "differential_agreement.h"
 #include "differential_document.h"
+#include "differential_divergence.h"
 
 #include "../model_facts.h"
 #include "../corpus_record.h"

@@ -43,7 +43,8 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "include_outside_link",
                    "include_package_filename",
                    "find_relative_root",
-                   "find_dotted_root")
+                   "find_dotted_root",
+                   "property_forward_reference")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # A committed fixture cannot spell a machine's absolute path, so these probes are handed the

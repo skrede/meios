@@ -4,21 +4,15 @@
 #include "differential_xml.h"
 #include "differential_seed.h"
 
-#include "../differential_verdict.h"
-
 #include <meios/xacro.h>
 
 #include <meios/io/source_stack.h>
 #include <meios/io/source_handle.h>
 #include <meios/io/directory_source.h>
 
-#include <catch2/catch_test_macros.hpp>
-
 #include <array>
-#include <tuple>
 #include <memory>
 #include <string>
-#include <vector>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -48,7 +42,7 @@ struct document_probe
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 12> document_probes{
+inline constexpr std::array<document_probe, 13> document_probes{
         document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
         document_probe{false, "argument_helper_call"},     document_probe{false, "argument_above_declaration"},
         document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
@@ -56,6 +50,7 @@ inline constexpr std::array<document_probe, 12> document_probes{
         document_probe{false, "include_outside_link"},     document_probe{false, "include_package_filename", false, true},
         document_probe{false, "find_relative_root", false, false, "find_relative_root.d"},
         document_probe{false, "find_dotted_root", false, false, "./find_dotted_root.d", true},
+        document_probe{false, "property_forward_reference"},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -138,57 +133,6 @@ inline std::string observed_document(const document_probe &one)
     const meios::expected<meios::expansion, meios::expansion_error> rendered = meios::expand(
         source, scope, sources, fixture, meios::expansion_limits{}, silent);
     return rendered.has_value() ? meios::canonical_xml(rendered->document) : std::string("REFUSED");
-}
-
-using verdicts = std::vector<std::tuple<std::string, std::string, std::string>>;
-
-inline std::string upstream_render(const std::string &renders_dir, const std::string &id)
-{
-    const std::filesystem::path scratch = render_path(renders_dir, id, ".txt");
-    REQUIRE(std::filesystem::exists(scratch));
-    return trimmed(slurp(scratch));
-}
-
-// A refusing render carries upstream's own wording after the verdict, which no manifest column can
-// hold: a tab is the column separator. Both sides therefore record the verdict, and the wording of
-// a refusal is what expressions.cases exists to carry.
-inline std::string upstream_value(const std::string &rendered)
-{
-    return refused(rendered) ? std::string("REFUSED") : rendered;
-}
-
-// A whole document is carried as the project's own canonical text, so attribute order and
-// insignificant whitespace are not a difference and the row stays one line.
-inline std::string upstream_document(const std::string &rendered)
-{
-    return refused(rendered) ? std::string("REFUSED") : meios::canonical_xml(rendered);
-}
-
-inline void record_divergence(const std::vector<oracle::row> &manifest, const std::string &id,
-                              const std::string &upstream_text, const std::string &meios_value,
-                              verdicts &observed)
-{
-    REQUIRE(upstream_text != meios_value);
-    std::string detail;
-    if(!matches_manifest(manifest, id, upstream_text, meios_value, detail))
-        FAIL(detail);
-    observed.emplace_back(id, upstream_text, meios_value);
-}
-
-inline void compare_divergence_probe(const probe &one, const std::string &renders_dir, const std::vector<oracle::row> &manifest, verdicts &observed)
-{
-    const std::string id(one.id);
-    INFO("probe " << id << ": " << one.expression);
-    const std::string rendered = upstream_render(renders_dir, id);
-    record_divergence(manifest, id, upstream_value(rendered), observed_value(one), observed);
-}
-
-inline void compare_document_probe(const document_probe &one, const std::string &renders_dir, const std::vector<oracle::row> &manifest, verdicts &observed)
-{
-    const std::string id(one.id);
-    INFO("document probe " << id);
-    const std::string rendered = upstream_render(renders_dir, id);
-    record_divergence(manifest, id, upstream_document(rendered), observed_document(one), observed);
 }
 
 #endif
