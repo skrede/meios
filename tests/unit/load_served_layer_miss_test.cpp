@@ -4,6 +4,7 @@
 
 #include <meios/io/source_stack.h>
 #include <meios/io/memory_source.h>
+#include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
@@ -37,6 +38,20 @@ std::string only_link(const load_outcome &loaded)
         return {};
     }
     return loaded->robot.links.size() == 1 ? loaded->robot.links.front().name : std::string{};
+}
+
+std::string sets_go(std::string_view value)
+{
+    return "<xacro:property name=\"go\" value=\"" + std::string(value) + "\"/>";
+}
+
+meios::memory_source serving_package(meios::log_sink &log, const std::string &top)
+{
+    meios::memory_source bytes{log};
+    bytes.add("p", "urdf/top.xacro", top);
+    bytes.add("p", "urdf/c.xacro", include_tree::robot("<xacro:if value=\"${go}\">" + include_tree::include("d.xacro") + "</xacro:if>"));
+    bytes.add("p", "urdf/d.xacro", include_tree::binds("from_d"));
+    return bytes;
 }
 
 }
@@ -77,4 +92,29 @@ TEST_CASE("a byte-served document's sibling spelled through a parent element is 
 
     const std::filesystem::path top = held.write("T/top.xacro", include_tree::reads_leaf("$(find p)/urdf/top.xacro"));
     CHECK(only_link(meios::load(top, {}, sources, log)) == "bytes_c");
+}
+
+TEST_CASE("a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in", "[urdf][load][include][source]")
+{
+    const include_tree::tree held;
+    held.write("L/d.xacro", include_tree::binds("WRONG_root_d"));
+    const std::filesystem::path top = held.write("T/top.xacro", include_tree::reads_leaf("$(find p)/urdf/top.xacro"));
+    const std::string climbs = sets_go("true") + include_tree::include("sub/../c.xacro");
+    meios::log_sink silent;
+    meios::capturing_log_sink log{silent};
+
+    for(const auto &[shape, body] : {std::pair{"order-free", include_tree::robot(climbs)},
+                                     std::pair{"ordered", include_tree::robot(sets_go("false") + include_tree::include("c.xacro") + climbs)}})
+    {
+        DYNAMIC_SECTION(shape << " over the memory layer alone")
+        {
+            meios::source_stack sources{serving_package(log, body)};
+            CHECK(only_link(meios::load(top, {}, sources, log)) == "from_d");
+        }
+        DYNAMIC_SECTION(shape << " over a directory layer holding its own d.xacro")
+        {
+            meios::source_stack sources{serving_package(log, body), meios::directory_source{held.root() / "L", log}};
+            CHECK(only_link(meios::load(top, {}, sources, log)) == "from_d");
+        }
+    }
 }
