@@ -14,10 +14,15 @@ struct include_target
 {
     std::string package;
     std::string relative;
-    std::optional<std::size_t> find_close;
 };
 
 include_target split_target(std::string_view raw);
+
+bool is_separator(char c);
+
+// The end of the leading elements of `text` that are exactly `directory`'s, with `.` and empty elements
+// dropped and `..` kept; empty when they differ or one is rooted and the other is not.
+std::optional<std::size_t> directory_prefix(std::string_view text, std::string_view directory);
 
 std::string normalize_relative(std::string_view rel, bool &escaped);
 

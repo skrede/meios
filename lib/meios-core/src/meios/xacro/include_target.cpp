@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstddef>
 #include <optional>
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -16,6 +17,31 @@ namespace
 
 constexpr std::string_view separators = std::filesystem::path::preferred_separator == '\\' ? std::string_view("/\\") : std::string_view("/");
 
+struct element
+{
+    std::string_view text;
+    std::size_t end;
+};
+
+std::vector<element> elements(std::string_view text)
+{
+    std::vector<element> out;
+    for(std::size_t i = 0; i <= text.size();)
+    {
+        const std::size_t slash = std::min(text.find_first_of(separators, i), text.size());
+        const std::string_view seg = text.substr(i, slash - i);
+        if(!seg.empty() && seg != ".")
+            out.push_back(element{ seg, slash });
+        i = slash + 1;
+    }
+    return out;
+}
+
+bool rooted(std::string_view text)
+{
+    return !text.empty() && is_separator(text.front());
+}
+
 }
 
 include_target split_target(std::string_view raw)
@@ -25,16 +51,27 @@ include_target split_target(std::string_view raw)
         std::string_view rest = raw.substr(10);
         std::size_t slash = rest.find('/');
         if(slash == std::string_view::npos)
-            return { std::string(rest), {}, std::nullopt };
-        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)), std::nullopt };
+            return { std::string(rest), {} };
+        return { std::string(rest.substr(0, slash)), std::string(rest.substr(slash + 1)) };
     }
-    std::size_t close = raw.rfind("$(find ", 0) == 0 ? raw.find(')') : std::string_view::npos;
-    if(close == std::string_view::npos)
-        return { {}, std::string(raw), std::nullopt };
-    std::string_view after = raw.substr(close + 1);
-    if(!after.empty() && after.front() == '/')
-        after.remove_prefix(1);
-    return { std::string(raw.substr(7, close - 7)), std::string(after), close };
+    return { {}, std::string(raw) };
+}
+
+bool is_separator(char c)
+{
+    return separators.find(c) != std::string_view::npos;
+}
+
+std::optional<std::size_t> directory_prefix(std::string_view text, std::string_view directory)
+{
+    const std::vector<element> held    = elements(directory);
+    const std::vector<element> written = elements(text);
+    if(held.empty() || written.size() < held.size() || rooted(text) != rooted(directory))
+        return std::nullopt;
+    for(std::size_t i = 0; i < held.size(); ++i)
+        if(written[i].text != held[i].text)
+            return std::nullopt;
+    return written[held.size() - 1].end;
 }
 
 std::string normalize_relative(std::string_view rel, bool &escaped)

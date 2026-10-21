@@ -1,12 +1,10 @@
 #include "substitution_lex.h"
+#include "substitution_find.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_render.h"
-
-#include "meios/io/source_stack.h"
-#include "meios/io/resolved_asset.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -45,18 +43,6 @@ std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std:
 void note_env_read(subst_ctx &ctx, std::string_view name)
 {
     ctx.log.log(level::info, "read of environment variable \"" + std::string(name) + '"');
-}
-
-std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
-{
-    std::pair<std::string_view, std::string_view> parts = split_first(rest);
-    if(parts.first.empty())
-        return fail(ctx, diagnostic_code::unresolved_find, "$(find) requires a package name");
-    const std::optional<resolved_asset> hit = ctx.sources.locate(parts.first, parts.second, ctx.log);
-    if(!hit)
-        return fail(ctx, diagnostic_code::unresolved_find,
-                    "$(find " + std::string(parts.first) + ") did not resolve");
-    return hit->named().value_or(hit->path()).generic_string();
 }
 
 // A collection has no text form, so the argument is reported unresolved rather than written into

@@ -103,6 +103,8 @@ std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string
         return eval_expr(ctx, resolved, ctx.scope);
     if(leading_command(resolved) != "eval" && refuse_command_text(ctx, resolved, "$("))
         return std::nullopt;
+    if(ctx.include)
+        ctx.include->span_offset = span_offset;
     return dispatch(ctx, resolved);
 }
 

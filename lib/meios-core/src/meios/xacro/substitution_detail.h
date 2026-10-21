@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_SUBSTITUTION_DETAIL_H
 
 #include "eval_session.h"
+#include "substitution_find.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
@@ -77,7 +78,7 @@ struct subst_ctx
               const source_location &anchor = {})
         : log(sink), sources(pkg_sources), scope(names), session(load), core(load), document(doc),
           at(anchor), node_anchor(anchor), mode(policy), backend(inject),
-          last_kind(eval_failure_kind::none), terminal()
+          last_kind(eval_failure_kind::none), terminal(), include()
     {
     }
 
@@ -102,6 +103,8 @@ struct subst_ctx
     pugi::xml_node host{};
     std::string_view host_text{};
     std::optional<std::size_t> attr_index{};
+    // Present only while an include filename is substituted; the find command records each package it renders.
+    std::optional<include_record> include;
 };
 
 inline void record_terminal(subst_ctx &ctx, const expansion_error &cause)

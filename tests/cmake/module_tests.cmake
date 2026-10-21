@@ -3,7 +3,8 @@
 # so a stem reaching the diagnostic seam through a module header compiles.
 foreach(stem IN ITEMS
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
-        xacro_macro_defaults xacro_macro_call xacro_block xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find xacro_include_resolution
+        xacro_macro_defaults xacro_macro_call xacro_block xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
+        xacro_include_spelling xacro_include_bytes xacro_include_resolution
         xacro_include_precedence xacro_include_identity xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
         xacro_budget xacro_depth xacro_arg xacro_arg_declaration xacro_arg_domain xacro_eval_command xacro_unsupported
