@@ -402,21 +402,18 @@ undefined name, and `${nope}${x` refuses as an unterminated span here and with "
 ${x" there. Exactly one token is looked at, so `${nope}a$$x` refuses for the undefined name on both
 sides. A following `${` token ends at its first `}`, as the reference's pattern has it, so
 `${nope}${'a}'` and `${nope}${a{b}` refuse for the undefined name on both sides, while a span's own
-close stays quote-aware, the difference recorded below. In an include filename the token after a
-leading `$(find …)` is lexed before that command's package text is evaluated, and the package is
-resolved before the rest of the filename is read, as the reference evaluates the find first:
-`$(find ${nope})$$x` refuses with "invalid expression" on both sides, and `$(find nopkg)/${nope}.xacro`
-and `$(find )/c.xacro` refuse for the package on both sides, under `unresolved_find` here. A single `$`
-before anything but an opener stays text, as `$x` does on both sides. The
+close stays quote-aware, the difference recorded below. An include filename is lexed the same way,
+so after a `$(find …)` in it, `$(find ${nope})$$x` refuses with "invalid expression" on both sides; the
+order its other refusals take is stated with the include filename below. A single `$` before anything
+but an opener stays text, as `$x` does on both sides. The
 `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
 `dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, with
 `dollar_run_in_argument_default`, `dollar_run_in_unused_argument_default` and
 `dollar_run_in_redeclared_argument_default` for an argument's default,
 `dollar_run_after_undefined_name`, `dollar_run_after_unset_argument`,
 `dollar_run_after_division_by_zero` and `unterminated_span_after_undefined_name` for the token after a
-span, `include_dollar_run_after_find` and `include_unterminated_span_after_find` for the token after an
-include's find, and `include_missing_package_before_undefined_name` and `include_find_without_package`
-for its package resolved first, beside the `xacro_dollar_run`, `xacro_arg_declaration`,
+span, and `include_dollar_run_after_find` and `include_unterminated_span_after_find` for the token
+after an include's find, beside the `xacro_dollar_run`, `xacro_arg_declaration`,
 `xacro_lex_lookahead` and `xacro_include_find` cases and
 `arg_scan.scan_args lists no argument a run of dollars escapes`, which keeps an escaped `$(arg …)` out
 of the argument listing. `${'$${x}'}` renders `${x}` here and refuses there, which is the closing brace
@@ -436,15 +433,83 @@ agreement probes hold this against a fresh upstream render, beside the `xacro_ar
 reached declaration reads, and what a declaration the expansion never reaches still lends where none is
 reached, [known limitations](known-limitations.md) records.
 
-**An include filename is a package lookup only where it begins with `$(find …)`.** That command's
-package text is substituted before the lookup, so `$(find ${pk})/urdf/a.xacro` with `pk` bound to `p`
-reads the package `p`'s file on both sides. A `$(find` anywhere else is part of a relative spelling:
-`$$(find p)/urdf/a.xacro`, whose run of dollars escapes it, and `sub/$(find p)/urdf/a.xacro` each
-refuse under `unresolved_include`, as the reference refuses them for want of the file the spelling
-names. A `package://` filename's package text is taken as written, so `package://${pk}/…` refuses here,
-and the reference refuses every `package://` filename. The `include_escaped_find` agreement probe holds
-the escaped spelling against a fresh upstream render, and the three `xacro_dollar_run` include cases
-pin the leading find, its substituted package text and the `package://` text taken as written.
+**An include filename is substituted whole and then read as a path, as the reference reads it.** Every
+include filename but a `package://` one is substituted as text, left to right with the one-token
+lookahead above, and each `$(find …)` in it writes its package's directory as the command writes it
+anywhere. The result is then resolved as a path, and a path whose leading elements are a directory a
+find in the filename rendered is looked up as that package's file. So a padded or substituted package
+name reaches the package: `$(find  p)/urdf/c.xacro`, `$(find p )/urdf/c.xacro`,
+`$(find ${sp})/urdf/c.xacro` with `sp` bound to ` p` and `$(find ${pk})/urdf/c.xacro` with `pk` bound
+to `p` each read `p`'s file on both sides, and so do a find an expression produces,
+`${'$(find p)'}/urdf/c.xacro`, one behind an empty span, `${''}$(find p)/urdf/c.xacro`, and a path
+after the find written `//` or `/./`. A find composed with text that is not a separator does not
+reach its package. `$(find p)urdf/c.xacro` names a directory `purdf` beside the package's own: with
+none there it refuses on both sides, under
+`unresolved_include` here; where `purdf/c.xacro` exists the reference reads it and this side refuses,
+because the filename is then an absolute path no rendered directory leads, which the absolute-filename
+entry below covers. `$(find p)./urdf/c.xacro` and `$(find p)urdf/../urdf/c.xacro` refuse on both sides,
+and so do `x/$(find p)/urdf/c.xacro` and `$$(find p)/urdf/c.xacro`, whose run of dollars escapes the
+find, each for want of the file the text names. The find command takes exactly one package name, in an
+include and anywhere else: `$(find p q)/urdf/c.xacro` and an attribute's `$(find p urdf)` refuse under
+`unresolved_find`, naming the second word, as the reference refuses them with "accepts exactly one
+argument". A path that climbs out of the find's package, `$(find p)/../q/a.xacro`, refuses here as
+escaping the source root, the containment every package-qualified include keeps, while the reference
+reads the sibling package's file; that is the `include_find_climbs_out_of_package` row, a reviewed
+divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a new one
+appears. A `package://` filename is split instead, its package text taken as written, so
+`package://${pk}/…` refuses here, and the reference refuses every `package://` filename. The
+`include_find_padded_package`, `include_find_in_literal`, `include_find_composed`,
+`include_find_two_words`, `find_command_second_word` and `include_escaped_find` agreement probes hold
+the padded, produced, composed, two-word and escaped spellings against a fresh upstream render. The
+`xacro_include_spelling` cases pin the padded, produced, composed, two-word and climbing spellings over
+a directory layer, `xacro_include_find.a find package read from a bound property renders its package's
+file` the bound one, and the `xacro_dollar_run` include cases the substituted package text and the
+`package://` text taken as written; the composition onto an existing `purdf` was measured against the
+pinned reference, and no case pins it. The generated include family below varies the find's spelling,
+its separator and the path after it.
+
+**A find whose package only a layer that serves bytes holds routes to that layer as the filename's
+first token alone.** A memory source names no paths, so such a find has no directory to write. As the
+filename's first token, followed by a separator or by nothing, it routes the rest of the filename to the
+source stack as that package's file: `$(find p)/urdf/a.xacro` and `$(find  p)/urdf/a.xacro` read the
+memory layer's file, and a memory layer stacked above a directory layer holding the same package
+outranks it. Anywhere else, after text, inside a span, beside a second find or followed by text that is
+not a separator, the include refuses under `unresolved_include`, naming the package and saying that no
+layer naming paths holds it. The `xacro_include_bytes` cases pin these; a find beside a second find was
+measured with a library program and no case pins it. The reference has no such layer, so nothing here
+is compared with it.
+
+**An include filename's refusals fall in the order the lexer meets them.** Where every configured
+layer names paths, a token after a span that does not lex refuses before the span is evaluated, a
+span's inner text is substituted before its command runs, and a find's package is resolved when the
+lexer reaches it, so a missing package, or a find with none, refuses under `unresolved_find` before the
+rest of the filename is read, as the reference raises for the package first:
+`$(find nopkg)/${nope}.xacro` and `$(find )/c.xacro` refuse for the package on both sides. A second
+word refuses at the find too. Only once the whole filename is substituted is it resolved, and a
+miss then refuses under `unresolved_include` and a climb out of a package under
+`xacro_structural_error`. A refusal's offset is counted into the whole filename, so
+`$(find p)/urdf/${x` refuses as an unterminated span at offset 15. Where a layer that serves bytes is
+configured, a find whose package no layer naming paths holds is decided, as the first token, only
+once the rest of the filename is read: `$(find nopkg)/${nope}.xacro` then refuses for the undefined
+name, under `undefined_property`, and `$(find nopkg)/a.xacro` under `unresolved_include`, naming
+`nopkg/a.xacro`. Anywhere else such a find refuses when the lexer reaches it, as the passage above
+states. The `include_missing_package_before_undefined_name` and
+`include_find_without_package` agreement probes hold the package resolved first against a fresh
+upstream render, beside `xacro_include_find.the package of a leading find is resolved before the rest of
+the filename is substituted`, `xacro_include_spelling.an include filename refuses at its first refusing
+token, at an offset into the whole filename` and, for a layer that serves bytes,
+`xacro_include_bytes.a memory layer's find of a package it does not hold refuses as an unresolved
+include`; the undefined name decided first over such a layer was measured with a library program, and
+no case pins it.
+
+**A glob include filename refuses here and is expanded there.** The reference expands an include
+filename holding `*`, `[` or `?` to the files it matches, in sorted order, and includes nothing where
+none matches. Here an include filename is not globbed, so the pattern is looked for as a file of that
+name and refuses under `unresolved_include`: `$(find p)/urdf/c.xac?o` renders the package's `c.xacro`
+there and refuses here, and `nomatch*.xacro` renders without the include there and refuses here. The
+first is the `include_glob_filename` row, a reviewed divergence, so the comparison fails if it stops
+reproducing exactly as much as it fails if a new one appears; the second was measured against the
+pinned reference and no row carries it.
 
 **`$(find)` writes a package's directory as its root was configured, except that a relative root is
 written absolute and a `.` element dropped.** Through a configured root that is a link the text keeps
@@ -708,10 +773,13 @@ What is compared, exactly:
   `dollar_run_inside_expression`, `include_escaped_find`, an include whose run of dollars escapes its
   `$(find …)`, the three `dollar_run_in_` documents, a stray run in an argument's default read, unread
   and redeclared, and four over the token after a span, the three `dollar_run_after_` documents and
-  `unterminated_span_after_undefined_name`. Four more hold an include filename's leading `$(find …)` to
-  the reference's order: `include_dollar_run_after_find` and `include_unterminated_span_after_find`
-  over the token after it, and `include_missing_package_before_undefined_name` and
-  `include_find_without_package` over its package resolved before the rest of the filename. Six more
+  `unterminated_span_after_undefined_name`. Nine more hold a `$(find …)` to the reference's reading:
+  `include_dollar_run_after_find` and `include_unterminated_span_after_find` over the token after one in
+  an include filename, `include_missing_package_before_undefined_name` and
+  `include_find_without_package` over its package resolved before the rest of the filename,
+  `include_find_padded_package`, `include_find_in_literal`, `include_find_composed` and
+  `include_find_two_words` over its package name and what follows it, and `find_command_second_word`
+  over the one package name it takes in an attribute. Six more
   hold an argument's default to the declaration the expansion reaches first: the two
   `argument_redeclared_` documents, `argument_declared_in_skipped_branch`,
   `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
@@ -746,11 +814,78 @@ documents — the `ur3e` variant and the KR6 — natively and checks them agains
 So agreement with upstream is established on one platform, and of the pinned documents exactly those
 two are established to resolve to the same facts on all three. The rest are established on Linux.
 
-That is the whole of it. The claim extends no further than these documents at these revisions and
-these expression forms. Another vendor's authoring style, another revision of the same upstream, or
-an expression form the closure above does not contain is covered by nothing on this page, and
-[known limitations](known-limitations.md) is where the rest of what is not yet proven is written
-down.
+That is the whole of it. The claim extends no further than these documents at these revisions, these
+expression forms and the input space the next section states. Another vendor's authoring style,
+another revision of the same upstream, or an expression form the closure above does not contain is
+covered by nothing on this page, and [known limitations](known-limitations.md) is where the rest of
+what is not yet proven is written down.
+
+## The input space the comparison was measured over
+
+**That every difference from the reference is either fixed or recorded holds over a stated input
+space, and is not claimed beyond it.** Inside it, a disagreement fails the comparison unless a reviewed
+row records it, and a recorded one that stops reproducing fails it too. A difference outside it is not
+claimed absent, whoever finds it. The space has four parts, each counted on the tree this page
+describes:
+
+- **The pinned corpus documents**: the sixteen entry points above, each compared whole against its
+  record and a fresh upstream render, the `document` rows of
+  `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
+- **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
+  and four authored cases above, which are the `expression` rows of the inventory.
+- **The committed probes**: ninety-five agreement probes, the `agreement` rows of the inventory and the
+  documents the enumeration above names, each held to a fresh upstream render; and the probes whose
+  difference the reviewed manifest `differential_divergences.cases` records, twenty-eight rows of it,
+  fifteen of them document probes and thirteen expression probes, all listed in
+  `tests/tools/oracle/differential_probes.py`.
+- **The generated set**: a committed grammar, `tests/tools/oracle/recorder/generated_families.py`, from
+  which `generated.py` draws two hundred cases in each of three families from one splitmix64 sequence
+  seeded `0x6d65696f73`, six hundred in all: include filenames, `$` shapes in an attribute, and macro
+  parameter lists with the calls that bind them. The include family varies the text before a find, the
+  find's package spelling (padded, substituted, missing, empty, two words, produced by an expression,
+  or no find at all), the separator after it, the path after that and the text after the path; the
+  span family strings together one to six atoms among spans, the `arg` and `find` commands, runs of
+  dollars, braces, parentheses and plain text; the macro family varies a parameter's name, its form
+  and its default, and the call's attributes and children. The pinned reference's verdict for every
+  case is recorded in `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the
+  count per family and the template each family's text is written into, and `generated_differential`
+  compares this side's verdict with that record on every run. A verdict is whether the document refused
+  and, where it rendered, the names of its links in document order, so two refusals agree whatever
+  each says. Five cases disagree, and `tests/golden/oracle/generated_divergences.cases` records each as
+  a reviewed row with its reason: two where a parent element after a find leaves the find's package,
+  the difference the `include_find_climbs_out_of_package` row records; one where a miss beside the
+  document is found through the configured sources, which [known limitations](known-limitations.md)
+  discloses; and two where a block parameter declared twice is bound by one child, the difference the
+  `include_sole_block` row records.
+
+**Most generated include and macro cases test agreement on a refusal, not on a rendering.** Of the two
+hundred cases in each family, the reference renders six include cases, eighty-four span cases and
+twelve macro cases, and refuses the rest. In the include family every non-empty text after the path
+refuses, as do a missing package, an empty find, a find given two words, a missing file and an
+undefined name in the path; in the macro family one hundred and twenty-one of the one hundred and
+eighty-eight refusals are a call attribute naming no declared parameter. A render here where the
+reference refuses is a silent divergence, so agreement on a refusal is a real test, but these two
+families reach few verdicts on which file an include read or what a parameter bound. The span family
+is the one that compares renderings in number.
+
+**What the generated set leaves out, and what carries it instead.** The grammar writes no glob
+character into an include filename; the `include_glob_filename` document probe carries one, under its
+manifest row. It writes no `package://` filename, which the `include_package_filename` row records, and
+no absolute path to a file that exists, which the `include_absolute_path` row records; the few filenames
+it starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
+`dirname`, `env` and `optenv` commands, and no command neither side implements. The `eval_` agreement
+probes compare `eval`, three of the `command_` agreement probes compare `optenv` over an unset
+variable, and the `dirname_command` row records `dirname`; nothing compares `env` with the reference.
+
+**What the generated comparison holds fixed, and what carries each instead.** It runs one directory
+layer under `eval_policy::fail`. A layer that serves bytes has no counterpart in the reference, so no
+case of it can be compared there: the `xacro_include_bytes`, `xacro_include_served` and
+`load_served_layer` cases carry it, against this side's own rule. A stack of more than one layer is
+carried by the `load_served_layer` and `xacro_include_precedence` cases. The lenient policies, `warn`
+and `skip`, are carried by the `xacro_policy_prop` property, which holds that an expansion logging an
+error under either returns no document, and by the `xacro_lex_lookahead` cases. None of these makes a
+claim of agreement with the reference. The record holds no machine path, so the comparison runs in
+every test tree on every platform; so far it has run on Linux alone.
 
 ## What this is not
 
