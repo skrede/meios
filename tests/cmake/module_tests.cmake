@@ -12,7 +12,7 @@ foreach(stem IN ITEMS
         xacro_corpus
         forward_scan
         yaml_resource yaml_resource_containment yaml_resource_followed yaml_grammar yaml_verdict io_concept
-        io_source_stack io_sources)
+        io_source_stack io_sources io_package_join)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
@@ -32,17 +32,20 @@ foreach(stem IN ITEMS
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()
-        # The forward-scan helper, the include-path helpers and the yaml resolver are compiled
-        # core-private symbols, so these stems alone reach into meios-core/src; only forward-scan's
-        # helper takes pugixml handles, so only it links pugixml directly.
-        if(stem STREQUAL "forward_scan" OR stem STREQUAL "xacro_include_target" OR stem STREQUAL "yaml_resource"
-                OR stem STREQUAL "yaml_resource_containment" OR stem STREQUAL "yaml_resource_followed"
-                OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
+        # The forward-scan helper, the include-path helpers, the path grammar and the yaml resolver are
+        # core-private, so these stems alone reach into meios-core/src; only forward-scan's helper takes
+        # pugixml handles, so only it links pugixml directly.
+        if(stem STREQUAL "forward_scan" OR stem STREQUAL "xacro_include_target" OR stem STREQUAL "io_package_join"
+                OR stem STREQUAL "yaml_resource" OR stem STREQUAL "yaml_resource_containment"
+                OR stem STREQUAL "yaml_resource_followed" OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
                 ${meios_SOURCE_DIR}/lib/meios-core/src)
         endif()
         if(stem STREQUAL "forward_scan")
             target_link_libraries(${stem}_test PRIVATE pugixml::pugixml)
+        endif()
+        if(stem STREQUAL "io_package_join")
+            target_link_libraries(${stem}_test PRIVATE meios::bundle)
         endif()
         meios_enable_coverage(${stem}_test)
         meios_warnings(${stem}_test)

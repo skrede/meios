@@ -1,4 +1,5 @@
 #include "xacro_include_tree.h"
+#include "ros_package_fixture.h"
 
 #include <meios/ros/ros_package_source.h>
 
@@ -73,4 +74,18 @@ TEST_CASE("a lookup a directory layer answered is not refused by a ROS crawl of 
             CHECK(log.count(meios::level::info, "\"p/plain.xacro\" also resolved") == 1);
             CHECK(log.count(meios::level::info, "\"p/urdf/a.xacro\" also resolved") == 0);
         }
+}
+
+TEST_CASE("a ROS package lookup whose relative part is rooted names no file, even one inside the package", "[ros][link]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path base = ros_test::ros1_package(held.root() / "ws" / "p", "p");
+    level_recorder log;
+    meios::ros_package_source source({held.root() / "ws"}, {}, log);
+    REQUIRE(source.locate("p", ros_test::mesh).has_value());
+    const std::string rooted = (base / ros_test::mesh).generic_string();
+    CHECK_FALSE(source.locate("p", rooted).has_value());
+    CHECK_FALSE(source.answers("p", rooted));
+    CHECK_FALSE(source.path_of("p", rooted).has_value());
+    CHECK(log.count(meios::level::error, "escapes the configured source root") == 2);
 }

@@ -1,7 +1,9 @@
 #ifndef HPP_GUARD_MEIOS_CORE_IO_PATH_GRAMMAR_H
 #define HPP_GUARD_MEIOS_CORE_IO_PATH_GRAMMAR_H
 
+#include <string>
 #include <cstddef>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -32,6 +34,18 @@ inline std::size_t root_length(std::string_view text, const path_grammar &gramma
 inline bool rooted(std::string_view text, const path_grammar &grammar = native_paths)
 {
     return root_length(text, grammar) != 0;
+}
+
+// A rooted relative part would replace the root it is joined onto rather than name a path under it.
+inline std::optional<std::filesystem::path> join_under(const std::filesystem::path &root, std::string_view package, std::string_view relative,
+                                                       const path_grammar &grammar = native_paths)
+{
+    if(rooted(relative, grammar))
+        return std::nullopt;
+    std::filesystem::path candidate = root / std::string(package);
+    if(!relative.empty())
+        candidate /= std::string(relative);
+    return candidate;
 }
 
 }

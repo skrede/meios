@@ -1,3 +1,4 @@
+#include "path_grammar.h"
 #include "beside_containment.h"
 
 #include "meios/io/directory_source.h"
@@ -29,9 +30,10 @@ std::string package_path(std::string_view package, std::string_view relative)
     return std::string(package) + '/' + std::string(relative);
 }
 
-std::string reject_message(std::string_view package, std::string_view relative)
+void log_rejected(log_sink &log, std::string_view package, std::string_view relative)
 {
-    return "rejected package path \"" + package_path(package, relative) + "\" that escapes the configured source root";
+    log.log(level::error, diagnostic_code::uncontained_asset, source_location{},
+            "rejected package path \"" + package_path(package, relative) + "\" that escapes the configured source root");
 }
 
 std::string undecided_message(std::string_view package, std::string_view relative, const operation_failure &cause)
@@ -89,33 +91,27 @@ detail::contained_path_result detail::try_contained_under(const std::filesystem:
 
 std::optional<std::filesystem::path> detail::contained_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log)
 {
-    const std::filesystem::path candidate     = package_candidate(root, package, relative);
-    std::optional<std::filesystem::path> real = detail::contained_under(root, candidate);
+    const std::optional<std::filesystem::path> candidate = package_candidate(root, package, relative);
+    std::optional<std::filesystem::path> real            = candidate ? detail::contained_under(root, *candidate) : std::nullopt;
     if(!real)
-    {
-        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, reject_message(package, relative));
-        return std::nullopt;
-    }
+        log_rejected(log, package, relative);
     return real;
 }
 
-std::filesystem::path detail::package_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative)
+std::optional<std::filesystem::path> detail::package_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative)
 {
-    std::filesystem::path candidate = root / std::string(package);
-    if(!relative.empty())
-        candidate /= std::string(relative);
-    return candidate;
+    return join_under(root, package, relative);
 }
 
-source_lookup_result detail::try_locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative,
-                                                  log_sink &log)
+source_lookup_result detail::try_locate_contained(const std::filesystem::path &root, const std::optional<std::filesystem::path> &candidate, std::string_view package,
+                                                  std::string_view relative, log_sink &log)
 {
-    const contained_read_result decided = contain_under(root, candidate);
+    const contained_read_result decided = candidate ? contain_under(root, *candidate) : contained_read_result{std::nullopt};
     if(!decided)
         return unexpected<operation_failure>(decided.error());
     if(!*decided)
     {
-        log.log(level::error, diagnostic_code::uncontained_asset, source_location{}, reject_message(package, relative));
+        log_rejected(log, package, relative);
         return std::optional<resolved_asset>{};
     }
     std::error_code error;
@@ -126,11 +122,11 @@ source_lookup_result detail::try_locate_contained(const std::filesystem::path &r
         return unexpected<operation_failure>({operation_kind::status, error});
     if(!std::filesystem::exists(status))
         return std::optional<resolved_asset>{};
-    return std::optional{admitted(**decided, candidate)};
+    return std::optional{admitted(**decided, *candidate)};
 }
 
-std::optional<resolved_asset> detail::locate_contained(const std::filesystem::path &root, const std::filesystem::path &candidate, std::string_view package, std::string_view relative,
-                                                       log_sink &log)
+std::optional<resolved_asset> detail::locate_contained(const std::filesystem::path &root, const std::optional<std::filesystem::path> &candidate, std::string_view package,
+                                                       std::string_view relative, log_sink &log)
 {
     source_lookup_result decided = try_locate_contained(root, candidate, package, relative, log);
     if(decided)
@@ -139,9 +135,11 @@ std::optional<resolved_asset> detail::locate_contained(const std::filesystem::pa
     return std::nullopt;
 }
 
-bool detail::answers_contained(const std::filesystem::path &root, const std::filesystem::path &candidate)
+bool detail::answers_contained(const std::filesystem::path &root, const std::optional<std::filesystem::path> &candidate)
 {
-    const contained_path_result real = try_contained_under(root, candidate);
+    if(!candidate)
+        return false;
+    const contained_path_result real = try_contained_under(root, *candidate);
     std::error_code ec;
     return real && *real && std::filesystem::exists(**real, ec) && !ec;
 }

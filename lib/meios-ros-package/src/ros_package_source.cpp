@@ -3,6 +3,7 @@
 #include "meios/io/directory_source.h"
 
 #include <string>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -13,9 +14,11 @@ namespace meios
 namespace
 {
 
-std::filesystem::path package_file(const std::filesystem::path &base, std::string_view relative)
+std::optional<std::filesystem::path> package_file(const std::filesystem::path &base, std::string_view relative)
 {
-    return relative.empty() ? base : base / relative;
+    if(relative.empty())
+        return base;
+    return detail::package_candidate(base, "", relative);
 }
 
 }
