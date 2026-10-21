@@ -28,9 +28,8 @@ std::string_view leading_command(std::string_view inner)
 
 bool refuse_held(subst_ctx &ctx, std::string_view held)
 {
-    const std::string message = "a command's text holds '" + std::string(held) + "', which a command cannot hold: it ends at its first ')'";
-    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
+    refuse_terminal(ctx, diagnostic_code::unterminated_substitution,
+                    "a command's text holds '" + std::string(held) + "', which a command cannot hold: it ends at its first ')'");
     return true;
 }
 

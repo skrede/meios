@@ -1,3 +1,4 @@
+#include "substitution_lex.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
@@ -37,8 +38,7 @@ std::pair<std::string_view, std::string_view> split_first(std::string_view text)
 
 std::optional<std::string> fail(subst_ctx &ctx, diagnostic_code code, const std::string &message)
 {
-    ctx.log.log(level::error, code, ctx.at, message);
-    record_terminal(ctx, code, message);
+    refuse_terminal(ctx, code, message);
     return std::nullopt;
 }
 

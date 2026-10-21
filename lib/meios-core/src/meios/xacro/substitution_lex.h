@@ -12,6 +12,8 @@ namespace meios::detail
 
 void refine_span_column(subst_ctx &ctx, std::size_t decoded_offset);
 
+bool refuse_terminal(subst_ctx &ctx, diagnostic_code code, const std::string &message);
+
 bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at);
 
 // The reference's lexer reads one token ahead, so a token after a span that does not lex refuses before the span is evaluated.

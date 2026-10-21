@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "reference_names.h"
+#include "substitution_lex.h"
 #include "argument_conversion.h"
 #include "substitution_detail.h"
 
@@ -7,8 +8,6 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_render.h"
 
-#include "meios/diagnostic/level.h"
-#include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
@@ -39,8 +38,7 @@ void bind_reference_names(eval_scope &over)
 
 std::optional<std::string> refuse(subst_ctx &ctx, const std::string &message)
 {
-    ctx.log.log(level::error, diagnostic_code::expression_error, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::expression_error, message);
+    refuse_terminal(ctx, diagnostic_code::expression_error, message);
     return std::nullopt;
 }
 

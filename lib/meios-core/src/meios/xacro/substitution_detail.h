@@ -115,6 +115,8 @@ inline void record_terminal(subst_ctx &ctx, diagnostic_code code, const std::str
     record_terminal(ctx, expansion_error{ ctx.at, message, code, std::nullopt });
 }
 
+bool refuse_recorded(subst_ctx &ctx, const expansion_error &cause);
+
 // The expression-depth axis counts stack frames in units of one recursive entry into the
 // expression grammar, so a nested scan, costing more than one entry, is charged what it costs.
 // Measured on a 512 KiB thread by driving each shape until the process died: 2 424 grammar
@@ -130,7 +132,7 @@ struct span_level
         : ctx(owner), cost(weight), entered(owner.session.enter_span(weight, owner.log, owner.at))
     {
         if(!entered && ctx.session.terminal)
-            record_terminal(ctx, *ctx.session.terminal);
+            refuse_recorded(ctx, *ctx.session.terminal);
     }
 
     span_level(const span_level &) = delete;

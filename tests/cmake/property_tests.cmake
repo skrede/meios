@@ -10,6 +10,17 @@ if(MEIOS_BUILD_PROPERTY_TESTS)
         catch_discover_tests(xacro_eval_prop)
     endif()
 
+    set(xacro_policy_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_policy_prop.cpp)
+    if(EXISTS ${xacro_policy_prop_src})
+        add_executable(xacro_policy_prop ${xacro_policy_prop_src})
+        target_link_libraries(xacro_policy_prop
+            PRIVATE meios::core meios::model meios::io meios::xacro
+                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(xacro_policy_prop)
+        meios_warnings(xacro_policy_prop)
+        catch_discover_tests(xacro_policy_prop TEST_PREFIX "xacro_policy_prop.")
+    endif()
+
     set(native_form_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/native_form_prop.cpp)
     if(EXISTS ${native_form_prop_src})
         add_executable(native_form_prop ${native_form_prop_src})

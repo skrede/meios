@@ -14,18 +14,30 @@
 namespace meios::detail
 {
 
+// A refusal holds under every policy, so marking the kind here keeps any enclosing span from
+// leaving it verbatim.
+bool refuse_terminal(subst_ctx &ctx, diagnostic_code code, const std::string &message)
+{
+    ctx.log.log(level::error, code, ctx.at, message);
+    record_terminal(ctx, code, message);
+    ctx.last_kind = eval_failure_kind::error;
+    return false;
+}
+
+bool refuse_recorded(subst_ctx &ctx, const expansion_error &cause)
+{
+    record_terminal(ctx, cause);
+    ctx.last_kind = eval_failure_kind::error;
+    return false;
+}
+
 namespace
 {
 
 bool refuse_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::size_t base)
 {
     refine_span_column(ctx, base + dollar);
-    const std::string message = "invalid expression: " + std::string(raw.substr(dollar));
-    ctx.log.log(level::error, diagnostic_code::expression_error, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::expression_error, message);
-    // Upstream's lexer refuses under every policy, so no enclosing span may keep this verbatim.
-    ctx.last_kind = eval_failure_kind::error;
-    return false;
+    return refuse_terminal(ctx, diagnostic_code::expression_error, "invalid expression: " + std::string(raw.substr(dollar)));
 }
 
 }
@@ -44,13 +56,8 @@ void refine_span_column(subst_ctx &ctx, std::size_t decoded_offset)
 
 bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at)
 {
-    const std::string message = std::string("unterminated $") + opener
-                              + " substitution span at offset " + std::to_string(at);
-    ctx.log.log(level::error, diagnostic_code::unterminated_substitution, ctx.at, message);
-    record_terminal(ctx, diagnostic_code::unterminated_substitution, message);
-    // An unterminated span refuses under every policy, so no enclosing span may keep it verbatim.
-    ctx.last_kind = eval_failure_kind::error;
-    return false;
+    return refuse_terminal(ctx, diagnostic_code::unterminated_substitution,
+                           std::string("unterminated $") + opener + " substitution span at offset " + std::to_string(at));
 }
 
 bool refuse_follower(subst_ctx &ctx, std::string_view raw, std::size_t at, std::size_t base)

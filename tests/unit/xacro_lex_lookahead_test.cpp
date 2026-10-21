@@ -144,3 +144,46 @@ TEST_CASE("an unterminated span inside a command is not reported as kept verbati
         if(r.code == meios::diagnostic_code::unterminated_substitution)
             CHECK(r.lvl == meios::level::error);
 }
+
+TEST_CASE("a nested command after a span the core leaves verbatim refuses under a lenient policy",
+          "[xacro][lex_lookahead]")
+{
+    for(meios::eval_policy policy : { meios::eval_policy::warn, meios::eval_policy::skip })
+        for(const char *raw : { "${[1, 2]}$(arg $(x))", "${[1, 2]}${'$(arg $(x))'}" })
+        {
+            INFO("raw: " << raw << ", warn: " << (policy == meios::eval_policy::warn));
+            std::vector<xacro_probe::captured> records;
+            meios::log_sink_f log{ xacro_probe::recorder{ records } };
+            const expansion_result out = expand_doc("<link name=\"" + std::string(raw) + "\"/>", policy, log);
+            REQUIRE_FALSE(out.has_value());
+            CHECK(out.error().code == meios::diagnostic_code::unterminated_substitution);
+            CHECK(xacro_probe::coded(records, meios::diagnostic_code::unsupported_expression)
+                  == (policy == meios::eval_policy::warn ? 1u : 0u));
+            CHECK(xacro_probe::coded(records, meios::diagnostic_code::unterminated_substitution) == 1);
+            for(const xacro_probe::captured &r : records)
+                if(r.code == meios::diagnostic_code::unterminated_substitution)
+                    CHECK(r.lvl == meios::level::error);
+        }
+}
+
+// Each nested span charges three expression-depth units, so 86 of them cross the default ceiling of 256.
+TEST_CASE("a span past the expression-depth ceiling after a span the core leaves verbatim refuses under a lenient policy",
+          "[xacro][lex_lookahead]")
+{
+    std::string nested = "${[1, 2]}";
+    for(int i = 0; i < 86; ++i)
+        nested += "${";
+    nested += "1" + std::string(86, '}');
+    for(meios::eval_policy policy : { meios::eval_policy::warn, meios::eval_policy::skip })
+    {
+        INFO("warn: " << (policy == meios::eval_policy::warn));
+        std::vector<xacro_probe::captured> records;
+        meios::log_sink_f log{ xacro_probe::recorder{ records } };
+        const expansion_result out = expand_doc("<link name=\"" + nested + "\"/>", policy, log);
+        REQUIRE_FALSE(out.has_value());
+        CHECK(out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+        CHECK(xacro_probe::coded(records, meios::diagnostic_code::unsupported_expression)
+              == (policy == meios::eval_policy::warn ? 1u : 0u));
+        CHECK(xacro_probe::errors(records) == 1);
+    }
+}
