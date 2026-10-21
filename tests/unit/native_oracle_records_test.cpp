@@ -29,6 +29,7 @@ constexpr std::string_view measured[] = {"PINS",
                                          "fr3v2_facts.cases",
                                          "gantry_facts.cases",
                                          "gen3_facts.cases",
+                                         "generated_cases.cases",
                                          "kr6_facts.cases",
                                          "lbr_med14_r820_facts.cases",
                                          "rendering.cases",
@@ -41,6 +42,10 @@ constexpr std::string_view measured[] = {"PINS",
                                          "ur7e_facts.cases",
                                          "ur_mocked_facts.cases",
                                          "yaml_scalars.cases"};
+
+// A generated set that agrees everywhere leaves its reviewed divergences with no row at all, so that
+// record is counted without the refusal an empty measurement gets.
+constexpr std::string_view reviewed = "generated_divergences.cases";
 
 std::string value_of(std::string_view file, std::string_view key)
 {
@@ -73,6 +78,9 @@ TEST_CASE("the upstream measurements are present, non-empty, and complete", "[or
         REQUIRE_FALSE(rows.empty());
         total += rows.size();
     }
+    std::ifstream in(std::filesystem::path{MEIOS_GOLDEN_DIR} / "oracle" / reviewed);
+    REQUIRE(in);
+    total += oracle::rows_of(in).size();
     REQUIRE(total == static_cast<std::size_t>(MEIOS_ORACLE_RECORD_ROWS));
 }
 

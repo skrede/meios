@@ -145,3 +145,19 @@ if(EXISTS ${urdf_flatten_resolution_src})
     meios_warnings(urdf_flatten_resolution_test)
     catch_discover_tests(urdf_flatten_resolution_test TEST_PREFIX "flatten_resolution.")
 endif()
+
+# The generated differential reads committed records alone, the reference's verdicts and the reviewed
+# divergences, so it needs neither the corpus nor the reference and registers in every tree.
+set(generated_differential_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/generated_differential_test.cpp)
+if(EXISTS ${generated_differential_src})
+    add_executable(generated_differential_test ${generated_differential_src})
+    target_link_libraries(generated_differential_test
+        PRIVATE meios::core meios::model meios::io meios::xacro pugixml::pugixml
+            Catch2::Catch2WithMain)
+    target_compile_definitions(generated_differential_test PRIVATE
+        MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
+        MEIOS_GENERATED_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/generated")
+    meios_enable_coverage(generated_differential_test)
+    meios_warnings(generated_differential_test)
+    catch_discover_tests(generated_differential_test TEST_PREFIX "generated_differential.")
+endif()

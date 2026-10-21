@@ -9,6 +9,7 @@ from recorder.ledger import LEDGER, ledger_rows
 from recorder.corpus import CORPUS_DOCUMENTS, document_root, key_of
 from recorder.manifests import pin_rows
 from recorder.expressions import expression_rows
+from recorder.generated import RECORD, generated_rows
 
 
 def write_record(out, name, header, rows):
@@ -31,6 +32,7 @@ def records(tmp, share, versions):
         "unit_tags.cases": (HEADERS["unit_tags.cases"], unit_tag_rows(tmp)),
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
         "collisions.cases": (HEADERS["collisions.cases"], collision_rows(tmp)),
+        RECORD: (HEADERS[RECORD], generated_rows(tmp)),
         LEDGER: (HEADERS[LEDGER], ledger_rows(measured)),
         **{one.record: (facts, measured[key_of(one)]) for one in CORPUS_DOCUMENTS},
     }

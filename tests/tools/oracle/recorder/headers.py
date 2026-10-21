@@ -1,4 +1,5 @@
 from recorder.ledger import LEDGER
+from recorder.generated import RECORD, generated_header
 
 HEADERS = {
     "PINS": ["name <TAB> version or revision <TAB> content digest, or a bare - where the version",
@@ -69,4 +70,5 @@ HEADERS = {
               "asserts rather than skips, because presence is paired in both directions. A row",
               "carries only the attributes its element declares, so a guard naming two of the",
               "four is recorded as naming two."],
+    RECORD: generated_header(),
 }
