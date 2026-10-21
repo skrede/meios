@@ -1,5 +1,6 @@
 #include "xacro_read_probe.h"
 #include "xacro_include_tree.h"
+#include "load_served_layer_fixture.h"
 
 #include <meios/urdf.h>
 
@@ -12,22 +13,23 @@
 #include <meios/io/directory_source.h>
 
 #include <meios/diagnostic/log_sink.h>
-#include <meios/diagnostic/diagnostic_code.h>
 #include <meios/diagnostic/capturing_log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <string>
 #include <vector>
-#include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
 
+using served_layer_fixture::under;
+using served_layer_fixture::only_link;
+using served_layer_fixture::load_outcome;
+using served_layer_fixture::refuses_unresolved;
+using served_layer_fixture::top_reading_package;
+
 namespace
 {
-
-using load_outcome = meios::expected<meios::load_result, meios::load_error>;
 
 struct bytes_only
 {
@@ -67,38 +69,6 @@ struct overlaid
         return std::nullopt;
     }
 };
-
-meios::load_options under(std::vector<std::filesystem::path> roots, bool climbing = false)
-{
-    meios::load_options opts;
-    opts.package_roots                 = std::move(roots);
-    opts.includes.climb_above_document = climbing;
-    return opts;
-}
-
-std::string only_link(const load_outcome &loaded)
-{
-    if(!loaded)
-    {
-        UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
-        return {};
-    }
-    return loaded->robot.links.size() == 1 ? loaded->robot.links.front().name : std::string{};
-}
-
-void refuses_unresolved(const load_outcome &loaded, const std::string &written)
-{
-    CHECK(only_link(loaded).empty());
-    REQUIRE_FALSE(loaded.has_value());
-    INFO(loaded.error().message);
-    CHECK(loaded.error().code == meios::diagnostic_code::unresolved_include);
-    CHECK(loaded.error().message.find('"' + written + '"') != std::string::npos);
-}
-
-std::filesystem::path top_reading_package(const include_tree::tree &held, std::string_view spelling = "$(find p)/urdf/a.xacro")
-{
-    return held.write("T/top.xacro", include_tree::reads_leaf(spelling));
-}
 
 }
 
@@ -151,7 +121,9 @@ TEST_CASE("a sibling of a document served through an in-root link refuses where 
     refuses_unresolved(meios::load(top_reading_package(held), under({held.root() / "R"}, true)), "b.xacro");
 }
 
-TEST_CASE("a beside hit a configured root admitted carries no served record, so the serving layer does not answer its miss", "[urdf][load][include][link]")
+TEST_CASE("a beside hit a configured root admitted through a linked directory carries no served record on POSIX, so the serving layer does not answer its miss, "
+          "and the spelling is read lexically on Windows",
+          "[urdf][load][include][link]")
 {
     const include_tree::tree held;
     held.write("R/p/urdf/a.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
@@ -164,10 +136,16 @@ TEST_CASE("a beside hit a configured root admitted carries no served record, so 
         return;
     }
 
-    refuses_unresolved(meios::load(top_reading_package(held), under({held.root() / "R"})), "c.xacro");
+    const load_outcome loaded = meios::load(top_reading_package(held), under({held.root() / "R"}));
+    if constexpr(include_tree::reduces_parent_lexically)
+        refuses_unresolved(loaded, "sub/../b.xacro");
+    else
+        refuses_unresolved(loaded, "c.xacro");
 }
 
-TEST_CASE("a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it", "[urdf][load][include][link]")
+TEST_CASE("a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, "
+          "and is read lexically on Windows",
+          "[urdf][load][include][link]")
 {
     const include_tree::tree held;
     held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
@@ -181,8 +159,14 @@ TEST_CASE("a sibling spelled back through a linked directory carries no served r
         return;
     }
 
-    refuses_unresolved(meios::load(top_reading_package(held, "$(find p)/urdf/top.xacro"), under({held.root() / "R"})), "c.xacro");
-    refuses_unresolved(meios::load(top_reading_package(held, "package://p/urdf/top.xacro"), under({held.root() / "R"})), "c.xacro");
+    for(const std::string_view spelling : {"$(find p)/urdf/top.xacro", "package://p/urdf/top.xacro"})
+    {
+        const load_outcome loaded = meios::load(top_reading_package(held, spelling), under({held.root() / "R"}));
+        if constexpr(include_tree::reduces_parent_lexically)
+            CHECK(only_link(loaded) == "lexical_b");
+        else
+            refuses_unresolved(loaded, "c.xacro");
+    }
 }
 
 TEST_CASE("a sibling spelled without a parent element keeps the served record, so the serving layer answers its miss", "[urdf][load][include][source]")

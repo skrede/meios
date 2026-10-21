@@ -174,7 +174,7 @@ TEST_CASE("a bundle-served document's admitted climb reads where the operating s
     REQUIRE(xacro_probe::errors(records) == 0);
 }
 
-TEST_CASE("a climb the operating system cannot look for names where it looked", "[urdf][xacro][include][options]")
+TEST_CASE("a climb with an over-long name names where it looked, a failed look on POSIX and a miss on Windows", "[urdf][xacro][include][options]")
 {
     const include_tree::tree held;
     const std::filesystem::path top = held.write("doc/top.xacro", include_tree::reads_leaf("../" + std::string(300, 'n') + ".xacro"));
@@ -186,7 +186,12 @@ TEST_CASE("a climb the operating system cannot look for names where it looked", 
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::unresolved_include);
     REQUIRE(out.error().message.find("beside") == std::string::npos);
-    REQUIRE(out.error().message.starts_with("xacro:include could not look for \""));
     REQUIRE(out.error().message.find(" at \"") != std::string::npos);
+#ifdef _WIN32
+    REQUIRE(out.error().message.starts_with("xacro:include could not resolve \""));
+    REQUIRE_FALSE(out.error().cause.has_value());
+#else
+    REQUIRE(out.error().message.starts_with("xacro:include could not look for \""));
     REQUIRE(out.error().cause.has_value());
+#endif
 }

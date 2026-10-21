@@ -22,6 +22,14 @@ namespace include_tree
 
 using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
 
+// The Win32 path interfaces reduce `x/..` textually before any element is looked at, so a link
+// that `x` names is never followed there.
+#ifdef _WIN32
+inline constexpr bool reduces_parent_lexically = true;
+#else
+inline constexpr bool reduces_parent_lexically = false;
+#endif
+
 class tree
 {
 public:

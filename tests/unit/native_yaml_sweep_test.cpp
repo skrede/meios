@@ -23,6 +23,15 @@ namespace
 
 constexpr std::size_t short_size = 16;
 
+// The sweep hands open_under the canonical root, so a root is keyed canonically and still matches
+// where the temporary directory is spelled through a link.
+std::filesystem::path root_key(const std::filesystem::path &root)
+{
+    std::error_code ec;
+    std::filesystem::path canonical = std::filesystem::weakly_canonical(root, ec);
+    return ec ? root.lexically_normal() : canonical;
+}
+
 // Serves an oversized document under one root, fails the open under another, and serves a short
 // document anywhere else, so what comes back shows which root the sweep stopped at.
 class rooted_operations final : public meios::detail::text_reader_operations
@@ -30,8 +39,8 @@ class rooted_operations final : public meios::detail::text_reader_operations
 public:
     rooted_operations(const std::filesystem::path &oversized, const std::filesystem::path &failing, std::size_t &delivered)
             : m_delivered(delivered)
-            , m_failing(failing.lexically_normal())
-            , m_oversized(oversized.lexically_normal())
+            , m_failing(root_key(failing))
+            , m_oversized(root_key(oversized))
     {
     }
 
@@ -47,9 +56,10 @@ public:
 
     meios::detail::text_open_result open_under(const std::filesystem::path &root, const std::filesystem::path &) const noexcept override
     {
-        if(root.lexically_normal() == m_oversized)
+        const std::filesystem::path key = root_key(root);
+        if(key == m_oversized)
             return std::make_unique<generated_file>(generated_size, m_delivered);
-        if(root.lexically_normal() == m_failing)
+        if(key == m_failing)
             return meios::unexpected<meios::text_read_failure>({meios::text_read_failure_kind::open, {meios::operation_kind::open, make_error_code(std::errc::io_error)}});
         return std::make_unique<generated_file>(short_size, m_delivered);
     }

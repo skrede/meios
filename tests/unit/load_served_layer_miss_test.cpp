@@ -1,4 +1,5 @@
 #include "xacro_include_tree.h"
+#include "load_served_layer_fixture.h"
 
 #include <meios/urdf.h>
 
@@ -13,32 +14,17 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
-#include <vector>
 #include <utility>
 #include <filesystem>
 #include <string_view>
 
+using served_layer_fixture::under;
+using served_layer_fixture::only_link;
+using served_layer_fixture::load_outcome;
+using served_layer_fixture::refuses_unresolved;
+
 namespace
 {
-
-using load_outcome = meios::expected<meios::load_result, meios::load_error>;
-
-meios::load_options under(std::vector<std::filesystem::path> roots)
-{
-    meios::load_options opts;
-    opts.package_roots = std::move(roots);
-    return opts;
-}
-
-std::string only_link(const load_outcome &loaded)
-{
-    if(!loaded)
-    {
-        UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
-        return {};
-    }
-    return loaded->robot.links.size() == 1 ? loaded->robot.links.front().name : std::string{};
-}
 
 std::string sets_go(std::string_view value)
 {
@@ -64,7 +50,9 @@ std::string unresolved(const load_outcome &loaded)
 
 }
 
-TEST_CASE("a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it", "[urdf][load][include][link]")
+TEST_CASE("a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, "
+          "and is read lexically on Windows",
+          "[urdf][load][include][link]")
 {
     const include_tree::tree held;
     held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("sub/../c.xacro")));
@@ -80,11 +68,10 @@ TEST_CASE("a sibling miss spelled back through a linked directory is not asked o
         DYNAMIC_SECTION(spelling)
         {
             const load_outcome loaded = meios::load(held.write("T/top.xacro", include_tree::reads_leaf(spelling)), under({held.root() / "R"}));
-            CHECK(only_link(loaded).empty());
-            REQUIRE_FALSE(loaded.has_value());
-            INFO(loaded.error().message);
-            CHECK(loaded.error().code == meios::diagnostic_code::unresolved_include);
-            CHECK(loaded.error().message.find("\"sub/../c.xacro\"") != std::string::npos);
+            if constexpr(include_tree::reduces_parent_lexically)
+                CHECK(only_link(loaded) == "lexical_c");
+            else
+                refuses_unresolved(loaded, "sub/../c.xacro");
         }
 }
 

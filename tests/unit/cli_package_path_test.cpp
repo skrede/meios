@@ -112,7 +112,7 @@ TEST_CASE("cli_package_path: an include linking out of its package but inside th
         }
 }
 
-TEST_CASE("cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it")
+TEST_CASE("cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows")
 {
     const include_tree::tree held;
     held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
@@ -131,10 +131,11 @@ TEST_CASE("cli_package_path: a sibling spelled back through a linked directory r
         {
             const outcome ran = flatten(held.write("T/top.xacro", include_tree::reads_leaf(spelling)), {(held.root() / "R").string()});
             INFO(ran.err);
-            CHECK(ran.code != 0);
             CHECK_FALSE(contains(ran.out, "layer_lexical_c"));
-            CHECK(contains(ran.err, "(unresolved_include)"));
-            CHECK(contains(ran.err, "c.xacro"));
+            if constexpr(include_tree::reduces_parent_lexically)
+                CHECK((ran.code == 0 && contains(ran.out, "name=\"lexical_b\"")));
+            else
+                CHECK((ran.code != 0 && contains(ran.err, "(unresolved_include)") && contains(ran.err, "c.xacro")));
         }
 }
 

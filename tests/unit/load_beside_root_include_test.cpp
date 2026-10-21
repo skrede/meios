@@ -90,7 +90,9 @@ TEST_CASE("an include linked beside its description into a configured root loads
     REQUIRE(loads_link(loaded, "from_root_link"));
 }
 
-TEST_CASE("an include spelled back through a linked directory into a configured root reads where the link leads, and its nested include anchors there", "[urdf][load][include][link]")
+TEST_CASE("an include spelled back through a linked directory into a configured root reads where the link leads on POSIX, its nested include anchored there, "
+          "and is read lexically on Windows",
+          "[urdf][load][include][link]")
 {
     const include_tree::tree held;
     held.write("root/common/x.xacro", include_tree::robot(include_tree::include("y.xacro")));
@@ -106,7 +108,10 @@ TEST_CASE("an include spelled back through a linked directory into a configured 
     const load_outcome loaded = meios::load(document, rooted(held, false));
     if(!loaded)
         UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
-    REQUIRE(loads_link(loaded, "nested_through_link"));
+    if constexpr(include_tree::reduces_parent_lexically)
+        REQUIRE(refuses(loaded, meios::diagnostic_code::unresolved_include, "could not resolve \"sub/../x.xacro\""));
+    else
+        REQUIRE(loads_link(loaded, "nested_through_link"));
 }
 
 TEST_CASE("an include's leading .. landing under a configured root meets the climb gate", "[urdf][load][include]")

@@ -164,11 +164,21 @@ TEST_CASE("a spelling back through a linked directory is judged where the operat
     meios::log_sink_f log{ xacro_probe::recorder{ records } };
     meios::source_stack sources;
 
-    const include_tree::expansion_result unset = expand_with(top, sources, log, meios::include_options{});
-    REQUIRE_FALSE(unset.has_value());
-    REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
-    const include_tree::expansion_result climbed = expand_with(top, sources, log, climbing());
-    REQUIRE_FALSE(climbed.has_value());
-    REQUIRE(climbed.error().code == meios::diagnostic_code::uncontained_asset);
-    REQUIRE(include_tree::renders_link(expand_with(top, sources, log, following()), "through_link"));
+    const include_tree::expansion_result unset    = expand_with(top, sources, log, meios::include_options{});
+    const include_tree::expansion_result climbed  = expand_with(top, sources, log, climbing());
+    const include_tree::expansion_result followed = expand_with(top, sources, log, following());
+    if constexpr(include_tree::reduces_parent_lexically)
+    {
+        REQUIRE(include_tree::renders_link(unset, "lexical"));
+        REQUIRE(include_tree::renders_link(climbed, "lexical"));
+        REQUIRE(include_tree::renders_link(followed, "lexical"));
+    }
+    else
+    {
+        REQUIRE_FALSE(unset.has_value());
+        REQUIRE(unset.error().code == meios::diagnostic_code::uncontained_asset);
+        REQUIRE_FALSE(climbed.has_value());
+        REQUIRE(climbed.error().code == meios::diagnostic_code::uncontained_asset);
+        REQUIRE(include_tree::renders_link(followed, "through_link"));
+    }
 }
