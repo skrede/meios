@@ -49,6 +49,7 @@ struct macro_def
 {
     std::vector<std::string> params;
     std::vector<std::optional<std::string>> defaults;
+    std::vector<bool> writes_default;
     std::vector<std::string> block_params;
     std::vector<bool> block_children;
     pugi::xml_node body;

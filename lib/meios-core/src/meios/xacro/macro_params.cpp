@@ -22,6 +22,7 @@ struct param_spec
     std::optional<std::string> written;
     std::size_t rest;
     std::size_t limit;
+    bool writes_default;
 };
 
 bool is_separating_space(char c)
@@ -122,8 +123,7 @@ std::optional<std::string> written_default(std::string_view forward, std::string
     return text.empty() ? std::string("^") : "^|" + std::string(unquote(text));
 }
 
-// The reference's pattern ends in `(.*)`, which stops at a newline, so whatever follows the first
-// newline after a matched spec is dropped from the specification.
+// The reference's pattern ends in `(.*)`, which stops at a newline, so what follows a matched spec's first newline is dropped.
 std::size_t rest_limit(std::string_view spec, std::size_t rest)
 {
     return std::min(spec.find('\n', skip_space(spec, rest)), spec.size());
@@ -143,10 +143,10 @@ std::optional<param_spec> read_default(std::string_view spec, std::string_view n
         if(!spec.substr(value).starts_with(forward))
             continue;
         if(std::optional<std::size_t> end = default_end(spec, text))
-            return param_spec{ name, written_default(forward, spec.substr(text, *end - text)), *end, rest_limit(spec, *end) };
+            return param_spec{ name, written_default(forward, spec.substr(text, *end - text)), *end, rest_limit(spec, *end), true };
     }
     if(value > at + 1)
-        return param_spec{ name, std::nullopt, value, rest_limit(spec, value) };
+        return param_spec{ name, std::nullopt, value, rest_limit(spec, value), true };
     return std::nullopt;
 }
 
@@ -163,7 +163,7 @@ param_spec read_spec(std::string_view spec, std::size_t at)
     end = at;
     while(!breaks_at(spec, end))
         ++end;
-    return param_spec{ spec.substr(at, end - at), std::nullopt, end, spec.size() };
+    return param_spec{ spec.substr(at, end - at), std::nullopt, end, spec.size(), false };
 }
 
 bool parse_block(std::string_view name, macro_def &def)
@@ -192,6 +192,7 @@ bool parse_params(std::string_view spec, macro_def &def)
             continue;
         def.params.emplace_back(read.name);
         def.defaults.push_back(std::move(read.written));
+        def.writes_default.push_back(read.writes_default);
     }
     return true;
 }

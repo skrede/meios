@@ -99,14 +99,28 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     return true;
 }
 
+// The reference keeps one default per parameter name: the last declaration of the name written with
+// one sets it, an empty one clearing it, and a declaration written without one leaves it alone.
+std::optional<std::string> named_default(const macro_def &def, const std::string &name)
+{
+    std::optional<std::string> last;
+    for(std::size_t i = 0; i < def.params.size(); ++i)
+        if(def.writes_default[i] && def.params[i] == name)
+            last = def.defaults[i];
+    return last;
+}
+
 bool bind_defaults(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document,
                    call_binding &bound, std::vector<bool> &supplied)
 {
     for(std::size_t i = 0; i < def.params.size(); ++i)
     {
-        if(supplied[i] || !def.defaults[i])
+        if(supplied[i])
             continue;
-        if(!bind_default(ctx, call, def.params[i], *def.defaults[i], document, bound.values[i]))
+        const std::optional<std::string> written = named_default(def, def.params[i]);
+        if(!written)
+            continue;
+        if(!bind_default(ctx, call, def.params[i], *written, document, bound.values[i]))
             return false;
         supplied[i] = true;
     }
