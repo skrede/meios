@@ -1,5 +1,3 @@
-#include "quote_scan.h"
-#include "substitution_lex.h"
 #include "structural_detail.h"
 #include "substitution_detail.h"
 
@@ -53,19 +51,6 @@ std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view
         return {};
     }
     return result->text;
-}
-
-bool admit_follower(expand_ctx &ctx, pugi::xml_node in, std::string_view raw, std::size_t at,
-                    const std::filesystem::path &document)
-{
-    if(lexes_at(raw, at))
-        return true;
-    subst_ctx lexing(ctx.log, ctx.sources, ctx.scope, document, ctx.mode, ctx.backend, ctx.session,
-                     locate(ctx, in));
-    refuse_follower(lexing, raw, at, 0);
-    record_terminal(ctx, *lexing.terminal);
-    ctx.ok = false;
-    return false;
 }
 
 namespace

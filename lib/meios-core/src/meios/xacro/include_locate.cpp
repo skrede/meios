@@ -107,14 +107,6 @@ bool serves_bytes(source_stack &sources, const served_document &served)
     return !sources.layers()[served.layer].names_paths();
 }
 
-bool holds_package(source_stack &sources, std::string_view package)
-{
-    for(source_handle &layer : sources.layers())
-        if(!layer.names_paths() || layer.answers(package, ""))
-            return true;
-    return false;
-}
-
 std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written)
 {
     bool escaped = false;

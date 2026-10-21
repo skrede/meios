@@ -106,6 +106,11 @@ TEST_CASE("the package of a leading find is resolved before the rest of the file
     CHECK(include_tree::renders_link(expand_including("$(find p)/urdf/a.xacro"), "from_package"));
 }
 
+TEST_CASE("a find package read from a bound property renders its package's file", "[xacro][include][find]")
+{
+    CHECK(include_tree::renders_link(expand_including("$(find ${pk})/urdf/a.xacro"), "from_package"));
+}
+
 TEST_CASE("a find with no package refuses as the find command refuses it", "[xacro][include][find]")
 {
     for(const char *filename : { "$(find )/a.xacro", "$(find ${e})/a.xacro" })
