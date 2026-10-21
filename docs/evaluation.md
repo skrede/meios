@@ -907,9 +907,15 @@ case of it can be compared there: the `xacro_include_bytes`, `xacro_include_serv
 carried by the `load_served_layer` and `xacro_include_precedence` cases. The lenient policies, `warn`
 and `skip`, are carried by the `xacro_policy_prop` property, which holds that an expansion logging an
 error under either returns no document, and by the `xacro_lex_lookahead` cases. None of these makes a
-claim of agreement with the reference. It runs the core evaluator alone: the `eval_python` cases
-carry the python evaluator, against this side's own rule. It passes no caller argument: the three
-agreement probes driven a second time with one, `property_default_over_caller_argument`,
+claim of agreement with the reference. It runs the core evaluator alone: the cases whose names begin
+`eval_python` carry the python evaluator. Two of them,
+`eval_python.python evaluator matches the golden CPython corpus` and
+`eval_python_unrestricted.both evaluators render every golden corpus row identically`, compare it with
+the text CPython's `str` gives for each expression, as recorded in `tests/golden/expr/arithmetic.cases`,
+`tests/golden/expr/functions.cases` and `tests/golden/expr/precedence.cases`; every other case
+compares it with this side's own rule, and none with a render of the pinned reference. It passes no
+caller argument: the three agreement probes driven a second time with one,
+`property_default_over_caller_argument`,
 `property_default_reads_caller_argument` and `eval_string_caller_argument`, compare that with the
 reference. Its include is written only in a top-level document no layer served, so neither
 served-sibling route is compared: the `xacro_include_served` and `load_served_layer` cases carry those,
