@@ -452,7 +452,18 @@ and so do `x/$(find p)/urdf/c.xacro` and `$$(find p)/urdf/c.xacro`, whose run of
 find, each for want of the file the text names. The find command takes exactly one package name, in an
 include and anywhere else: `$(find p q)/urdf/c.xacro` and an attribute's `$(find p urdf)` refuse under
 `unresolved_find`, naming the second word, as the reference refuses them with "accepts exactly one
-argument". A path that climbs out of the find's package, `$(find p)/../q/a.xacro`, refuses here as
+argument". A command's words are separated by spaces alone, as the reference separates them, so a tab
+is part of a word wherever the command is written. Written as `&#9;`, since XML reads a literal tab
+in an attribute as a space, `$(find&#9;p)/urdf/c.xacro`, an attribute's `$(find&#9;p)` and an
+attribute's `$(arg&#9;y)` name no known command and refuse under `unknown_substitution`, and
+`$(find p&#9;)/urdf/c.xacro` names a package whose name ends in a tab and refuses under
+`unresolved_find`. The `include_find_tab_before_package`, `include_find_tab_after_package`,
+`find_command_tab_before_package` and `arg_command_tab_before_name` agreement probes hold these
+against a fresh upstream render, beside `xacro_include_spelling.a tab beside a find's package is part
+of a word, so the find does not reach its package` and `xacro_command_body.a command's words are
+separated by a space alone, so a tab stays inside a word, as the reference separates them`; the
+literal tab read as a space was measured against the pinned reference. A path that climbs out of the
+find's package, `$(find p)/../q/a.xacro`, refuses here as
 escaping the source root, the containment every package-qualified include keeps, while the reference
 reads the sibling package's file; that is the `include_find_climbs_out_of_package` row, a reviewed
 divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a new one
@@ -488,7 +499,8 @@ rest of the filename is read, as the reference raises for the package first:
 word refuses at the find too. Only once the whole filename is substituted is it resolved, and a
 miss then refuses under `unresolved_include` and a climb out of a package under
 `xacro_structural_error`. A refusal's offset is counted into the whole filename, so
-`$(find p)/urdf/${x` refuses as an unterminated span at offset 15. Where a layer that serves bytes is
+`$(find p)/urdf/${x` refuses as an unterminated span at offset 15, and `$(find p)/$(arg ${x)`, whose
+unterminated span sits inside a command, at offset 16. Where a layer that serves bytes is
 configured, a find whose package no layer naming paths holds is decided, as the first token, only
 once the rest of the filename is read: `$(find nopkg)/${nope}.xacro` then refuses for the undefined
 name, under `undefined_property`, and `$(find nopkg)/a.xacro` under `unresolved_include`, naming
@@ -779,7 +791,10 @@ What is compared, exactly:
   `include_find_without_package` over its package resolved before the rest of the filename,
   `include_find_padded_package`, `include_find_in_literal`, `include_find_composed` and
   `include_find_two_words` over its package name and what follows it, and `find_command_second_word`
-  over the one package name it takes in an attribute. Six more
+  over the one package name it takes in an attribute. Four more hold a command's words to the
+  reference's separation: `include_find_tab_before_package` and `include_find_tab_after_package` over
+  a tab beside a find's package in an include filename, and `find_command_tab_before_package` and
+  `arg_command_tab_before_name` over a tab after a command's name in an attribute. Six more
   hold an argument's default to the declaration the expansion reaches first: the two
   `argument_redeclared_` documents, `argument_declared_in_skipped_branch`,
   `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
@@ -833,7 +848,7 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: ninety-five agreement probes, the `agreement` rows of the inventory and the
+- **The committed probes**: ninety-nine agreement probes, the `agreement` rows of the inventory and the
   documents the enumeration above names, each held to a fresh upstream render; and the probes whose
   difference the reviewed manifest `differential_divergences.cases` records, twenty-eight rows of it,
   fifteen of them document probes and thirteen expression probes, all listed in
@@ -851,7 +866,13 @@ describes:
   count per family and the template each family's text is written into, and `generated_differential`
   compares this side's verdict with that record on every run. A verdict is whether the document refused
   and, where it rendered, the names of its links in document order, so two refusals agree whatever
-  each says. Five cases disagree, and `tests/golden/oracle/generated_divergences.cases` records each as
+  each says. Nothing but those link names is compared: the macro family draws block parameters and
+  calls whose children a block parameter takes, but what a block inserts, and every element other
+  than a link, is not part of the verdict. Block insertion is compared with the reference by the
+  corpus documents that insert one, each compared whole: the six `ur_description` entry points, whose
+  `ur_robot` macro calls `cylinder_inertial` with an `origin` block, and `tmrv0_2.urdf.xacro`, whose
+  `argo_drive`, `caster_wheel` and `rocker_arm` macros insert theirs. The `xacro_block` cases pin it.
+  Five cases disagree, and `tests/golden/oracle/generated_divergences.cases` records each as
   a reviewed row with its reason: two where a parent element after a find leaves the find's package,
   the difference the `include_find_climbs_out_of_package` row records; one where a miss beside the
   document is found through the configured sources, which [known limitations](known-limitations.md)
@@ -873,9 +894,11 @@ character into an include filename; the `include_glob_filename` document probe c
 manifest row. It writes no `package://` filename, which the `include_package_filename` row records, and
 no absolute path to a file that exists, which the `include_absolute_path` row records; the few filenames
 it starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
-`dirname`, `env` and `optenv` commands, and no command neither side implements. The `eval_` agreement
-probes compare `eval`, three of the `command_` agreement probes compare `optenv` over an unset
-variable, and the `dirname_command` row records `dirname`; nothing compares `env` with the reference.
+`dirname`, `env`, `optenv` and `cwd` commands. The `eval_` agreement probes compare `eval`, three of
+the `command_` agreement probes compare `optenv` over an unset variable, and the `dirname_command` row
+records `dirname`; nothing compares `env` with the reference. Nothing compares `cwd` either: the
+reference implements `$(cwd)` as the working directory, and this side refuses it under
+`unknown_substitution`, as measured against the pinned reference, with no case pinning it.
 
 **What the generated comparison holds fixed, and what carries each instead.** It runs one directory
 layer under `eval_policy::fail`. A layer that serves bytes has no counterpart in the reference, so no
@@ -884,7 +907,16 @@ case of it can be compared there: the `xacro_include_bytes`, `xacro_include_serv
 carried by the `load_served_layer` and `xacro_include_precedence` cases. The lenient policies, `warn`
 and `skip`, are carried by the `xacro_policy_prop` property, which holds that an expansion logging an
 error under either returns no document, and by the `xacro_lex_lookahead` cases. None of these makes a
-claim of agreement with the reference. The record holds no machine path, so the comparison runs in
+claim of agreement with the reference. It runs the core evaluator alone: the `eval_python` cases
+carry the python evaluator, against this side's own rule. It passes no caller argument: the three
+agreement probes driven a second time with one, `property_default_over_caller_argument`,
+`property_default_reads_caller_argument` and `eval_string_caller_argument`, compare that with the
+reference. Its include is written only in a top-level document no layer served, so neither
+served-sibling route is compared: the `xacro_include_served` and `load_served_layer` cases carry those,
+against this side's own rule. Its macro family defines one macro and calls it once, at top level: the
+corpus documents, each compared whole, call macros from macro bodies and from included files, as
+`ur_description`'s `ur_robot`, defined in an included file, calls `cylinder_inertial` from its body.
+The record holds no machine path, so the comparison runs in
 every test tree on every platform; so far it has run on Linux alone.
 
 ## What this is not
