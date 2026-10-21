@@ -121,7 +121,8 @@ def render_agreement_probe(tmp, out, case_id, fixture, mappings):
 
     staged = stage_probe(tmp, fixture)
     try:
-        rendered = xacro.process_file(str(staged), mappings=dict(mappings) if mappings else None)
+        with probe_package_root(tmp, case_id):
+            rendered = xacro.process_file(str(staged), mappings=dict(mappings) if mappings else None)
         write_text(out, case_id, ".xml", rendered.toxml())
     except Exception as failure:
         write_refusal(out, case_id, ".xml", failure)

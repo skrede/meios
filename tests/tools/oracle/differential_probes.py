@@ -44,7 +44,9 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "include_package_filename",
                    "find_relative_root",
                    "find_dotted_root",
-                   "property_forward_reference")
+                   "property_forward_reference",
+                   "include_find_climbs_out_of_package",
+                   "include_glob_filename")
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # A committed fixture cannot spell a machine's absolute path, so these probes are handed the
@@ -58,10 +60,22 @@ DIRECTORY_BOUND_PROBES = ("include_absolute_path",)
 RELATIVE_ROOT_PROBES = {"find_relative_root": "find_relative_root.d"}
 DOTTED_ROOT_PROBES = {"find_dotted_root": "./find_dotted_root.d"}
 
+# These probes find a package of their own: each is handed its own tree, joined under the directory
+# it is staged in, as its only package root, so nothing resolves against the corpus packages.
+PACKAGE_ROOT_PROBES = {one: one + ".d" for one in ("include_find_padded_package",
+                                                   "include_find_in_literal",
+                                                   "include_find_composed",
+                                                   "include_find_two_words",
+                                                   "find_command_second_word",
+                                                   "include_find_climbs_out_of_package",
+                                                   "include_glob_filename")}
+
 
 def probe_root(case_id, directory):
     if case_id in DOTTED_ROOT_PROBES:
         return os.path.join(str(directory), DOTTED_ROOT_PROBES[case_id])
+    if case_id in PACKAGE_ROOT_PROBES:
+        return os.path.join(str(directory), PACKAGE_ROOT_PROBES[case_id])
     return RELATIVE_ROOT_PROBES.get(case_id)
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
@@ -157,4 +171,9 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_dollar_run_after_find", "include_dollar_run_after_find", None),
                     ("include_unterminated_span_after_find", "include_unterminated_span_after_find", None),
                     ("include_missing_package_before_undefined_name", "include_missing_package_before_undefined_name", None),
-                    ("include_find_without_package", "include_find_without_package", None))
+                    ("include_find_without_package", "include_find_without_package", None),
+                    ("include_find_padded_package", "include_find_padded_package", None),
+                    ("include_find_in_literal", "include_find_in_literal", None),
+                    ("include_find_composed", "include_find_composed", None),
+                    ("include_find_two_words", "include_find_two_words", None),
+                    ("find_command_second_word", "find_command_second_word", None))

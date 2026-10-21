@@ -18,9 +18,9 @@ namespace differential
 // binding needs. The first three fields are spelled exactly as differential.py's own tuple spells
 // them, so an id names the same fixture and the same rendered file whichever side wrote it. A
 // probe both sides refuse also names the cause each side must give. The root, relative to the
-// probe directory, is a configured source this side alone is handed: upstream consults none. The
-// include options, like the root, are this side's alone, because upstream always reads what they
-// admit.
+// probe directory, is a configured source this side is handed; upstream is handed the same root only
+// where differential_probes.py lists the probe as finding a package of its own. The include options
+// are this side's alone, because upstream always reads what they admit.
 struct agreement_probe
 {
     std::string_view id;
@@ -158,6 +158,12 @@ inline const std::vector<agreement_probe> agreement_probes{
         agreement_probe{
                 "include_missing_package_before_undefined_name", "include_missing_package_before_undefined_name", {}, meios::diagnostic_code::unresolved_find, "PackageNotFoundError"},
         agreement_probe{"include_find_without_package", "include_find_without_package", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument"},
+        agreement_probe{"include_find_padded_package", "include_find_padded_package", {}, std::nullopt, {}, "include_find_padded_package.d"},
+        agreement_probe{"include_find_in_literal", "include_find_in_literal", {}, std::nullopt, {}, "include_find_in_literal.d"},
+        agreement_probe{"include_find_composed", "include_find_composed", {}, meios::diagnostic_code::unresolved_include, "No such file or directory", "include_find_composed.d"},
+        agreement_probe{"include_find_two_words", "include_find_two_words", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument", "include_find_two_words.d"},
+        agreement_probe{
+                "find_command_second_word", "find_command_second_word", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument", "find_command_second_word.d"},
 };
 
 }

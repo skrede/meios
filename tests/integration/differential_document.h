@@ -42,7 +42,7 @@ struct document_probe
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 13> document_probes{
+inline constexpr std::array<document_probe, 15> document_probes{
         document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
         document_probe{false, "argument_helper_call"},     document_probe{false, "argument_above_declaration"},
         document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
@@ -51,6 +51,8 @@ inline constexpr std::array<document_probe, 13> document_probes{
         document_probe{false, "find_relative_root", false, false, "find_relative_root.d"},
         document_probe{false, "find_dotted_root", false, false, "./find_dotted_root.d", true},
         document_probe{false, "property_forward_reference"},
+        document_probe{false, "include_find_climbs_out_of_package", false, false, "include_find_climbs_out_of_package.d", true},
+        document_probe{false, "include_glob_filename", false, false, "include_glob_filename.d", true},
 };
 
 inline std::filesystem::path probe_file(std::string_view id, const char *suffix)
@@ -87,7 +89,7 @@ inline meios::eval_scope document_scope(const document_probe &one)
 }
 
 // A root is handed from the probe directory as differential.py hands upstream the same spelling: the
-// relative root as written, and the dotted root joined under that directory.
+// relative root as written, and the dotted root or a probe's own package tree joined under that directory.
 class probe_working_directory
 {
 public:

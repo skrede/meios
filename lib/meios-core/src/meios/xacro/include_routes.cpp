@@ -98,33 +98,41 @@ bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_docum
     return enter_include(ctx, in, located_include{ std::move(*served), named, std::move(*sibling) }, out);
 }
 
-bool include_sibling(expand_ctx &ctx, pugi::xml_node in, const std::optional<served_document> &sibling, const std::string &normalized, const std::string &written, pugi::xml_node out)
+bool include_in_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, const std::string &written,
+                        const include_lookups &asked, pugi::xml_node out)
+{
+    std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
+    if(!found)
+        return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, asked));
+    const std::filesystem::path named = served_name(found->asset);
+    return enter_include(ctx, in, located_include{ std::move(found->asset), named, served_document{ found->layer, package, normalized } }, out);
+}
+
+bool include_sibling(expand_ctx &ctx, pugi::xml_node in, const std::optional<served_document> &sibling, bool looked_beside, const std::string &normalized,
+                     const std::string &written, pugi::xml_node out)
 {
     if(std::optional<resolved_asset> served = sibling ? probe_served(ctx.sources, *sibling) : std::nullopt)
         return enter_include(ctx, in, located_include{ *served, served_name(*served), sibling }, out);
-    return include_from_sources(ctx, in, {}, normalized, written, out);
+    const include_lookups asked{ looked_beside, sibling ? std::optional<std::string>{ sibling->package } : std::nullopt };
+    return include_in_sources(ctx, in, {}, normalized, written, asked, out);
 }
 
 }
 
 bool include_from_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &package, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
-    std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
-    if(!found)
-        return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, !beside_anchor(ctx, package, written).empty()));
-    const std::filesystem::path named = served_name(found->asset);
-    return enter_include(ctx, in, located_include{ std::move(found->asset), named, served_document{ found->layer, package, normalized } }, out);
+    return include_in_sources(ctx, in, package, normalized, written, include_lookups{ false, std::nullopt }, out);
 }
 
-// A document its layer served as bytes has no links, so its lexical sibling is the file named, and the layer answers alone, as for a climb: its scratch mirror holds a sibling
-// only once something earlier made the layer write it. Otherwise a file beside the document is the one the spelling names, joined as written so a `..` resolves where the operating system resolves it, and no configured root's copy stands in
-// for it: a link out of the directory it was named in, the one it lives in and every configured root refuses unless outside links are followed. [fs.op.weakly.canonical]
-// decides existence through status(), which follows links, so with them unset a dangling link canonicalizes as an absent file beside the document and falls through to the
-// serving layer and configured sources; followed, where a link on its way leads is the final answer.
+// A file beside the document is the one the spelling names, joined as written so a `..` resolves where the operating system resolves it, and no configured root's copy
+// stands in for it: a link out of the directory it was named in, the one it lives in and every configured root refuses unless outside links are followed.
+// [fs.op.weakly.canonical] decides existence through status(), which follows links, so with them unset a dangling link canonicalizes as an absent file beside the
+// document and falls through to the serving layer and configured sources; followed, where a link on its way leads is the final answer.
 bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &normalized, const std::string &written, pugi::xml_node out)
 {
+    // A byte-served document has no links, so its sibling is the file named, and the layer answers alone: its scratch mirror holds one only once something made the layer write it.
     if(ctx.served && serves_bytes(ctx.sources, *ctx.served))
-        return include_sibling(ctx, in, sibling_of(*ctx.served, normalized), normalized, written, out);
+        return include_sibling(ctx, in, sibling_of(*ctx.served, normalized), false, normalized, written, out);
     const std::filesystem::path document = absolute_base(ctx.scope.active_document());
     const beside_probe probe             = probe_beside(document, written, ctx.package_roots);
     if(probe.cause)
@@ -143,7 +151,7 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
         sibling = sibling_of(*ctx.served, normalized);
     if(probe.hit)
         return enter_include(ctx, in, located_include{ *probe.hit, anchor / written, probe.in_named_directory ? sibling : std::nullopt }, out);
-    return include_sibling(ctx, in, sibling, normalized, written, out);
+    return include_sibling(ctx, in, sibling, true, normalized, written, out);
 }
 
 // Upstream opens the spelling joined as written, so `..` resolves against the real directories it

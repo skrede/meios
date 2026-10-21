@@ -42,6 +42,16 @@ bool rooted(std::string_view text)
     return !text.empty() && is_separator(text.front());
 }
 
+std::string lookups_text(const include_lookups &asked)
+{
+    if(!asked.served_package)
+        return asked.beside ? "beside the document that writes it or in the configured sources" : "in the configured sources";
+    const std::string package = "in the package \"" + *asked.served_package + '"';
+    if(!asked.beside)
+        return package + " that served the document that writes it, then in the configured sources";
+    return "beside the document that writes it, then " + package + " that served that document, then in the configured sources";
+}
+
 }
 
 include_target split_target(std::string_view raw)
@@ -109,12 +119,11 @@ std::filesystem::path located_key(const std::filesystem::path &located)
 
 // A spelling with no package is named as the document wrote it, because its normalized form
 // joined onto an empty package reads as an absolute path nobody wrote.
-std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, bool looked_beside)
+std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, const include_lookups &asked)
 {
     if(!package.empty())
         return "xacro:include could not resolve \"" + package + '/' + normalized + '"';
-    const std::string_view beside = looked_beside ? "beside the document that writes it or " : "";
-    return "xacro:include could not resolve \"" + written + "\": looked for it " + std::string(beside) + "in the configured sources";
+    return "xacro:include could not resolve \"" + written + "\": looked for it " + lookups_text(asked);
 }
 
 }

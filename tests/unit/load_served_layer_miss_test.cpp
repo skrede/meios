@@ -54,6 +54,14 @@ meios::memory_source serving_package(meios::log_sink &log, const std::string &to
     return bytes;
 }
 
+std::string unresolved(const load_outcome &loaded)
+{
+    if(loaded)
+        return {};
+    UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
+    return loaded.error().code == meios::diagnostic_code::unresolved_include ? loaded.error().message : std::string{};
+}
+
 }
 
 TEST_CASE("a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it", "[urdf][load][include][link]")
@@ -94,7 +102,9 @@ TEST_CASE("a byte-served document's sibling spelled through a parent element is 
     CHECK(only_link(meios::load(top, {}, sources, log)) == "bytes_c");
 }
 
-TEST_CASE("a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in", "[urdf][load][include][source]")
+TEST_CASE("a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, "
+          "and no lower layer's file stands in",
+          "[urdf][load][include][source]")
 {
     const include_tree::tree held;
     held.write("L/d.xacro", include_tree::binds("WRONG_root_d"));
@@ -117,4 +127,40 @@ TEST_CASE("a byte-served document's sibling spelled through a parent element res
             CHECK(only_link(meios::load(top, {}, sources, log)) == "from_d");
         }
     }
+}
+
+TEST_CASE("a byte-served document's miss names the package that served it and the configured sources", "[urdf][load][include][source]")
+{
+    const include_tree::tree held;
+    meios::log_sink silent;
+    meios::capturing_log_sink log{silent};
+    meios::memory_source bytes{log};
+    bytes.add("p", "urdf/top.xacro", include_tree::robot(include_tree::include("missing.xacro")));
+    meios::source_stack sources{std::move(bytes)};
+
+    const std::filesystem::path top = held.write("T/top.xacro", include_tree::reads_leaf("$(find p)/urdf/top.xacro"));
+    CHECK(unresolved(meios::load(top, {}, sources, log))
+          == "xacro:include could not resolve \"missing.xacro\": looked for it in the package \"p\" that served the document that writes it, then in the configured sources");
+}
+
+TEST_CASE("a path-naming layer's served document names the beside lookup, the layer and the configured sources", "[urdf][load][include][source]")
+{
+    const include_tree::tree held;
+    held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("missing.xacro")));
+    meios::log_sink silent;
+    meios::capturing_log_sink log{silent};
+    meios::source_stack sources{meios::directory_source{held.root() / "R", log}};
+
+    const std::filesystem::path top = held.write("T/top.xacro", include_tree::reads_leaf("$(find p)/urdf/top.xacro"));
+    CHECK(unresolved(meios::load(top, {}, sources, log))
+          == "xacro:include could not resolve \"missing.xacro\": looked for it beside the document that writes it, "
+             "then in the package \"p\" that served that document, then in the configured sources");
+}
+
+TEST_CASE("a document no layer served keeps its miss message", "[urdf][load][include]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path top = held.write("T/top.xacro", include_tree::robot(include_tree::include("missing.xacro")));
+    CHECK(unresolved(meios::load(top, {}))
+          == "xacro:include could not resolve \"missing.xacro\": looked for it beside the document that writes it or in the configured sources");
 }

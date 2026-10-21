@@ -29,7 +29,13 @@ std::string normalize_relative(std::string_view rel, bool &escaped);
 // The key is the file found, never the spelling that found it.
 std::filesystem::path located_key(const std::filesystem::path &located);
 
-std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, bool looked_beside);
+struct include_lookups
+{
+    bool beside;
+    std::optional<std::string> served_package;
+};
+
+std::string unresolved_message(const std::string &package, const std::string &normalized, const std::string &written, const include_lookups &asked);
 
 }
 
