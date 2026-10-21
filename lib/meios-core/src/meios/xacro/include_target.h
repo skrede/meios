@@ -2,6 +2,8 @@
 #define HPP_GUARD_MEIOS_XACRO_INCLUDE_TARGET_H
 
 #include <string>
+#include <cstddef>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -12,7 +14,7 @@ struct include_target
 {
     std::string package;
     std::string relative;
-    bool from_find;
+    std::optional<std::size_t> find_close;
 };
 
 include_target split_target(std::string_view raw);

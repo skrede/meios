@@ -17,6 +17,7 @@
 #include <utility>
 #include <optional>
 #include <filesystem>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -85,15 +86,34 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, located_include &found, const st
     return descend(ctx, doc, parked, key, found, out);
 }
 
+bool resolve_package(expand_ctx &ctx, pugi::xml_node in, const std::string &package)
+{
+    if(package.empty())
+        return fail(ctx, in, diagnostic_code::unresolved_find, "$(find) requires a package name");
+    if(!holds_package(ctx.sources, package))
+        return fail(ctx, in, diagnostic_code::unresolved_find, "$(find " + package + ") did not resolve");
+    return true;
+}
+
+// The reference lexes one token past the find before it evaluates the find, and evaluates the find
+// before it reads the rest of the filename.
+bool substitute_package(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, std::string_view raw, include_target &target)
+{
+    if(!admit_follower(ctx, in, raw, *target.find_close + 1, document))
+        return false;
+    bool ok = true;
+    target.package = substitute_attr(ctx, in, target.package, document, ok);
+    return ok && resolve_package(ctx, in, target.package);
+}
+
 // Upstream joins a package:// filename as a relative path, and here it resolves through the sources as
 // the recorded divergence states, so substituting its package text would widen that divergence.
-bool substitute_target(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, include_target &target)
+bool substitute_target(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, std::string_view raw, include_target &target)
 {
+    if(target.find_close && !substitute_package(ctx, in, document, raw, target))
+        return false;
     bool ok = true;
-    if(target.from_find)
-        target.package = substitute_attr(ctx, in, target.package, document, ok);
-    if(ok)
-        target.relative = substitute_attr(ctx, in, target.relative, document, ok);
+    target.relative = substitute_attr(ctx, in, target.relative, document, ok);
     return ok;
 }
 
@@ -118,8 +138,9 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 {
     if(!ctx.charge_work(in))
         return false;
-    include_target target = split_target(in.attribute("filename").value());
-    if(!substitute_target(ctx, in, document, target))
+    const std::string_view raw = in.attribute("filename").value();
+    include_target target = split_target(raw);
+    if(!substitute_target(ctx, in, document, raw, target))
         return false;
     const std::string &relative = target.relative;
     const std::filesystem::path anchor = beside_anchor(ctx, target.package, relative);

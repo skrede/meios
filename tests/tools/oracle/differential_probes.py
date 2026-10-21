@@ -152,4 +152,8 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("macro_params_only_whitespace", "macro_params_only_whitespace", None),
                     ("macro_params_only_whitespace_never_reached", "macro_params_only_whitespace_never_reached", None),
                     ("macro_default_reads_supplied_parameter", "macro_default_reads_supplied_parameter", None),
-                    ("argument_default_reads_itself_before_redeclaration", "argument_default_reads_itself_before_redeclaration", None))
+                    ("argument_default_reads_itself_before_redeclaration", "argument_default_reads_itself_before_redeclaration", None),
+                    ("include_dollar_run_after_find", "include_dollar_run_after_find", None),
+                    ("include_unterminated_span_after_find", "include_unterminated_span_after_find", None),
+                    ("include_missing_package_before_undefined_name", "include_missing_package_before_undefined_name", None),
+                    ("include_find_without_package", "include_find_without_package", None))

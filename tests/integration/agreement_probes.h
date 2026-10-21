@@ -152,6 +152,12 @@ inline const std::vector<agreement_probe> agreement_probes{
                         {},
                         meios::diagnostic_code::unresolved_arg,
                         "Undefined substitution argument a"},
+        agreement_probe{"include_dollar_run_after_find", "include_dollar_run_after_find", {}, meios::diagnostic_code::expression_error, "invalid expression: $$x"},
+        agreement_probe{
+                "include_unterminated_span_after_find", "include_unterminated_span_after_find", {}, meios::diagnostic_code::unterminated_substitution, "invalid expression: ${x"},
+        agreement_probe{
+                "include_missing_package_before_undefined_name", "include_missing_package_before_undefined_name", {}, meios::diagnostic_code::unresolved_find, "PackageNotFoundError"},
+        agreement_probe{"include_find_without_package", "include_find_without_package", {}, meios::diagnostic_code::unresolved_find, "accepts exactly one argument"},
 };
 
 }

@@ -24,6 +24,10 @@ std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index = std::nullopt);
 
+// Refuses a token at `at` that does not lex as the reference's lexer refuses it.
+bool admit_follower(expand_ctx &ctx, pugi::xml_node in, std::string_view raw, std::size_t at,
+                    const std::filesystem::path &document);
+
 value substitute_attr_value(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index = std::nullopt);

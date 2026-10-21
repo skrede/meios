@@ -65,6 +65,10 @@ std::optional<resolved_asset> probe_served(source_stack &sources, const served_d
 // A layer whose type names no paths holds what it served only as the bytes it materialized.
 bool serves_bytes(source_stack &sources, const served_document &served);
 
+// A layer that serves only bytes names no package directory to ask, so where one is configured the
+// lookup of the whole spelling decides.
+bool holds_package(source_stack &sources, std::string_view package);
+
 // Empty when the spelling, joined onto the served document's directory, leaves its package.
 std::optional<served_document> climbed_sibling(const served_document &served, const std::string &written);
 

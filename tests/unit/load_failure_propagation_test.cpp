@@ -38,10 +38,10 @@ TEST_CASE("an unresolvable $(find) include under eval_policy::fail returns a loc
     const meios::expected<meios::load_result, meios::load_error> result =
         meios::load(fixture("unresolvable_find_include.xacro"), opts);
 
-    // The include seam extracts $(find ...) textually and reports the containing
-    // include's failure to resolve the composed path, not the bare cmd_find code.
+    // The package is resolved before the rest of the filename, as the reference raises for an
+    // unknown package before it reads the path after it.
     REQUIRE_FALSE(result.has_value());
-    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_include);
+    REQUIRE(result.error().code == meios::diagnostic_code::unresolved_find);
     REQUIRE(result.error().loc.line > 0);
     REQUIRE(result.error().loc.column > 0);
 }
