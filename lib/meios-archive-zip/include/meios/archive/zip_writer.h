@@ -23,12 +23,12 @@ inline constexpr int default_zip_compression = 6;
 // Writes a self-contained bundle into a single zip archive: the miniz-backed
 // analog of package_writer, sharing its write() surface but emitting archive
 // entries instead of a directory tree. miniz stays private to the .cpp, so no
-// archive type leaks here. Every entry name is confined to the archive root by
-// the same containment invariant the folder writer enforces on disk; a name
-// holding a backslash, one beginning with a drive letter and colon, one with a
-// root, or one escaping by .. is rejected with a located diagnostic and no entry,
-// closing the zip-slip hole on later extraction. Under dry_run it performs the same
-// containment checks and exists() probes but creates no archive file.
+// archive type leaks here. An entry name holding a backslash, beginning with
+// a drive letter and colon, having a root, or leading with .. is refused on every
+// host, stricter than package_writer's containment guard, since an extractor on
+// any platform may read those shapes as leaving its target (zip-slip). A refusal
+// logs an error naming the entry and adds no entry. Under dry_run it performs the
+// same checks and exists() probes but creates no archive file.
 class zip_writer
 {
 public:
