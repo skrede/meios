@@ -129,3 +129,17 @@ TEST_CASE("a layer that serves only bytes is not asked for a bare package", "[xa
     REQUIRE_FALSE(missing.has_value());
     CHECK(missing.error().code == meios::diagnostic_code::unresolved_include);
 }
+
+TEST_CASE("a find naming its package by a rooted path names no package, even a package directory inside a configured root", "[xacro][include][find]")
+{
+    meios::log_sink_f log{ [](auto &&...) {} };
+    const include_tree::tree held;
+    held.write("root/p/urdf/a.xacro", include_tree::robot("<link name=\"from_package\"/>"));
+    meios::source_stack sources{ meios::directory_source{ held.root() / "root", log } };
+    const std::string named   = (held.root() / "root" / "p").generic_string();
+    const std::string refusal = "$(find " + named + ") did not resolve";
+    require_refused(expand_over(sources, held, "$(find " + named + ")/urdf/a.xacro", log), meios::diagnostic_code::unresolved_find, refusal);
+    const std::string attribute = head + "<link name=\"$(find " + named + ")\"/></robot>";
+    require_refused(include_tree::expand_text(attribute, held.root() / "doc" / "top.xacro", sources, log), meios::diagnostic_code::unresolved_find, refusal);
+    CHECK(include_tree::renders_link(expand_over(sources, held, "$(find p)/urdf/a.xacro", log), "from_package"));
+}

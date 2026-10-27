@@ -68,21 +68,21 @@ void every_record_is_an_escape(const std::vector<heard_record> &heard)
 }
 
 template<typename Source>
-void refuses_rooted(Source &source, const std::string &rooted, const std::vector<heard_record> &heard)
+void refuses_rooted(Source &source, const std::string &package, const std::string &relative, const std::vector<heard_record> &heard)
 {
     REQUIRE(source.locate("p", "m.stl").has_value());
     REQUIRE(heard.empty());
-    CHECK_FALSE(source.locate("p", rooted).has_value());
+    CHECK_FALSE(source.locate(package, relative).has_value());
     std::size_t refusals = 2;
-    if constexpr(requires { source.try_locate("p", rooted); })
+    if constexpr(requires { source.try_locate(package, relative); })
     {
-        const meios::source_lookup_result typed = source.try_locate("p", rooted);
+        const meios::source_lookup_result typed = source.try_locate(package, relative);
         REQUIRE(typed.has_value());
         CHECK_FALSE(typed->has_value());
         ++refusals;
     }
-    CHECK_FALSE(source.answers("p", rooted));
-    CHECK_FALSE(source.path_of("p", rooted).has_value());
+    CHECK_FALSE(source.answers(package, relative));
+    CHECK_FALSE(source.path_of(package, relative).has_value());
     CHECK(heard.size() == refusals);
     every_record_is_an_escape(heard);
 }
@@ -104,6 +104,24 @@ TEST_CASE("under the POSIX grammar only a leading separator roots a relative par
     CHECK(join_under("R", "p", "D:/a", posix_paths).has_value());
 }
 
+TEST_CASE("a rooted package part names no candidate under the Windows grammar, a drive or a backslash included", "[io][join]")
+{
+    for(const std::string_view package : {"C:", "C:/abs/R/p", "\\x", "/abs"})
+    {
+        CAPTURE(package);
+        CHECK_FALSE(join_under("R", package, "x", windows_paths).has_value());
+    }
+    CHECK_FALSE(join_under("R", "C:/abs/R/p", "", windows_paths).has_value());
+}
+
+TEST_CASE("under the POSIX grammar only a leading separator roots a package part", "[io][join]")
+{
+    const std::filesystem::path root("R");
+    CHECK_FALSE(join_under(root, "/abs/R/p", "", posix_paths).has_value());
+    CHECK_FALSE(join_under(root, "/abs", "x", posix_paths).has_value());
+    CHECK(join_under(root, "C:", "x", posix_paths) == std::optional{root / "C:" / "x"});
+}
+
 TEST_CASE("an ordinary package path joins under the root as it did", "[io][join]")
 {
     const std::filesystem::path root("R");
@@ -123,14 +141,36 @@ TEST_CASE("a directory or bundle source refuses a rooted relative part as an esc
         std::vector<heard_record> heard;
         meios::log_sink_f log{recorder{heard}};
         meios::directory_source source{root, log};
-        refuses_rooted(source, rooted, heard);
+        refuses_rooted(source, "p", rooted, heard);
     }
     SECTION("bundle")
     {
         std::vector<heard_record> heard;
         meios::log_sink_f log{recorder{heard}};
         meios::bundle_source source{root, log};
-        refuses_rooted(source, rooted, heard);
+        refuses_rooted(source, "p", rooted, heard);
+    }
+}
+
+TEST_CASE("a directory or bundle source refuses a rooted package part as an escape, even one naming a package inside its root", "[io][join]")
+{
+    const include_tree::tree held;
+    const std::filesystem::path root = held.root() / "R";
+    held.write("R/p/m.stl", "solid\n");
+    const std::string named = (root / "p").generic_string();
+    SECTION("directory")
+    {
+        std::vector<heard_record> heard;
+        meios::log_sink_f log{recorder{heard}};
+        meios::directory_source source{root, log};
+        refuses_rooted(source, named, "m.stl", heard);
+    }
+    SECTION("bundle")
+    {
+        std::vector<heard_record> heard;
+        meios::log_sink_f log{recorder{heard}};
+        meios::bundle_source source{root, log};
+        refuses_rooted(source, named, "m.stl", heard);
     }
 }
 

@@ -36,11 +36,12 @@ inline bool rooted(std::string_view text, const path_grammar &grammar = native_p
     return root_length(text, grammar) != 0;
 }
 
-// A rooted relative part would replace the root it is joined onto rather than name a path under it.
+// A rooted package or relative part would replace the root it is joined onto rather than name a path
+// under it.
 inline std::optional<std::filesystem::path> join_under(const std::filesystem::path &root, std::string_view package, std::string_view relative,
                                                        const path_grammar &grammar = native_paths)
 {
-    if(rooted(relative, grammar))
+    if(rooted(package, grammar) || rooted(relative, grammar))
         return std::nullopt;
     std::filesystem::path candidate = root / std::string(package);
     if(!relative.empty())

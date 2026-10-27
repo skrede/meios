@@ -49,8 +49,8 @@ std::optional<std::filesystem::path> contained_under(const std::filesystem::path
 // the path-backed sources.
 std::optional<std::filesystem::path> contained_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative, log_sink &log);
 
-// Empty where the relative part is rooted, since joining it would replace the root rather than
-// name a path under it.
+// Empty where the package or the relative part is rooted, since joining either would replace the
+// root rather than name a path under it.
 std::optional<std::filesystem::path> package_candidate(const std::filesystem::path &root, std::string_view package, std::string_view relative);
 
 // Both log an escape, an empty candidate counting as one, and answer it empty; a failure is answered on the error arm by the
