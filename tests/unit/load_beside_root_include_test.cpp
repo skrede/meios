@@ -98,6 +98,7 @@ TEST_CASE("an include spelled back through a linked directory into a configured 
     held.write("root/common/x.xacro", include_tree::robot(include_tree::include("y.xacro")));
     held.write("root/common/y.xacro", include_tree::binds("nested_through_link"));
     held.write("doc/y.xacro", include_tree::binds("nested_lexical"));
+    held.write("doc/x.xacro", include_tree::binds("lexical"));
     const std::filesystem::path document = held.write("doc/robot.xacro", include_tree::reads_leaf("sub/../x.xacro"));
     if(!linked_sub(held, "root/common"))
     {
@@ -108,6 +109,28 @@ TEST_CASE("an include spelled back through a linked directory into a configured 
     const load_outcome loaded = meios::load(document, rooted(held, false));
     if(!loaded)
         UNSCOPED_INFO(static_cast<int>(loaded.error().code) << ": " << loaded.error().message);
+    if constexpr(include_tree::reduces_parent_lexically)
+        REQUIRE(loads_link(loaded, "lexical"));
+    else
+        REQUIRE(loads_link(loaded, "nested_through_link"));
+}
+
+TEST_CASE("an include spelled back through a linked directory into a configured root with nothing beside the document reads where the link leads on POSIX "
+          "and refuses for want of the file beside the document on Windows",
+          "[urdf][load][include][link]")
+{
+    const include_tree::tree held;
+    held.write("root/common/x.xacro", include_tree::robot(include_tree::include("y.xacro")));
+    held.write("root/common/y.xacro", include_tree::binds("nested_through_link"));
+    held.write("doc/y.xacro", include_tree::binds("nested_lexical"));
+    const std::filesystem::path document = held.write("doc/robot.xacro", include_tree::reads_leaf("sub/../x.xacro"));
+    if(!linked_sub(held, "root/common"))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    const load_outcome loaded = meios::load(document, rooted(held, false));
     if constexpr(include_tree::reduces_parent_lexically)
         REQUIRE(refuses(loaded, meios::diagnostic_code::unresolved_include, "could not resolve \"sub/../x.xacro\""));
     else

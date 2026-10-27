@@ -22,6 +22,7 @@ using served_layer_fixture::under;
 using served_layer_fixture::only_link;
 using served_layer_fixture::load_outcome;
 using served_layer_fixture::refuses_unresolved;
+using served_layer_fixture::top_reading_package;
 
 namespace
 {
@@ -150,4 +151,22 @@ TEST_CASE("a document no layer served keeps its miss message", "[urdf][load][inc
     const std::filesystem::path top = held.write("T/top.xacro", include_tree::robot(include_tree::include("missing.xacro")));
     CHECK(unresolved(meios::load(top, {}))
           == "xacro:include could not resolve \"missing.xacro\": looked for it beside the document that writes it or in the configured sources");
+}
+
+TEST_CASE("a beside hit a configured root admitted through a linked directory with nothing beside the named path refuses its sibling's miss on POSIX "
+          "and the spelling itself on Windows",
+          "[urdf][load][include][link]")
+{
+    const include_tree::tree held;
+    if(!served_layer_fixture::beside_hit_through_link(held))
+    {
+        SUCCEED("this host cannot create a symlink");
+        return;
+    }
+
+    const load_outcome loaded = meios::load(top_reading_package(held), under({held.root() / "R"}));
+    if constexpr(include_tree::reduces_parent_lexically)
+        refuses_unresolved(loaded, "sub/../b.xacro");
+    else
+        refuses_unresolved(loaded, "c.xacro");
 }

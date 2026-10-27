@@ -126,19 +126,16 @@ TEST_CASE("a beside hit a configured root admitted through a linked directory ca
           "[urdf][load][include][link]")
 {
     const include_tree::tree held;
-    held.write("R/p/urdf/a.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
-    held.write("R/e/b.xacro", include_tree::robot(include_tree::include("c.xacro")));
-    held.write("R/p/urdf/c.xacro", include_tree::binds("layer_sibling"));
-    std::filesystem::create_directories(held.root() / "R/e/d");
-    if(!include_tree::linked(held.root() / "R/e/d", held.root() / "R/p/urdf/sub"))
+    if(!served_layer_fixture::beside_hit_through_link(held))
     {
         SUCCEED("this host cannot create a symlink");
         return;
     }
+    held.write("R/p/urdf/b.xacro", include_tree::binds("lexical_b"));
 
     const load_outcome loaded = meios::load(top_reading_package(held), under({held.root() / "R"}));
     if constexpr(include_tree::reduces_parent_lexically)
-        refuses_unresolved(loaded, "sub/../b.xacro");
+        CHECK(only_link(loaded) == "lexical_b");
     else
         refuses_unresolved(loaded, "c.xacro");
 }

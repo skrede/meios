@@ -52,6 +52,16 @@ inline std::filesystem::path top_reading_package(const include_tree::tree &held,
     return held.write("T/top.xacro", include_tree::reads_leaf(spelling));
 }
 
+// R/p/urdf/sub links to R/e/d, so a.xacro's sub/../b.xacro names R/e/b.xacro where the link is followed before .. is reduced, and R/p/urdf/b.xacro where .. is reduced first.
+inline bool beside_hit_through_link(const include_tree::tree &held)
+{
+    held.write("R/p/urdf/a.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));
+    held.write("R/e/b.xacro", include_tree::robot(include_tree::include("c.xacro")));
+    held.write("R/p/urdf/c.xacro", include_tree::binds("layer_sibling"));
+    std::filesystem::create_directories(held.root() / "R/e/d");
+    return include_tree::linked(held.root() / "R/e/d", held.root() / "R/p/urdf/sub");
+}
+
 }
 
 #endif
