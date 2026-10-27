@@ -23,11 +23,11 @@ include_target split_target(std::string_view raw);
 bool is_separator(char c);
 
 // The end of the leading elements of `text` that are exactly `directory`'s, with `.` and empty elements
-// dropped and `..` kept; empty when they differ or one is rooted under the grammar and the other is not.
+// dropped and `..` kept; empty when they differ or the roots differ in kind, a drive and a separator each counted.
 std::optional<std::size_t> directory_prefix(std::string_view text, std::string_view directory, const path_grammar &grammar = native_paths);
 
-// Never rooted under the grammar: the spelling's root is removed before `..` is counted, and a drive
-// the walk leaves leading is removed after it.
+// Never rooted under the grammar: the spelling's root is removed before `..` is counted, and a drive the
+// walk leaves leading is removed and what follows it walked again, so a `..` it uncovers is counted.
 std::string normalize_relative(std::string_view rel, bool &escaped, const path_grammar &grammar = native_paths);
 
 // The key is the file found, never the spelling that found it.

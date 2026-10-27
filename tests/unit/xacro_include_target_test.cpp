@@ -71,6 +71,17 @@ TEST_CASE("a drive the walk leaves leading is removed, so the result is never ro
                windows_paths);
 }
 
+TEST_CASE("a parent element a removed drive leaves leading escapes under the Windows grammar and stays a name under the POSIX one", "[xacro][include][target]")
+{
+    for(const std::string_view spelling : { "x/../D:..", "/D:../q", "D:D:..", "x/../D:../q/f.xacro", "C:\\x\\..\\D:..\\q" })
+    {
+        CAPTURE(spelling);
+        CHECK(escapes(spelling, windows_paths));
+    }
+    check_kept({ { "x/D:../q", "x/D:../q" } }, windows_paths);
+    check_kept({ { "x/../D:..", "D:.." } }, posix_paths);
+}
+
 TEST_CASE("under the POSIX grammar a drive is an ordinary name", "[xacro][include][target]")
 {
     check_kept({ { "D:/a/b.xacro", "D:/a/b.xacro" }, { "./D:/a.xacro", "D:/a.xacro" } }, posix_paths);
@@ -84,6 +95,19 @@ TEST_CASE("a spelling is under a find's directory only where both are rooted ali
     CHECK_FALSE(directory_prefix("D:/a/R/p./urdf/c.xacro", "D:/a/R/p", windows_paths));
     CHECK_FALSE(directory_prefix("C:/a/R/p/urdf/c.xacro", "D:/a/R/p", windows_paths));
     CHECK(directory_prefix("/a/R/p/urdf", "/a/R/p", posix_paths) == std::optional<std::size_t>(6));
+    CHECK_FALSE(directory_prefix("/C:/a/R/p/x", "C:/a/R/p", windows_paths));
+    CHECK_FALSE(directory_prefix("\\\\C:\\a\\R\\p\\x", "C:/a/R/p", windows_paths));
+    CHECK_FALSE(directory_prefix("C:/a/R/p/x", "/C:/a/R/p", windows_paths));
+    CHECK(directory_prefix("D://a/R/p/x", "D:/a/R/p", windows_paths) == std::optional<std::size_t>(9));
+    CHECK(directory_prefix("//a/R/p/urdf", "/a/R/p", posix_paths) == std::optional<std::size_t>(7));
+}
+
+TEST_CASE("a UNC or device spelling loses only its leading separators under the Windows grammar", "[xacro][include][target]")
+{
+    check_kept({ { "//server/share/x.xacro", "server/share/x.xacro" },
+                 { "\\\\server\\share\\x.xacro", "server/share/x.xacro" },
+                 { "\\\\?\\C:\\x.xacro", "?/C:/x.xacro" } },
+               windows_paths);
 }
 
 TEST_CASE("the native grammar roots a spelling exactly where the standard library finds a root path", "[xacro][include][target]")

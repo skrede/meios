@@ -43,11 +43,19 @@ std::string joined(const std::vector<std::string_view> &parts)
     return out;
 }
 
-std::string unrooted(std::string text, const path_grammar &grammar)
+struct root_kind
 {
-    for(std::size_t root = root_length(text, grammar); root != 0; root = root_length(text, grammar))
-        text.erase(0, root);
-    return text;
+    bool drive;
+    bool separator;
+
+    bool operator==(const root_kind &) const = default;
+};
+
+root_kind root_kind_of(std::string_view text, const path_grammar &grammar)
+{
+    const std::size_t root  = root_length(text, grammar);
+    const std::size_t drive = root >= 2 && text[1] == ':' ? 2 : 0;
+    return root_kind{ .drive = drive != 0, .separator = root > drive };
 }
 
 std::string lookups_text(const include_lookups &asked)
@@ -84,7 +92,7 @@ std::optional<std::size_t> directory_prefix(std::string_view text, std::string_v
 {
     const std::vector<element> held    = elements(directory, grammar);
     const std::vector<element> written = elements(text, grammar);
-    if(held.empty() || written.size() < held.size() || rooted(text, grammar) != rooted(directory, grammar))
+    if(held.empty() || written.size() < held.size() || root_kind_of(text, grammar) != root_kind_of(directory, grammar))
         return std::nullopt;
     for(std::size_t i = 0; i < held.size(); ++i)
         if(written[i].text != held[i].text)
@@ -105,7 +113,8 @@ std::string normalize_relative(std::string_view rel, bool &escaped, const path_g
         else
             parts.pop_back();
     }
-    return unrooted(joined(parts), grammar);
+    const std::string kept = joined(parts);
+    return rooted(kept, grammar) ? normalize_relative(kept, escaped, grammar) : kept;
 }
 
 std::filesystem::path located_key(const std::filesystem::path &located)
