@@ -18,23 +18,32 @@ namespace meios
 namespace
 {
 
-// The zip-slip guard: an entry whose name is absolute, carries a root name, or
-// lexically escapes the archive root (a leading `..` after normalization) would
-// extract outside the bundle, so it is rejected with a loud diagnostic and no
-// entry. Mirrors package_writer's contained_candidate invariant with no on-disk
-// root; the returned name is the forward-slash generic form miniz expects.
+std::optional<std::string> refused(std::string_view name, std::string_view why, log_sink &log)
+{
+    log.log(level::error, "rejecting archive entry " + std::string(why) + ": '" + std::string(name) + '\'');
+    return std::nullopt;
+}
+
+bool leading_drive(std::string_view text)
+{
+    const bool letter = !text.empty() && ((text[0] >= 'A' && text[0] <= 'Z') || (text[0] >= 'a' && text[0] <= 'z'));
+    return letter && text.size() >= 2 && text[1] == ':';
+}
+
+// APPNOTE 4.4.17: a stored name holds no drive letter and no leading slash, and separates its elements by
+// forward slashes alone, so a backslash or a leading drive is refused on every host, whatever the extractor.
+// The zip-slip guard then refuses a name with a root as the platform reads it, or one leading with `..`.
 std::optional<std::string> contained_entry(std::string_view name, log_sink &log)
 {
+    if(name.find('\\') != std::string_view::npos)
+        return refused(name, "whose name holds a backslash", log);
     const std::filesystem::path p = std::filesystem::path(name).lexically_normal();
-    const bool escapes = p.empty() || p.is_absolute() || p.has_root_name() ||
-                         p.begin()->string() == "..";
-    if(escapes)
-    {
-        log.log(level::error,
-                "rejecting archive entry that escapes the bundle root: '" + std::string(name) + '\'');
-        return std::nullopt;
-    }
-    return p.generic_string();
+    const std::string generic = p.generic_string();
+    if(leading_drive(generic))
+        return refused(name, "whose name begins with a drive letter and colon", log);
+    if(p.empty() || p.has_root_path() || p.begin()->string() == "..")
+        return refused(name, "that escapes the bundle root", log);
+    return generic;
 }
 
 bool add_text(mz_zip_archive &zip, std::string_view name, std::string_view text,

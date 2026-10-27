@@ -104,6 +104,7 @@ if(TARGET meios_archive-zip)
     set(zip_writer_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/zip_writer_test.cpp)
     if(EXISTS ${zip_writer_src})
         add_executable(zip_writer_test ${zip_writer_src})
+        target_sources(zip_writer_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/zip_writer_entry_test.cpp)
         target_link_libraries(zip_writer_test
             PRIVATE meios::core meios::model meios::io meios::bundle meios::archive-zip
                 miniz::miniz Catch2::Catch2WithMain)

@@ -1,57 +1,21 @@
+#include "zip_writer_fixture.h"
+
 #include <meios/archive/zip_writer.h>
 #include <meios/bundle.h>
-
-#include <miniz.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <map>
 #include <string>
-#include <cstddef>
-#include <fstream>
 #include <optional>
 #include <filesystem>
 
 namespace
 {
 
-std::filesystem::path scratch_root(const std::string &suffix)
-{
-    const std::filesystem::path root = std::filesystem::temp_directory_path() / ("meios_zip_" + suffix);
-    std::filesystem::remove_all(root);
-    std::filesystem::create_directories(root);
-    return root;
-}
-
-std::filesystem::path write_file(const std::filesystem::path &path, const std::string &text)
-{
-    std::filesystem::create_directories(path.parent_path());
-    std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    out << text;
-    return path;
-}
-
-std::map<std::string, std::string> read_archive(const std::filesystem::path &path)
-{
-    std::map<std::string, std::string> out;
-    mz_zip_archive zip;
-    mz_zip_zero_struct(&zip);
-    if(!mz_zip_reader_init_file(&zip, path.string().c_str(), 0))
-        return out;
-    const mz_uint count = mz_zip_reader_get_num_files(&zip);
-    for(mz_uint i = 0; i < count; ++i)
-    {
-        mz_zip_archive_file_stat stat;
-        if(!mz_zip_reader_file_stat(&zip, i, &stat))
-            continue;
-        std::size_t size = 0;
-        void *raw = mz_zip_reader_extract_to_heap(&zip, i, &size, 0);
-        out.emplace(stat.m_filename, std::string(static_cast<const char *>(raw), size));
-        mz_free(raw);
-    }
-    mz_zip_reader_end(&zip);
-    return out;
-}
+using zip_fixture::write_file;
+using zip_fixture::read_archive;
+using zip_fixture::scratch_root;
 
 meios::tree<double> mesh_robot(std::string filename, std::optional<std::string> resolved)
 {
@@ -94,32 +58,6 @@ TEST_CASE("the zip writer stores the URDF and an asset that read back", "[archiv
     const std::map<std::string, std::string> entries = read_archive(archive);
     REQUIRE(entries.at("rob.urdf") == "<robot name=\"rob\"/>");
     REQUIRE(entries.at("meshes/rob/base.stl") == "MESH-BYTES");
-    std::filesystem::remove_all(root);
-}
-
-TEST_CASE("an entry name escaping the archive root is rejected with no entry", "[archive][zip]")
-{
-    const std::filesystem::path root = scratch_root("escape");
-    const std::filesystem::path archive = root / "rob.zip";
-    const std::filesystem::path src = write_file(root / "src_evil.stl", "X");
-    meios::log_sink silent;
-
-    meios::asset_manifest escaping;
-    escaping.entries.push_back(meios::bundle_entry{ "package://rob/x", src, "../escape.stl" });
-    meios::asset_manifest absolute;
-    absolute.entries.push_back(meios::bundle_entry{ "package://rob/x", src, "/etc/passwd" });
-
-    meios::zip_writer writer(archive, silent);
-    const meios::emit_result rel = writer.write("rob.urdf", "<robot/>", escaping, false);
-    const meios::emit_result abs = writer.write("rob.urdf", "<robot/>", absolute, false);
-
-    REQUIRE(rel.status == meios::emit_status::io_error);
-    REQUIRE(abs.status == meios::emit_status::io_error);
-    const std::map<std::string, std::string> entries = read_archive(archive);
-    REQUIRE(entries.find("../escape.stl") == entries.end());
-    REQUIRE(entries.find("escape.stl") == entries.end());
-    REQUIRE(entries.find("/etc/passwd") == entries.end());
-    REQUIRE(entries.find("etc/passwd") == entries.end());
     std::filesystem::remove_all(root);
 }
 
