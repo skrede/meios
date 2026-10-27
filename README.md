@@ -57,7 +57,8 @@ the work that would close it.
   rather than counting warnings.
 - **Flatten and bundle:** write one expanded description back out as a plain URDF, or collect a
   description together with every asset it references into a self-contained folder — or a `.zip`,
-  with entry names confined to the archive root so extraction cannot escape it.
+  which refuses rather than archives an entry name that holds a backslash or begins with a drive letter
+  and colon on any platform, has a root on the platform building the archive, or climbs out with `..`.
 - **Asset scanners:** Wavefront `.obj` (every `mtllib` and `map_*` reference), COLLADA, glTF and GLB,
   and STL — each a separate opt-in target, each returning references verbatim so the bundle closure
   re-anchors them against the referring package.

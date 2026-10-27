@@ -437,7 +437,13 @@ reached, [known limitations](known-limitations.md) records.
 include filename but a `package://` one is substituted as text, left to right with the one-token
 lookahead above, and each `$(find …)` in it writes its package's directory as the command writes it
 anywhere. The result is then resolved as a path, and a path whose leading elements are a directory a
-find in the filename rendered is looked up as that package's file. So a padded or substituted package
+find in the filename rendered is looked up as that package's file. A path counts as under that
+directory only where it is rooted the way the directory is: a drive in both or in neither, and a
+separator after it in both or in neither. So `/$(find p)/urdf/c.xacro` doubles the leading separator
+on POSIX and is still `p`'s file here, while on Windows it puts a separator before the drive the find
+renders and is looked for as an absolute filename, as `xacro_include_target.a spelling is under a
+find's directory only where both are rooted alike, a drive included` asserts for both readings. That is
+this side's reading alone; no reference reading of it is claimed. A padded or substituted package
 name reaches the package: `$(find  p)/urdf/c.xacro`, `$(find p )/urdf/c.xacro`,
 `$(find ${sp})/urdf/c.xacro` with `sp` bound to ` p` and `$(find ${pk})/urdf/c.xacro` with `pk` bound
 to `p` each read `p`'s file on both sides, and so do a find an expression produces,
@@ -452,8 +458,16 @@ and so do `x/$(find p)/urdf/c.xacro` and `$$(find p)/urdf/c.xacro`, whose run of
 find, each for want of the file the text names. The find command takes exactly one package name, in an
 include and anywhere else: `$(find p q)/urdf/c.xacro` and an attribute's `$(find p urdf)` refuse under
 `unresolved_find`, naming the second word, as the reference refuses them with "accepts exactly one
-argument". A command's words are separated by spaces alone, as the reference separates them, so a tab
-is part of a word wherever the command is written. Written as `&#9;`, since XML reads a literal tab
+argument". A package name written as a rooted path names no package: `$(find /opt/ws/p)` refuses under
+`unresolved_find`, as not resolving, in an include filename and in an attribute alike, even where that
+directory is a package inside a configured root, and on Windows so does a name opening with a drive.
+The reference looks a package name up in the ROS package index, which holds no such name, so against
+the real index it would refuse it too, with `PackageNotFoundError`; that is reasoned from the index's
+interface, not run. The comparison's stand-in for that index joins the name onto its root as a path
+and renders it, and no compared case writes such a name. `xacro_include_find.a find naming its package
+by a rooted path names no package, even a package directory inside a configured root` asserts this
+side's refusal. A command's words are separated by spaces alone, as the reference separates them, so a
+tab is part of a word wherever the command is written. Written as `&#9;`, since XML reads a literal tab
 in an attribute as a space, `$(find&#9;p)/urdf/c.xacro`, an attribute's `$(find&#9;p)` and an
 attribute's `$(arg&#9;y)` name no known command and refuse under `unknown_substitution`, and
 `$(find p&#9;)/urdf/c.xacro` names a package whose name ends in a tab and refuses under
@@ -636,9 +650,14 @@ layer naming no paths served stays inside that document's package, so it is a de
 the description is trusted, not about parity.
 
 **An absolute include filename refuses here and is read there.** The reference opens an include written
-as an absolute path where it points. Here the root is dropped, the leading separator and on Windows a
-drive letter and colon before it, and the rest is looked for only through the configured sources, so an
-include stays inside the roots the caller configured, and where none of them holds it the load refuses.
+as an absolute path where it points. Here the root is removed, the leading separators and under the
+Windows reading a leading drive letter and colon with the separators after it. A drive that the removal
+of `.` and `..` leaves leading, as in `x/../D:/a.xacro`, is removed too and what follows it is walked
+again, so a `..` it uncovers counts as a climb: `x/../D:../q/f.xacro` refuses as escaping the source
+root. Only these count as the root, so a UNC spelling, `//server/share/x.xacro`, keeps `server` and
+`share`, and a device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements. The rest is
+looked for only through the configured sources, so an include stays inside the roots the caller
+configured, and where none of them holds it the load refuses.
 This is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it
 fails if a new one appears.
 
