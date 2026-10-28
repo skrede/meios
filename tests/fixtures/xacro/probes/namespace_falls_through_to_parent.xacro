@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="x" value="px"/>
+  <xacro:include filename="namespace_falls_through_to_parent.d/n.xacro" ns="n"/>
+  <link name="${n.x}"/>
+</robot>

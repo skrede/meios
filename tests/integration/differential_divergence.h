@@ -44,10 +44,10 @@ inline std::string upstream_value(const std::string &rendered)
 // A whole document is carried as the project's own canonical text, so attribute order and
 // insignificant whitespace are not a difference and the row stays one line. A refusal is carried as
 // the code this side gives for upstream's cause, so two refusals agree only on the same cause.
-inline std::string upstream_document(const std::string &rendered)
+inline std::string upstream_document(const document_probe &one, const std::string &rendered)
 {
     if(!refused(rendered))
-        return meios::canonical_xml(rendered);
+        return document_verdict(one, rendered);
     const upstream_refusal cause                     = parse_refusal(rendered);
     const std::optional<meios::diagnostic_code> code = mapped_cause(cause.outer, cause.inner, cause.line);
     if(!code)
@@ -79,7 +79,7 @@ inline void compare_document_probe(const document_probe &one, const std::string 
     const std::string id(one.id);
     INFO("document probe " << id);
     const std::string rendered = upstream_render(renders_dir, id);
-    record_divergence(manifest, id, upstream_document(rendered), observed_document(one), observed);
+    record_divergence(manifest, id, upstream_document(one, rendered), observed_document(one), observed);
 }
 
 #endif

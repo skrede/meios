@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="p" value="1" scope="parent"/>
+  <link name="l"/>
+</robot>

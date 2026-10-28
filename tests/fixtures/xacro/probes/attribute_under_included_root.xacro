@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="l">
+    <xacro:include filename="attribute_under_included_root.d/i.xacro"/>
+  </link>
+</robot>

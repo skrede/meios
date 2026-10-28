@@ -1,0 +1,5 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="m">
+    <xacro:property name="s" value="S" scope="parent"/>
+  </xacro:macro>
+</robot>

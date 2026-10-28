@@ -1,0 +1,6 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="namespace_parent_scope_skips_namespace.d/n.xacro" ns="n"/>
+  <xacro:n.m/>
+  <link name="a${s}"/>
+  <link name="a${n.s}"/>
+</robot>

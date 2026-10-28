@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 65> grammar_document_probes{
+inline const std::array<document_probe, 90> grammar_document_probes{
         document_probe{false, "property_evaluated_at_first_read"}, document_probe{false, "property_circular_definition"},
         document_probe{false, "property_self_reference"},          document_probe{false, "property_never_read_undefined_name"},
         document_probe{false, "property_never_read_dollar_run"},   document_probe{false, "property_default_reads_later_property"},
@@ -67,6 +67,31 @@ inline const std::array<document_probe, 65> grammar_document_probes{
         document_probe{false, "macro_defined_in_macro_used_after_call"},
         document_probe{false, "property_removed_in_macro_reaches_global"},
         document_probe{false, "property_removed_in_macro_erases_parameter"},
+        document_probe{false, "comment_kept_in_output", false, false, {}, false, {}, {}, false, true},
+        document_probe{false, "block_evaluated_where_inserted"},
+        document_probe{false, "block_parameter_seen_by_nested_call"},
+        document_probe{false, "block_property_before_block_parameter"},
+        document_probe{false, "xacro_attribute_removed"},
+        document_probe{false, "xacro_attribute_never_evaluated"},
+        document_probe{false, "included_root_namespace_lifted"},
+        document_probe{false, "macro_namespace_lifted"},
+        document_probe{false, "cdata_kept_verbatim"},
+        document_probe{false, "parent_scope_at_document_level"},
+        document_probe{false, "attribute_under_conditional"},
+        document_probe{false, "attribute_under_macro_body"},
+        document_probe{false, "attribute_under_included_root"},
+        document_probe{false, "attribute_under_block_wrapper"},
+        document_probe{false, "attribute_under_block_element"},
+        document_probe{false, "attribute_on_document_root"},
+        document_probe{false, "element_renamed_to_conditional"},
+        document_probe{false, "element_renamed_to_macro_call"},
+        document_probe{false, "namespace_property_sees_later_global"},
+        document_probe{false, "namespace_falls_through_to_parent"},
+        document_probe{false, "namespace_parent_scope_skips_namespace"},
+        document_probe{false, "namespace_replaced_by_second_include"},
+        document_probe{false, "comment_evaluated_under_eval_comments", false, false, {}, false, {}, {}, false, true},
+        document_probe{false, "comment_before_xacro_element_removed", false, false, {}, false, {}, {}, false, true},
+        document_probe{false, "processing_instruction_kept", false, false, {}, false, {}, {}, false, true},
 };
 
 #endif
