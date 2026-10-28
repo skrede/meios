@@ -31,6 +31,8 @@ struct generated_case
     std::string family;
     std::string text;
     std::string upstream;
+    std::string cause;
+    std::string refusal;
 };
 
 struct record
@@ -106,8 +108,8 @@ inline record read_record()
         else if(!line.empty())
         {
             const std::vector<std::string> fields = oracle::fields_of(line);
-            REQUIRE(fields.size() == 5);
-            held.cases.push_back(generated_case{fields[0], fields[1], unescaped(fields[2]), unescaped(fields[3])});
+            REQUIRE(fields.size() == 6);
+            held.cases.push_back(generated_case{fields[0], fields[1], unescaped(fields[2]), unescaped(fields[3]), fields[4], unescaped(fields[5])});
         }
     }
     return held;

@@ -3,10 +3,17 @@ import hashlib
 import unittest
 
 from recorder import generated
+from recorder.rendering import refusal_cause
 from recorder.generated_families import FAMILIES
 
 MACHINE_PATH = re.compile(r"/home/|/tmp/|/Users/|[A-Za-z]:\\")
 PARAMETER = re.compile(r"(\*{0,2})([a-z])(:?=|$)")
+
+
+class wrapping(Exception):
+    def __init__(self, inner):
+        super().__init__("wrapped")
+        self.exc = inner
 
 
 def family_texts(name):
@@ -92,6 +99,24 @@ class generated_set(unittest.TestCase):
         include = FAMILIES[0]
         written = generated.document(include, 'a&b<"c')
         self.assertIn('filename="a&amp;b&lt;&quot;c"', written)
+
+    def test_a_refusal_records_its_class_and_the_class_it_wraps(self):
+        self.assertEqual(refusal_cause(wrapping(NameError("name 'x' is not defined"))),
+                         ("wrapping", "NameError"))
+        self.assertEqual(refusal_cause(RuntimeError()), ("RuntimeError", "-"))
+        self.assertEqual(refusal_cause(wrapping(None)), ("wrapping", "-"))
+
+    def test_every_recorded_case_names_its_cause(self):
+        record = generated.REPO / "tests" / "golden" / "oracle" / generated.RECORD
+        lines = record.read_text(encoding="utf-8").splitlines()
+        rows = [line.split("\t") for line in lines if not line.startswith("#")]
+        self.assertEqual(len(rows), generated.COUNT * len(FAMILIES))
+        for row in rows:
+            self.assertEqual(len(row), 6, row[0])
+            if row[3] == "REFUSED":
+                self.assertRegex(row[4], r"^\w+ (\w+|-)$", row[0])
+            else:
+                self.assertEqual((row[4], row[5]), ("-", ""), row[0])
 
 
 if __name__ == "__main__":

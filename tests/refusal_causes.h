@@ -66,6 +66,7 @@ inline constexpr refusal_cause refusal_causes[]{
         {"XacroException", "ValueError", "", meios::diagnostic_code::expression_error},
         {"XacroException", "PackageNotFoundError", "", meios::diagnostic_code::unresolved_find},
         {"XacroException", "FileNotFoundError", "", meios::diagnostic_code::unresolved_include},
+        {"XacroException", "NotADirectoryError", "", meios::diagnostic_code::unresolved_include},
         {"XacroException", "SubstitutionException", "Unknown substitution command", meios::diagnostic_code::unknown_substitution},
         {"XacroException", "SubstitutionException", "Cannot substitute $(dirname)", meios::diagnostic_code::unknown_substitution},
         {"XacroException", "SubstitutionException", "$(find pkg) accepts exactly one argument", meios::diagnostic_code::unresolved_find},

@@ -902,19 +902,24 @@ describes:
   renders it. The pinned reference's verdict for every case is recorded in
   `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the count per family and
   the template each family's text is written into, and `generated_differential` compares this side's
-  verdict with that record on every run. A verdict is whether the document refused and, where it
+  verdict with that record on every run. A verdict is the cause of a refusal or, where the document
   rendered, the whole rendered document, read on both sides into the project's own canonical text
   (`meios::canonical_xml`: attributes sorted, insignificant whitespace collapsed, comments and
   processing instructions dropped) after the staged paths are normalized, so every element and
-  attribute is compared and two refusals agree whatever each says. Nine cases disagree, and
+  attribute is compared. Two refusals agree only on the same cause: upstream's exception class, which
+  the record's cause column carries beside the refusal's first line, and its message stem, mapped
+  through `tests/refusal_causes.h` to the code this side gives, the same rule the probes follow. An
+  upstream refusal no row maps fails the run. Eleven cases disagree, and
   `tests/golden/oracle/generated_divergences.cases` records each as a reviewed row with its reason:
   five where a parent element after a find leaves the find's package, the difference the
   `include_find_climbs_out_of_package` row records; one where a find held in an argument makes the
   filename absolute, the difference the `include_absolute_path` row records; one where a separator
-  after the file a find names is read here and refused as not a directory by the reference; and two
+  after the file a find names is read here and refused as not a directory by the reference; two
   where an element missing before a parent element beside the document cancels by its spelling here,
-  one of them then found through the configured sources. [Known limitations](known-limitations.md)
-  discloses all four.
+  one of them then found through the configured sources; and two macro calls that both sides refuse
+  for different causes, the reference for want of a block before it reads any default and this side
+  on a default that is a run of dollars, read before any block is inserted.
+  [Known limitations](known-limitations.md) discloses all five.
 
 **Most generated include and macro cases test agreement on a refusal, not on a rendering.** Of the two
 hundred cases in each family, the reference renders seventeen include cases, eighty-four span cases

@@ -6,7 +6,7 @@ import shutil
 import contextlib
 
 from recorder.corpus import REPO
-from recorder.rendering import escape, refusal_text, same_length
+from recorder.rendering import escape, refusal_cause, refusal_text, same_length
 from recorder.generated_families import ESCAPED, FAMILIES
 
 RECORD = "generated_cases.cases"
@@ -97,9 +97,9 @@ def render_case(source, normal):
     try:
         with contextlib.redirect_stderr(io.StringIO()):
             rendered = xacro.process_file(str(source), mappings={})
-        return verdict(rendered, normal), ""
+        return verdict(rendered, normal), "-", ""
     except Exception as failure:
-        return "REFUSED", normal(refusal_text(failure))
+        return "REFUSED", " ".join(refusal_cause(failure)), normal(refusal_text(failure))
 
 
 @contextlib.contextmanager
@@ -122,27 +122,30 @@ def generated_rows(tmp):
     with package_root(stage / "R"):
         for case_id, one, text in generated_cases():
             source.write_text(document(one, text), encoding="utf-8", newline="\n")
-            upstream, refusal = render_case(source, normal)
-            rows.append((case_id, one.name, column(text), upstream, column(refusal)))
+            upstream, cause, refusal = render_case(source, normal)
+            rows.append((case_id, one.name, column(text), upstream, cause, column(refusal)))
     same_length("the generated set", "rows", len(rows), COUNT * len(FAMILIES))
     return rows
 
 
 def generated_header():
-    return ["id <TAB> family <TAB> text <TAB> upstream <TAB> refusal. A seeded, fixed-size set of",
-            "include filenames, dollar shapes and macro specifications, each written into its",
-            "family's template below and rendered by the pinned reference as doc/case.xacro beside",
-            "tests/fixtures/xacro/generated, whose R directory is the only package root. The text",
-            "and refusal columns escape a backslash, a tab and a newline as \\\\, \\t and \\n. A",
-            "slot the escaped line names is written into an attribute with &, < and \" escaped,",
-            "and every other slot is markup written as it is. A multi-slot text separates its",
-            "fields with a tab, in the order its slots line names. The upstream column is",
-            "REFUSED, or the rendered document element as the reference writes it, each staged",
-            "path in it replaced by the token the next line names and escaped as the text column",
-            "is. Both sides compare it as the project's own canonical text, so every element and",
-            "attribute is compared.",
-            "The staged package root reads @ROOT@ and the staged document directory @DOC@. The",
-            "refusal column carries a refusal's first line and is not compared.",
+    return ["id <TAB> family <TAB> text <TAB> upstream <TAB> cause <TAB> refusal. A seeded,",
+            "fixed-size set of include filenames, dollar shapes and macro specifications, each",
+            "written into its family's template below and rendered by the pinned reference as",
+            "doc/case.xacro beside tests/fixtures/xacro/generated, whose R directory is the only",
+            "package root. The text and refusal columns escape a backslash, a tab and a newline as",
+            "\\\\, \\t and \\n. A slot the escaped line names is written into an attribute with &, <",
+            "and \" escaped, and every other slot is markup written as it is. A multi-slot text",
+            "separates its fields with a tab, in the order its slots line names. The upstream",
+            "column is REFUSED, or the rendered document element as the reference writes it, each",
+            "staged path in it replaced by the token the next line names and escaped as the text",
+            "column is. Both sides compare it as the project's own canonical text, so every element",
+            "and attribute is compared.",
+            "The staged package root reads @ROOT@ and the staged document directory @DOC@. A",
+            "refused case's cause column names the reference's exception class and the class it",
+            "wraps, or - where it wraps none, and a rendered case's is -. The refusal column carries",
+            "the refusal's first line. The cause column and that line select the diagnostic code",
+            "the refusal is compared as, so two refusals agree only on the same cause.",
             "seed 0x{:x}".format(SEED),
             *("count {} {}".format(one.name, COUNT) for one in FAMILIES),
             "escaped " + " ".join(ESCAPED),

@@ -38,7 +38,7 @@ generated::record literal_record(const std::string &document)
 {
     generated::record held;
     held.families["literal"] = generated::family{1, {"TEXT"}, "@TEXT@"};
-    held.cases.push_back(generated::generated_case{"literal_001", "literal", document, ""});
+    held.cases.push_back(generated::generated_case{"literal_001", "literal", document, "", "-", ""});
     return held;
 }
 
@@ -50,7 +50,12 @@ std::string meios_literal(const std::string &document)
 
 std::string upstream_literal(const std::string &upstream)
 {
-    return generated::upstream_verdict(generated::generated_case{"literal_001", "literal", "", upstream});
+    return generated::upstream_verdict(generated::generated_case{"literal_001", "literal", "", upstream, "-", ""});
+}
+
+std::string upstream_refused(const std::string &cause, const std::string &refusal)
+{
+    return generated::upstream_verdict(generated::generated_case{"literal_001", "literal", "", "REFUSED", cause, refusal});
 }
 
 }
@@ -112,11 +117,16 @@ TEST_CASE("the verdict is the whole canonical document on both sides", "[generat
     CHECK(upstream_literal(R"(<robot name="g"></robot>)") == meios_literal(R"(<robot name="g"/>)"));
 }
 
-TEST_CASE("a refusal agrees only with a refusal", "[generated]")
+TEST_CASE("two refusals agree only on the same cause", "[generated]")
 {
-    const std::string refused = meios_literal(R"(<robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><link name="${nope}"/></robot>)");
-    CHECK(upstream_literal("REFUSED") == refused);
-    CHECK(upstream_literal(R"(<robot name="g"/>)") != refused);
+    const std::string upstream = upstream_refused("XacroException NameError", "name 'nope' is not defined");
+    const std::string named    = meios_literal(R"(<robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><link name="${nope}"/></robot>)");
+    const std::string included = meios_literal(R"(<robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:include filename="missing.xacro"/></robot>)");
+    CHECK(upstream == "REFUSED undefined_property");
+    CHECK(named == upstream);
+    CHECK(included == "REFUSED unresolved_include");
+    CHECK(included != upstream);
+    CHECK(upstream_literal(R"(<robot name="g"/>)") != named);
 }
 
 TEST_CASE("a staged path is normalized in the native and the generic spelling", "[generated]")
