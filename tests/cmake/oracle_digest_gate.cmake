@@ -29,12 +29,24 @@ function(meios_check_oracle_records oracle_dir out_rows)
                 "tests/tools/oracle/record_upstream.py, never by editing an expected value.")
         endif()
         list(APPEND listed ${name})
-        file(STRINGS ${oracle_dir}/${name} measured_rows REGEX "^[^#]")
-        list(LENGTH measured_rows measured_count)
+        _meios_count_record_rows(${oracle_dir}/${name} measured_count)
         math(EXPR rows "${rows} + ${measured_count}")
     endforeach()
     _meios_refuse_unlisted_records(${oracle_dir} "${listed}")
     set(${out_rows} ${rows} PARENT_SCOPE)
+endfunction()
+
+# A recorded line may hold a semicolon or an unbalanced bracket, which a CMake list splits at or
+# joins across, so the lines are counted with those characters neutralized first.
+function(_meios_count_record_rows path out_count)
+    file(READ ${path} text)
+    string(REPLACE ";" "_" text "${text}")
+    string(REPLACE "[" "_" text "${text}")
+    string(REPLACE "]" "_" text "${text}")
+    string(REGEX MATCHALL "[^\n]+" lines "${text}")
+    list(FILTER lines EXCLUDE REGEX "^#")
+    list(LENGTH lines count)
+    set(${out_count} ${count} PARENT_SCOPE)
 endfunction()
 
 # A script run has no build system to re-run it, so only a configure asks for the glob to be

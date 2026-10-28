@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 from recorder.headers import HEADERS
+from recorder.grammar import grammar_rows, pinned_sources
 from recorder.yaml_rows import collision_rows, rendering_rows, scalar_rows, unit_tag_rows
 from recorder.facts import robot_facts
 from recorder.ledger import LEDGER, ledger_rows
@@ -33,6 +34,8 @@ def records(tmp, share, versions):
         "yaml_scalars.cases": (HEADERS["yaml_scalars.cases"], scalar_rows(tmp, ur)),
         "collisions.cases": (HEADERS["collisions.cases"], collision_rows(tmp)),
         RECORD: (HEADERS[RECORD], generated_rows(tmp)),
+        "grammar_constructs.cases": (HEADERS["grammar_constructs.cases"],
+                                     grammar_rows(pinned_sources())),
         LEDGER: (HEADERS[LEDGER], ledger_rows(measured)),
         **{one.record: (facts, measured[key_of(one)]) for one in CORPUS_DOCUMENTS},
     }
