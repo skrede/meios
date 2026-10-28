@@ -5,6 +5,7 @@
 #include "differential_seed.h"
 #include "differential_document.h"
 
+#include "../refusal_causes.h"
 #include "../differential_verdict.h"
 
 #include <meios/xacro.h>
@@ -14,6 +15,7 @@
 #include <tuple>
 #include <string>
 #include <vector>
+#include <optional>
 #include <filesystem>
 
 namespace differential
@@ -39,10 +41,17 @@ inline std::string upstream_value(const std::string &rendered)
 }
 
 // A whole document is carried as the project's own canonical text, so attribute order and
-// insignificant whitespace are not a difference and the row stays one line.
+// insignificant whitespace are not a difference and the row stays one line. A refusal is carried as
+// the code this side gives for upstream's cause, so two refusals agree only on the same cause.
 inline std::string upstream_document(const std::string &rendered)
 {
-    return refused(rendered) ? std::string("REFUSED") : meios::canonical_xml(rendered);
+    if(!refused(rendered))
+        return meios::canonical_xml(rendered);
+    const upstream_refusal cause                     = parse_refusal(rendered);
+    const std::optional<meios::diagnostic_code> code = mapped_cause(cause.outer, cause.inner, cause.line);
+    if(!code)
+        FAIL("unmapped upstream refusal: " << cause.outer << ' ' << cause.inner << ": " << cause.line);
+    return "REFUSED " + std::string(meios::to_string(*code));
 }
 
 inline void record_divergence(const std::vector<oracle::row> &manifest, const std::string &id,

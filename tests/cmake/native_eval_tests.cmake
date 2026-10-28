@@ -59,7 +59,7 @@ function(meios_add_native_test stem kind)
 endfunction()
 
 foreach(stem IN ITEMS native_oracle_records native_oracle_pins native_corpus_record
-                      differential_verdict accepted_forms coverage_matrix)
+                      differential_verdict refusal_causes accepted_forms coverage_matrix)
     meios_add_native_test(${stem} record)
 endforeach()
 

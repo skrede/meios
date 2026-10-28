@@ -113,8 +113,9 @@ private:
 };
 
 // This side's verdict for a whole document: the expansion entry the load path runs, reduced to the
-// canonical text of what it rendered or to the bare refusal a manifest column can hold. It is named
-// after the fixture, so a relative include in it resolves beside the fixture as upstream's does.
+// canonical text of what it rendered or to the refusal and its code, which a manifest column can
+// hold. It is named after the fixture, so a relative include in it resolves beside the fixture as
+// upstream's does.
 inline std::string observed_document(const document_probe &one)
 {
     meios::log_sink silent;
@@ -134,7 +135,7 @@ inline std::string observed_document(const document_probe &one)
     const std::string source = slurp(fixture);
     const meios::expected<meios::expansion, meios::expansion_error> rendered = meios::expand(
         source, scope, sources, fixture, meios::expansion_limits{}, silent);
-    return rendered.has_value() ? meios::canonical_xml(rendered->document) : std::string("REFUSED");
+    return rendered.has_value() ? meios::canonical_xml(rendered->document) : "REFUSED " + std::string(meios::to_string(rendered.error().code));
 }
 
 #endif

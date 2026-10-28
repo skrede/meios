@@ -6,6 +6,7 @@
 
 #include "../model_facts.h"
 #include "../corpus_record.h"
+#include "../refusal_causes.h"
 #include "../native_expansion.h"
 #include "../differential_verdict.h"
 
@@ -108,6 +109,16 @@ void compare_expression_case(const oracle::row &row, const std::vector<oracle::r
     require_reviewed_divergence(manifest, id, upstream_text, ran.rendered);
 }
 
+// Two refusals agree only on the same cause, upstream's mapped through the cause table.
+void require_same_cause(const std::string &upstream_text, const meios::load_error &error)
+{
+    const differential::upstream_refusal cause         = differential::parse_refusal(upstream_text);
+    const std::optional<meios::diagnostic_code> mapped = differential::mapped_cause(cause.outer, cause.inner, cause.line);
+    INFO("upstream refused with " << cause.outer << ' ' << cause.inner << ": " << cause.line << ", mapped to "
+                                  << (mapped ? meios::to_string(*mapped) : "no code") << ", refused here with " << meios::to_string(error.code));
+    CHECK(mapped == error.code);
+}
+
 void compare_corpus_document(const corpus::document &doc, std::vector<std::string> &seen)
 {
     if(doc.backend != corpus::evaluator::native)
@@ -125,6 +136,8 @@ void compare_corpus_document(const corpus::document &doc, std::vector<std::strin
     const meios::expected<meios::load_result, meios::load_error> own =
         meios::load(doc.path, native_options(doc));
     CHECK(own.has_value() == !upstream_refused);
+    if(!own.has_value() && upstream_refused)
+        return require_same_cause(upstream_text, own.error());
     if(!own.has_value() || upstream_refused)
         return;
     const std::vector<oracle::row> facts_record = oracle::load_rows(record_file);

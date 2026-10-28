@@ -831,8 +831,9 @@ What is compared, exactly:
   later declaration. The meios side is what the load path builds, under the caller
   arguments a consumer would hand it, written back out by the serializer the command line flattens
   with; the expansion alone is held to the same render beside it. Two refusals agree only on their
-  cause: upstream's own wording and this side's diagnostic code, both named per document, so a fixture
-  missing from both sides or a refusal for an unrelated reason fails the run.
+  cause: upstream's own wording and this side's diagnostic code, both named per document, and upstream's
+  exception mapped to the code this side gives for it, so a fixture missing from both sides or a refusal
+  for an unrelated reason fails the run.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -881,7 +882,11 @@ describes:
   documents the enumeration above names, each held to a fresh upstream render; and the probes whose
   difference the reviewed manifest `differential_divergences.cases` records, twenty-eight rows of it,
   fifteen of them document probes and thirteen expression probes, all listed in
-  `tests/tools/oracle/differential_probes.py`.
+  `tests/tools/oracle/differential_probes.py`. A probe refused on both sides agrees only on the same
+  cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
+  code this side gives for that cause, and an upstream refusal no row maps fails the run. The
+  expression cases and expression probes still compare a refusal by refusal alone, because they
+  measure the `${}` surface, whose evaluator reports that it failed and no code.
 - **The generated set**: a committed grammar, `tests/tools/oracle/recorder/generated_families.py`, from
   which `generated.py` draws two hundred cases in each of three families from one splitmix64 sequence
   seeded `0x6d65696f73`, six hundred in all: include filenames, `$` shapes in an attribute, and macro

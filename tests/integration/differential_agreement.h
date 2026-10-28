@@ -5,6 +5,7 @@
 #include "differential_xml.h"
 
 #include "../corpus_record.h"
+#include "../refusal_causes.h"
 #include "../native_expansion.h"
 
 #include <meios/urdf.h>
@@ -61,12 +62,18 @@ inline std::string loaded_document(const meios::load_result &loaded)
 }
 
 // A refusal agrees only on its cause, so a fixture gone from both tables, a malformed one, or a
-// refusal under an unrelated code cannot pass as agreement.
+// refusal under an unrelated code cannot pass as agreement. Upstream's cause is held to the same
+// code through the cause table, and its wording to the stem the probe names.
 inline void require_same_refusal(const agreement_probe &one, const std::string &upstream_text, const meios::load_error &error)
 {
     REQUIRE(one.refuses.has_value());
     CHECK(error.code == *one.refuses);
     CHECK(upstream_text.find(one.upstream_cause) != std::string::npos);
+    const upstream_refusal cause                       = parse_refusal(upstream_text);
+    const std::optional<meios::diagnostic_code> mapped = mapped_cause(cause.outer, cause.inner, cause.line);
+    INFO("upstream refused with " << cause.outer << ' ' << cause.inner << ": " << cause.line << ", mapped to "
+                                  << (mapped ? meios::to_string(*mapped) : "no code") << ", expected " << meios::to_string(*one.refuses));
+    CHECK(mapped == one.refuses);
 }
 
 // The load a consumer runs is what is compared, under the caller arguments it would hand that

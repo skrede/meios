@@ -27,3 +27,8 @@ def refusal_text(failure):
     lines = str(failure).splitlines()
     return lines[0] if lines and lines[0].strip() else type(failure).__name__
 
+
+# Upstream wraps an evaluation failure in its own exception, so the wrapped class names the cause.
+def refusal_cause(failure):
+    inner = getattr(failure, "exc", None)
+    return type(failure).__name__, type(inner).__name__ if inner is not None else "-"

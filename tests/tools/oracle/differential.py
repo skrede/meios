@@ -17,7 +17,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from recorder.corpus import REPO, CORPUS_DOCUMENTS, document_root, key_of  # noqa: E402
-from recorder.rendering import render, escape, refusal_text  # noqa: E402
+from recorder.rendering import render, escape, refusal_text, refusal_cause  # noqa: E402
 from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
@@ -34,7 +34,8 @@ def write_text(out, case_id, suffix, text):
 
 
 def write_refusal(out, case_id, suffix, failure):
-    write_text(out, case_id, suffix, "REFUSED\t" + refusal_text(failure) + "\n")
+    fields = (*refusal_cause(failure), refusal_text(failure))
+    write_text(out, case_id, suffix, "REFUSED\t" + "\t".join(fields) + "\n")
 
 
 # Written as a tiny single-attribute document rather than the bare value, so the C++ comparator
