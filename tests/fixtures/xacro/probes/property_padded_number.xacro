@@ -1,0 +1,10 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="n1" value=" 1"/>
+  <xacro:property name="n2" value=" 1 "/>
+  <xacro:property name="n3" value="1 "/>
+  <xacro:property name="n4" value=" 1.5e1 "/>
+  <link name="a${n1}"/>
+  <link name="b${n2}"/>
+  <link name="c${n3}"/>
+  <link name="d${n4}"/>
+</robot>

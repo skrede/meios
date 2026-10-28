@@ -1,0 +1,8 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="q1" value="'abc'"/>
+  <xacro:property name="q2" value="''"/>
+  <xacro:property name="q3" value="'a'b'"/>
+  <link name="x${q1}"/>
+  <link name="x${q2}"/>
+  <link name="x${q3}"/>
+</robot>

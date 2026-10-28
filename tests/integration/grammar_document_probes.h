@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 43> grammar_document_probes{
+inline const std::array<document_probe, 65> grammar_document_probes{
         document_probe{false, "property_evaluated_at_first_read"}, document_probe{false, "property_circular_definition"},
         document_probe{false, "property_self_reference"},          document_probe{false, "property_never_read_undefined_name"},
         document_probe{false, "property_never_read_dollar_run"},   document_probe{false, "property_default_reads_later_property"},
@@ -45,6 +45,28 @@ inline const std::array<document_probe, 43> grammar_document_probes{
         document_probe{false, "optenv_command_fallback_words"},
         document_probe{false, "empty_command"},
         document_probe{true, "yaml_empty_scalar_key"},
+        document_probe{false, "property_quoted_value"},
+        document_probe{false, "property_padded_number"},
+        document_probe{false, "property_signed_number"},
+        document_probe{false, "property_unicode_digit"},
+        document_probe{false, "property_infinity_spelling"},
+        document_probe{false, "macro_argument_literal_reading"},
+        document_probe{false, "property_shadows_pi"},
+        document_probe{false, "conditional_real_one"},
+        document_probe{false, "conditional_upper_true"},
+        document_probe{false, "conditional_empty"},
+        document_probe{false, "conditional_quoted_text"},
+        document_probe{false, "property_without_name"},
+        document_probe{false, "macro_without_name"},
+        document_probe{false, "conditional_without_value"},
+        document_probe{false, "unless_without_value"},
+        document_probe{false, "include_without_filename"},
+        document_probe{false, "macro_named_call"},
+        document_probe{false, "macro_name_with_dot"},
+        document_probe{false, "macro_name_with_xacro_prefix"},
+        document_probe{false, "macro_defined_in_macro_used_after_call"},
+        document_probe{false, "property_removed_in_macro_reaches_global"},
+        document_probe{false, "property_removed_in_macro_erases_parameter"},
 };
 
 #endif

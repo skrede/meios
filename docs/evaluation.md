@@ -880,9 +880,9 @@ describes:
   and four authored cases above, which are the `expression` rows of the inventory.
 - **The committed probes**: ninety-nine agreement probes, the `agreement` rows of the inventory and the
   documents the enumeration above names, each held to a fresh upstream render; and the probes whose
-  difference the reviewed manifest `differential_divergences.cases` records, seventy-one rows of it:
+  difference the reviewed manifest `differential_divergences.cases` records, ninety-three rows of it:
   fifteen document probes and thirteen expression probes listed in
-  `tests/tools/oracle/differential_probes.py`, and the grammar record's forty-three document probes, a
+  `tests/tools/oracle/differential_probes.py`, and the grammar record's sixty-five document probes, a
   group listed in `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
