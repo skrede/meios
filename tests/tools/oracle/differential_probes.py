@@ -4,6 +4,7 @@
 import os
 
 from recorder.corpus import REPO
+from grammar_probes import GRAMMAR_DOCUMENT_PROBES
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
@@ -46,7 +47,7 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "find_dotted_root",
                    "property_forward_reference",
                    "include_find_climbs_out_of_package",
-                   "include_glob_filename")
+                   "include_glob_filename") + GRAMMAR_DOCUMENT_PROBES
 PROBE_DIR = REPO / "tests" / "fixtures" / "xacro" / "probes"
 
 # A committed fixture cannot spell a machine's absolute path, so these probes are handed the

@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="include_optional_missing_file.d/missing.xacro" optional="true"/>
+  <link name="l"/>
+</robot>

@@ -1,0 +1,8 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="blk">
+    <visual/>
+  </xacro:property>
+  <link name="l">
+    <xacro:insert_block name="blk"/>
+  </link>
+</robot>

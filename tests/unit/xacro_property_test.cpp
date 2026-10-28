@@ -2,21 +2,37 @@
 
 #include <meios/io/source_stack.h>
 
+#include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/source_location.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 #include <fstream>
 #include <utility>
 #include <iterator>
+#include <algorithm>
 #include <filesystem>
 
 namespace
 {
 
 using expansion_result = meios::expected<meios::expansion, meios::expansion_error>;
+
+struct code_sink final : public meios::log_sink
+{
+    std::vector<meios::diagnostic_code> codes;
+
+    using meios::log_sink::log;
+
+    void log(meios::level, meios::diagnostic_code code, const meios::source_location &, const std::string &) override
+    {
+        codes.push_back(code);
+    }
+};
 
 expansion_result expand_body(const std::string &body, meios::log_sink &log)
 {
@@ -147,4 +163,14 @@ TEST_CASE("a read of an argument other than through the argument command refuses
             REQUIRE(out.error().message.find("$(arg p)") != std::string::npos);
         }
     }
+}
+
+// Upstream warns "unknown attribute(s)" for an attribute a property does not declare.
+TEST_CASE("an attribute outside a property's attribute list raises no warning here", "[xacro][property][warning]")
+{
+    code_sink heard;
+    const expansion_result out = expand_body(R"(<xacro:property name="p" value="1" bogus="x"/><link name="l${p}"/>)", heard);
+    REQUIRE(out.has_value());
+    REQUIRE(out->document.find(R"(name="l1")") != std::string::npos);
+    REQUIRE(std::ranges::find(heard.codes, meios::diagnostic_code::unknown_attribute) == heard.codes.end());
 }

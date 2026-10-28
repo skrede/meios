@@ -58,6 +58,8 @@ inline constexpr refusal_cause refusal_causes[]{
         {"XacroException", "-", "xacro:element: empty name", meios::diagnostic_code::xacro_structural_error},
         {"XacroException", "-", "xacro:attribute: empty name", meios::diagnostic_code::xacro_structural_error},
         {"XacroException", "XacroException", "invalid expression: ", meios::diagnostic_code::expression_error},
+        {"XacroException", "XacroException", "circular variable definition", meios::diagnostic_code::xacro_structural_error},
+        {"XacroException", "XacroException", "name '", meios::diagnostic_code::undefined_property},
         {"XacroException", "XacroException", "Cannot substitute $(dirname)", meios::diagnostic_code::unknown_substitution},
         {"XacroException", "ImportError", "substitution args not supported", meios::diagnostic_code::unknown_substitution},
         {"XacroException", "ArgException", "Undefined substitution argument", meios::diagnostic_code::unresolved_arg},

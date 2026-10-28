@@ -4,6 +4,7 @@
 #include "differential_xml.h"
 #include "differential_seed.h"
 #include "differential_document.h"
+#include "grammar_document_probes.h"
 
 #include "../refusal_causes.h"
 #include "../differential_verdict.h"

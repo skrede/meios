@@ -190,6 +190,8 @@ TEST_CASE("the divergence manifest matches the measured divergences and no other
         differential::compare_divergence_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, manifest, observed);
     for(const differential::document_probe &one : differential::document_probes)
         differential::compare_document_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, manifest, observed);
+    for(const differential::document_probe &one : differential::grammar_document_probes)
+        differential::compare_document_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, manifest, observed);
     for(const std::string &stale : differential::stale_manifest_entries(manifest, observed))
         FAIL("divergence manifest entry '" << stale << "' no longer reproduces");
 }
