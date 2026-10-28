@@ -110,4 +110,14 @@ TEST_CASE("an entry name that names the archive root itself is rejected on every
     require_refused("itself_up", "rob.urdf", "x/..", "names the bundle root itself");
     require_refused("itself_slash", "rob.urdf", "./", "names the bundle root itself");
     require_refused("itself_dot_up", "rob.urdf", "a/./..", "names the bundle root itself");
+    require_refused("itself_empty", "", "", "names the bundle root itself");
+}
+
+TEST_CASE("an entry name that names a directory is rejected on every platform, in a write and in a dry run", "[archive][zip]")
+{
+    require_refused("directory_urdf", "rob/", "", "names a directory, not a file");
+    require_refused("directory_slash", "rob.urdf", "x/", "names a directory, not a file");
+    require_refused("directory_dot", "rob.urdf", "x/.", "names a directory, not a file");
+    require_refused("directory_up", "rob.urdf", "a/b/..", "names a directory, not a file");
+    require_refused("directory_package", "rob.urdf", "meshes/p/", "names a directory, not a file");
 }

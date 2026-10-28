@@ -373,60 +373,62 @@ anyone counting: a consumer tallying write failures is not handed a policy refus
 
 Several refusals are unconditional and belong to no policy. An empty reference, a `file://` authority
 naming a host, and a `file://` candidate that does not normalize to an absolute path are three, each
-described in its own section above. Two more are worth naming here, beside the policy they are not
-part of. **A `package://` URI must carry both
-halves at this layer** — a package name and a relative path beneath it — so the spelling that names a
-package and nothing after it, the spelling whose package name is empty, the spelling that ends at the
-separator immediately after the package name, and the spelling whose segment below that name is empty
-are all malformed under `malformed_asset_uri`. That guard measures the separator immediately after the
-package name and the character following it, and no deeper one; what a reference ending at a separator
-further down does depends on what precedes that separator. Where a directory below the package name
-is named, the reference carries a relative half, the lookup happens, and a directory it resolves to is
-graded absent by the policy above under `unresolved_asset` rather than being called malformed. Where
-that segment is empty — `package://<pkg>//` — the relative half opens with a separator and names no
-asset beneath the package, so the spelling is decided by shape at the grammar stage, before any source
-is asked, any containment decision is made or the missing-asset policy is consulted. A relative half
-rooted some other way passes that shape check, on Windows a drive (`package://<pkg>/D:/…`) or a
-backslash, and the source then refuses it as escaping the root, under `uncontained_asset`, as it
-refuses a rooted relative half on every platform. On Windows a package half opening with a drive, as
-in `package://C:/…`, is refused as escaping the root as well; on POSIX a package half is never rooted,
-since its first `/` ends the package name. So neither half replaces the root it is joined onto, even
-where the path it names lies inside that root, and a folder bundle refuses a rooted destination name
-the same way. `io_package_join.a rooted relative part names no candidate under the Windows grammar, a
-drive or a backslash included` and `io_package_join.a rooted package part names no candidate under the
-Windows grammar, a drive or a backslash included` assert the drive and backslash readings of each half
-on every host, and `io_package_join.a directory or bundle source refuses a rooted relative part as an
-escape, even one naming a file inside its root`, `io_package_join.a directory or bundle source refuses
-a rooted package part as an escape, even one naming a package inside its root` and `io_package_join.a
-folder bundle refuses a rooted destination name, even one inside its root, and writes nothing there`
-the refusals. The archive writer refuses an entry name by its own guard, in a write and in a dry run
-alike, in four cases: on every host, a name holding a backslash, and a name whose first element, once
-normalized, begins with an ASCII letter and a colon, a leading `./` included, since a ZIP entry name
-holds no drive letter and separates its elements by forward slashes alone (APPNOTE 4.4.17); a name with a
-root as the platform building the archive reads it, which on Windows includes a lone leading separator;
-and a name that is empty, that leads out with `..` once normalized, or that is `.` once normalized, as
-`x/..` is. A refusal fails the write as a whole: the other entries are still checked, the writer reports
-`io_error`, and a real write leaves no archive. A colon later in a name is not refused. The writer's own
-cases "an entry name holding a backslash is rejected on every platform, in a write and in a dry run" and
-"an entry name beginning with a drive letter and colon is rejected on every platform, in a write and in a
-dry run" assert the first two on every host, Linux included, and "an entry name with a root as the
-platform reads it is rejected by the containment guard, in a write and in a dry run" pins the third; on
-POSIX a root and an absolute path coincide, so that case cannot show the Windows reading of a lone
-separator there. The writer's case "an entry name that names the archive root itself is rejected on every
-platform, in a write and in a dry run" asserts on every host, Linux included, that a name normalizing to
-`.` is refused. On Windows a reference written with backslash separators, `package://p/meshes\base.stl`,
-resolves, since a backslash there separates elements, but its entry name keeps the relative half as
-written, `meshes/p/meshes\base.stl`, so the archive writer refuses the bundle, the whole archive as every
-refusal does, while the folder writer writes it; on POSIX the backslash is part of a file name, so such a
+described in its own section above. Two more are worth naming here, beside the policy they are not part
+of. **A `package://` URI must carry both halves at this layer** — a package name and a relative path
+beneath it — so the spelling that names a package and nothing after it, the spelling whose package name
+is empty, the spelling that ends at the separator immediately after the package name, and the spelling
+whose segment below that name is empty are all malformed under `malformed_asset_uri`. That guard measures
+the separator immediately after the package name and the character following it, and no deeper one; what
+a reference ending at a separator further down does depends on what precedes that separator. Where a
+directory below the package name is named, the reference carries a relative half, the lookup happens, and
+a directory it resolves to is graded absent by the policy above under `unresolved_asset` rather than
+being called malformed. Where that segment is empty — `package://<pkg>//` — the relative half opens with
+a separator and names no asset beneath the package, so the spelling is decided by shape at the grammar
+stage, before any source is asked, any containment decision is made or the missing-asset policy is
+consulted. A relative half rooted some other way passes that shape check, on Windows a drive
+(`package://<pkg>/D:/…`) or a backslash, and the source then refuses it as escaping the root, under
+`uncontained_asset`, as it refuses a rooted relative half on every platform. On Windows a package half
+opening with a drive, as in `package://C:/…`, is refused as escaping the root as well; on POSIX a package
+half is never rooted, since its first `/` ends the package name. So neither half replaces the root it is
+joined onto, even where the path it names lies inside that root, and a folder bundle refuses a rooted
+destination name the same way. `io_package_join.a rooted relative part names no candidate under the
+Windows grammar, a drive or a backslash included` and `io_package_join.a rooted package part names no
+candidate under the Windows grammar, a drive or a backslash included` assert the drive and backslash
+readings of each half on every host, and `io_package_join.a directory or bundle source refuses a rooted
+relative part as an escape, even one naming a file inside its root`, `io_package_join.a directory or
+bundle source refuses a rooted package part as an escape, even one naming a package inside its root` and
+`io_package_join.a folder bundle refuses a rooted destination name, even one inside its root, and writes
+nothing there` the refusals. The archive writer refuses an entry name by its own guard, in a write and in
+a dry run alike, in five cases: on every host, a name holding a backslash, and a name whose first
+element, once normalized, begins with an ASCII letter and a colon, a leading `./` included, since a ZIP
+entry name holds no drive letter and separates its elements by forward slashes alone (APPNOTE 4.4.17); a
+name with a root as the platform building the archive reads it, which on Windows includes a lone leading
+separator; a name that is empty, that leads out with `..` once normalized, or that is `.` once
+normalized, as `x/..` is; and a name that ends in a separator once normalized, as `x/`, `x/.` and
+`a/b/..` do, since such a name is a directory entry and an extractor would create an empty directory in
+place of the file. A refusal fails the write as a whole: the other entries are still checked, the writer
+reports `io_error`, and a real write leaves no archive. A colon later in a name is not refused. The
+writer's own cases "an entry name holding a backslash is rejected on every platform, in a write and in a
+dry run" and "an entry name beginning with a drive letter and colon is rejected on every platform, in a
+write and in a dry run" assert the first two on every host, Linux included, and "an entry name with a
+root as the platform reads it is rejected by the containment guard, in a write and in a dry run" pins the
+third; on POSIX a root and an absolute path coincide, so that case cannot show the Windows reading of a
+lone separator there. The writer's case "an entry name that names the archive root itself is rejected on
+every platform, in a write and in a dry run" asserts on every host, Linux included, that an empty name
+and a name normalizing to `.` are refused, and "an entry name that names a directory is rejected on every
+platform, in a write and in a dry run" does the same for a name normalizing to a directory. On Windows a
+reference written with backslash separators, `package://p/meshes\base.stl`, resolves, since a backslash
+there separates elements, but its entry name keeps the relative half as written,
+`meshes/p/meshes\base.stl`, so the archive writer refuses the bundle, the whole archive as every refusal
+does, while the folder writer writes it; on POSIX the backslash is part of a file name, so such a
 reference resolves only where a file is named so, and the archive writer refuses it there too. Write
 asset references with forward slashes; the Windows outcome here is reasoned from the code, not run. A
-`<mesh>` and a
-`<texture>` ask for a file, and a package directory is not one. At the source layer, the genuinely empty relative used by the bare
-`$(find <pkg>)` substitution command is answered with the package directory by a directory-rooted
-source holding the package, while a source holding bytes declines it; that split is deliberate, and
-its halves are stated in [Ownership](#ownership) so none of them is met without the others. And a
-resolved asset whose contents are an unsmudged Git-LFS pointer rather than geometry is refused under
-`lfs_pointer_asset`, which reaches meshes and textures alike.
+`<mesh>` and a `<texture>` ask for a file, and a package directory is not one. At the source layer, the
+genuinely empty relative used by the bare `$(find <pkg>)` substitution command is answered with the
+package directory by a directory-rooted source holding the package, while a source holding bytes declines
+it; that split is deliberate, and its halves are stated in [Ownership](#ownership) so none of them is met
+without the others. And a resolved asset whose contents are an unsmudged Git-LFS pointer rather than
+geometry is refused under `lfs_pointer_asset`, which reaches meshes and textures alike.
 
 ## Serialization
 

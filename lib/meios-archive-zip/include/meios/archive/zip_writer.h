@@ -25,7 +25,8 @@ inline constexpr int default_zip_compression = 6;
 // private to the .cpp, so no archive type leaks here. An entry name holding a backslash, beginning with a
 // drive letter and colon, having a root, or leading with .. is refused on every host, stricter than
 // package_writer's containment guard, since an extractor on any platform may read those shapes as leaving
-// its target (zip-slip). A name normalizing to the archive root itself is refused too, as it names no file.
+// its target (zip-slip). A name that is empty, normalizes to the archive root itself or normalizes to a
+// directory is refused too, as it names no file.
 // A refusal logs an error naming the entry, and the remaining entries are still checked; write() then
 // reports io_error and leaves no archive at the archive path. Under dry_run the same checks and exists()
 // probes run, the result is the same io_error, and no archive file is created.
