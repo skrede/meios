@@ -107,7 +107,7 @@ inline record read_record()
         {
             const std::vector<std::string> fields = oracle::fields_of(line);
             REQUIRE(fields.size() == 5);
-            held.cases.push_back(generated_case{fields[0], fields[1], unescaped(fields[2]), fields[3]});
+            held.cases.push_back(generated_case{fields[0], fields[1], unescaped(fields[2]), unescaped(fields[3])});
         }
     }
     return held;

@@ -887,42 +887,51 @@ describes:
   seeded `0x6d65696f73`, six hundred in all: include filenames, `$` shapes in an attribute, and macro
   parameter lists with the calls that bind them. The include family varies the text before a find, the
   find's package spelling (padded, substituted, missing, empty, two words, produced by an expression,
-  or no find at all), the separator after it, the path after that and the text after the path; the
-  span family strings together one to six atoms among spans, the `arg` and `find` commands, runs of
-  dollars, braces, parentheses and plain text; the macro family varies a parameter's name, its form
-  and its default, and the call's attributes and children. The pinned reference's verdict for every
-  case is recorded in `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the
-  count per family and the template each family's text is written into, and `generated_differential`
-  compares this side's verdict with that record on every run. A verdict is whether the document refused
-  and, where it rendered, the names of its links in document order, so two refusals agree whatever
-  each says. Nothing but those link names is compared: the macro family draws block parameters and
-  calls whose children a block parameter takes, but what a block inserts, and every element other
-  than a link, is not part of the verdict. Block insertion is compared with the reference by the
-  corpus documents that insert one, each compared whole: the six `ur_description` entry points, whose
-  `ur_robot` macro calls `cylinder_inertial` with an `origin` block, and `tmrv0_2.urdf.xacro`, whose
-  `argo_drive`, `caster_wheel` and `rocker_arm` macros insert theirs. The `xacro_block` cases pin it.
-  Five cases disagree, and `tests/golden/oracle/generated_divergences.cases` records each as
-  a reviewed row with its reason: two where a parent element after a find leaves the find's package,
-  the difference the `include_find_climbs_out_of_package` row records; one where a miss beside the
-  document is found through the configured sources, which [known limitations](known-limitations.md)
-  discloses; and two where a block parameter declared twice is bound by one child, the difference the
-  `include_sole_block` row records.
+  held in a property or an argument, or no find at all), the separator after it, the path after that
+  and the text after the path, a trailing separator among it; the span family strings together one to
+  six atoms among spans, the `arg` and `find` commands, runs of dollars, braces, parentheses and plain
+  text; the macro family varies a parameter's name, its form and its default, and the call's children.
+  A call names the parameters its macro declares, each with odds of three in four, and one undeclared
+  name with odds of one in eight, and the document reads the property `b` again after the call, so a
+  parameter named `b` that shadows it must be restored for the document to render as the reference
+  renders it. The pinned reference's verdict for every case is recorded in
+  `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the count per family and
+  the template each family's text is written into, and `generated_differential` compares this side's
+  verdict with that record on every run. A verdict is whether the document refused and, where it
+  rendered, the whole rendered document, read on both sides into the project's own canonical text
+  (`meios::canonical_xml`: attributes sorted, insignificant whitespace collapsed, comments and
+  processing instructions dropped) after the staged paths are normalized, so every element and
+  attribute is compared and two refusals agree whatever each says. Nine cases disagree, and
+  `tests/golden/oracle/generated_divergences.cases` records each as a reviewed row with its reason:
+  five where a parent element after a find leaves the find's package, the difference the
+  `include_find_climbs_out_of_package` row records; one where a find held in an argument makes the
+  filename absolute, the difference the `include_absolute_path` row records; one where a separator
+  after the file a find names is read here and refused as not a directory by the reference; and two
+  where an element missing before a parent element beside the document cancels by its spelling here,
+  one of them then found through the configured sources. [Known limitations](known-limitations.md)
+  discloses all four.
 
 **Most generated include and macro cases test agreement on a refusal, not on a rendering.** Of the two
-hundred cases in each family, the reference renders six include cases, eighty-four span cases and
-twelve macro cases, and refuses the rest. In the include family every non-empty text after the path
-refuses, as do a missing package, an empty find, a find given two words, a missing file and an
-undefined name in the path; in the macro family one hundred and twenty-one of the one hundred and
-eighty-eight refusals are a call attribute naming no declared parameter. A render here where the
-reference refuses is a silent divergence, so agreement on a refusal is a real test, but these two
-families reach few verdicts on which file an include read or what a parameter bound. The span family
-is the one that compares renderings in number.
+hundred cases in each family, the reference renders seventeen include cases, eighty-four span cases
+and eighteen macro cases, and refuses the rest. In the include family every non-empty text after the
+path refuses, a trailing separator among it, as do a missing package, an empty find, a find given two
+words, a missing file and an undefined name in the path, and of the cases that hold a find in a
+property or an argument only one renders. In the macro family the one hundred and eighty-two refusals
+are thirty-eight calls holding fewer children than the block parameters declared, sixty undefined
+names, thirty invalid expressions, twenty-nine children no block parameter takes, twenty-one call
+attributes naming no parameter the reference reads as declared, nineteen of them the undeclared name,
+and four forwarded defaults with nothing to forward. Every case that declares `b` twice is among the
+refusals, so the restore of a parameter declared twice is reached by no case the reference renders. A
+render here where the reference refuses is a silent divergence, so agreement on a refusal is a real
+test, but these two families reach few verdicts on which file an include read or what a parameter
+bound. The span family is the one that compares renderings in number.
 
 **What the generated set leaves out, and what carries it instead.** The grammar writes no glob
 character into an include filename; the `include_glob_filename` document probe carries one, under its
 manifest row. It writes no `package://` filename, which the `include_package_filename` row records, and
-no absolute path to a file that exists, which the `include_absolute_path` row records; the few filenames
-it starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
+no literal absolute path to a file that exists; the absolute filenames that name one are finds held
+in a property or an argument, which the `include_absolute_path` row records, and the few filenames it
+starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
 `dirname`, `env`, `optenv` and `cwd` commands. The `eval_` agreement probes compare `eval`, three of
 the `command_` agreement probes compare `optenv` over an unset variable, and the `dirname_command` row
 records `dirname`; nothing compares `env` with the reference. Nothing compares `cwd` either: the

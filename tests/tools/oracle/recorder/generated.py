@@ -72,14 +72,8 @@ def column(text):
     return text.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n")
 
 
-def quoted(name):
-    return '"' + column(name).replace('"', '\\"') + '"'
-
-
 def verdict(rendered, normal):
-    names = [quoted(normal(one.getAttribute("name")))
-             for one in rendered.getElementsByTagName("link")]
-    return " ".join(names) if names else "-"
+    return column(normal(rendered.documentElement.toxml()))
 
 
 def normalizer(stage):
@@ -143,9 +137,10 @@ def generated_header():
             "slot the escaped line names is written into an attribute with &, < and \" escaped,",
             "and every other slot is markup written as it is. A multi-slot text separates its",
             "fields with a tab, in the order its slots line names. The upstream column is",
-            "REFUSED, or the name of every rendered link element in document order, each",
-            "double-quoted with a quote or backslash inside it escaped, joined by a space, or -",
-            "where none rendered.",
+            "REFUSED, or the rendered document element as the reference writes it, each staged",
+            "path in it replaced by the token the next line names and escaped as the text column",
+            "is. Both sides compare it as the project's own canonical text, so every element and",
+            "attribute is compared.",
             "The staged package root reads @ROOT@ and the staged document directory @DOC@. The",
             "refusal column carries a refusal's first line and is not compared.",
             "seed 0x{:x}".format(SEED),

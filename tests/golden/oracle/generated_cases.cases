@@ -6,9 +6,10 @@
 # slot the escaped line names is written into an attribute with &, < and " escaped,
 # and every other slot is markup written as it is. A multi-slot text separates its
 # fields with a tab, in the order its slots line names. The upstream column is
-# REFUSED, or the name of every rendered link element in document order, each
-# double-quoted with a quote or backslash inside it escaped, joined by a space, or -
-# where none rendered.
+# REFUSED, or the rendered document element as the reference writes it, each staged
+# path in it replaced by the token the next line names and escaped as the text column
+# is. Both sides compare it as the project's own canonical text, so every element and
+# attribute is compared.
 # The staged package root reads @ROOT@ and the staged document directory @DOC@. The
 # refusal column carries a refusal's first line and is not compared.
 # seed 0x6d65696f73
@@ -19,289 +20,289 @@
 # slots include TEXT
 # slots span TEXT
 # slots macro SPEC ATTRS CHILDREN BODY
-# template include <robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:property name="x" value="vx"/><xacro:property name="e" value=""/><xacro:property name="pk" value="p"/><xacro:property name="sp" value=" p"/><xacro:include filename="@TEXT@"/></robot>
+# template include <robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:property name="x" value="vx"/><xacro:property name="e" value=""/><xacro:property name="pk" value="p"/><xacro:property name="sp" value=" p"/><xacro:property name="fp" value="$(find p)"/><xacro:property name="fu" value="$(find p)/urdf"/><xacro:arg name="fa" default="$(find p)"/><xacro:include filename="@TEXT@"/></robot>
 # template span <robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:property name="x" value="vx"/><xacro:property name="e" value=""/><xacro:property name="pk" value="p"/><xacro:property name="sp" value=" p"/><xacro:arg name="y" default="Y"/><link name="@TEXT@"/></robot>
-# template macro <robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:property name="x" value="vx"/><xacro:property name="b" value="ob"/><xacro:arg name="y" default="Y"/><xacro:macro name="m" params="@SPEC@">@BODY@</xacro:macro><xacro:m @ATTRS@>@CHILDREN@</xacro:m></robot>
-include_001	include	$(find  p)//urdf/c.xacro	"p_urdf_c"	
-include_002	include	x/$(find p)./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_003	include	.///missing.xacro	REFUSED	No such file or directory: @DOC@/.///missing.xacro [Errno 2] No such file or directory: '@DOC@/.///missing.xacro'
-include_004	include	${e}$(find  p)//../q/a.xacro	"q_a"	
-include_005	include	$$(find ${pk})./missing.xacro	REFUSED	No such file or directory: @DOC@/$(find p)./missing.xacro [Errno 2] No such file or directory: '@DOC@/$(find p)./missing.xacro'
-include_006	include	x/${'$(find p)'}//urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p//urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p//urdf/sub/../c.xacro'
-include_007	include	$$$(find q)/./c.xacro	REFUSED	No such file or directory: @DOC@/$$(find q)/./c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find q)/./c.xacro'
-include_008	include	$(find nopkg)/a.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+# template macro <robot name="g" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:property name="x" value="vx"/><xacro:property name="b" value="ob"/><xacro:arg name="y" default="Y"/><xacro:macro name="m" params="@SPEC@">@BODY@</xacro:macro><xacro:m @ATTRS@>@CHILDREN@</xacro:m><link name="after_${b}"/></robot>
+include_001	include	$(find nopkg)//urdf/c.xacro$	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_002	include	x/$(find q)./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_003	include	./$(find p )//missing.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p//missing.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p//missing.xacro'
+include_004	include	${e}$(arg fa)//../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_005	include	$$(find  p)./missing.xacro$(x	REFUSED	invalid expression: $(x
+include_006	include	x/$(find p q)//urdf/sub/../c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_007	include	$$$(find )/./c.xacro${x	REFUSED	invalid expression: ${x
+include_008	include	$(find nopkg)/a.xacro$	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 include_009	include	x/$(find q)urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/qurdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/qurdf/../urdf/c.xacro'
-include_010	include	$$(find ${pk})/a.xacro$	REFUSED	No such file or directory: @DOC@/$(find p)/a.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p)/a.xacro$'
-include_011	include	$$(find ${sp})urdf/../urdf/c.xacro$$x	REFUSED	invalid expression: $$x
-include_012	include	${e}$(find )./a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_013	include	$(find ${pk})urdf/sub/d.xacro	REFUSED	No such file or directory: @ROOT@/purdf/sub/d.xacro [Errno 2] No such file or directory: '@ROOT@/purdf/sub/d.xacro'
-include_014	include	$(find q)/./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/q/./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/q/./urdf/../urdf/c.xacro'
-include_015	include	./$(find ${sp})/./c.xacro$$x	REFUSED	invalid expression: $$x
-include_016	include	$(find nopkg)//c.xacro$$x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_017	include	${'$(find p)'}/./missing.xacro	REFUSED	No such file or directory: @ROOT@/p/./missing.xacro [Errno 2] No such file or directory: '@ROOT@/p/./missing.xacro'
-include_018	include	$$$(find )//urdf/sub/../c.xacro${x	REFUSED	invalid expression: ${x
-include_019	include	$$(find nopkg)./c.xacro	REFUSED	No such file or directory: @DOC@/$(find nopkg)./c.xacro [Errno 2] No such file or directory: '@DOC@/$(find nopkg)./c.xacro'
-include_020	include	./$(find p)/./../q/a.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./../q/a.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./../q/a.xacro'
-include_021	include	$(find nopkg)/urdf/c.xacro$	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_022	include	$(find nopkg)/./urdf/sub/d.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_023	include	/missing.xacro	REFUSED	No such file or directory: /missing.xacro [Errno 2] No such file or directory: '/missing.xacro'
-include_024	include	/c.xacro$(x	REFUSED	invalid expression: $(x
-include_025	include	/./../q/a.xacro	REFUSED	No such file or directory: /./../q/a.xacro [Errno 2] No such file or directory: '/./../q/a.xacro'
-include_026	include	$(find )urdf/${nope}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_027	include	$$$(find p)c.xacro$$x	REFUSED	invalid expression: $$x
-include_028	include	$(find  p)/./${x}.xacro	REFUSED	No such file or directory: @ROOT@/p/./vx.xacro [Errno 2] No such file or directory: '@ROOT@/p/./vx.xacro'
-include_029	include	${e}$(find ${pk})/./c.xacro	"p_c"	
-include_030	include	$(find p q)/./../q/a.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_031	include	$$(find nopkg)/./missing.xacro$(x	REFUSED	invalid expression: $(x
-include_032	include	$(find p )//${x}.xacro	REFUSED	No such file or directory: @ROOT@/p//vx.xacro [Errno 2] No such file or directory: '@ROOT@/p//vx.xacro'
-include_033	include	x/$(find )urdf/../urdf/c.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_034	include	x/$(find p q)./urdf/../urdf/c.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_035	include	$(find  p)//a.xacro$	REFUSED	No such file or directory: @ROOT@/p//a.xacro$ [Errno 2] No such file or directory: '@ROOT@/p//a.xacro$'
-include_036	include	$(find  p)./a.xacro	REFUSED	No such file or directory: @ROOT@/p./a.xacro [Errno 2] No such file or directory: '@ROOT@/p./a.xacro'
-include_037	include	$$$(find ${sp})//urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)//urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)//urdf/c.xacro'
-include_038	include	$$$(find  p)/./c.xacro$(x	REFUSED	invalid expression: $(x
-include_039	include	x/$(find nopkg)/urdf/c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_040	include	${e}$(find p )urdf/../urdf/c.xacro$(x	REFUSED	invalid expression: $(x
-include_041	include	$(find p )/${x}.xacro	REFUSED	No such file or directory: @ROOT@/p/vx.xacro [Errno 2] No such file or directory: '@ROOT@/p/vx.xacro'
-include_042	include	$$(find  p)./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find  p)./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find  p)./urdf/c.xacro'
-include_043	include	$$$(find )//c.xacro	REFUSED	No such file or directory: @DOC@/$$(find )//c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find )//c.xacro'
-include_044	include	$$(find p)../q/a.xacro	REFUSED	No such file or directory: @DOC@/$(find p)../q/a.xacro [Errno 2] No such file or directory: '@DOC@/$(find p)../q/a.xacro'
-include_045	include	$(find p )missing.xacro	REFUSED	No such file or directory: @ROOT@/pmissing.xacro [Errno 2] No such file or directory: '@ROOT@/pmissing.xacro'
-include_046	include	x/$(find ${sp})/c.xacro$(x	REFUSED	invalid expression: $(x
-include_047	include	./$(find q)/./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/q/./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/q/./urdf/../urdf/c.xacro'
-include_048	include	${'$(find p)'}//a.xacro$(x	REFUSED	invalid expression: $(x
-include_049	include	$(find p q)//urdf/c.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_050	include	//../q/a.xacro$	REFUSED	No such file or directory: //../q/a.xacro$ [Errno 2] No such file or directory: '//../q/a.xacro$'
-include_051	include	x//./${x}.xacro	REFUSED	No such file or directory: @DOC@/x//./vx.xacro [Errno 2] No such file or directory: '@DOC@/x//./vx.xacro'
-include_052	include	./$(find nopkg)urdf/${nope}.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_053	include	${e}${'$(find p)'}./urdf/sub/../c.xacro$	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/../c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/../c.xacro$'
-include_054	include	x/$(find p)./c.xacro${x	REFUSED	invalid expression: ${x
-include_055	include	$(find p )/./urdf/sub/../c.xacro	"p_urdf_c"	
-include_056	include	$(find ${pk})//urdf/sub/d.xacro$(x	REFUSED	invalid expression: $(x
-include_057	include	.//./urdf/${nope}.xacro$	REFUSED	name 'nope' is not defined 
-include_058	include	$(find p q)/urdf/${nope}.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_059	include	$//c.xacro${x	REFUSED	invalid expression: ${x
-include_060	include	$(find p)/a.xacro	REFUSED	No such file or directory: @ROOT@/p/a.xacro [Errno 2] No such file or directory: '@ROOT@/p/a.xacro'
-include_061	include	$$$(find  p)//urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)//urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)//urdf/sub/../c.xacro'
-include_062	include	$$(find p)/./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find p)/./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p)/./urdf/c.xacro'
-include_063	include	$(find p q)${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_064	include	$(find p q)/./c.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_065	include	$$(find ${pk})/c.xacro$	REFUSED	No such file or directory: @DOC@/$(find p)/c.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p)/c.xacro$'
-include_066	include	$(find )/urdf/${nope}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_067	include	$$(find ${sp})urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find  p)urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find  p)urdf/c.xacro'
-include_068	include	./$(find nopkg)./missing.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_069	include	$(find q)./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/q./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/q./urdf/../urdf/c.xacro'
-include_070	include	$$$(find ${pk})//missing.xacro	REFUSED	No such file or directory: @DOC@/$$(find p)//missing.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p)//missing.xacro'
-include_071	include	$(find nopkg)/../q/a.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_072	include	$(find nopkg)/./c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_073	include	${e}$(find nopkg)//urdf/c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_074	include	$(find )/./urdf/sub/d.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_075	include	$$(find q)/${x}.xacro$$x	REFUSED	invalid expression: $$x
-include_076	include	$(find )./urdf/sub/d.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_077	include	$(find nopkg)/urdf/${nope}.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_078	include	$(find p q)//../q/a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_079	include	x/$(find p )/./urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p/./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p/./urdf/sub/../c.xacro'
-include_080	include	./../q/a.xacro	REFUSED	No such file or directory: @DOC@/./../q/a.xacro [Errno 2] No such file or directory: '@DOC@/./../q/a.xacro'
-include_081	include	$(find p q)./urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_082	include	$(find ${sp})./urdf/sub/../c.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/../c.xacro'
-include_083	include	$(find p )//missing.xacro	REFUSED	No such file or directory: @ROOT@/p//missing.xacro [Errno 2] No such file or directory: '@ROOT@/p//missing.xacro'
-include_084	include	$(find p )/urdf/${nope}.xacro${x	REFUSED	name 'nope' is not defined 
-include_085	include	$$(find nopkg)a.xacro	REFUSED	No such file or directory: @DOC@/$(find nopkg)a.xacro [Errno 2] No such file or directory: '@DOC@/$(find nopkg)a.xacro'
-include_086	include	$(find p q)/./c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_087	include	$(find ${sp})/./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_088	include	x/$(find p)urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/purdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/purdf/sub/../c.xacro'
-include_089	include	x/$(find p q)./${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_090	include	${e}$(find p q)//urdf/sub/../c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_091	include	$(find p)urdf/sub/d.xacro$	REFUSED	No such file or directory: @ROOT@/purdf/sub/d.xacro$ [Errno 2] No such file or directory: '@ROOT@/purdf/sub/d.xacro$'
-include_092	include	./$(find ${pk})./urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./urdf/sub/../c.xacro'
-include_093	include	$$$(find p q)/../q/a.xacro	REFUSED	No such file or directory: @DOC@/$$(find p q)/../q/a.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p q)/../q/a.xacro'
-include_094	include	x/${'$(find p)'}/./missing.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p/./missing.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p/./missing.xacro'
-include_095	include	$(find )/./urdf/${nope}.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_096	include	$(find q)./${x}.xacro	REFUSED	No such file or directory: @ROOT@/q./vx.xacro [Errno 2] No such file or directory: '@ROOT@/q./vx.xacro'
-include_097	include	x/$(find p q)//urdf/sub/../c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_098	include	x/$(find nopkg)${x}.xacro$$x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_099	include	$(find  p)/./missing.xacro	REFUSED	No such file or directory: @ROOT@/p/./missing.xacro [Errno 2] No such file or directory: '@ROOT@/p/./missing.xacro'
-include_100	include	$$(find p)/urdf/${nope}.xacro$$x	REFUSED	name 'nope' is not defined 
+include_010	include	$$(find p q)/a.xacro${x	REFUSED	invalid expression: ${x
+include_011	include	$$(find ${pk})urdf/../urdf/c.xacro$$x	REFUSED	invalid expression: $$x
+include_012	include	${e}${fu}./a.xacro${x	REFUSED	invalid expression: ${x
+include_013	include	$(arg fa)urdf/sub/d.xacro	REFUSED	No such file or directory: @ROOT@/purdf/sub/d.xacro [Errno 2] No such file or directory: '@ROOT@/purdf/sub/d.xacro'
+include_014	include	$(find p q)/./urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_015	include	./$(find p)/./c.xacro$$x	REFUSED	invalid expression: $$x
+include_016	include	$(find nopkg)//c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_017	include	$(arg fa)/./missing.xacro$(x	REFUSED	invalid expression: $(x
+include_018	include	$$${fp}//urdf/sub/../c.xacro${x	REFUSED	invalid expression: ${x
+include_019	include	$$(find nopkg)./c.xacro$$x	REFUSED	invalid expression: $$x
+include_020	include	./$(find p)/./../q/a.xacro$	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./../q/a.xacro$ [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./../q/a.xacro$'
+include_021	include	$(find  p)/urdf/c.xacro$(x	REFUSED	invalid expression: $(x
+include_022	include	$(find )/./urdf/sub/d.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_023	include	$(find )/missing.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_024	include	$(find  p)/c.xacro/	REFUSED	Not a directory: @ROOT@/p/c.xacro/ [Errno 20] Not a directory: '@ROOT@/p/c.xacro/'
+include_025	include	/./../q/a.xacro$$x	REFUSED	invalid expression: $$x
+include_026	include	${'$(find p)'}urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_027	include	$$${fu}c.xacro$(x	REFUSED	invalid expression: $(x
+include_028	include	$(find p q)/./${x}.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_029	include	${e}/./c.xacro	REFUSED	No such file or directory: /./c.xacro [Errno 2] No such file or directory: '/./c.xacro'
+include_030	include	${'$(find p)'}/./../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_031	include	$$(find )/./missing.xacro	REFUSED	No such file or directory: @DOC@/$(find )/./missing.xacro [Errno 2] No such file or directory: '@DOC@/$(find )/./missing.xacro'
+include_032	include	$(find )//${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_033	include	x/$(find )urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_034	include	x/$(find  p)./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p./urdf/../urdf/c.xacro'
+include_035	include	${fu}//a.xacro	REFUSED	No such file or directory: @ROOT@/p/urdf//a.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdf//a.xacro'
+include_036	include	${fp}./a.xacro$	REFUSED	No such file or directory: @ROOT@/p./a.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./a.xacro$'
+include_037	include	$$$(find ${pk})//urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$$(find p)//urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p)//urdf/c.xacro'
+include_038	include	$$$(find p )/./c.xacro	REFUSED	No such file or directory: @DOC@/$$(find p )/./c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p )/./c.xacro'
+include_039	include	x/$(find ${sp})/urdf/c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p/urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p/urdf/c.xacro'
+include_040	include	${e}$(find ${sp})urdf/../urdf/c.xacro$$x	REFUSED	invalid expression: $$x
+include_041	include	$(find )/${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_042	include	$$(find p )./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find p )./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p )./urdf/c.xacro'
+include_043	include	$$$(find p q)//c.xacro	REFUSED	No such file or directory: @DOC@/$$(find p q)//c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p q)//c.xacro'
+include_044	include	$${fu}../q/a.xacro$	REFUSED	No such file or directory: @DOC@/${fu}../q/a.xacro$ [Errno 2] No such file or directory: '@DOC@/${fu}../q/a.xacro$'
+include_045	include	$(arg fa)missing.xacro	REFUSED	No such file or directory: @ROOT@/pmissing.xacro [Errno 2] No such file or directory: '@ROOT@/pmissing.xacro'
+include_046	include	x/$(find p q)/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_047	include	./$(find ${sp})/./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./urdf/../urdf/c.xacro'
+include_048	include	$(arg fa)//a.xacro	REFUSED	No such file or directory: @ROOT@/p//a.xacro [Errno 2] No such file or directory: '@ROOT@/p//a.xacro'
+include_049	include	$(find p)//urdf/c.xacro$$x	REFUSED	invalid expression: $$x
+include_050	include	$(find ${sp})//../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_051	include	x/${fu}/./${x}.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p/urdf/./vx.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p/urdf/./vx.xacro'
+include_052	include	./${fp}urdf/${nope}.xacro$(x	REFUSED	name 'nope' is not defined 
+include_053	include	${e}$(find p)./urdf/sub/../c.xacro/	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/../c.xacro/ [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/../c.xacro/'
+include_054	include	x/$(find ${pk})./c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p./c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p./c.xacro'
+include_055	include	${fu}/./urdf/sub/../c.xacro	REFUSED	No such file or directory: @ROOT@/p/urdf/./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdf/./urdf/sub/../c.xacro'
+include_056	include	$(find ${pk})//urdf/sub/d.xacro	<robot name="g"><link name="p_urdf_sub_d"/></robot>	
+include_057	include	./$(find  p)/./urdf/${nope}.xacro$	REFUSED	name 'nope' is not defined 
+include_058	include	$(find p)/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_059	include	$$(find nopkg)//c.xacro$(x	REFUSED	invalid expression: $(x
+include_060	include	$(find q)/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_061	include	$$$(find nopkg)//urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$$(find nopkg)//urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find nopkg)//urdf/sub/../c.xacro'
+include_062	include	$$(find q)/./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find q)/./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find q)/./urdf/c.xacro'
+include_063	include	${'$(find p)'}${x}.xacro	REFUSED	No such file or directory: @ROOT@/pvx.xacro [Errno 2] No such file or directory: '@ROOT@/pvx.xacro'
+include_064	include	$(find  p)/./c.xacro	<robot name="g"><link name="p_c"/></robot>	
+include_065	include	$$(find p q)/c.xacro$	REFUSED	No such file or directory: @DOC@/$(find p q)/c.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p q)/c.xacro$'
+include_066	include	$(find nopkg)/urdf/${nope}.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_067	include	$$(find ${pk})urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find p)urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p)urdf/c.xacro'
+include_068	include	./${fp}./missing.xacro$$x	REFUSED	invalid expression: $$x
+include_069	include	${fp}./urdf/../urdf/c.xacro$	REFUSED	No such file or directory: @ROOT@/p./urdf/../urdf/c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./urdf/../urdf/c.xacro$'
+include_070	include	$$$(find p q)//missing.xacro/	REFUSED	No such file or directory: @DOC@/$$(find p q)//missing.xacro/ [Errno 2] No such file or directory: '@DOC@/$$(find p q)//missing.xacro/'
+include_071	include	$(find q)/../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_072	include	$(find p )/./c.xacro	<robot name="g"><link name="p_c"/></robot>	
+include_073	include	${e}$(find )//urdf/c.xacro/	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_074	include	${'$(find p)'}/./urdf/sub/d.xacro${x	REFUSED	invalid expression: ${x
+include_075	include	$$(find ${sp})/${x}.xacro	REFUSED	No such file or directory: @DOC@/$(find  p)/vx.xacro [Errno 2] No such file or directory: '@DOC@/$(find  p)/vx.xacro'
+include_076	include	${'$(find p)'}./urdf/sub/d.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/d.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/d.xacro'
+include_077	include	$(find q)/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_078	include	${fu}//../q/a.xacro$	REFUSED	No such file or directory: @ROOT@/p/urdf//../q/a.xacro$ [Errno 2] No such file or directory: '@ROOT@/p/urdf//../q/a.xacro$'
+include_079	include	x/$(find  p)/./urdf/sub/../c.xacro$(x	REFUSED	invalid expression: $(x
+include_080	include	./$(find p )../q/a.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p../q/a.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p../q/a.xacro'
+include_081	include	$(find p )./urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/c.xacro'
+include_082	include	$(find ${pk})./urdf/sub/../c.xacro$	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/../c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/../c.xacro$'
+include_083	include	$(find  p)//missing.xacro	REFUSED	No such file or directory: @ROOT@/p//missing.xacro [Errno 2] No such file or directory: '@ROOT@/p//missing.xacro'
+include_084	include	${fp}/urdf/${nope}.xacro$$x	REFUSED	name 'nope' is not defined 
+include_085	include	$$(find p q)a.xacro	REFUSED	No such file or directory: @DOC@/$(find p q)a.xacro [Errno 2] No such file or directory: '@DOC@/$(find p q)a.xacro'
+include_086	include	$(find p q)/./c.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_087	include	$(find p)/./urdf/${nope}.xacro$$x	REFUSED	name 'nope' is not defined 
+include_088	include	x/$(find )urdf/sub/../c.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_089	include	x/$(find ${pk})./${x}.xacro/	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p./vx.xacro/ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p./vx.xacro/'
+include_090	include	${e}$(find p )//urdf/sub/../c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_091	include	${fu}urdf/sub/d.xacro	REFUSED	No such file or directory: @ROOT@/p/urdfurdf/sub/d.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdfurdf/sub/d.xacro'
+include_092	include	./$(find  p)./urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./urdf/sub/../c.xacro'
+include_093	include	$$$(find p )/../q/a.xacro$(x	REFUSED	invalid expression: $(x
+include_094	include	x/$(find ${sp})/./missing.xacro$	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p/./missing.xacro$ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p/./missing.xacro$'
+include_095	include	$(find )/./urdf/${nope}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_096	include	$(arg fa)./${x}.xacro	REFUSED	No such file or directory: @ROOT@/p./vx.xacro [Errno 2] No such file or directory: '@ROOT@/p./vx.xacro'
+include_097	include	x/$(arg fa)//urdf/sub/../c.xacro$	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p//urdf/sub/../c.xacro$ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p//urdf/sub/../c.xacro$'
+include_098	include	x/${x}.xacro$	REFUSED	No such file or directory: @DOC@/x/vx.xacro$ [Errno 2] No such file or directory: '@DOC@/x/vx.xacro$'
+include_099	include	$(find nopkg)/./missing.xacro${x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_100	include	$$(find )/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
 include_101	include	$$(find p q)/urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find p q)/urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p q)/urdf/c.xacro'
-include_102	include	$(find p)urdf/sub/../c.xacro	REFUSED	No such file or directory: @ROOT@/purdf/sub/../c.xacro [Errno 2] No such file or directory: '@ROOT@/purdf/sub/../c.xacro'
-include_103	include	$$${'$(find p)'}./c.xacro$$x	REFUSED	invalid expression: $$x
-include_104	include	$(find nopkg)/./urdf/${nope}.xacro$	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_105	include	$$(find nopkg)urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$(find nopkg)urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$(find nopkg)urdf/sub/../c.xacro'
-include_106	include	$(find p)/./missing.xacro$$x	REFUSED	invalid expression: $$x
-include_107	include	$$(find  p)//${x}.xacro	REFUSED	No such file or directory: @DOC@/$(find  p)//vx.xacro [Errno 2] No such file or directory: '@DOC@/$(find  p)//vx.xacro'
-include_108	include	./$(find ${sp})/./c.xacro$	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./c.xacro$ [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./c.xacro$'
+include_102	include	urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/urdf/sub/../c.xacro'
+include_103	include	$$$(find p q)./c.xacro	REFUSED	No such file or directory: @DOC@/$$(find p q)./c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p q)./c.xacro'
+include_104	include	$(find p q)/./urdf/${nope}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_105	include	$$(find p )urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$(find p )urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p )urdf/sub/../c.xacro'
+include_106	include	$(find p )/./missing.xacro	REFUSED	No such file or directory: @ROOT@/p/./missing.xacro [Errno 2] No such file or directory: '@ROOT@/p/./missing.xacro'
+include_107	include	$$(find p )//${x}.xacro$	REFUSED	No such file or directory: @DOC@/$(find p )//vx.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p )//vx.xacro$'
+include_108	include	./$(find p q)/./c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
 include_109	include	x/$(find q)/./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_110	include	$(find )/./urdf/sub/d.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_111	include	./$(find  p)./${x}.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./vx.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./vx.xacro'
-include_112	include	${e}$(find nopkg)//a.xacro$(x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_113	include	$(find ${sp})./../q/a.xacro	REFUSED	No such file or directory: @ROOT@/p./../q/a.xacro [Errno 2] No such file or directory: '@ROOT@/p./../q/a.xacro'
-include_114	include	$${'$(find p)'}/c.xacro	REFUSED	No such file or directory: @DOC@/${'@ROOT@/p'}/c.xacro [Errno 2] No such file or directory: "@DOC@/${'@ROOT@/p'}/c.xacro"
-include_115	include	./$(find  p)./${x}.xacro$	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./vx.xacro$ [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./vx.xacro$'
+include_110	include	$(find nopkg)/./urdf/sub/d.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_111	include	./$(find p q)./${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_112	include	${e}$(find )//a.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_113	include	$(find ${pk})./../q/a.xacro$$x	REFUSED	invalid expression: $$x
+include_114	include	$$(find ${sp})/c.xacro$$x	REFUSED	invalid expression: $$x
+include_115	include	./$(find nopkg)./${x}.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 include_116	include	$(find p)./urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/c.xacro'
-include_117	include	$$$(find  p)//missing.xacro$$x	REFUSED	invalid expression: $$x
-include_118	include	$(find p q)//c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_119	include	$(find nopkg)a.xacro$$x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_120	include	$${'$(find p)'}//../q/a.xacro	REFUSED	No such file or directory: @DOC@/${'@ROOT@/p'}//../q/a.xacro [Errno 2] No such file or directory: "@DOC@/${'@ROOT@/p'}//../q/a.xacro"
-include_121	include	$(find  p)//a.xacro${x	REFUSED	invalid expression: ${x
-include_122	include	$$missing.xacro	REFUSED	invalid expression: $$missing.xacro
-include_123	include	$(find p q)./a.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_124	include	$$(find p )urdf/sub/d.xacro$	REFUSED	No such file or directory: @DOC@/$(find p )urdf/sub/d.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p )urdf/sub/d.xacro$'
-include_125	include	//urdf/../urdf/c.xacro$(x	REFUSED	invalid expression: $(x
-include_126	include	$$${'$(find p)'}//c.xacro	REFUSED	No such file or directory: @DOC@/$${'@ROOT@/p'}//c.xacro [Errno 2] No such file or directory: "@DOC@/$${'@ROOT@/p'}//c.xacro"
-include_127	include	$$$(find  p)./urdf/sub/d.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)./urdf/sub/d.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)./urdf/sub/d.xacro'
-include_128	include	$(find p q)//c.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_129	include	${e}$(find  p)${x}.xacro	REFUSED	No such file or directory: @ROOT@/pvx.xacro [Errno 2] No such file or directory: '@ROOT@/pvx.xacro'
-include_130	include	$$$(find p)./a.xacro	REFUSED	No such file or directory: @DOC@/$$(find p)./a.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p)./a.xacro'
-include_131	include	//urdf/../urdf/c.xacro	REFUSED	No such file or directory: //urdf/../urdf/c.xacro [Errno 2] No such file or directory: '//urdf/../urdf/c.xacro'
-include_132	include	${'$(find p)'}//urdf/${nope}.xacro${x	REFUSED	name 'nope' is not defined 
-include_133	include	$(find ${pk})/${x}.xacro	REFUSED	No such file or directory: @ROOT@/p/vx.xacro [Errno 2] No such file or directory: '@ROOT@/p/vx.xacro'
-include_134	include	$$$(find  p)/./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)/./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)/./urdf/c.xacro'
+include_117	include	$$$(find q)//missing.xacro	REFUSED	No such file or directory: @DOC@/$$(find q)//missing.xacro [Errno 2] No such file or directory: '@DOC@/$$(find q)//missing.xacro'
+include_118	include	${fp}//c.xacro/	REFUSED	Not a directory: @ROOT@/p//c.xacro/ [Errno 20] Not a directory: '@ROOT@/p//c.xacro/'
+include_119	include	$(find nopkg)a.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_120	include	$$(find p )//../q/a.xacro$(x	REFUSED	invalid expression: $(x
+include_121	include	$(find  p)//a.xacro	REFUSED	No such file or directory: @ROOT@/p//a.xacro [Errno 2] No such file or directory: '@ROOT@/p//a.xacro'
+include_122	include	$$$(find  p)missing.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)missing.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)missing.xacro'
+include_123	include	./a.xacro	REFUSED	No such file or directory: @DOC@/./a.xacro [Errno 2] No such file or directory: '@DOC@/./a.xacro'
+include_124	include	$$(find )urdf/sub/d.xacro	REFUSED	No such file or directory: @DOC@/$(find )urdf/sub/d.xacro [Errno 2] No such file or directory: '@DOC@/$(find )urdf/sub/d.xacro'
+include_125	include	${fu}//urdf/../urdf/c.xacro$	REFUSED	No such file or directory: @ROOT@/p/urdf//urdf/../urdf/c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p/urdf//urdf/../urdf/c.xacro$'
+include_126	include	$$$(find ${pk})//c.xacro${x	REFUSED	invalid expression: ${x
+include_127	include	$$$(find p)./urdf/sub/d.xacro	REFUSED	No such file or directory: @DOC@/$$(find p)./urdf/sub/d.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p)./urdf/sub/d.xacro'
+include_128	include	$(find )//c.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_129	include	${e}$(find p q)${x}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_130	include	$$$(find ${pk})./a.xacro${x	REFUSED	invalid expression: ${x
+include_131	include	$(find )//urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_132	include	$(find ${pk})//urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_133	include	$(find  p)/${x}.xacro$$x	REFUSED	invalid expression: $$x
+include_134	include	$$${fu}/./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$${fu}/./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$${fu}/./urdf/c.xacro'
 include_135	include	$(find p)//urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_136	include	${e}$(find nopkg)//urdf/sub/d.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_137	include	$(find ${sp})./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_138	include	${e}$(find  p)/c.xacro$$x	REFUSED	invalid expression: $$x
-include_139	include	$(find )/./../q/a.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_140	include	$(find ${sp})/urdf/c.xacro${x	REFUSED	invalid expression: ${x
-include_141	include	$$${'$(find p)'}/../q/a.xacro	REFUSED	No such file or directory: @DOC@/$${'@ROOT@/p'}/../q/a.xacro [Errno 2] No such file or directory: "@DOC@/$${'@ROOT@/p'}/../q/a.xacro"
-include_142	include	$$$(find ${pk})/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_143	include	$(find p)//${x}.xacro	REFUSED	No such file or directory: @ROOT@/p//vx.xacro [Errno 2] No such file or directory: '@ROOT@/p//vx.xacro'
-include_144	include	${'$(find p)'}/missing.xacro	REFUSED	No such file or directory: @ROOT@/p/missing.xacro [Errno 2] No such file or directory: '@ROOT@/p/missing.xacro'
-include_145	include	$(find p q)/./../q/a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_146	include	$(find p )/./../q/a.xacro	"q_a"	
-include_147	include	x/$(find )./../q/a.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_148	include	$$$(find q)./urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$$(find q)./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find q)./urdf/sub/../c.xacro'
-include_149	include	x/$(find p q)../q/a.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_150	include	${e}$(find p q)./urdf/sub/d.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_151	include	$(find p q)//a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_152	include	x/${x}.xacro${x	REFUSED	invalid expression: ${x
-include_153	include	./$(find p q)urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_154	include	./$(find q)${x}.xacro$(x	REFUSED	invalid expression: $(x
-include_155	include	$(find )/./urdf/sub/d.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_156	include	$(find )//a.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_157	include	${e}$(find )./urdf/sub/../c.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_158	include	${e}$(find  p)./missing.xacro$(x	REFUSED	invalid expression: $(x
-include_159	include	$(find )//urdf/${nope}.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_160	include	/urdf/../urdf/c.xacro	REFUSED	No such file or directory: /urdf/../urdf/c.xacro [Errno 2] No such file or directory: '/urdf/../urdf/c.xacro'
-include_161	include	x/$(find )//../q/a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_162	include	./$(find p)./urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./urdf/c.xacro'
-include_163	include	${e}$(find ${sp})c.xacro$(x	REFUSED	invalid expression: $(x
-include_164	include	./$(find p q)./urdf/c.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_165	include	./$(find p q)//a.xacro$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_166	include	/${x}.xacro$(x	REFUSED	invalid expression: $(x
-include_167	include	${'$(find p)'}urdf/sub/d.xacro$$x	REFUSED	invalid expression: $$x
-include_168	include	$(find ${pk})//${x}.xacro	REFUSED	No such file or directory: @ROOT@/p//vx.xacro [Errno 2] No such file or directory: '@ROOT@/p//vx.xacro'
-include_169	include	x//c.xacro	REFUSED	No such file or directory: @DOC@/x//c.xacro [Errno 2] No such file or directory: '@DOC@/x//c.xacro'
-include_170	include	./$(find ${pk})/./c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./c.xacro'
-include_171	include	./$(find  p)/./missing.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./missing.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./missing.xacro'
-include_172	include	x/$(find ${pk})//${x}.xacro$	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p//vx.xacro$ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p//vx.xacro$'
-include_173	include	$$(find nopkg)/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_174	include	$(find  p)/urdf/sub/../c.xacro	"p_urdf_c"	
-include_175	include	./$(find p)./c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p./c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p./c.xacro'
-include_176	include	$(find nopkg)./urdf/sub/../c.xacro$(x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_177	include	$$(find ${pk})/./c.xacro	REFUSED	No such file or directory: @DOC@/$(find p)/./c.xacro [Errno 2] No such file or directory: '@DOC@/$(find p)/./c.xacro'
-include_178	include	$(find )/urdf/sub/../c.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_179	include	x/${'$(find p)'}//urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p//urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p//urdf/sub/../c.xacro'
-include_180	include	$$$(find )${x}.xacro	REFUSED	No such file or directory: @DOC@/$$(find )vx.xacro [Errno 2] No such file or directory: '@DOC@/$$(find )vx.xacro'
-include_181	include	$(find p )./urdf/../urdf/c.xacro$	REFUSED	No such file or directory: @ROOT@/p./urdf/../urdf/c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./urdf/../urdf/c.xacro$'
-include_182	include	x/$(find nopkg)/./urdf/sub/../c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-include_183	include	$(find )urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_184	include	${'$(find p)'}//urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
-include_185	include	./$(find ${sp})/urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/urdf/../urdf/c.xacro'
-include_186	include	./$(find ${sp})/../q/a.xacro$(x	REFUSED	invalid expression: $(x
-include_187	include	x/$(find q)/${x}.xacro$	REFUSED	No such file or directory: @DOC@/x/@ROOT@/q/vx.xacro$ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/q/vx.xacro$'
-include_188	include	${'$(find p)'}/urdf/sub/d.xacro${x	REFUSED	invalid expression: ${x
-include_189	include	$$(find nopkg)./missing.xacro	REFUSED	No such file or directory: @DOC@/$(find nopkg)./missing.xacro [Errno 2] No such file or directory: '@DOC@/$(find nopkg)./missing.xacro'
-include_190	include	/./urdf/c.xacro	REFUSED	No such file or directory: /./urdf/c.xacro [Errno 2] No such file or directory: '/./urdf/c.xacro'
-include_191	include	$(find p q)./a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
-include_192	include	$$(find nopkg)//urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/$(find nopkg)//urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/$(find nopkg)//urdf/../urdf/c.xacro'
-include_193	include	/./urdf/../urdf/c.xacro${x	REFUSED	invalid expression: ${x
-include_194	include	./$(find q)/urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/q/urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/q/urdf/../urdf/c.xacro'
-include_195	include	$(find ${sp})./a.xacro${x	REFUSED	invalid expression: ${x
-include_196	include	//c.xacro	REFUSED	No such file or directory: //c.xacro [Errno 2] No such file or directory: '//c.xacro'
-include_197	include	$(find p)/urdf/sub/../c.xacro${x	REFUSED	invalid expression: ${x
-include_198	include	.//missing.xacro$$x	REFUSED	invalid expression: $$x
-include_199	include	${e}$(find )urdf/sub/../c.xacro$$x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
-include_200	include	$(find p)./urdf/../urdf/c.xacro$	REFUSED	No such file or directory: @ROOT@/p./urdf/../urdf/c.xacro$ [Errno 2] No such file or directory: '@ROOT@/p./urdf/../urdf/c.xacro$'
+include_136	include	${e}${fu}//urdf/sub/d.xacro	REFUSED	No such file or directory: @ROOT@/p/urdf//urdf/sub/d.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdf//urdf/sub/d.xacro'
+include_137	include	$(arg fa)./urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_138	include	${e}$(find p)/c.xacro${x	REFUSED	invalid expression: ${x
+include_139	include	/./../q/a.xacro$$x	REFUSED	invalid expression: $$x
+include_140	include	$(find p )/urdf/c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_141	include	$$/../q/a.xacro$	REFUSED	invalid expression: $$/../q/a.xacro$
+include_142	include	$$$(arg fa)/urdf/${nope}.xacro$(x	REFUSED	name 'nope' is not defined 
+include_143	include	${fu}//${x}.xacro	REFUSED	No such file or directory: @ROOT@/p/urdf//vx.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdf//vx.xacro'
+include_144	include	$(find  p)/missing.xacro	REFUSED	No such file or directory: @ROOT@/p/missing.xacro [Errno 2] No such file or directory: '@ROOT@/p/missing.xacro'
+include_145	include	$(find  p)/./../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_146	include	$(find q)/./../q/a.xacro	<robot name="g"><link name="q_a"/></robot>	
+include_147	include	x/${'$(find p)'}./../q/a.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p./../q/a.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p./../q/a.xacro'
+include_148	include	$$$(find  p)./urdf/sub/../c.xacro	REFUSED	No such file or directory: @DOC@/$$(find  p)./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@DOC@/$$(find  p)./urdf/sub/../c.xacro'
+include_149	include	x/${'$(find p)'}../q/a.xacro	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p../q/a.xacro [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p../q/a.xacro'
+include_150	include	${e}${fp}./urdf/sub/d.xacro$(x	REFUSED	invalid expression: $(x
+include_151	include	$(find )//a.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_152	include	x/$(find q)${x}.xacro/	REFUSED	No such file or directory: @DOC@/x/@ROOT@/qvx.xacro/ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/qvx.xacro/'
+include_153	include	./$(find nopkg)urdf/../urdf/c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_154	include	./$(find p )${x}.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/pvx.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/pvx.xacro'
+include_155	include	${fu}/./urdf/sub/d.xacro${x	REFUSED	invalid expression: ${x
+include_156	include	//a.xacro	REFUSED	No such file or directory: //a.xacro [Errno 2] No such file or directory: '//a.xacro'
+include_157	include	${e}$(find ${pk})./urdf/sub/../c.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/sub/../c.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/sub/../c.xacro'
+include_158	include	${e}./missing.xacro	REFUSED	No such file or directory: @DOC@/./missing.xacro [Errno 2] No such file or directory: '@DOC@/./missing.xacro'
+include_159	include	$(find p)//urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_160	include	$(find ${sp})/urdf/../urdf/c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_161	include	x///../q/a.xacro	REFUSED	No such file or directory: @DOC@/x///../q/a.xacro [Errno 2] No such file or directory: '@DOC@/x///../q/a.xacro'
+include_162	include	./${'$(find p)'}./urdf/c.xacro$(x	REFUSED	invalid expression: $(x
+include_163	include	${e}$(find ${sp})c.xacro	REFUSED	No such file or directory: @ROOT@/pc.xacro [Errno 2] No such file or directory: '@ROOT@/pc.xacro'
+include_164	include	./$(arg fa)./urdf/c.xacro$(x	REFUSED	invalid expression: $(x
+include_165	include	./$(find ${sp})//a.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p//a.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p//a.xacro'
+include_166	include	${fp}/${x}.xacro$(x	REFUSED	invalid expression: $(x
+include_167	include	$(find p q)urdf/sub/d.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_168	include	${fu}//${x}.xacro	REFUSED	No such file or directory: @ROOT@/p/urdf//vx.xacro [Errno 2] No such file or directory: '@ROOT@/p/urdf//vx.xacro'
+include_169	include	x/$(find )/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_170	include	./$(find ${sp})/./c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/./c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/./c.xacro'
+include_171	include	./${fu}/./missing.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/urdf/./missing.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/urdf/./missing.xacro'
+include_172	include	x/$(find nopkg)//${x}.xacro${x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_173	include	$$(find  p)/urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_174	include	${'$(find p)'}/urdf/sub/../c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_175	include	././c.xacro	<robot name="g"><link name="doc_c"/></robot>	
+include_176	include	$(find nopkg)./urdf/sub/../c.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_177	include	$$(find ${sp})/./c.xacro	REFUSED	No such file or directory: @DOC@/$(find  p)/./c.xacro [Errno 2] No such file or directory: '@DOC@/$(find  p)/./c.xacro'
+include_178	include	$(find p q)/urdf/sub/../c.xacro$(x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_179	include	x/$(arg fa)//urdf/sub/../c.xacro/	REFUSED	No such file or directory: @DOC@/x/@ROOT@/p//urdf/sub/../c.xacro/ [Errno 2] No such file or directory: '@DOC@/x/@ROOT@/p//urdf/sub/../c.xacro/'
+include_180	include	$$$(find p q)${x}.xacro	REFUSED	No such file or directory: @DOC@/$$(find p q)vx.xacro [Errno 2] No such file or directory: '@DOC@/$$(find p q)vx.xacro'
+include_181	include	${'$(find p)'}./urdf/../urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/p./urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/p./urdf/../urdf/c.xacro'
+include_182	include	x/${fp}/./urdf/sub/../c.xacro${x	REFUSED	invalid expression: ${x
+include_183	include	$(find p)urdf/../urdf/c.xacro	REFUSED	No such file or directory: @ROOT@/purdf/../urdf/c.xacro [Errno 2] No such file or directory: '@ROOT@/purdf/../urdf/c.xacro'
+include_184	include	${fp}//urdf/${nope}.xacro	REFUSED	name 'nope' is not defined 
+include_185	include	./$(find p q)/urdf/../urdf/c.xacro	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_186	include	./$(find p )/../q/a.xacro${x	REFUSED	invalid expression: ${x
+include_187	include	x/$(find nopkg)/${x}.xacro	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_188	include	$(find nopkg)/urdf/sub/d.xacro$$x	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_189	include	$$(find q)./missing.xacro	REFUSED	No such file or directory: @DOC@/$(find q)./missing.xacro [Errno 2] No such file or directory: '@DOC@/$(find q)./missing.xacro'
+include_190	include	$(find p q)/./urdf/c.xacro${x	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p q] $(find pkg) accepts exactly one argument [find p q]
+include_191	include	$(find nopkg)./a.xacro/	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
+include_192	include	$$(find p )//urdf/../urdf/c.xacro$	REFUSED	No such file or directory: @DOC@/$(find p )//urdf/../urdf/c.xacro$ [Errno 2] No such file or directory: '@DOC@/$(find p )//urdf/../urdf/c.xacro$'
+include_193	include	$(find ${sp})/./urdf/../urdf/c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_194	include	./$(find p )/urdf/../urdf/c.xacro	REFUSED	No such file or directory: @DOC@/./@ROOT@/p/urdf/../urdf/c.xacro [Errno 2] No such file or directory: '@DOC@/./@ROOT@/p/urdf/../urdf/c.xacro'
+include_195	include	$(find p)./a.xacro	REFUSED	No such file or directory: @ROOT@/p./a.xacro [Errno 2] No such file or directory: '@ROOT@/p./a.xacro'
+include_196	include	$(find  p)//c.xacro${x	REFUSED	invalid expression: ${x
+include_197	include	$(find p)/urdf/sub/../c.xacro	<robot name="g"><link name="p_urdf_c"/></robot>	
+include_198	include	./${fu}/missing.xacro${x	REFUSED	invalid expression: ${x
+include_199	include	${e}$(find )urdf/sub/../c.xacro/	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find ] $(find pkg) accepts exactly one argument [find ]
+include_200	include	$(find ${pk})./urdf/../urdf/c.xacro$(x	REFUSED	invalid expression: $(x
 span_001	span	.${x}$(arg ${x})${x}(	REFUSED	Undefined substitution argument vx
 span_002	span	$(arg y z)$(find p)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
-span_003	span	{	"{"	
+span_003	span	{	<robot name="g"><link name="{"/></robot>	
 span_004	span	${'a'}$(arg nope)$$a(	REFUSED	invalid expression: $$a(
 span_005	span	$(find  p).$(arg ${x})$(find p urdf).$$$	REFUSED	Undefined substitution argument vx
-span_006	span	${x}$(arg y)	"vxY"	
-span_007	span	$(find p)/	"@ROOT@/p/"	
+span_006	span	${x}$(arg y)	<robot name="g"><link name="vxY"/></robot>	
+span_007	span	$(find p)/	<robot name="g"><link name="@ROOT@/p/"/></robot>	
 span_008	span	$(arg y)$(arg  y)$(arg y z)$$a	REFUSED	invalid expression: $$a
 span_009	span	$(arg nope)	REFUSED	Undefined substitution argument nope
 span_010	span	/$(arg nope)$(find p urdf)	REFUSED	Undefined substitution argument nope
-span_011	span	a	"a"	
+span_011	span	a	<robot name="g"><link name="a"/></robot>	
 span_012	span	${'$(arg y)'}$$	REFUSED	invalid expression: $$
 span_013	span	$(arg ${x})$(find  p)a/	REFUSED	Undefined substitution argument vx
 span_014	span	$(arg y z)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_015	span	 $$$	REFUSED	invalid expression: $$$
 span_016	span	$(find  p)$$$)a$(arg  y)	REFUSED	invalid expression: $$$)a$(arg  y)
 span_017	span	$$)$(arg  y))${e}	REFUSED	invalid expression: $$)$(arg  y))${e}
-span_018	span	$(find p)$(find p)/${x}$	"@ROOT@/p@ROOT@/p/vx$"	
-span_019	span	$$$$(find p)${e}.$(find p){	"$$$(find p).@ROOT@/p{"	
+span_018	span	$(find p)$(find p)/${x}$	<robot name="g"><link name="@ROOT@/p@ROOT@/p/vx$"/></robot>	
+span_019	span	$$$$(find p)${e}.$(find p){	<robot name="g"><link name="$$$(find p).@ROOT@/p{"/></robot>	
 span_020	span	${x}{${x}$$	REFUSED	invalid expression: $$
 span_021	span	.$(find p urdf)$(arg y z)${'$(arg y)'}$(arg y z)$$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
 span_022	span	${'a'}{$(find p urdf)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
-span_023	span	 $$$${e}	" $$${e}"	
-span_024	span	{	"{"	
+span_023	span	 $$$${e}	<robot name="g"><link name=" $$${e}"/></robot>	
+span_024	span	{	<robot name="g"><link name="{"/></robot>	
 span_025	span	$(arg y z)$(find  p)$$(find p urdf))	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
-span_026	span	$$(find p)/	"$(find p)/"	
-span_027	span	$(find  p)	"@ROOT@/p"	
+span_026	span	$$(find p)/	<robot name="g"><link name="$(find p)/"/></robot>	
+span_027	span	$(find  p)	<robot name="g"><link name="@ROOT@/p"/></robot>	
 span_028	span	$(arg ${x})} .${x}	REFUSED	Undefined substitution argument vx
-span_029	span	)$(find p)${x}$(find p)	")@ROOT@/pvx@ROOT@/p"	
+span_029	span	)$(find p)${x}$(find p)	<robot name="g"><link name=")@ROOT@/pvx@ROOT@/p"/></robot>	
 span_030	span	$(arg ${x})$(find p urdf)	REFUSED	Undefined substitution argument vx
-span_031	span	${'$(arg y)'}	"Y"	
-span_032	span	/${'$(arg y)'}$	"/Y$"	
-span_033	span	$/$(find  p)	"$/@ROOT@/p"	
-span_034	span	($(find  p)${e}.$(arg  y)/	"(@ROOT@/p.Y/"	
+span_031	span	${'$(arg y)'}	<robot name="g"><link name="Y"/></robot>	
+span_032	span	/${'$(arg y)'}$	<robot name="g"><link name="/Y$"/></robot>	
+span_033	span	$/$(find  p)	<robot name="g"><link name="$/@ROOT@/p"/></robot>	
+span_034	span	($(find  p)${e}.$(arg  y)/	<robot name="g"><link name="(@ROOT@/p.Y/"/></robot>	
 span_035	span	$(arg y z)$(find p)$(arg ${x})	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_036	span	$(arg nope)	REFUSED	Undefined substitution argument nope
-span_037	span	${'a'}($(find p)	"a(@ROOT@/p"	
+span_037	span	${'a'}($(find p)	<robot name="g"><link name="a(@ROOT@/p"/></robot>	
 span_038	span	$(find nopkg)$(arg y)$(arg  y)$${nope}	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_039	span	$(arg nope)$(arg ${x})	REFUSED	Undefined substitution argument nope
-span_040	span	$(arg  y)	"Y"	
+span_040	span	$(arg  y)	<robot name="g"><link name="Y"/></robot>	
 span_041	span	$(find p urdf)$(find  p)${e}$(find nopkg)$$$(arg  y)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
 span_042	span	$$$a}	REFUSED	invalid expression: $$$a}
 span_043	span	$(arg y)$(arg ${x})$$	REFUSED	invalid expression: $$
-span_044	span	$(find p)	"@ROOT@/p"	
-span_045	span	${e}{	"{"	
-span_046	span	${'$(arg y)'}	"Y"	
+span_044	span	$(find p)	<robot name="g"><link name="@ROOT@/p"/></robot>	
+span_045	span	${e}{	<robot name="g"><link name="{"/></robot>	
+span_046	span	${'$(arg y)'}	<robot name="g"><link name="Y"/></robot>	
 span_047	span	$$$$(find  p)$(arg y z)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
-span_048	span	$(find  p)$$$(arg y)	"@ROOT@/p$$(arg y)"	
+span_048	span	$(find  p)$$$(arg y)	<robot name="g"><link name="@ROOT@/p$$(arg y)"/></robot>	
 span_049	span	$(find p)$$$$$)	REFUSED	invalid expression: $$$$$)
 span_050	span	)$(arg ${x})$(arg nope)$(find p)/	REFUSED	Undefined substitution argument vx
 span_051	span	 $(find p)${'a'}$(arg y z)a	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_052	span	$(find nopkg)${'a'}${'a'}($	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_053	span	$ ${nope}${nope}a	REFUSED	name 'nope' is not defined 
-span_054	span	$(arg y)a${x}$$$(find p)	"Yavx$$(find p)"	
+span_054	span	$(arg y)a${x}$$$(find p)	<robot name="g"><link name="Yavx$$(find p)"/></robot>	
 span_055	span	$(arg ${x})$(find p)$(find  p)${'$(arg y)'}{}	REFUSED	Undefined substitution argument vx
-span_056	span	${x}a).	"vxa)."	
-span_057	span	}($(find p)	"}(@ROOT@/p"	
+span_056	span	${x}a).	<robot name="g"><link name="vxa)."/></robot>	
+span_057	span	}($(find p)	<robot name="g"><link name="}(@ROOT@/p"/></robot>	
 span_058	span	${nope} 	REFUSED	name 'nope' is not defined 
-span_059	span	{{	"{{"	
+span_059	span	{{	<robot name="g"><link name="{{"/></robot>	
 span_060	span	$(find  p)$(arg y z))}$(find  p)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_061	span	.$(arg nope)${'$(arg y)'}	REFUSED	Undefined substitution argument nope
 span_062	span	/$(arg  y)$$$a.	REFUSED	invalid expression: $$$a.
-span_063	span	(	"("	
+span_063	span	(	<robot name="g"><link name="("/></robot>	
 span_064	span	${nope}a	REFUSED	name 'nope' is not defined 
-span_065	span	(	"("	
-span_066	span	)$(find  p)$(find  p))	")@ROOT@/p@ROOT@/p)"	
+span_065	span	(	<robot name="g"><link name="("/></robot>	
+span_066	span	)$(find  p)$(find  p))	<robot name="g"><link name=")@ROOT@/p@ROOT@/p)"/></robot>	
 span_067	span	${x}$$	REFUSED	invalid expression: $$
 span_068	span	${'a'}$(find nopkg)$(find  p)$(arg y){	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_069	span	a$(arg ${x})/$(arg  y)	REFUSED	Undefined substitution argument vx
 span_070	span	${x}$(arg ${x})a	REFUSED	Undefined substitution argument vx
-span_071	span	).${'a'}.	").a."	
-span_072	span	$(find p)	"@ROOT@/p"	
+span_071	span	).${'a'}.	<robot name="g"><link name=").a."/></robot>	
+span_072	span	$(find p)	<robot name="g"><link name="@ROOT@/p"/></robot>	
 span_073	span	$(arg ${x})${'$(arg y)'}	REFUSED	Undefined substitution argument vx
 span_074	span	$(find nopkg)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_075	span	($(arg y)	"(Y"	
-span_076	span	${'$(arg y)'}${e}	"Y"	
+span_075	span	($(arg y)	<robot name="g"><link name="(Y"/></robot>	
+span_076	span	${'$(arg y)'}${e}	<robot name="g"><link name="Y"/></robot>	
 span_077	span	$$$/$(arg nope).${'$(arg y)'}${x}	REFUSED	invalid expression: $$$/$(arg nope).${'$(arg y)'}${x}
 span_078	span	 {${'$(arg y)'}${x}$(arg ${x})	REFUSED	Undefined substitution argument vx
-span_079	span	}$(find  p)${x}	"}@ROOT@/pvx"	
-span_080	span	${x}	"vx"	
+span_079	span	}$(find  p)${x}	<robot name="g"><link name="}@ROOT@/pvx"/></robot>	
+span_080	span	${x}	<robot name="g"><link name="vx"/></robot>	
 span_081	span	${x}${'a'}$$$./$(find p)	REFUSED	invalid expression: $$$./$(find p)
 span_082	span	$${'$(arg y)'}${e}$(find  p)$(arg nope)$(arg y z)	REFUSED	Undefined substitution argument nope
 span_083	span	$(arg y z)$$$${'a'}	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
@@ -309,16 +310,16 @@ span_084	span	${nope}$$$)$(find  p)$$	REFUSED	invalid expression: $$$)$(find  p)
 span_085	span	$(arg  y)$(arg nope))${e}/	REFUSED	Undefined substitution argument nope
 span_086	span	$(arg ${x})${'$(arg y)'}${'a'}$(arg nope)$/	REFUSED	Undefined substitution argument vx
 span_087	span	$$$(arg ${x})$(arg y)$(arg y)$$	REFUSED	invalid expression: $$
-span_088	span	${e}$$(find p)a./	"$(find p)a./"	
-span_089	span	/a${e}$(find  p)	"/a@ROOT@/p"	
+span_088	span	${e}$$(find p)a./	<robot name="g"><link name="$(find p)a./"/></robot>	
+span_089	span	/a${e}$(find  p)	<robot name="g"><link name="/a@ROOT@/p"/></robot>	
 span_090	span	$(arg nope)$(find p urdf)	REFUSED	Undefined substitution argument nope
 span_091	span	$(arg nope)$$(find p urdf)$(arg y)	REFUSED	Undefined substitution argument nope
 span_092	span	$(find nopkg)$(arg  y)$$$$(find  p)$$(find p)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_093	span	  	"  "	
-span_094	span	.${'a'}$(arg y)	".aY"	
-span_095	span	/()$$$${e}	"/()$$${e}"	
-span_096	span	.$(find p){$(find  p)	".@ROOT@/p{@ROOT@/p"	
-span_097	span	/$${x}{a	"/${x}{a"	
+span_093	span	  	<robot name="g"><link name="  "/></robot>	
+span_094	span	.${'a'}$(arg y)	<robot name="g"><link name=".aY"/></robot>	
+span_095	span	/()$$$${e}	<robot name="g"><link name="/()$$${e}"/></robot>	
+span_096	span	.$(find p){$(find  p)	<robot name="g"><link name=".@ROOT@/p{@ROOT@/p"/></robot>	
+span_097	span	/$${x}{a	<robot name="g"><link name="/${x}{a"/></robot>	
 span_098	span	$(arg nope)	REFUSED	Undefined substitution argument nope
 span_099	span	$$$$$)	REFUSED	invalid expression: $$$$$)
 span_100	span	$$$${'$(arg y)'}$(arg y z)$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
@@ -330,295 +331,295 @@ span_105	span	$(arg  y)$(arg nope)$$($$${e}	REFUSED	Undefined substitution argum
 span_106	span	 $(arg nope)/ $$$	REFUSED	Undefined substitution argument nope
 span_107	span	$(arg ${x})$$$(arg y)$$$	REFUSED	Undefined substitution argument vx
 span_108	span	$$$$ 	REFUSED	invalid expression: $$$$ 
-span_109	span	${'a'}	"a"	
-span_110	span	.	"."	
-span_111	span	${x}${e}	"vx"	
+span_109	span	${'a'}	<robot name="g"><link name="a"/></robot>	
+span_110	span	.	<robot name="g"><link name="."/></robot>	
+span_111	span	${x}${e}	<robot name="g"><link name="vx"/></robot>	
 span_112	span	$(arg nope)${x}$(find p urdf)$(arg  y)	REFUSED	Undefined substitution argument nope
-span_113	span	{$(arg  y)${'$(arg y)'}$$${'$(arg y)'}	"{YY$${'Y'}"	
+span_113	span	{$(arg  y)${'$(arg y)'}$$${'$(arg y)'}	<robot name="g"><link name="{YY$${'Y'}"/></robot>	
 span_114	span	$$$	REFUSED	invalid expression: $$$
 span_115	span	${x}$(arg  y)$(arg ${x})$(arg  y)${e}$	REFUSED	Undefined substitution argument vx
 span_116	span	a${e}$.${e}$(arg y z)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_117	span	{ $(find p urdf)$${	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
-span_118	span	 {${x}{	" {vx{"	
-span_119	span	){$(arg y)$$${x}	"){Y$${x}"	
-span_120	span	 $(find p)$(arg y)	" @ROOT@/pY"	
+span_118	span	 {${x}{	<robot name="g"><link name=" {vx{"/></robot>	
+span_119	span	){$(arg y)$$${x}	<robot name="g"><link name="){Y$${x}"/></robot>	
+span_120	span	 $(find p)$(arg y)	<robot name="g"><link name=" @ROOT@/pY"/></robot>	
 span_121	span	${nope}${'$(arg y)'}.)${'a'} 	REFUSED	name 'nope' is not defined 
-span_122	span	${x}	"vx"	
+span_122	span	${x}	<robot name="g"><link name="vx"/></robot>	
 span_123	span	${'a'}a${'a'}${x}($(find nopkg)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_124	span	$(arg ${x})$(find p)${e}	REFUSED	Undefined substitution argument vx
 span_125	span	}$(find p)$(arg nope)	REFUSED	Undefined substitution argument nope
-span_126	span	)${e}a{${'$(arg y)'}	")a{Y"	
+span_126	span	)${e}a{${'$(arg y)'}	<robot name="g"><link name=")a{Y"/></robot>	
 span_127	span	$$${'$(arg y)'}$$$ 	REFUSED	invalid expression: $$$ 
 span_128	span	$(arg  y)$$	REFUSED	invalid expression: $$
 span_129	span	$(find p urdf)$(find  p)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
 span_130	span	$$$(arg  y)}{$(find nopkg)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_131	span	$(arg y)$$$$(find  p)	"Y$$$(find  p)"	
+span_131	span	$(arg y)$$$$(find  p)	<robot name="g"><link name="Y$$$(find  p)"/></robot>	
 span_132	span	$(find p urdf)${'$(arg y)'}{ a)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
 span_133	span	$(arg nope)	REFUSED	Undefined substitution argument nope
 span_134	span	${x}a$(find nopkg)$(find nopkg)$(arg y z)$(find p urdf)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_135	span	$(find p)$	"@ROOT@/p$"	
-span_136	span	{$(find  p)	"{@ROOT@/p"	
+span_135	span	$(find p)$	<robot name="g"><link name="@ROOT@/p$"/></robot>	
+span_136	span	{$(find  p)	<robot name="g"><link name="{@ROOT@/p"/></robot>	
 span_137	span	${nope}	REFUSED	name 'nope' is not defined 
 span_138	span	$$$(arg y z)}{.$(arg nope)	REFUSED	Undefined substitution argument nope
 span_139	span	${x}$$(arg y z)$(arg nope)	REFUSED	Undefined substitution argument nope
 span_140	span	$(arg y)$(find nopkg)${'a'}	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_141	span	$(arg y z)$(find  p)$(find p)$(find p urdf)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_142	span	$(find nopkg).a$(arg ${x}))	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_143	span	${e}aa$$$(arg nope)	"aa$$(arg nope)"	
+span_143	span	${e}aa$$$(arg nope)	<robot name="g"><link name="aa$$(arg nope)"/></robot>	
 span_144	span	(($(find  p)$(find p urdf)}	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
 span_145	span	$(arg nope){$(find  p){}	REFUSED	Undefined substitution argument nope
 span_146	span	$(find  p)$(arg y z)${'$(arg y)'}$(arg ${x})($(find p)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_147	span	$(find nopkg)$(find  p)$(arg y z){	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_148	span	$(arg y)$(arg  y).	"YY."	
+span_148	span	$(arg y)$(arg  y).	<robot name="g"><link name="YY."/></robot>	
 span_149	span	$(arg ${x})${	REFUSED	invalid expression: ${
-span_150	span	$$$$$${nope}	"$$$$${nope}"	
-span_151	span	 $(find p)$$$(arg ${x})	" @ROOT@/p$$(arg vx)"	
+span_150	span	$$$$$${nope}	<robot name="g"><link name="$$$$${nope}"/></robot>	
+span_151	span	 $(find p)$$$(arg ${x})	<robot name="g"><link name=" @ROOT@/p$$(arg vx)"/></robot>	
 span_152	span	 )$(find p urdf)${'a'}	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
-span_153	span	${'$(arg y)'}${'a'}	"Ya"	
+span_153	span	${'$(arg y)'}${'a'}	<robot name="g"><link name="Ya"/></robot>	
 span_154	span	${'a'}$(arg ${x})$(find  p)${'$(arg y)'}	REFUSED	Undefined substitution argument vx
-span_155	span	$(find p)$(find  p)	"@ROOT@/p@ROOT@/p"	
-span_156	span	}	"}"	
+span_155	span	$(find p)$(find  p)	<robot name="g"><link name="@ROOT@/p@ROOT@/p"/></robot>	
+span_156	span	}	<robot name="g"><link name="}"/></robot>	
 span_157	span	$(arg nope)$(find p urdf)$(find p)$(find p urdf)	REFUSED	Undefined substitution argument nope
 span_158	span	$(arg y z){${'a'}$(arg nope)(	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_159	span	 $(arg  y)${nope}$(find p urdf)${nope}{	REFUSED	name 'nope' is not defined 
-span_160	span	.${'$(arg y)'})$(arg  y)	".Y)Y"	
+span_160	span	.${'$(arg y)'})$(arg  y)	<robot name="g"><link name=".Y)Y"/></robot>	
 span_161	span	${e}$$$(arg  y)$(find p)$(find nopkg)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_162	span	$(find nopkg)${x}$(arg y z){	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
 span_163	span	$$.)	REFUSED	invalid expression: $$.)
 span_164	span	$(find p)$(arg nope)$$	REFUSED	invalid expression: $$
-span_165	span	${e}${'a'}$$${}	"a$${}"	
+span_165	span	${e}${'a'}$$${}	<robot name="g"><link name="a$${}"/></robot>	
 span_166	span	${nope}$$$$$(find p urdf)${e}$$	REFUSED	name 'nope' is not defined 
-span_167	span	 $(find p).${x}a.	" @ROOT@/p.vxa."	
+span_167	span	 $(find p).${x}a.	<robot name="g"><link name=" @ROOT@/p.vxa."/></robot>	
 span_168	span	$(arg ${x})$(find p)${'$(arg y)'}$$$	REFUSED	Undefined substitution argument vx
-span_169	span	$${'$(arg y)'}${'a'})	"${'Y'}a)"	
-span_170	span	.{}	".{}"	
-span_171	span	${x}${'$(arg y)'}}((	"vxY}(("	
-span_172	span	$aaa$(arg  y)	"$aaaY"	
-span_173	span	 $(find  p)${e}	" @ROOT@/p"	
+span_169	span	$${'$(arg y)'}${'a'})	<robot name="g"><link name="${'Y'}a)"/></robot>	
+span_170	span	.{}	<robot name="g"><link name=".{}"/></robot>	
+span_171	span	${x}${'$(arg y)'}}((	<robot name="g"><link name="vxY}(("/></robot>	
+span_172	span	$aaa$(arg  y)	<robot name="g"><link name="$aaaY"/></robot>	
+span_173	span	 $(find  p)${e}	<robot name="g"><link name=" @ROOT@/p"/></robot>	
 span_174	span	${nope}$(arg ${x})$$$$(find p)$	REFUSED	name 'nope' is not defined 
 span_175	span	$(arg ${x})$(find p urdf)$(find nopkg)$(arg y z)$$	REFUSED	Undefined substitution argument vx
 span_176	span	$(arg y z)$(arg y z)$	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(arg var) may only specify one arg [arg y z] $(arg var) may only specify one arg [arg y z]
 span_177	span	$(arg nope)${'$(arg y)'}/	REFUSED	Undefined substitution argument nope
-span_178	span	 $(find p){	" @ROOT@/p{"	
-span_179	span	 ${'a'})${x}$(arg y)	" a)vxY"	
-span_180	span	a.	"a."	
+span_178	span	 $(find p){	<robot name="g"><link name=" @ROOT@/p{"/></robot>	
+span_179	span	 ${'a'})${x}$(arg y)	<robot name="g"><link name=" a)vxY"/></robot>	
+span_180	span	a.	<robot name="g"><link name="a."/></robot>	
 span_181	span	$(find p urdf)a.$$a	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
-span_182	span	a	"a"	
-span_183	span	)	")"	
+span_182	span	a	<robot name="g"><link name="a"/></robot>	
+span_183	span	)	<robot name="g"><link name=")"/></robot>	
 span_184	span	${x}$(arg nope)	REFUSED	Undefined substitution argument nope
 span_185	span	$(find p urdf)$(find p urdf)	REFUSED	<class 'xacro.substitution_args.SubstitutionException'>: $(find pkg) accepts exactly one argument [find p urdf] $(find pkg) accepts exactly one argument [find p urdf]
-span_186	span	$(arg  y)$$$(arg y){$$$(arg ${x})	"Y$$(arg y){$$(arg vx)"	
-span_187	span	$(find  p)	"@ROOT@/p"	
-span_188	span	$$(arg nope)$(find  p)}$	"$(arg nope)@ROOT@/p}$"	
-span_189	span	.}	".}"	
-span_190	span	.$(find p).	".@ROOT@/p."	
+span_186	span	$(arg  y)$$$(arg y){$$$(arg ${x})	<robot name="g"><link name="Y$$(arg y){$$(arg vx)"/></robot>	
+span_187	span	$(find  p)	<robot name="g"><link name="@ROOT@/p"/></robot>	
+span_188	span	$$(arg nope)$(find  p)}$	<robot name="g"><link name="$(arg nope)@ROOT@/p}$"/></robot>	
+span_189	span	.}	<robot name="g"><link name=".}"/></robot>	
+span_190	span	.$(find p).	<robot name="g"><link name=".@ROOT@/p."/></robot>	
 span_191	span	${'a'}/${nope}$$$	REFUSED	invalid expression: $$$
-span_192	span	 	" "	
-span_193	span	${e}$(find  p)$$$$(arg  y) 	"@ROOT@/p$$$(arg  y) "	
-span_194	span	${'$(arg y)'}$	"Y$"	
+span_192	span	 	<robot name="g"><link name=" "/></robot>	
+span_193	span	${e}$(find  p)$$$$(arg  y) 	<robot name="g"><link name="@ROOT@/p$$$(arg  y) "/></robot>	
+span_194	span	${'$(arg y)'}$	<robot name="g"><link name="Y$"/></robot>	
 span_195	span	$(arg nope)$(find nopkg)$$$$	REFUSED	Undefined substitution argument nope
 span_196	span	${nope}}{})	REFUSED	name 'nope' is not defined 
-span_197	span	/$(arg  y)	"/Y"	
+span_197	span	/$(arg  y)	<robot name="g"><link name="/Y"/></robot>	
 span_198	span	$(find nopkg)	REFUSED	<class 'ament_index_python.packages.PackageNotFoundError'>: 'nopkg' 'nopkg'
-span_199	span	.$	".$"	
-span_200	span	$$${	"$${"	
-macro_001	macro	**c\td="1" b="$$x" c="$$x"\t<visual/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
-macro_002	macro	a\ta="$(arg y)"\t\t<link name="${a}"/>	"Y"	
-macro_003	macro	c:=^|1  **a  **b\ta="z w"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="a"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "a"
-macro_004	macro	*c\t\t<visual/>\t<xacro:insert_block name="c"/>	-	
-macro_005	macro	b:=^ b  b:=^\ta="$$x" c="${x}" d="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/><link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_006	macro	b:=^  *c\t\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Unused block "collision"
-macro_007	macro	a=$(arg y)\t\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
-macro_008	macro	b=${cp}\ta="1"\t\t<link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_009	macro	b\ta="${x}" c="1" d="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_010	macro	b:=${cp}\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	"c"	
-macro_011	macro	a:=^|${1 + 2}  *c\tc="${nope}" d="z w"\t<visual/><collision/>\t<link name="${a}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "c"
-macro_012	macro	c:=^\tc="${cp}" b="$$x"\t<visual/>\t<link name="${c}"/>	REFUSED	name 'cp' is not defined 
-macro_013	macro	a:=^ c=1 **c\t\t\t<link name="${a}"/><link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
-macro_014	macro	c  a  c\t\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/><link name="${c}"/>	REFUSED	Undefined parameters [c,a,c]
-macro_015	macro	b:=^|${x} b  b\ta="$$x" c="$(arg y)"\t<visual/>\t<link name="${b}"/><link name="${b}"/><link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_016	macro	a:=^|1  c='q r' **b\t\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
-macro_017	macro	a:=$$x\t\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
-macro_018	macro	a a:=^|1\t\t<visual/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Unused block "visual"
-macro_019	macro	*a b:=^|$$x  *c\tc="1" b="$$x"\t\t<xacro:insert_block name="a"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "c"
-macro_020	macro	b:=$(arg y)\ta="${x}" b="${cp}"\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_021	macro	c:=^\ta="$(arg y)" c="${nope}"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_022	macro	*a c=${cp}\t\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Unused block "collision"
-macro_023	macro	b:=$(arg y) b:=^\tc="${x}" d="1" a="${nope}"\t<visual/><collision/>\t<link name="${b}"/><link name="${b}"/>	REFUSED	Invalid parameter "c"
-macro_024	macro	a a='q r' **c\t\t<visual/>\t<link name="${a}"/><link name="${a}"/><xacro:insert_block name="c"/>	"q r" "q r"	
-macro_025	macro	b\t\t\t<link name="${b}"/>	REFUSED	Undefined parameters [b]
-macro_026	macro	b:=^|${x} b:=^\tc="1" a="$(arg y)" d="$$x"\t\t<link name="${b}"/><link name="${b}"/>	REFUSED	Invalid parameter "c"
-macro_027	macro	c:=^  **a  c=\tb="$$x" d="1"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "b"
-macro_028	macro	b:=${cp}\ta="${cp}" c="z w" b="z w"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_029	macro	a a=1 a=1\td="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_030	macro	*a  a:=^\tc="$$x" d="${cp}" a="${cp}"\t<visual/>\t<xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_031	macro	c\t\t<visual/>\t<link name="${c}"/>	REFUSED	Unused block "visual"
-macro_032	macro	**b  **c\tb="$$x" d="1"\t<visual/><collision/>\t<xacro:insert_block name="b"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "b"
-macro_033	macro	*a\tb="${cp}"\t<visual/>\t<xacro:insert_block name="a"/>	REFUSED	Invalid parameter "b"
-macro_034	macro	b:=^  **a\tc="${cp}" d="${x}" a="1"\t<visual/>\t<link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_035	macro	b b:=^|${1 + 2} a\ta="${cp}" c="$(arg y)"\t\t<link name="${b}"/><link name="${b}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_036	macro	c:='q r' b=$(arg y)\tc="$(arg y)"\t<visual/><collision/>\t<link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_037	macro	c a:=^|${x}\tc="z w" b="1" d="${x}"\t<visual/><collision/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_038	macro	a\tb="${x}" d="z w"\t<visual/>\t<link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_039	macro	a=  b\t\t<visual/><collision/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_040	macro	**c  b:=^|  **c\t\t<visual/>\t<xacro:insert_block name="c"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
-macro_041	macro	a  a=1\tc="${nope}" d="${nope}" a="$(arg y)"\t<visual/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_042	macro	b:=^  a:=^  **b\tb="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><xacro:insert_block name="b"/>	REFUSED	invalid expression: $$x
-macro_043	macro	c\tc="1" d="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_044	macro	a  c:=$(arg y) b:=^|${cp}\tb="${nope}" a="$(arg y)" c="$$x"\t<visual/>\t<link name="${a}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
-macro_045	macro	b  **a\ta="${cp}" d="z w" b="1"\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "a"
-macro_046	macro	a:=^ c='q r'  b\t\t<visual/><collision/>\t<link name="${a}"/><link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_047	macro	*a  c\td="$(arg y)" a="$$x"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_048	macro	**c a:=^|${cp}\ta="${cp}" d="${nope}"\t<visual/>\t<xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_049	macro	b=$$x\td="$$x" b="${x}"\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_050	macro	b='q r' *a\tb="$(arg y)" c="${x}" a="z w"\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_051	macro	a:=^|${x} a\tb="z w" a="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_052	macro	c=${1 + 2} c='q r'\td="$(arg y)" b="$(arg y)" c="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_053	macro	b=$(arg y)  b:=1 **c\tb="1" a="${nope}" c="$$x"\t\t<link name="${b}"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "a"
-macro_054	macro	**b\tc="${nope}"\t\t<xacro:insert_block name="b"/>	REFUSED	Invalid parameter "c"
-macro_055	macro	c *c  a='q r'\t\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	Not enough blocks
-macro_056	macro	a:=^ c:=^|$(arg y)  a\td="${nope}" a="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_057	macro	a:='q r'\ta="$(arg y)" d="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_058	macro	a=${1 + 2}\tc="z w" a="${nope}" b="$(arg y)"\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_059	macro	a:=^|${cp}  a:=^|'q r' a\t\t\t<link name="${a}"/><link name="${a}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_060	macro	*c **b\ta="${x}" c="$$x" b="${nope}"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "a"
-macro_061	macro	a:=^\tc="$(arg y)"\t\t<link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_062	macro	*c\tb="z w" d="${x}" a="${cp}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "b"
-macro_063	macro	b:=\td="1" c="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_064	macro	c:=^  *c a:=^|'q r'\tc="${nope}" a="${nope}" b="z w"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
-macro_065	macro	a:=${1 + 2}  b=1  c:='q r'\ta="$(arg y)" c="1"\t\t<link name="${a}"/><link name="${b}"/><link name="${c}"/>	"Y" "1" "1"	
-macro_066	macro	**b  c:=^|\tb="${cp}"\t<visual/>\t<xacro:insert_block name="b"/><link name="${c}"/>	REFUSED	Invalid parameter "b"
-macro_067	macro	b:=^ b:=${1 + 2}  a=$(arg y)\td="1" c="z w" b="${cp}"\t\t<link name="${b}"/><link name="${b}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_068	macro	a=${1 + 2} a **c\td="${x}" a="1"\t<visual/>\t<link name="${a}"/><link name="${a}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
-macro_069	macro	a:=\ta="$$x" d="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	invalid expression: $$x
-macro_070	macro	b:=^|'q r' b:=^|${1 + 2} b=$$x\t\t<visual/><collision/>\t<link name="${b}"/><link name="${b}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_071	macro	c  c:='q r'\td="z w" c="${cp}"\t<visual/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_072	macro	b:=^|${cp} c:=\t\t<visual/><collision/>\t<link name="${b}"/><link name="${c}"/>	REFUSED	Unused block "visual"
-macro_073	macro	a:=^\tb="1" a="${nope}" c="${nope}"\t<visual/>\t<link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_074	macro	c:=$(arg y)  a:=^|$$x\td="${cp}" c="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_075	macro	**c *a b\ta="${cp}" c="$(arg y)" b="$$x"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="a"/><link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_076	macro	*b  b:=${1 + 2} **b\ta="${nope}" d="${cp}" c="z w"\t<visual/>\t<xacro:insert_block name="b"/><link name="${b}"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "a"
-macro_077	macro	*c  c:=^| b:=^|\tc="z w"\t<visual/><collision/>\t<xacro:insert_block name="c"/><link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "collision"
-macro_078	macro	a:=${x}  **a\ta="1" c="${cp}" d="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_079	macro	**b  b  *c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
-macro_080	macro	**c a=${x}\t\t\t<xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	Not enough blocks
-macro_081	macro	b:=^\t\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	Unused block "visual"
-macro_082	macro	**a c\ta="1"\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_083	macro	**a\tb="$$x"\t<visual/>\t<xacro:insert_block name="a"/>	REFUSED	Invalid parameter "b"
-macro_084	macro	**b b:=^|$$x\td="${nope}" c="${x}" a="${cp}"\t<visual/>\t<xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_085	macro	a a:=${1 + 2}  *a\tc="${cp}" b="${cp}" a="$(arg y)"\t<visual/>\t<link name="${a}"/><link name="${a}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_086	macro	b:=^  **a  *b\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><xacro:insert_block name="a"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
-macro_087	macro	a:= **a\tb="$(arg y)" c="$$x" a="${cp}"\t<visual/><collision/>\t<link name="${a}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "b"
-macro_088	macro	b\tc="${nope}" a="$$x"\t\t<link name="${b}"/>	REFUSED	Invalid parameter "c"
-macro_089	macro	a:= a:=^  *b\tc="${nope}" d="${cp}" a="${cp}"\t<visual/>\t<link name="${a}"/><link name="${a}"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "c"
-macro_090	macro	c:=^|$(arg y)  c:=^\t\t<visual/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	Unused block "visual"
-macro_091	macro	*a **b a\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	Not enough blocks
-macro_092	macro	*a\tb="$$x" a="$$x"\t\t<xacro:insert_block name="a"/>	REFUSED	Invalid parameter "b"
-macro_093	macro	b:=^\t\t\t<link name="${b}"/>	"ob"	
-macro_094	macro	a=1 b:=^|1 a:=^\t\t<visual/>\t<link name="${a}"/><link name="${b}"/><link name="${a}"/>	REFUSED	Unused block "visual"
-macro_095	macro	c:=^  c  c:=^\t\t<visual/><collision/>\t<link name="${c}"/><link name="${c}"/><link name="${c}"/>	REFUSED	Unused block "visual"
-macro_096	macro	**b c:=^|$$x\td="${x}" c="1" a="${x}"\t\t<xacro:insert_block name="b"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_097	macro	b:=^\ta="${nope}" c="$(arg y)"\t\t<link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_098	macro	a:=^\td="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_099	macro	c  b:=^|${cp}\t\t<visual/><collision/>\t<link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_100	macro	c:=^|${x}\td="1"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_101	macro	*c\td="${x}" b="${x}"\t<visual/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
-macro_102	macro	**a  a c:=${1 + 2}\t\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${a}"/><link name="${c}"/>	REFUSED	Unused block "collision"
-macro_103	macro	a:=^  *c\tc="${cp}" a="${nope}" b="1"\t<visual/>\t<link name="${a}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "c"
-macro_104	macro	**c  *a\t\t\t<xacro:insert_block name="c"/><xacro:insert_block name="a"/>	REFUSED	Not enough blocks
-macro_105	macro	a=$$x\ta="${x}"\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
-macro_106	macro	a=${x}  a:='q r'\tc="${cp}" b="$(arg y)" d="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_107	macro	*c c=1 c:=^\ta="$(arg y)" d="1"\t<visual/>\t<xacro:insert_block name="c"/><link name="${c}"/><link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_108	macro	a:=^|$$x c:=^  c:='q r'\td="1" a="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${c}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_109	macro	c  c\t\t<visual/><collision/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	Unused block "visual"
-macro_110	macro	c:=${cp}\td="${cp}"\t<visual/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_111	macro	c:=^|1  a:=^|${1 + 2}\td="${cp}" b="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_112	macro	*a a:=^\tc="${x}" d="1"\t\t<xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_113	macro	b:=^ c:=^|${cp} a='q r'\tc="$$x" d="1" a="$(arg y)"\t\t<link name="${b}"/><link name="${c}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
-macro_114	macro	b:=^|\td="${nope}" a="${x}" b="${nope}"\t<visual/>\t<link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_115	macro	a:=${x}\td="${cp}" c="${x}"\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_116	macro	a  a:='q r'\tc="1" b="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_117	macro	*a b=$(arg y)  c\ta="${nope}" d="${nope}" b="$$x"\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${b}"/><link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_118	macro	**b b:=^\tc="${x}" b="1" a="z w"\t<visual/>\t<xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	Invalid parameter "c"
-macro_119	macro	c:=^\tc="z w" d="${x}"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_120	macro	b:='q r'  c:=^  **b\ta="$(arg y)" b="${nope}" c="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "a"
-macro_121	macro	a=$(arg y) a:=^\ta="1"\t<visual/><collision/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Unused block "visual"
-macro_122	macro	a=$$x b:=$$x a:=${1 + 2}\td="${cp}" a="$$x"\t<visual/>\t<link name="${a}"/><link name="${b}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_123	macro	c:=^\td="${nope}"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_124	macro	b:=${cp}\tb="${cp}" a="$$x" c="z w"\t<visual/>\t<link name="${b}"/>	REFUSED	name 'cp' is not defined 
-macro_125	macro	a a\td="$(arg y)" c="${nope}"\t\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_126	macro	**c\tc="${cp}"\t<visual/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "c"
-macro_127	macro	b:='q r' a:=^|${1 + 2} a:=^\tb="${cp}" c="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_128	macro	**a\ta="${x}" c="${nope}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/>	REFUSED	Invalid parameter "a"
-macro_129	macro	*a  a=1 b\td="$$x" b="$(arg y)"\t<visual/>\t<xacro:insert_block name="a"/><link name="${a}"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_130	macro	c  b='q r' c:=^\t\t<visual/>\t<link name="${c}"/><link name="${b}"/><link name="${c}"/>	REFUSED	Unused block "visual"
-macro_131	macro	b=  a c:=^\tb="${x}" a="$$x" d="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_132	macro	**b *c **a\td="${nope}" c="z w" b="z w"\t<visual/><collision/>\t<xacro:insert_block name="b"/><xacro:insert_block name="c"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "d"
-macro_133	macro	**b a=$$x\tc="${x}" d="z w" b="z w"\t\t<xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_134	macro	c\t\t\t<link name="${c}"/>	REFUSED	Undefined parameters [c]
-macro_135	macro	b:=^ a:='q r' c='q r'\td="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_136	macro	b:=^|${x}\tb="${nope}" c="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	REFUSED	name 'nope' is not defined 
-macro_137	macro	b=1 a  a:=^|${x}\td="${x}" b="$(arg y)" c="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_138	macro	b:=^|$(arg y) a:=^ a\t\t\t<link name="${b}"/><link name="${a}"/><link name="${a}"/>	REFUSED	Undefined property to forward: a
-macro_139	macro	a:=^|'q r' a=$(arg y)\tc="${x}" b="$$x" d="${cp}"\t\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_140	macro	b:=^ a:=^\t\t<visual/><collision/>\t<link name="${b}"/><link name="${a}"/>	REFUSED	Unused block "visual"
-macro_141	macro	**a  c:='q r'\ta="1" b="${x}"\t\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "a"
-macro_142	macro	a=$(arg y) a:=${1 + 2}\tc="${cp}" d="1"\t<visual/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_143	macro	a:=$(arg y)\ta="${x}"\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
-macro_144	macro	c  *b\tc="${x}" d="${nope}" b="1"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "d"
-macro_145	macro	c:=$(arg y) c:=^|${1 + 2} *c\tb="1"\t\t<link name="${c}"/><link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "b"
-macro_146	macro	*c\tc="1"\t<visual/><collision/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "c"
-macro_147	macro	c=1 a:=^|  b=$$x\td="z w"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_148	macro	a\td="z w" c="1"\t\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_149	macro	b:=  **b\tb="${x}" d="1" a="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "d"
-macro_150	macro	c:=^  *a  b:=^\tb="z w"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="a"/><link name="${b}"/>	REFUSED	Not enough blocks
-macro_151	macro	b:=^|'q r' b=${cp}\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/>	"c" "c"	
-macro_152	macro	**a c:=$(arg y)\td="${cp}"\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_153	macro	a:=$(arg y)  a:=${1 + 2}\ta="${cp}" b="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_154	macro	c:=^|${1 + 2} b:=^ *c\td="${cp}" b="z w" a="z w"\t\t<link name="${c}"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
-macro_155	macro	a\td="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_156	macro	**a\tc="z w" a="${cp}"\t<visual/><collision/>\t<xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_157	macro	*c  **b a:=^|1\tc="z w"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_158	macro	c:=1 **a c:=^\tb="${nope}" a="${nope}"\t\t<link name="${c}"/><xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Invalid parameter "b"
-macro_159	macro	b:=^|1\t\t\t<link name="${b}"/>	"ob"	
-macro_160	macro	a *b  *a\td="z w" b="$$x" c="z w"\t\t<link name="${a}"/><xacro:insert_block name="b"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "d"
-macro_161	macro	**b c:=${1 + 2}  **b\t\t<visual/>\t<xacro:insert_block name="b"/><link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
-macro_162	macro	a:=^ b:=\td="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_163	macro	c=${x}\tc="${cp}" b="1"\t\t<link name="${c}"/>	REFUSED	name 'cp' is not defined 
-macro_164	macro	c:=^|'q r' b\t\t<visual/><collision/>\t<link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_165	macro	a:=$(arg y) b:=^|$$x\ta="${x}"\t<visual/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_166	macro	b:='q r' **c\t\t\t<link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
-macro_167	macro	a:=${x} b:=^ a:=$(arg y)\tc="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${b}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
-macro_168	macro	*c **c  a\ta="${x}" d="${cp}" b="${x}"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_169	macro	*b **a b:=^\td="${x}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/><xacro:insert_block name="a"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_170	macro	c=$$x\td="${cp}" b="$(arg y)" c="z w"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_171	macro	c:='q r' a:=^\td="1" a="z w" c="z w"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_172	macro	b:=^  c:=$$x a\td="${cp}" c="$$x" a="$$x"\t<visual/>\t<link name="${b}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_173	macro	**c  c:=^|'q r'\t\t<visual/>\t<xacro:insert_block name="c"/><link name="${c}"/>	"q r"	
-macro_174	macro	c:=^\td="1"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
-macro_175	macro	c=$$x a:=^\tc="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Undefined property to forward: a
-macro_176	macro	c:=^  a=${1 + 2}\tc="${cp}" d="${x}" b="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
-macro_177	macro	a=${cp} b:=$$x\t\t<visual/><collision/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	Unused block "visual"
-macro_178	macro	a:=^|$(arg y) **a a=$(arg y)\td="z w" c="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_179	macro	b:=^  b:=^ a:=^\tb="$$x" d="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
-macro_180	macro	a=$(arg y)  b:=^|${cp}  c:=^\ta="z w" b="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${b}"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
-macro_181	macro	a:=\ta="$(arg y)" d="$$x" b="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_182	macro	b=${x} c  c:=^|${1 + 2}\t\t\t<link name="${b}"/><link name="${c}"/><link name="${c}"/>	"vx" "3" "3"	
-macro_183	macro	*a  b:=^|'q r'\tb="z w"\t\t<xacro:insert_block name="a"/><link name="${b}"/>	REFUSED	Not enough blocks
-macro_184	macro	*c *c  b:=\t\t<visual/><collision/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Undefined parameters [b]
-macro_185	macro	b:=^\tb="$$x" d="z w"\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	invalid expression: $$x
-macro_186	macro	*a *a\td="$(arg y)" b="$(arg y)"\t<visual/><collision/>\t<xacro:insert_block name="a"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "d"
-macro_187	macro	a=${x}\t\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	"vx"	
-macro_188	macro	**c\tb="${x}" c="z w" a="1"\t\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "b"
-macro_189	macro	b:=^| b:=^\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/>	"ob" "ob"	
-macro_190	macro	*b\t\t<visual/><collision/>\t<xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
-macro_191	macro	a:=${cp}  **c **b\ta="${x}" c="$(arg y)" d="1"\t<visual/><collision/>\t<link name="${a}"/><xacro:insert_block name="c"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "c"
-macro_192	macro	a\td="${nope}" b="${cp}" c="${cp}"\t\t<link name="${a}"/>	REFUSED	Invalid parameter "d"
-macro_193	macro	*c **c b:=^\ta="1"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Invalid parameter "a"
-macro_194	macro	a:=^ **b b=1\t\t<visual/><collision/>\t<link name="${a}"/><xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	Unused block "collision"
-macro_195	macro	c:=^|$$x b\td="${nope}" c="${x}" b="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
-macro_196	macro	a:=^|${1 + 2}\tb="$(arg y)"\t\t<link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_197	macro	a  c:=^|${x} a\tb="$$x"\t<visual/>\t<link name="${a}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "b"
-macro_198	macro	b:=^|$$x a:=^  b:='q r'\ta="${cp}" c="$(arg y)"\t<visual/>\t<link name="${b}"/><link name="${a}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
-macro_199	macro	**c  **a\tc="$(arg y)" b="${nope}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "c"
-macro_200	macro	a=$(arg y)\tc="z w" d="1" b="$$x"\t\t<link name="${a}"/>	REFUSED	Invalid parameter "c"
+span_199	span	.$	<robot name="g"><link name=".$"/></robot>	
+span_200	span	$$${	<robot name="g"><link name="$${"/></robot>	
+macro_001	macro	**c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_002	macro	c c:=^|${cp}\tc="${nope}" d="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_003	macro	c c=$$x\tc="1"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_004	macro	*b\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_005	macro	b:=${x} c:=1  b\tb="${x}" c="1"\t<visual/>\t<link name="${b}"/><link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
+macro_006	macro	c=  **b b=${1 + 2}\tc="$(arg y)" b="${cp}"\t\t<link name="${c}"/><xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_007	macro	a:=^ a=${x}\ta="1" d="z w"\t<visual/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
+macro_008	macro	a=$(arg y) a  c=$(arg y)\ta="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_009	macro	a:=^ b:=^|${1 + 2} a:=^\ta="${nope}" b="1"\t<visual/><collision/>\t<link name="${a}"/><link name="${b}"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_010	macro	a:=^|${x} c=${1 + 2}\td="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_011	macro	**a\t\t<visual/>\t<xacro:insert_block name="a"/>	<robot name="g"><link name="after_ob"/></robot>	
+macro_012	macro	a\ta="z w"\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
+macro_013	macro	a b:=^|${x}\ta="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_014	macro	b:=^|$(arg y) **c c:=^\tb="z w"\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	Unused block "collision"
+macro_015	macro	**b *a  a:=$$x\ta="1"\t<visual/><collision/>\t<xacro:insert_block name="b"/><xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_016	macro	a=1  *b *a\ta="z w"\t<visual/><collision/>\t<link name="${a}"/><xacro:insert_block name="b"/><xacro:insert_block name="a"/>	<robot name="g"><link name="z w"/><visual/><collision/><link name="after_ob"/></robot>	
+macro_017	macro	a  b  **b\ta="${x}" b="${x}"\t<visual/><collision/>\t<link name="${a}"/><link name="${b}"/><xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
+macro_018	macro	c:=^ c:=^  b\tc="${cp}" b="z w"\t<visual/><collision/>\t<link name="${c}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_019	macro	b:=^|1  c=$$x  b\tb="${nope}" c="${cp}"\t<visual/>\t<link name="${b}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_020	macro	c:=^|${1 + 2}  a\tc="${cp}"\t<visual/><collision/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_021	macro	c **a a:=^|1\ta="${nope}"\t\t<link name="${c}"/><xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_022	macro	*c  c\td="${x}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_023	macro	**a  c=\tc="1"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Not enough blocks
+macro_024	macro	a:=1\ta="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	<robot name="g"><link name="Y"/><link name="after_ob"/></robot>	
+macro_025	macro	b:=${1 + 2}\tb="1"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	<robot name="g"><link name="1"/><link name="after_ob"/></robot>	
+macro_026	macro	*c\t\t\t<xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_027	macro	**a\t\t\t<xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_028	macro	**b\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_029	macro	**c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_030	macro	c c:=^|\tc="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_031	macro	c=1  b:=^  c:=${1 + 2}\tc="$(arg y)" b="$(arg y)"\t<visual/>\t<link name="${c}"/><link name="${b}"/><link name="${c}"/>	REFUSED	Unused block "visual"
+macro_032	macro	**c  b:=^ b:=^\tb="${cp}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><link name="${b}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_033	macro	c:=$(arg y)\tc="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_034	macro	a:=${x} c:=^|'q r'\tc="$(arg y)"\t\t<link name="${a}"/><link name="${c}"/>	<robot name="g"><link name="vx"/><link name="Y"/><link name="after_ob"/></robot>	
+macro_035	macro	c:='q r' b=$(arg y)\tc="1" b="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${b}"/>	<robot name="g"><link name="1"/><link name="vx"/><link name="after_ob"/></robot>	
+macro_036	macro	a:=^|${x}\ta="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_037	macro	c\tc="${nope}"\t\t<link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_038	macro	c:=^|  *c\tc="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_039	macro	c:=1 a:=^|$(arg y)\tc="z w" a="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_040	macro	b:=1  a  a=1\tb="${nope}" a="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_041	macro	c=${cp}  a:=^\tc="${x}" a="$$x"\t\t<link name="${c}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_042	macro	**a  a=$$x\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><link name="${a}"/>	REFUSED	Not enough blocks
+macro_043	macro	a  c:=$(arg y) b:=^|${cp}\ta="${nope}" c="$(arg y)" b="$$x"\t<visual/>\t<link name="${a}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_044	macro	b  **a\tb="$(arg y)" d="${nope}"\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "d"
+macro_045	macro	a:=^|${x}\t\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
+macro_046	macro	c:=^\t\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	Undefined property to forward: c
+macro_047	macro	b:=1  a\tb="z w" a="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/>	<robot name="g"><link name="z w"/><link name="Y"/><link name="after_ob"/></robot>	
+macro_048	macro	*b *c c=$$x\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/><xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	Not enough blocks
+macro_049	macro	a:=^|${x}\ta="${nope}"\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_050	macro	c=${cp} b='q r'  *a\tc="$(arg y)"\t<visual/>\t<link name="${c}"/><link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	name 'cp' is not defined 
+macro_051	macro	c=1 **b a\tc="${cp}" a="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_052	macro	b=$$x  c:=^|1  b\tc="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_053	macro	*c  b:=1\tb="${x}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_054	macro	a:=^ b:=^\tb="${cp}"\t<visual/>\t<link name="${a}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_055	macro	c:=${cp} c\tc="$(arg y)"\t\t<link name="${c}"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_056	macro	*c b:=^|1\tb="$$x"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_057	macro	c:=^|$$x  *a  **b\tc="$(arg y)" d="${nope}"\t\t<link name="${c}"/><xacro:insert_block name="a"/><xacro:insert_block name="b"/>	REFUSED	Invalid parameter "d"
+macro_058	macro	**c  *c a=${1 + 2}\ta="z w" d="${nope}"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
+macro_059	macro	*c c:=^\tc="1"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	Not enough blocks
+macro_060	macro	**c\td="${x}"\t<visual/><collision/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
+macro_061	macro	**b\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_062	macro	b=${x}  a:=^\tb="$$x" a="$(arg y)"\t\t<link name="${b}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_063	macro	a:=^|$(arg y) a  c:=^\ta="1" c="${x}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/><link name="${c}"/>	<robot name="g"><link name="Y"/><link name="Y"/><link name="vx"/><link name="after_ob"/></robot>	
+macro_064	macro	a\ta="1"\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
+macro_065	macro	b:=^|${cp} a:=^|'q r'  c:=$(arg y)\tb="1" a="z w" c="$(arg y)" d="${x}"\t<visual/><collision/>\t<link name="${b}"/><link name="${a}"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_066	macro	b=1  a=${cp}\tb="$(arg y)" d="1"\t\t<link name="${b}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
+macro_067	macro	**b  c:=^|\tc="${cp}"\t<visual/>\t<xacro:insert_block name="b"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_068	macro	b:=^ b:=${1 + 2}  a=$(arg y)\tb="${nope}" a="1"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_069	macro	c\t\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Unused block "visual"
+macro_070	macro	b\tb="z w"\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	Unused block "visual"
+macro_071	macro	a:=$$x c='q r' a:=$$x\ta="${cp}" c="1"\t<visual/>\t<link name="${a}"/><link name="${c}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_072	macro	b:=^|${1 + 2} b=$$x  b='q r'\tb="${nope}"\t\t<link name="${b}"/><link name="${b}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_073	macro	a  c:=^\ta="z w" c="$$x"\t<visual/>\t<link name="${a}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_074	macro	*c  b:=${1 + 2}  **a\tb="$(arg y)"\t<visual/>\t<xacro:insert_block name="c"/><link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_075	macro	*a\t\t<visual/>\t<xacro:insert_block name="a"/>	<robot name="g"><visual/><link name="after_ob"/></robot>	
+macro_076	macro	b=${x} **c\tb="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	name 'cp' is not defined 
+macro_077	macro	*c **c a:=^|\ta="1"\t<visual/><collision/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${a}"/>	<robot name="g"><link name="1"/><link name="after_ob"/></robot>	
+macro_078	macro	c:=^|${x}\td="z w"\t\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_079	macro	a c:=^|'q r'  *c\tc="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	name 'cp' is not defined 
+macro_080	macro	c=${cp}  *c *b\tc="z w"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="c"/><xacro:insert_block name="b"/>	REFUSED	name 'cp' is not defined 
+macro_081	macro	a:=${x}  **a\ta="$(arg y)" d="z w"\t\t<link name="${a}"/><xacro:insert_block name="a"/>	REFUSED	Invalid parameter "d"
+macro_082	macro	a:=^\ta="${cp}"\t<visual/><collision/>\t<link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_083	macro	*c c:=^\tc="${cp}"\t<visual/><collision/>\t<xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_084	macro	*c\td="1"\t\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
+macro_085	macro	b:=^\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/>	<robot name="g"><link name="ob"/><link name="after_ob"/></robot>	
+macro_086	macro	**a\t\t\t<xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_087	macro	a b=1\ta="${cp}" b="$$x" d="${x}"\t\t<link name="${a}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_088	macro	**a  **a\t\t<visual/><collision/>\t<xacro:insert_block name="a"/><xacro:insert_block name="a"/>	<robot name="g"><link name="after_ob"/></robot>	
+macro_089	macro	**a  **c  a\ta="z w"\t<visual/><collision/>\t<xacro:insert_block name="a"/><xacro:insert_block name="c"/><link name="${a}"/>	<robot name="g"><link name="z w"/><link name="after_ob"/></robot>	
+macro_090	macro	c:=^|${x} **b\tc="z w"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
+macro_091	macro	**a  *b\t\t\t<xacro:insert_block name="a"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_092	macro	b *a\tb="${cp}"\t<visual/>\t<link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	name 'cp' is not defined 
+macro_093	macro	b=${1 + 2}  c\tb="z w" c="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_094	macro	**c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_095	macro	a:=^\ta="${cp}" d="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_096	macro	c:=^ **b\tc="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	name 'cp' is not defined 
+macro_097	macro	c:=^  **b\t\t\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_098	macro	b:=^ a=$$x\tb="z w" a="z w"\t<visual/>\t<link name="${b}"/><link name="${a}"/>	REFUSED	Unused block "visual"
+macro_099	macro	a:=^|1\ta="${nope}"\t\t<link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_100	macro	c a:=^|${cp}\ta="1"\t<visual/><collision/>\t<link name="${c}"/><link name="${a}"/>	REFUSED	Unused block "visual"
+macro_101	macro	a c:=^ c\ta="$$x" c="${cp}" d="1"\t\t<link name="${a}"/><link name="${c}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_102	macro	*c  *c c:=1\td="${nope}"\t<visual/><collision/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/><link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_103	macro	b:=^\tb="$(arg y)"\t\t<link name="${b}"/>	<robot name="g"><link name="Y"/><link name="after_ob"/></robot>	
+macro_104	macro	a:=^\ta="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	<robot name="g"><link name="Y"/><link name="after_ob"/></robot>	
+macro_105	macro	c  b:=^|${cp}\tb="$$x"\t<visual/><collision/>\t<link name="${c}"/><link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_106	macro	a:=^|$$x a=$$x\ta="${nope}"\t<visual/>\t<link name="${a}"/><link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_107	macro	**b  **a\t\t<visual/><collision/>\t<xacro:insert_block name="b"/><xacro:insert_block name="a"/>	<robot name="g"><link name="after_ob"/></robot>	
+macro_108	macro	b\tb="$$x" d="z w"\t<visual/>\t<link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_109	macro	*c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_110	macro	a a:=^\ta="$$x"\t\t<link name="${a}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_111	macro	a:=1\t\t<visual/>\t<link name="${a}"/>	REFUSED	Unused block "visual"
+macro_112	macro	c:=^|1 **c  b:=^\t\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_113	macro	c **a **b\t\t<visual/>\t<link name="${c}"/><xacro:insert_block name="a"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_114	macro	c:=${x}\t\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Unused block "visual"
+macro_115	macro	c=${cp} *b a:=^|$$x\tc="1" a="$(arg y)"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	Unused block "collision"
+macro_116	macro	a **c b:=^|${1 + 2}\ta="1"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_117	macro	**a  **c\t\t\t<xacro:insert_block name="a"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_118	macro	b:=^|$$x  *c  *c\tb="${nope}"\t\t<link name="${b}"/><xacro:insert_block name="c"/><xacro:insert_block name="c"/>	REFUSED	name 'nope' is not defined 
+macro_119	macro	a:=^\ta="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_120	macro	a:=^\t\t\t<link name="${a}"/>	REFUSED	Undefined property to forward: a
+macro_121	macro	**c a='q r'  b:=^|\tb="$(arg y)"\t\t<xacro:insert_block name="c"/><link name="${a}"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_122	macro	b:=^|\tb="${nope}"\t\t<link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_123	macro	b:=^ c:=^|'q r'  **a\tb="${cp}" c="$(arg y)"\t\t<link name="${b}"/><link name="${c}"/><xacro:insert_block name="a"/>	REFUSED	name 'cp' is not defined 
+macro_124	macro	a:='q r'  a=$$x  b\ta="${x}" b="$(arg y)"\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><link name="${a}"/><link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_125	macro	*c c:=^|1 c:=^\tc="$$x"\t<visual/>\t<xacro:insert_block name="c"/><link name="${c}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_126	macro	b:=^\t\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	Unused block "visual"
+macro_127	macro	c:=1  **c\tc="$$x"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	invalid expression: $$x
+macro_128	macro	b:=$$x c:=^|'q r' a=\tb="z w" c="z w" a="$(arg y)" d="${nope}"\t<visual/>\t<link name="${b}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "d"
+macro_129	macro	b:=^|'q r'\tb="${nope}"\t\t<link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_130	macro	c c  a=$$x\tc="z w" a="$(arg y)"\t<visual/><collision/>\t<link name="${c}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Unused block "visual"
+macro_131	macro	c:=^ b:=^|${cp}  **a\tc="1"\t<visual/>\t<link name="${c}"/><link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	name 'cp' is not defined 
+macro_132	macro	c  *c **c\tc="$$x"\t<visual/>\t<link name="${c}"/><xacro:insert_block name="c"/><xacro:insert_block name="c"/>	REFUSED	invalid expression: $$x
+macro_133	macro	a\ta="$$x"\t\t<link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_134	macro	c=$(arg y) c:=${1 + 2}  *a\t\t\t<link name="${c}"/><link name="${c}"/><xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_135	macro	**a *c  b:=^|${cp}\tb="${x}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_136	macro	b  b:= *a\tb="${nope}"\t\t<link name="${b}"/><link name="${b}"/><xacro:insert_block name="a"/>	REFUSED	name 'nope' is not defined 
+macro_137	macro	a:=${1 + 2} b:=^|$$x c=${cp}\ta="${nope}" b="${nope}"\t\t<link name="${a}"/><link name="${b}"/><link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_138	macro	**b b= a\tb="${x}" a="z w"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="b"/><link name="${b}"/><link name="${a}"/>	REFUSED	Invalid parameter "a"
+macro_139	macro	a:=  c:=^ a:=$(arg y)\tc="$$x"\t\t<link name="${a}"/><link name="${c}"/><link name="${a}"/>	REFUSED	Invalid parameter "c"
+macro_140	macro	*b\t\t<visual/><collision/>\t<xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
+macro_141	macro	**b a=$$x\ta="1"\t<visual/>\t<xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_142	macro	*b\td="$$x"\t<visual/>\t<xacro:insert_block name="b"/>	REFUSED	Invalid parameter "d"
+macro_143	macro	c:=^ c:=^ b:=^|$$x\tc="1"\t<visual/>\t<link name="${c}"/><link name="${c}"/><link name="${b}"/>	REFUSED	Unused block "visual"
+macro_144	macro	a:=^\ta="$$x"\t<visual/>\t<link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_145	macro	a:=^\ta="${nope}" d="$$x"\t<visual/>\t<link name="${a}"/>	REFUSED	name 'nope' is not defined 
+macro_146	macro	b=${cp}  a:=^|${x}  b\tb="$(arg y)" a="$$x"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_147	macro	b:=^|$(arg y) a:=^ a\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${a}"/>	REFUSED	Undefined property to forward: a
+macro_148	macro	a:=^|${1 + 2}  c\ta="${x}"\t<visual/><collision/>\t<link name="${a}"/><link name="${c}"/>	REFUSED	Unused block "visual"
+macro_149	macro	b\tb="${nope}"\t\t<link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_150	macro	*a\t\t<visual/>\t<xacro:insert_block name="a"/>	<robot name="g"><visual/><link name="after_ob"/></robot>	
+macro_151	macro	c:='q r' *b\tc="${x}"\t\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_152	macro	a=$(arg y) a:=${1 + 2}\ta="z w"\t\t<link name="${a}"/><link name="${a}"/>	<robot name="g"><link name="3"/><link name="3"/><link name="after_ob"/></robot>	
+macro_153	macro	a:=^  a:=$(arg y) a:=${1 + 2}\t\t<visual/>\t<link name="${a}"/><link name="${a}"/><link name="${a}"/>	REFUSED	Unused block "visual"
+macro_154	macro	a:=${1 + 2} **c a:=^\t\t<xacro:property name="cp" value="c"/>\t<link name="${a}"/><xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	Not enough blocks
+macro_155	macro	c:=^|${1 + 2}  *c b:=^|${x}\td="z w"\t<visual/>\t<link name="${c}"/><xacro:insert_block name="c"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
+macro_156	macro	*b c:=^\t\t\t<xacro:insert_block name="b"/><link name="${c}"/>	REFUSED	Not enough blocks
+macro_157	macro	b=$$x  b:=^|${cp}  *b\tb="${cp}"\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${b}"/><xacro:insert_block name="b"/>	REFUSED	name 'cp' is not defined 
+macro_158	macro	a  c:=^  b:=\ta="${nope}" c="${x}" b="1"\t\t<link name="${a}"/><link name="${c}"/><link name="${b}"/>	REFUSED	name 'nope' is not defined 
+macro_159	macro	c=${cp}  *a\tc="z w"\t<visual/>\t<link name="${c}"/><xacro:insert_block name="a"/>	REFUSED	name 'cp' is not defined 
+macro_160	macro	b:=$$x b:=^|'q r'\t\t<visual/><collision/>\t<link name="${b}"/><link name="${b}"/>	REFUSED	Unused block "visual"
+macro_161	macro	**a **a\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_162	macro	*c  *c\t\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="c"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_163	macro	a:=${1 + 2} c  *a\ta="$$x" c="${cp}"\t<visual/><collision/>\t<link name="${a}"/><link name="${c}"/><xacro:insert_block name="a"/>	REFUSED	invalid expression: $$x
+macro_164	macro	*c  **a\t\t\t<xacro:insert_block name="c"/><xacro:insert_block name="a"/>	REFUSED	Not enough blocks
+macro_165	macro	*c\td="${nope}"\t<visual/><collision/>\t<xacro:insert_block name="c"/>	REFUSED	Invalid parameter "d"
+macro_166	macro	c\tc="${nope}"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_167	macro	b:=^|${1 + 2}\tb="${cp}"\t<visual/><collision/>\t<link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_168	macro	*c  **b a:=^|1\ta="z w"\t<visual/>\t<xacro:insert_block name="c"/><xacro:insert_block name="b"/><link name="${a}"/>	REFUSED	Not enough blocks
+macro_169	macro	c:=1 **a c:=^\tc="1"\t<visual/>\t<link name="${c}"/><xacro:insert_block name="a"/><link name="${c}"/>	REFUSED	Undefined property to forward: c
+macro_170	macro	a:=${cp} b:=^  b:=$$x\ta="z w" b="${cp}"\t<visual/>\t<link name="${a}"/><link name="${b}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_171	macro	c:=^|${cp}  b:=^|${x} c=\tc="${cp}" b="${cp}"\t<visual/>\t<link name="${c}"/><link name="${b}"/><link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_172	macro	c:=^|'q r' *b\tc="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><xacro:insert_block name="b"/>	REFUSED	name 'nope' is not defined 
+macro_173	macro	b:=^|1 c:=${1 + 2}\tb="$$x" c="z w"\t<visual/><collision/>\t<link name="${b}"/><link name="${c}"/>	REFUSED	invalid expression: $$x
+macro_174	macro	b *c\tb="$$x"\t<visual/><collision/>\t<link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	invalid expression: $$x
+macro_175	macro	b:=^|$$x  a:='q r'  b\t\t<xacro:property name="cp" value="c"/>\t<link name="${b}"/><link name="${a}"/><link name="${b}"/>	REFUSED	invalid expression: $$x  a:='q r'  b
+macro_176	macro	a:=${1 + 2}  a:=${x}  b:=^\ta="$$x"\t<visual/><collision/>\t<link name="${a}"/><link name="${a}"/><link name="${b}"/>	REFUSED	invalid expression: $$x
+macro_177	macro	*b *c\t\t<visual/>\t<xacro:insert_block name="b"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_178	macro	c\tc="1"\t<visual/><collision/>\t<link name="${c}"/>	REFUSED	Unused block "visual"
+macro_179	macro	c:=${cp}\tc="z w" d="1"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	Invalid parameter "d"
+macro_180	macro	**c a=$(arg y)\ta="$$x"\t\t<xacro:insert_block name="c"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_181	macro	**c b a=${cp}\tb="${cp}" a="${nope}"\t\t<xacro:insert_block name="c"/><link name="${b}"/><link name="${a}"/>	REFUSED	name 'cp' is not defined 
+macro_182	macro	*b\t\t<visual/><collision/>\t<xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
+macro_183	macro	c:=^ c=1\tc="${nope}"\t<visual/><collision/>\t<link name="${c}"/><link name="${c}"/>	REFUSED	name 'nope' is not defined 
+macro_184	macro	*b **c **b\t\t\t<xacro:insert_block name="b"/><xacro:insert_block name="c"/><xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_185	macro	*a  b  b:=${x}\tb="${cp}"\t<xacro:property name="cp" value="c"/>\t<xacro:insert_block name="a"/><link name="${b}"/><link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_186	macro	**b\t\t<visual/><collision/>\t<xacro:insert_block name="b"/>	REFUSED	Unused block "collision"
+macro_187	macro	**c\t\t<visual/><collision/>\t<xacro:insert_block name="c"/>	REFUSED	Unused block "collision"
+macro_188	macro	b  c:=^  a=${1 + 2}\tb="${x}" c="${x}" a="$$x"\t\t<link name="${b}"/><link name="${c}"/><link name="${a}"/>	REFUSED	invalid expression: $$x
+macro_189	macro	b:=^|${cp}\tb="z w"\t\t<link name="${b}"/>	REFUSED	name 'cp' is not defined 
+macro_190	macro	c=${cp}\tc="${cp}" d="1"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/>	REFUSED	name 'cp' is not defined 
+macro_191	macro	**a *a  *c\t\t<visual/><collision/>\t<xacro:insert_block name="a"/><xacro:insert_block name="a"/><xacro:insert_block name="c"/>	REFUSED	Not enough blocks
+macro_192	macro	b:=^\t\t<visual/>\t<link name="${b}"/>	REFUSED	Unused block "visual"
+macro_193	macro	*b\t\t\t<xacro:insert_block name="b"/>	REFUSED	Not enough blocks
+macro_194	macro	c=${1 + 2}  c:=  c:=$$x\tc="1"\t<visual/>\t<link name="${c}"/><link name="${c}"/><link name="${c}"/>	REFUSED	Unused block "visual"
+macro_195	macro	c:=^|$(arg y)  a:= *c\tc="1" a="${nope}"\t<xacro:property name="cp" value="c"/>\t<link name="${c}"/><link name="${a}"/><xacro:insert_block name="c"/>	REFUSED	name 'nope' is not defined 
+macro_196	macro	b  **b b='q r'\t\t\t<link name="${b}"/><xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	Not enough blocks
+macro_197	macro	b:=^|'q r' b *c\tb="$$x"\t<visual/><collision/>\t<link name="${b}"/><link name="${b}"/><xacro:insert_block name="c"/>	REFUSED	invalid expression: $$x
+macro_198	macro	**b b\tb="${x}" d="${nope}"\t<visual/><collision/>\t<xacro:insert_block name="b"/><link name="${b}"/>	REFUSED	Invalid parameter "d"
+macro_199	macro	c:=^|$(arg y)  *c\tc="z w"\t<visual/><collision/>\t<link name="${c}"/><xacro:insert_block name="c"/>	REFUSED	Unused block "collision"
+macro_200	macro	*a  c=$$x  *a\t\t<visual/><collision/>\t<xacro:insert_block name="a"/><link name="${c}"/><xacro:insert_block name="a"/>	REFUSED	invalid expression: $$x

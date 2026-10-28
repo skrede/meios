@@ -14,12 +14,16 @@ PROPERTIES = ('<xacro:property name="x" value="vx"/><xacro:property name="e" val
 
 INCLUDE_PREFIXES = (("", 5), ("${e}", 1), ("x/", 1), ("./", 1), ("$$", 1), ("$", 1))
 INCLUDE_HEADS = ("$(find p)", "$(find  p)", "$(find p )", "$(find ${pk})", "$(find ${sp})",
-                 "$(find q)", "$(find nopkg)", "$(find )", "$(find p q)", "${'$(find p)'}", "")
+                 "$(find q)", "$(find nopkg)", "$(find )", "$(find p q)", "${'$(find p)'}", "",
+                 "${fp}", "${fu}", "$(arg fa)")
 INCLUDE_SEPARATORS = ("/", "//", "", "/./", "./")
 INCLUDE_TAILS = ("urdf/c.xacro", "c.xacro", "urdf/sub/d.xacro", "urdf/sub/../c.xacro",
                  "urdf/../urdf/c.xacro", "../q/a.xacro", "a.xacro", "missing.xacro",
                  "urdf/${nope}.xacro", "${x}.xacro")
-INCLUDE_SUFFIXES = (("", 6), ("$$x", 1), ("${x", 1), ("$(x", 1), ("$", 1))
+INCLUDE_SUFFIXES = (("", 6), ("$$x", 1), ("${x", 1), ("$(x", 1), ("$", 1), ("/", 1))
+HELD_FINDS = ('<xacro:property name="fp" value="$(find p)"/>'
+              '<xacro:property name="fu" value="$(find p)/urdf"/>'
+              '<xacro:arg name="fa" default="$(find p)"/>')
 
 
 def include_case(draw):
@@ -40,7 +44,6 @@ def span_case(draw):
 MACRO_NAMES = ("a", "b", "c")
 MACRO_FORMS = ("{n}", "{n}:={d}", "{n}={d}", "{n}:=^", "{n}:=^|{d}", "*{n}", "**{n}")
 MACRO_DEFAULTS = ("1", "${x}", "${1 + 2}", "$(arg y)", "'q r'", "${cp}", "$$x", "")
-CALL_NAMES = ("a", "b", "c", "d")
 CALL_VALUES = ("1", "${x}", "$(arg y)", "${nope}", "$$x", "z w", "${cp}")
 CALL_CHILDREN = ("", "<visual/>", "<visual/><collision/>", '<xacro:property name="cp" value="c"/>')
 
@@ -50,30 +53,36 @@ def parameter(draw):
     default = draw.pick(MACRO_DEFAULTS) if "{d}" in form else ""
     written = form.format(n=name, d=default)
     if form.startswith("*"):
-        return written, '<xacro:insert_block name="%s"/>' % name
-    return written, '<link name="${%s}"/>' % name
+        return name, written, '<xacro:insert_block name="%s"/>' % name
+    return name, written, '<link name="${%s}"/>' % name
 
 
 def macro_case(draw):
     specification = [parameter(draw) for _ in range(draw.between(1, 3))]
-    spec = specification[0][0] + "".join(draw.pick((" ", "  ")) + written
-                                         for written, _ in specification[1:])
-    names = draw.distinct(CALL_NAMES, draw.between(0, 3))
+    spec = specification[0][1] + "".join(draw.pick((" ", "  ")) + written
+                                         for _, written, _ in specification[1:])
+    declared = dict.fromkeys(name for name, written, _ in specification
+                             if not written.startswith("*"))
+    names = [name for name in declared if draw.below(4) != 0]
+    names += ["d"] if draw.below(8) == 0 else []
     attributes = " ".join('%s="%s"' % (name, escape(draw.pick(CALL_VALUES))) for name in names)
-    body = "".join(element for _, element in specification)
+    body = "".join(element for _, _, element in specification)
     return "\t".join((spec, attributes, draw.pick(CALL_CHILDREN), body))
 
 
 # Drawn in this order from one sequence, so a family appended later leaves every earlier family's
-# cases as they were.
+# cases as they were. The macro template reads b again after the call, so a parameter named b that
+# shadows the outer property must be restored for the document to render as upstream renders it.
 FAMILIES = (
     family("include", ("TEXT",),
-           ROBOT % (PROPERTIES + '<xacro:include filename="@TEXT@"/>'), include_case),
+           ROBOT % (PROPERTIES + HELD_FINDS + '<xacro:include filename="@TEXT@"/>'), include_case),
     family("span", ("TEXT",),
            ROBOT % (PROPERTIES + '<xacro:arg name="y" default="Y"/><link name="@TEXT@"/>'),
            span_case),
     family("macro", ("SPEC", "ATTRS", "CHILDREN", "BODY"),
            ROBOT % ('<xacro:property name="x" value="vx"/><xacro:property name="b" value="ob"/>'
                     '<xacro:arg name="y" default="Y"/><xacro:macro name="m" params="@SPEC@">'
-                    '@BODY@</xacro:macro><xacro:m @ATTRS@>@CHILDREN@</xacro:m>'), macro_case),
+                    '@BODY@</xacro:macro><xacro:m @ATTRS@>@CHILDREN@</xacro:m>'
+                    '<link name="after_${b}"/>'),
+           macro_case),
 )

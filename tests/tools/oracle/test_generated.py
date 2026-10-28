@@ -6,10 +6,22 @@ from recorder import generated
 from recorder.generated_families import FAMILIES
 
 MACHINE_PATH = re.compile(r"/home/|/tmp/|/Users/|[A-Za-z]:\\")
+PARAMETER = re.compile(r"(\*{0,2})([a-z])(:?=|$)")
 
 
 def family_texts(name):
     return [text for _, one, text in generated.generated_cases() if one.name == name]
+
+
+def family_hash(name):
+    return hashlib.sha256("\n".join(family_texts(name)).encode("utf-8")).hexdigest()
+
+
+def declared_and_called(text):
+    spec, attributes, _, _ = text.split("\t")
+    matched = [PARAMETER.match(token) for token in spec.split()]
+    declared = [one.group(2) for one in matched if one and not one.group(1)]
+    return declared, re.findall(r'(\w+)="', attributes)
 
 
 class generated_set(unittest.TestCase):
@@ -38,10 +50,29 @@ class generated_set(unittest.TestCase):
         self.assertEqual([seeded.next() for _ in range(3)],
                          [0x6AF68C71D027A653, 0x99F0739CCC5D998C, 0xC3F5347EF1F236AB])
 
-    def test_the_include_family_is_unchanged(self):
-        texts = "\n".join(family_texts("include")).encode("utf-8")
-        self.assertEqual(hashlib.sha256(texts).hexdigest(),
-                         "c2236fc5dfd72d4eea036e2d94b4ae71620dcc46ca00ade05ab6113e2b6698f5")
+    def test_the_include_family_is_pinned(self):
+        self.assertEqual(family_hash("include"),
+                         "bff9e89e4893daca8d9b726db5616b3824ae605410ec4f873ab1d017d4b7ca16")
+
+    def test_the_span_family_is_pinned(self):
+        self.assertEqual(family_hash("span"),
+                         "8783260e57bd0a6d2e4604c7630f4b5ee22f22262ae17d73d84ad7112f229838")
+
+    def test_call_attributes_name_declared_parameters(self):
+        undeclared = 0
+        for text in family_texts("macro"):
+            declared, called = declared_and_called(text)
+            self.assertEqual(len(called), len(set(called)), text)
+            for name in called:
+                self.assertTrue(name in declared or name == "d", text)
+            undeclared += "d" in called
+        self.assertGreater(undeclared, 0)
+
+    def test_a_doubly_declared_parameter_is_called(self):
+        twice = [text for text in family_texts("macro")
+                 if any(declared_and_called(text)[0].count(name) > 1
+                        for name in declared_and_called(text)[1])]
+        self.assertTrue(twice)
 
     def test_no_text_or_template_holds_a_machine_path(self):
         repo = str(generated.REPO)
