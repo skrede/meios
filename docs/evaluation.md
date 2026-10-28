@@ -651,13 +651,13 @@ the description is trusted, not about parity.
 
 **An absolute include filename refuses here and is read there.** The reference opens an include written
 as an absolute path where it points. Here the root is removed, the leading separators and under the
-Windows reading a leading drive letter and colon with the separators after it. A drive that the removal
-of `.` and `..` leaves leading, as in `x/../D:/a.xacro`, is removed too and what follows it is walked
-again, so a `..` it uncovers counts as a climb: `x/../D:../q/f.xacro` refuses as escaping the source
-root. Only these count as the root, so a UNC spelling, `//server/share/x.xacro`, keeps `server` and
-`share`, and a device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements. The rest is
-looked for only through the configured sources, so an include stays inside the roots the caller
-configured, and where none of them holds it the load refuses.
+Windows reading a leading drive letter and colon with the separators after it. Under the Windows reading,
+a drive that the removal of `.` and `..` leaves leading, as in `/x/../D:/a.xacro`, is removed too and
+what follows it is walked again, so a `..` it uncovers counts as a climb: `/x/../D:../q/f.xacro` refuses
+as escaping the source root. Only these count as the root, so a UNC spelling, `//server/share/x.xacro`,
+keeps `server` and `share`, and a device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary
+elements. The rest is looked for only through the configured sources, so an include stays inside the
+roots the caller configured, and where none of them holds it the load refuses.
 This is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it
 fails if a new one appears.
 

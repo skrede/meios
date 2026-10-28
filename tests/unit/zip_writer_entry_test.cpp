@@ -12,7 +12,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <map>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -22,7 +21,6 @@ namespace
 {
 
 using zip_fixture::write_file;
-using zip_fixture::read_archive;
 using zip_fixture::scratch_root;
 
 struct recorder
@@ -81,30 +79,10 @@ void require_refused(const std::string &suffix, const std::string &urdf_name, co
 
 }
 
-TEST_CASE("an entry name escaping the archive root is rejected with no entry", "[archive][zip]")
+TEST_CASE("an entry name escaping the archive root is rejected by the containment guard, in a write and in a dry run", "[archive][zip]")
 {
-    const std::filesystem::path root = scratch_root("escape");
-    const std::filesystem::path archive = root / "rob.zip";
-    const std::filesystem::path src = write_file(root / "src_evil.stl", "X");
-    meios::log_sink silent;
-
-    meios::asset_manifest escaping;
-    escaping.entries.push_back(meios::bundle_entry{ "package://rob/x", src, "../escape.stl" });
-    meios::asset_manifest absolute;
-    absolute.entries.push_back(meios::bundle_entry{ "package://rob/x", src, "/etc/passwd" });
-
-    meios::zip_writer writer(archive, silent);
-    const meios::emit_result rel = writer.write("rob.urdf", "<robot/>", escaping, false);
-    const meios::emit_result abs = writer.write("rob.urdf", "<robot/>", absolute, false);
-
-    REQUIRE(rel.status == meios::emit_status::io_error);
-    REQUIRE(abs.status == meios::emit_status::io_error);
-    const std::map<std::string, std::string> entries = read_archive(archive);
-    REQUIRE(entries.find("../escape.stl") == entries.end());
-    REQUIRE(entries.find("escape.stl") == entries.end());
-    REQUIRE(entries.find("/etc/passwd") == entries.end());
-    REQUIRE(entries.find("etc/passwd") == entries.end());
-    std::filesystem::remove_all(root);
+    require_refused("escape_up", "rob.urdf", "../escape.stl", "that escapes the bundle root");
+    require_refused("escape_absolute", "rob.urdf", "/etc/passwd", "that escapes the bundle root");
 }
 
 TEST_CASE("an entry name holding a backslash is rejected on every platform, in a write and in a dry run", "[archive][zip]")
@@ -124,4 +102,12 @@ TEST_CASE("an entry name beginning with a drive letter and colon is rejected on 
 TEST_CASE("an entry name with a root as the platform reads it is rejected by the containment guard, in a write and in a dry run", "[archive][zip]")
 {
     require_refused("rooted", "rob.urdf", "/x", "that escapes the bundle root");
+}
+
+TEST_CASE("an entry name that names the archive root itself is rejected on every platform, in a write and in a dry run", "[archive][zip]")
+{
+    require_refused("itself_urdf", ".", "", "names the bundle root itself");
+    require_refused("itself_up", "rob.urdf", "x/..", "names the bundle root itself");
+    require_refused("itself_slash", "rob.urdf", "./", "names the bundle root itself");
+    require_refused("itself_dot_up", "rob.urdf", "a/./..", "names the bundle root itself");
 }

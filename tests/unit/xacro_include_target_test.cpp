@@ -67,19 +67,20 @@ TEST_CASE("a drive the walk leaves leading is removed, so the result is never ro
     check_kept({ { "./D:/a/R/p/./c.xacro", "a/R/p/c.xacro" },
                  { "./D:/a/R/p/urdf/../urdf/c.xacro", "a/R/p/urdf/c.xacro" },
                  { "x/../D:/a.xacro", "a.xacro" },
+                 { "/x/../D:/a.xacro", "a.xacro" },
                  { "x/D:/a.xacro", "x/D:/a.xacro" } },
                windows_paths);
 }
 
 TEST_CASE("a parent element a removed drive leaves leading escapes under the Windows grammar and stays a name under the POSIX one", "[xacro][include][target]")
 {
-    for(const std::string_view spelling : { "x/../D:..", "/D:../q", "D:D:..", "x/../D:../q/f.xacro", "C:\\x\\..\\D:..\\q" })
+    for(const std::string_view spelling : { "x/../D:..", "/D:../q", "D:D:..", "x/../D:../q/f.xacro", "/x/../D:../q/f.xacro", "C:\\x\\..\\D:..\\q" })
     {
         CAPTURE(spelling);
         CHECK(escapes(spelling, windows_paths));
     }
     check_kept({ { "x/D:../q", "x/D:../q" } }, windows_paths);
-    check_kept({ { "x/../D:..", "D:.." } }, posix_paths);
+    check_kept({ { "x/../D:..", "D:.." }, { "/x/../D:../q/f.xacro", "D:../q/f.xacro" } }, posix_paths);
 }
 
 TEST_CASE("under the POSIX grammar a drive is an ordinary name", "[xacro][include][target]")

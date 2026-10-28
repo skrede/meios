@@ -302,12 +302,12 @@ removed, where the reference reads the file it names.** The reference opens
 never opened directly. Its root is removed: the leading separators, and under the Windows reading a
 leading drive letter and colon with the separators after it. Its `.` elements are then dropped and each
 `..` removes the element before it; a `..` with nothing before it refuses under
-`xacro_structural_error` as escaping the source root. A drive that this leaves leading, as in
-`x/../D:/a.xacro`, is removed too and what follows it is walked again, so the `..` a removed drive
-uncovers counts as a climb: `x/../D:../q/f.xacro` refuses as escaping the source root. Only these
-count as the root. A UNC spelling, `//server/share/x.xacro`, keeps `server` and `share`, and a device
-spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements looked for under the sources. The
-rest is looked for as a relative path under each configured source, and where no source holds it the
+`xacro_structural_error` as escaping the source root. Under the Windows reading, a drive that this leaves
+leading, as in `/x/../D:/a.xacro`, is removed too and what follows it is walked again, so the `..` a
+removed drive uncovers counts as a climb: `/x/../D:../q/f.xacro` refuses as escaping the source root.
+Only these count as the root. A UNC spelling, `//server/share/x.xacro`, keeps `server` and `share`, and a
+device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements looked for under the sources.
+The rest is looked for as a relative path under each configured source, and where no source holds it the
 load refuses under `unresolved_include`, whose message says the configured sources were the only place
 looked. That keeps an include inside the roots the caller configured rather than
 letting a description name any file on the host. Measured on a document that includes the file beside

@@ -32,7 +32,7 @@ bool leading_drive(std::string_view text)
 
 // APPNOTE 4.4.17: a stored name holds no drive letter and no leading slash, and separates its elements by
 // forward slashes alone, so a backslash or a leading drive is refused on every host, whatever the extractor.
-// The zip-slip guard then refuses a name with a root as the platform reads it, or one leading with `..`.
+// A name normalizing to `.` names no file an extractor can place; the zip-slip guard then refuses a root as the platform reads it, or a leading `..`.
 std::optional<std::string> contained_entry(std::string_view name, log_sink &log)
 {
     if(name.find('\\') != std::string_view::npos)
@@ -41,6 +41,8 @@ std::optional<std::string> contained_entry(std::string_view name, log_sink &log)
     const std::string generic = p.generic_string();
     if(leading_drive(generic))
         return refused(name, "whose name begins with a drive letter and colon", log);
+    if(generic == ".")
+        return refused(name, "that names the bundle root itself", log);
     if(p.empty() || p.has_root_path() || p.begin()->string() == "..")
         return refused(name, "that escapes the bundle root", log);
     return generic;
@@ -74,7 +76,7 @@ bool add_source(mz_zip_archive &zip, std::string_view dest,
 }
 
 // dry_run threads the same containment checks and exists() probes as a real write
-// but touches no archive; a missing source or an escaping name still reports false.
+// but touches no archive; a missing source or a refused name still reports false.
 bool probe_entries(std::string_view urdf_name, const asset_manifest &manifest, log_sink &log)
 {
     bool ok = contained_entry(urdf_name, log).has_value();

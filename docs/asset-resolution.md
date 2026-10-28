@@ -402,15 +402,25 @@ folder bundle refuses a rooted destination name, even one inside its root, and w
 the refusals. The archive writer refuses an entry name by its own guard, in a write and in a dry run
 alike, in four cases: on every host, a name holding a backslash, and a name whose first element, once
 normalized, begins with an ASCII letter and a colon, a leading `./` included, since a ZIP entry name
-holds no drive letter and separates its elements by forward slashes alone (APPNOTE 4.4.17); a name
-with a root as the platform building the archive reads it, which on Windows includes a lone leading
-separator; and a name that is empty or leads out with `..` once normalized. A colon later in a name is
-not refused. The writer's own cases "an entry name holding a backslash is rejected on every platform,
-in a write and in a dry run" and "an entry name beginning with a drive letter and colon is rejected on
-every platform, in a write and in a dry run" assert the first two on every host, Linux included, and
-"an entry name with a root as the platform reads it is rejected by the containment guard, in a write
-and in a dry run" pins the third; on POSIX a root and an absolute path coincide, so that case cannot
-show the Windows reading of a lone separator there. A `<mesh>` and a
+holds no drive letter and separates its elements by forward slashes alone (APPNOTE 4.4.17); a name with a
+root as the platform building the archive reads it, which on Windows includes a lone leading separator;
+and a name that is empty, that leads out with `..` once normalized, or that is `.` once normalized, as
+`x/..` is. A refusal fails the write as a whole: the other entries are still checked, the writer reports
+`io_error`, and a real write leaves no archive. A colon later in a name is not refused. The writer's own
+cases "an entry name holding a backslash is rejected on every platform, in a write and in a dry run" and
+"an entry name beginning with a drive letter and colon is rejected on every platform, in a write and in a
+dry run" assert the first two on every host, Linux included, and "an entry name with a root as the
+platform reads it is rejected by the containment guard, in a write and in a dry run" pins the third; on
+POSIX a root and an absolute path coincide, so that case cannot show the Windows reading of a lone
+separator there. The writer's case "an entry name that names the archive root itself is rejected on every
+platform, in a write and in a dry run" asserts on every host, Linux included, that a name normalizing to
+`.` is refused. On Windows a reference written with backslash separators, `package://p/meshes\base.stl`,
+resolves, since a backslash there separates elements, but its entry name keeps the relative half as
+written, `meshes/p/meshes\base.stl`, so the archive writer refuses the bundle, the whole archive as every
+refusal does, while the folder writer writes it; on POSIX the backslash is part of a file name, so such a
+reference resolves only where a file is named so, and the archive writer refuses it there too. Write
+asset references with forward slashes; the Windows outcome here is reasoned from the code, not run. A
+`<mesh>` and a
 `<texture>` ask for a file, and a package directory is not one. At the source layer, the genuinely empty relative used by the bare
 `$(find <pkg>)` substitution command is answered with the package directory by a directory-rooted
 source holding the package, while a source holding bytes declines it; that split is deliberate, and
