@@ -21,8 +21,8 @@ from recorder.rendering import render, escape, refusal_text, refusal_cause  # no
 from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
-                                 PROBE_DIR, AGREEMENT_PROBES, PROBE_DIRECTORY_ARGUMENT,
-                                 DIRECTORY_BOUND_PROBES, probe_root)
+                                 PROBE_DIR, AGREEMENT_PROBES, probe_root, probe_mappings)
+from grammar_probes import GRAMMAR_PROBES_IN_STAGE, probe_environment  # noqa: E402
 
 
 def sanitize(case_id):
@@ -84,12 +84,13 @@ def stage_probe(tmp, case_id):
 @contextlib.contextmanager
 def probe_package_root(tmp, case_id):
     root = probe_root(case_id, tmp)
-    if root is None:
+    if root is None and case_id not in GRAMMAR_PROBES_IN_STAGE:
         yield
         return
     saved_directory, saved_roots = os.getcwd(), os.environ.get("ORACLE_PACKAGE_ROOTS")
     try:
-        os.environ["ORACLE_PACKAGE_ROOTS"] = root
+        if root is not None:
+            os.environ["ORACLE_PACKAGE_ROOTS"] = root
         os.chdir(tmp)
         yield
     finally:
@@ -106,7 +107,7 @@ def render_document_probe(tmp, out, case_id):
     import xacro
 
     staged = stage_probe(tmp, case_id)
-    mappings = {PROBE_DIRECTORY_ARGUMENT: str(tmp)} if case_id in DIRECTORY_BOUND_PROBES else None
+    mappings = probe_mappings(case_id, tmp)
     try:
         with probe_package_root(tmp, case_id):
             rendered = xacro.process_file(str(staged), mappings=mappings).toxml()
@@ -160,6 +161,7 @@ def render_all(tmp, share, out):
 
 
 def worker(out):
+    probe_environment()
     try:
         import ament_index_python.packages  # noqa: F401
     except ImportError:

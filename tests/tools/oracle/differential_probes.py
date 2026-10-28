@@ -2,9 +2,10 @@
 # spell them, so an id names the same fixture and the same rendered file whichever side wrote it.
 
 import os
+from pathlib import Path
 
 from recorder.corpus import REPO
-from grammar_probes import GRAMMAR_DOCUMENT_PROBES
+from grammar_probes import GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
@@ -76,11 +77,22 @@ PACKAGE_ROOT_PROBES = {one: one + ".d" for one in ("include_find_padded_package"
 
 
 def probe_root(case_id, directory):
+    if case_id in GRAMMAR_PROBE_ROOTS:
+        return os.pathsep.join(os.path.join(str(directory), one) for one in GRAMMAR_PROBE_ROOTS[case_id])
     if case_id in DOTTED_ROOT_PROBES:
         return os.path.join(str(directory), DOTTED_ROOT_PROBES[case_id])
     if case_id in PACKAGE_ROOT_PROBES:
         return os.path.join(str(directory), PACKAGE_ROOT_PROBES[case_id])
     return RELATIVE_ROOT_PROBES.get(case_id)
+
+
+def probe_mappings(case_id, directory):
+    if case_id in DIRECTORY_BOUND_PROBES:
+        return {PROBE_DIRECTORY_ARGUMENT: str(directory)}
+    if case_id not in GRAMMAR_PROBE_ARGUMENTS:
+        return None
+    stage = str(Path(directory).resolve())
+    return {name: value.replace("@STAGE@", stage) for name, value in GRAMMAR_PROBE_ARGUMENTS[case_id].items()}
 
 # Minimized binding documents both sides must render alike, compared whole: verdict id, fixture,
 # and the caller mapping where the binding needs one. A probe both sides refuse agrees only on the

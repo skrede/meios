@@ -76,7 +76,9 @@ if(MEIOS_FETCH_CORPUS AND EXISTS ${native_differential_src})
     endif()
     meios_enable_coverage(native_differential_test)
     meios_warnings(native_differential_test)
-    catch_discover_tests(native_differential_test TEST_PREFIX "native_differential.")
+    # Both sides read this one fixed environment, so no row spells a machine's own.
+    catch_discover_tests(native_differential_test TEST_PREFIX "native_differential."
+        PROPERTIES ENVIRONMENT "MEIOS_PROBE_ENV=probe_value" ENVIRONMENT_MODIFICATION "MEIOS_PROBE_UNSET=unset:")
 endif()
 
 # The compatibility ledger's enforcement: the ledger pairs both ways with the corpus records and

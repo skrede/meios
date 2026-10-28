@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="d" value="$(find p)/urdf"/>
+  <xacro:include filename="${d}/c.xacro"/>
+</robot>

@@ -10,9 +10,12 @@
 #include <meios/io/source_handle.h>
 #include <meios/io/directory_source.h>
 
+#include <map>
 #include <array>
 #include <memory>
 #include <string>
+#include <vector>
+#include <cstddef>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -38,11 +41,14 @@ struct document_probe
     bool serves_directory;
     std::string_view relative_root;
     bool root_under_directory;
+    std::map<std::string, std::string> args;
+    std::vector<std::string_view> roots;
+    bool in_stage;
 };
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline constexpr std::array<document_probe, 15> document_probes{
+inline const std::array<document_probe, 15> document_probes{
         document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
         document_probe{false, "argument_helper_call"},     document_probe{false, "argument_above_declaration"},
         document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
@@ -74,6 +80,17 @@ public:
     }
 };
 
+// @STAGE@ names the directory the probe is read from, resolved, as differential.py names the
+// directory it stages the probe in.
+inline std::string staged_value(std::string value)
+{
+    constexpr std::string_view marker{ "@STAGE@" };
+    const std::string stage = std::filesystem::canonical(MEIOS_XACRO_PROBE_DIR).generic_string();
+    for(std::size_t at = value.find(marker); at != std::string::npos; at = value.find(marker, at + stage.size()))
+        value.replace(at, marker.size(), stage);
+    return value;
+}
+
 // A committed fixture cannot spell a machine's absolute path, so a directory-bound probe is handed
 // the directory this side reads it from, as differential.py hands upstream the one it stages it in.
 inline meios::eval_scope document_scope(const document_probe &one)
@@ -81,6 +98,8 @@ inline meios::eval_scope document_scope(const document_probe &one)
     meios::eval_scope scope;
     if(one.binds_directory && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
         scope.bind_argument("probe_directory", meios::value{std::string(MEIOS_XACRO_PROBE_DIR)});
+    for(const auto &[name, value] : one.args)
+        scope.bind_argument(name, meios::value{staged_value(value)});
     if(!one.reads_documents)
         return scope;
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<probe_loader>() });
@@ -112,6 +131,26 @@ private:
     std::filesystem::path m_saved;
 };
 
+// The listed roots are pushed in their order, so the first that holds a package answers for it on
+// both sides.
+inline meios::source_stack probe_sources(const document_probe &one, meios::log_sink &silent)
+{
+    meios::source_stack sources;
+    const std::filesystem::path directory{ MEIOS_XACRO_PROBE_DIR };
+    if(directory.empty())
+        return sources;
+    if(!one.relative_root.empty())
+    {
+        const std::filesystem::path written{ one.relative_root };
+        sources.push_back(meios::source_handle{ meios::directory_source{ one.root_under_directory ? directory / written : written, silent } });
+    }
+    if(one.serves_directory)
+        sources.push_back(meios::source_handle{ meios::directory_source{ directory, silent } });
+    for(const std::string_view root : one.roots)
+        sources.push_back(meios::source_handle{ meios::directory_source{ directory / root, silent } });
+    return sources;
+}
+
 // This side's verdict for a whole document: the expansion entry the load path runs, reduced to the
 // canonical text of what it rendered or to the refusal and its code, which a manifest column can
 // hold. It is named after the fixture, so a relative include in it resolves beside the fixture as
@@ -120,17 +159,10 @@ inline std::string observed_document(const document_probe &one)
 {
     meios::log_sink silent;
     std::optional<probe_working_directory> here;
-    meios::source_stack sources;
-    if(!one.relative_root.empty() && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
-    {
+    if((one.in_stage || !one.relative_root.empty() || !one.roots.empty()) && !std::string_view{ MEIOS_XACRO_PROBE_DIR }.empty())
         here.emplace();
-        const std::filesystem::path written{one.relative_root};
-        const std::filesystem::path root = one.root_under_directory ? std::filesystem::path{MEIOS_XACRO_PROBE_DIR} / written : written;
-        sources.push_back(meios::source_handle{meios::directory_source{root, silent}});
-    }
-    if(one.serves_directory && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
-        sources.push_back(meios::source_handle{meios::directory_source{MEIOS_XACRO_PROBE_DIR, silent}});
-    meios::eval_scope scope = document_scope(one);
+    meios::source_stack sources = probe_sources(one, silent);
+    meios::eval_scope scope     = document_scope(one);
     const std::filesystem::path fixture = probe_file(one.id, ".xacro");
     const std::string source = slurp(fixture);
     const meios::expected<meios::expansion, meios::expansion_error> rendered = meios::expand(

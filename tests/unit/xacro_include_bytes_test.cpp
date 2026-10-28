@@ -73,6 +73,15 @@ TEST_CASE("a memory layer's find composed with text or nested in a span refuses 
     }
 }
 
+TEST_CASE("a memory layer's filename holding a second find refuses naming the leading-find rule as its cause here", "[xacro][include][bytes]")
+{
+    const expansion_result out = expand_from_memory("$(find p)/$(find p)/urdf/a.xacro");
+    REQUIRE_FALSE(out.has_value());
+    INFO(out.error().message);
+    CHECK(out.error().code == meios::diagnostic_code::unresolved_include);
+    CHECK(out.error().message.find("followed by a separator") != std::string::npos);
+}
+
 TEST_CASE("a memory layer's find of a package it does not hold refuses as an unresolved include", "[xacro][include][bytes]")
 {
     const expansion_result out = expand_from_memory("$(find nopkg)/a.xacro");

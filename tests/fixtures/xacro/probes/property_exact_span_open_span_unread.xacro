@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="p" value="${&quot;${x&quot;}"/>
+  <link name="l"/>
+</robot>

@@ -1,0 +1,6 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="here" default=""/>
+  <xacro:property name="c" value="$(cwd)"/>
+  <xacro:property name="h" value="$(arg here)"/>
+  <link name="${c == h}"/>
+</robot>
