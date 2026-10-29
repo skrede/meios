@@ -247,3 +247,10 @@ arg_command_tab_before_name	agreement
 property_eager_in_unmodelled_element	agreement
 property_parent_scope_in_macro	agreement
 conditional_padded_one	agreement
+element_empty_name	agreement
+attribute_empty_name	agreement
+insert_block_undefined	agreement
+env_variable_unset	agreement
+call_empty_macro	agreement
+optenv_command_without_name	agreement
+arg_command_without_name	agreement

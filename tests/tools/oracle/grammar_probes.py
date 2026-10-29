@@ -92,13 +92,23 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "namespace_replaced_by_second_include",
                            "comment_evaluated_under_eval_comments",
                            "comment_before_xacro_element_removed",
-                           "processing_instruction_kept")
+                           "processing_instruction_kept",
+                           "property_reads_later_global_in_macro",
+                           "include_glob_matching_nothing",
+                           "include_namespace_not_text")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
-# both sides already render alike, each held to a fresh render so losing the agreement fails.
+# both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
 GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_eager_in_unmodelled_element", None),
                             ("property_parent_scope_in_macro", "property_parent_scope_in_macro", None),
-                            ("conditional_padded_one", "conditional_padded_one", None))
+                            ("conditional_padded_one", "conditional_padded_one", None),
+                            ("element_empty_name", "element_empty_name", None),
+                            ("attribute_empty_name", "attribute_empty_name", None),
+                            ("insert_block_undefined", "insert_block_undefined", None),
+                            ("env_variable_unset", "env_variable_unset", None),
+                            ("call_empty_macro", "call_empty_macro", None),
+                            ("optenv_command_without_name", "optenv_command_without_name", None),
+                            ("arg_command_without_name", "arg_command_without_name", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

@@ -878,13 +878,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and two agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, three of them the grammar record's, each held to a
+- **The committed probes**: one hundred and nine agreement probes, the `agreement` rows of the inventory
+  and the documents the enumeration above names, ten of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and eighteen rows of it: fifteen
+  manifest `differential_divergences.cases` records, one hundred and twenty-one rows of it: fifteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's ninety document probes, a group listed in
+  and the grammar record's ninety-three document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
