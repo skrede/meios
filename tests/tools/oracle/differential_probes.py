@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from recorder.corpus import REPO
-from grammar_probes import GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
+from grammar_probes import GRAMMAR_AGREEMENT_PROBES, GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
 
 # The known divergences, measured and deliberately not changed: and/or yielding a boolean rather
 # than the deciding operand, a self-referential alias graph that loads here as a value containing
@@ -196,4 +196,4 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_find_tab_before_package", "include_find_tab_before_package", None),
                     ("include_find_tab_after_package", "include_find_tab_after_package", None),
                     ("find_command_tab_before_package", "find_command_tab_before_package", None),
-                    ("arg_command_tab_before_name", "arg_command_tab_before_name", None))
+                    ("arg_command_tab_before_name", "arg_command_tab_before_name", None)) + GRAMMAR_AGREEMENT_PROBES

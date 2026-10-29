@@ -244,3 +244,6 @@ include_find_tab_before_package	agreement
 include_find_tab_after_package	agreement
 find_command_tab_before_package	agreement
 arg_command_tab_before_name	agreement
+property_eager_in_unmodelled_element	agreement
+property_parent_scope_in_macro	agreement
+conditional_padded_one	agreement

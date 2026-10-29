@@ -30,6 +30,8 @@ struct agreement_probe
     std::string_view upstream_cause;
     std::string_view root;
     meios::include_options includes;
+    // A construct the robot model does not carry is compared on the canonical expansion alone.
+    bool expansion_only;
 };
 
 inline meios::include_options follows_outside_links()

@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="x" value="v"/>
+  <xacro:property name="p" value="a${x}" lazy_eval="false"/>
+  <xacro:property name="x" value="w"/>
+  <extra name="${p}"/>
+  <link name="l"/>
+</robot>

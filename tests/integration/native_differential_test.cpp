@@ -166,8 +166,8 @@ TEST_CASE("fresh upstream renders agree with meios on category, structure and fa
         compare_expression_case(row, manifest, seen);
     for(const corpus::document &doc : corpus::documents(MEIOS_CORPUS_DOCUMENTS))
         compare_corpus_document(doc, seen);
-    for(const differential::agreement_probe &one : differential::agreement_probes)
-        differential::compare_agreement_probe(one, MEIOS_DIFFERENTIAL_RENDERS_DIR, seen);
+    differential::compare_agreement_table(differential::agreement_probes, MEIOS_DIFFERENTIAL_RENDERS_DIR, seen);
+    differential::compare_agreement_table(differential::grammar_agreement_probes, MEIOS_DIFFERENTIAL_RENDERS_DIR, seen);
     const std::optional<std::string> missing = differential::first_missing_verdict(inventory, seen);
     if(missing)
         FAIL("no differential verdict was produced for inventory entry '" << *missing << "'");

@@ -94,6 +94,12 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "comment_before_xacro_element_removed",
                            "processing_instruction_kept")
 
+# The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
+# both sides already render alike, each held to a fresh render so losing the agreement fails.
+GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_eager_in_unmodelled_element", None),
+                            ("property_parent_scope_in_macro", "property_parent_scope_in_macro", None),
+                            ("conditional_padded_one", "conditional_padded_one", None))
+
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.
 GRAMMAR_PROBE_ARGUMENTS = {"cwd_command": {"here": "@STAGE@"}}

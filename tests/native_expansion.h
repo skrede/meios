@@ -35,7 +35,7 @@ inline std::string bytes_of(const std::filesystem::path &path)
 // path installs is installed here too -- the argument seeding, the document-relative text loader
 // over the package roots, and the auxiliary-document reader -- so what is observed is the load a
 // consumer gets rather than a reduced one.
-inline std::optional<meios::expansion> expanded(const document &doc, const meios::include_options &includes = meios::include_options())
+inline meios::expected<meios::expansion, meios::expansion_error> expansion_of(const document &doc, const meios::include_options &includes = meios::include_options())
 {
     meios::log_sink silent;
     std::vector<std::filesystem::path> roots;
@@ -51,8 +51,12 @@ inline std::optional<meios::expansion> expanded(const document &doc, const meios
 #ifdef MEIOS_TEST_HAS_YAML
     scope.install_yaml_parser(meios::make_yaml_parser());
 #endif
-    meios::expected<meios::expansion, meios::expansion_error> out =
-            meios::expand(bytes_of(doc.path), scope, sources, doc.path, meios::expansion_limits{}, meios::eval_policy::fail, nullptr, silent, includes);
+    return meios::expand(bytes_of(doc.path), scope, sources, doc.path, meios::expansion_limits{}, meios::eval_policy::fail, nullptr, silent, includes);
+}
+
+inline std::optional<meios::expansion> expanded(const document &doc, const meios::include_options &includes = meios::include_options())
+{
+    meios::expected<meios::expansion, meios::expansion_error> out = expansion_of(doc, includes);
     if(!out)
         return std::nullopt;
     return std::move(out.value());
