@@ -59,9 +59,22 @@ function(meios_add_native_test stem kind)
 endfunction()
 
 foreach(stem IN ITEMS native_oracle_records native_oracle_pins native_corpus_record
-                      differential_verdict refusal_causes accepted_forms coverage_matrix)
+                      differential_verdict refusal_causes accepted_forms grammar_constructs coverage_matrix)
     meios_add_native_test(${stem} record)
 endforeach()
+# A unit carrier names a test case of a stem, which the pairing gate finds only in the sources that
+# stem's target compiles, listed one stem per line once generation resolves them.
+if(TARGET grammar_constructs_test)
+    set(unit_stem_sources "")
+    foreach(stem IN LISTS meios_module_test_stems)
+        if(TARGET ${stem}_test)
+            string(APPEND unit_stem_sources "${stem}\t$<JOIN:$<TARGET_PROPERTY:${stem}_test,SOURCES>,\t>\n")
+        endif()
+    endforeach()
+    file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt CONTENT "${unit_stem_sources}")
+    target_compile_definitions(grammar_constructs_test PRIVATE
+        MEIOS_UNIT_STEM_SOURCES="${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt")
+endif()
 
 foreach(stem IN ITEMS native_value native_value_key native_value_scope native_render
                       native_expression native_expression_document native_expression_constructor

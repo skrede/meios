@@ -1,0 +1,8 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="x" value="v"/>
+  <!-- xacro:eval-comments -->
+  <!-- ${x} -->
+  <!-- xacro:eval-comments:off -->
+  <!-- ${x} -->
+  <link name="l"/>
+</robot>

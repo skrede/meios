@@ -22,7 +22,7 @@ from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
                                  PROBE_DIR, AGREEMENT_PROBES, probe_root, probe_mappings)
-from grammar_probes import GRAMMAR_PROBES_IN_STAGE, probe_environment  # noqa: E402
+from grammar_probes import GRAMMAR_PROBES_IN_STAGE, probe_environment, without_package_index  # noqa: E402
 
 
 def sanitize(case_id):
@@ -109,7 +109,7 @@ def render_document_probe(tmp, out, case_id):
     staged = stage_probe(tmp, case_id)
     mappings = probe_mappings(case_id, tmp)
     try:
-        with probe_package_root(tmp, case_id):
+        with probe_package_root(tmp, case_id), without_package_index(case_id):
             rendered = xacro.process_file(str(staged), mappings=mappings).toxml()
         write_text(out, case_id, ".txt", rendered)
     except Exception as failure:

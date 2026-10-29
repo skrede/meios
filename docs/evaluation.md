@@ -882,9 +882,9 @@ describes:
   and the documents the enumeration above names, ten of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and twenty-one rows of it: fifteen
+  manifest `differential_divergences.cases` records, one hundred and twenty-four rows of it: fifteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's ninety-three document probes, a group listed in
+  and the grammar record's ninety-six document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -924,6 +924,28 @@ describes:
   on a default that is a run of dollars, read before any block is inserted.
   [Known limitations](known-limitations.md) discloses all five.
 
+**The grammar these parts are held to is derived from the pinned reference's own source, and the build
+pairs each of its constructs with what carries it.** `tests/golden/oracle/grammar_constructs.cases`
+lists ninety-seven constructs, found by walking the pinned xacro's syntax tree rather than listed by
+hand: one per element branch, attribute list, lexer token, substitution command, special form, raise
+site and warning site. `grammar_constructs` pairs each with what carries it, in both directions: a
+construct no pairing names fails the build, and so does a pairing whose construct the record no longer
+lists or whose key its record does not hold. A carrier is an agreement probe, a corpus document, a row
+of the reviewed manifest, a generated case, an expression case or a unit case, and the standing a
+pairing states is checked against it; a site no document reaches is paired with that evidence instead,
+and its standing stays open. A construct said to agree points only at a measurement on which
+both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
+row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
+Counting each construct by its least settled pairing, eighty-five are measured: twenty-nine agree,
+four of them warning sites a unit case carries alone, where upstream warns and this side does not;
+fifteen are recorded differences on which this side refuses; and forty-one are recorded differences on
+which it renders something else. The seven constructs of the `${}` expression surface and the
+command-line driver are paired with the boundary rather than measured here. Five sites, four raise
+sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`
+pairs each with the reason. The raise for a substitution the install cannot support is not among
+them: the pinned install ships no package index, so every find reaches it there, and the
+`find_without_package_index` probe is rendered without the index the oracle vendors.
+
 **Most generated include and macro cases test agreement on a refusal, not on a rendering.** Of the two
 hundred cases in each family, the reference renders seventeen include cases, eighty-four span cases
 and eighteen macro cases, and refuses the rest. In the include family every non-empty text after the
@@ -947,9 +969,9 @@ in a property or an argument, which the `include_absolute_path` row records, and
 starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
 `dirname`, `env`, `optenv` and `cwd` commands. The `eval_` agreement probes compare `eval`, three of
 the `command_` agreement probes compare `optenv` over an unset variable, and the `dirname_command` row
-records `dirname`; nothing compares `env` with the reference. Nothing compares `cwd` either: the
-reference implements `$(cwd)` as the working directory, and this side refuses it under
-`unknown_substitution`, as measured against the pinned reference, with no case pinning it.
+records `dirname`. The `env_variable_unset` agreement probe and the `env_command_two_words` row compare
+`env`, and the `cwd_command` row compares `cwd`: the reference implements `$(cwd)` as the working
+directory, and this side refuses it under `unknown_substitution`.
 
 **What the generated comparison holds fixed, and what carries each instead.** It runs one directory
 layer under `eval_policy::fail`. A layer that serves bytes has no counterpart in the reference, so no

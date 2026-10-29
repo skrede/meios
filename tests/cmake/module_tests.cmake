@@ -1,7 +1,7 @@
 # The module unit stems are wired but guarded: a stem becomes a real test the
 # moment its source drops in, with no further CMake edit. meios::model is linked
 # so a stem reaching the diagnostic seam through a module header compiles.
-foreach(stem IN ITEMS
+set(meios_module_test_stems
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
         xacro_macro_defaults xacro_macro_redeclared xacro_macro_call xacro_block xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
         xacro_include_spelling xacro_include_bytes xacro_include_resolution
@@ -13,6 +13,7 @@ foreach(stem IN ITEMS
         forward_scan
         yaml_resource yaml_resource_containment yaml_resource_followed yaml_grammar yaml_verdict io_concept
         io_source_stack io_sources io_package_join)
+foreach(stem IN LISTS meios_module_test_stems)
     set(module_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/${stem}_test.cpp)
     if(EXISTS ${module_test_src})
         add_executable(${stem}_test ${module_test_src})
@@ -54,6 +55,12 @@ foreach(stem IN ITEMS
 endforeach()
 if(TARGET io_source_stack_test)
     target_sources(io_source_stack_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/io_source_answers_test.cpp)
+endif()
+if(TARGET xacro_property_test)
+    target_sources(xacro_property_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_property_warning_test.cpp)
+endif()
+if(TARGET xacro_include_read_test)
+    target_sources(xacro_include_read_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_warning_test.cpp)
 endif()
 
 # Catch discovery transports properties as name/value pairs, so a platform-specific

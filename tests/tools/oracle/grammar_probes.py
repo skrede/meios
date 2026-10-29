@@ -2,6 +2,11 @@
 # pinned reference, each recorded as a divergence until the two sides agree.
 
 import os
+import sys
+import contextlib
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
 
 GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "property_circular_definition",
@@ -95,7 +100,10 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "processing_instruction_kept",
                            "property_reads_later_global_in_macro",
                            "include_glob_matching_nothing",
-                           "include_namespace_not_text")
+                           "include_namespace_not_text",
+                           "property_removes_builtin",
+                           "comment_evaluation_switched_off",
+                           "find_without_package_index")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -122,9 +130,30 @@ GRAMMAR_PROBE_ROOTS = {"include_find_answering_root_only": ("include_find_answer
                                                          "include_find_composed_reads_neighbor",
                                                          "include_find_trailing_separator")}}
 GRAMMAR_PROBES_IN_STAGE = ("cwd_command",)
+# Rendered by the pinned install as it ships, which has no package index: the vendored one is what
+# lets every other probe's find resolve.
+GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX = ("find_without_package_index",)
 
 
 # Both sides read this one fixed environment, so no row spells a machine's own.
 def probe_environment():
     os.environ["MEIOS_PROBE_ENV"] = "probe_value"
     os.environ.pop("MEIOS_PROBE_UNSET", None)
+
+
+# The vendored index is taken off the import path and out of the module cache while the probe
+# renders, so upstream's own import of it fails as it does in the bare pinned install.
+@contextlib.contextmanager
+def without_package_index(case_id):
+    if case_id not in GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX:
+        yield
+        return
+    saved_path = list(sys.path)
+    saved_modules = {name: sys.modules.pop(name) for name in list(sys.modules)
+                     if name.split(".")[0] == "ament_index_python"}
+    try:
+        sys.path[:] = [one for one in sys.path if Path(one or ".").resolve() != HERE]
+        yield
+    finally:
+        sys.path[:] = saved_path
+        sys.modules.update(saved_modules)
