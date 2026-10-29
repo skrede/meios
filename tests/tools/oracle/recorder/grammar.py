@@ -1,5 +1,8 @@
-# Derived from the syntax tree of upstream's own dispatch sites rather than listed, so a construct
-# upstream adds cannot be missing from the record.
+# Derived from the syntax tree of upstream's own dispatch sites rather than listed: a tag compared
+# against tagName, a literal attribute list handed to check_attrs or reqd_attrs, the lexer bound to
+# LEXER, the literals assigned to valid, and each raise of a constructed exception and each warning
+# call. A construct upstream adds in any other shape is missing from the record, and a site's scope
+# comes from the expression and tool sets grammar_tree names by hand.
 
 import ast
 import sys
@@ -109,7 +112,8 @@ def assigned(rows, used):
         count = sum(1 for taken in used.values() if taken == base) + 1
         steps = [base] if count == 1 else []
         steps += [base + "_" + slug(one.function)] if count == 2 and slug(one.function) else []
-        steps += [base + "_" + str(one.line), base + "_" + slug(one.function) + "_" + str(one.line)]
+        steps += [base + "_" + str(one.line)]
+        steps += [base + "_" + slug(one.function) + "_" + str(one.line)] if slug(one.function) else []
         chosen = next((step for step in steps if step not in used), None)
         if chosen is None:
             sys.exit("oracle: two sites at {}:{} derive the id {}; nothing was recorded"

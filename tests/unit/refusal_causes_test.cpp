@@ -5,8 +5,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <utility>
 #include <cstddef>
 #include <optional>
+#include <algorithm>
 #include <string_view>
 
 namespace
@@ -23,6 +25,28 @@ bool covers(const differential::refusal_cause &row, std::string_view type, std::
     return row.outer == type && (row.stem.empty() ? fixed.empty() : fixed.starts_with(row.stem));
 }
 
+// A wrapper fixes no text of its own and passes on whatever it caught, so it is covered by the rows
+// of the classes it is measured to wrap, never by any row that happens to share its class.
+constexpr std::pair<std::string_view, std::string_view> wrapped_classes[]{
+        {"raise.xacroexception_eval_extension", "NameError"}, {"raise.xacroexception_eval_extension", "SubstitutionException"},
+        {"raise.xacroexception_handle_expr", "NameError"},    {"raise.xacroexception_handle_expr", "XacroException"},
+        {"raise.xacroexception_parse", "FileNotFoundError"},  {"raise.xacroexception_parse", "NotADirectoryError"},
+};
+
+bool wrapper_covered(std::string_view id)
+{
+    bool listed = false;
+    for(const auto &[site, inner] : wrapped_classes)
+    {
+        if(site != id)
+            continue;
+        listed = true;
+        if(std::ranges::none_of(differential::refusal_causes, [&](const differential::refusal_cause &row) { return row.outer == "XacroException" && row.inner == inner; }))
+            return false;
+    }
+    return listed;
+}
+
 // The text a site fixes ends at its first format placeholder.
 bool mapped_site(const oracle::row &site)
 {
@@ -31,6 +55,8 @@ bool mapped_site(const oracle::row &site)
     const std::string_view type  = quote.substr(0, colon);
     const std::string_view rest  = colon == std::string_view::npos ? std::string_view{} : quote.substr(colon + 2);
     const std::string_view fixed = rest.substr(0, rest.find_first_of("%{"));
+    if(type == "XacroException" && fixed.empty())
+        return wrapper_covered(site.fields[0]);
     for(const differential::refusal_cause &row : differential::refusal_causes)
         if(covers(row, type, fixed))
             return true;

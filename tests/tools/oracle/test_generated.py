@@ -61,6 +61,10 @@ class generated_set(unittest.TestCase):
         self.assertEqual(family_hash("include"),
                          "bff9e89e4893daca8d9b726db5616b3824ae605410ec4f873ab1d017d4b7ca16")
 
+    def test_the_macro_family_is_pinned(self):
+        self.assertEqual(family_hash("macro"),
+                         "daeff020b727679be51349a68fa3c42bd736856431af3959978b544f733780ce")
+
     def test_the_span_family_is_pinned(self):
         self.assertEqual(family_hash("span"),
                          "8783260e57bd0a6d2e4604c7630f4b5ee22f22262ae17d73d84ad7112f229838")

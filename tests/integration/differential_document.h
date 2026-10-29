@@ -54,7 +54,8 @@ inline void list_comments_and_instructions(std::string &listed, pugi::xml_node n
 inline std::string comments_and_instructions(std::string_view xml)
 {
     pugi::xml_document parsed;
-    parsed.load_buffer(xml.data(), xml.size(), pugi::parse_default | pugi::parse_comments | pugi::parse_pi);
+    if(!parsed.load_buffer(xml.data(), xml.size(), pugi::parse_default | pugi::parse_comments | pugi::parse_pi))
+        return "unparsed";
     std::string listed;
     list_comments_and_instructions(listed, parsed.document_element());
     return listed;
