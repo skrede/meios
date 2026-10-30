@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <variant>
 #include <optional>
 #include <string_view>
 
@@ -31,6 +32,20 @@ struct chain_access
     static std::optional<std::size_t> parent(const eval_scope &scope, std::size_t table)
     {
         return scope.m_chain.table(table).parent();
+    }
+
+    static bool is_namespace(const eval_scope &scope, std::size_t table)
+    {
+        return scope.m_chain.table(table).is_namespace();
+    }
+
+    static std::optional<std::size_t> namespace_table(const eval_scope &scope, std::size_t from, std::string_view name)
+    {
+        const std::optional<std::size_t> at = scope.m_chain.holder(from, name);
+        const namespace_entry *found = at ? std::get_if<namespace_entry>(scope.m_chain.table(*at).find(name)) : nullptr;
+        if(!found || !scope.m_chain.live(*found))
+            return std::nullopt;
+        return found->table;
     }
 
     static table_mark mark(const eval_scope &scope)

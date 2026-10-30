@@ -139,14 +139,14 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(!ctx.charge_work(in))
         return false;
     bool ok = true;
-    const std::size_t table = include_table(ctx, in, document, ok);
+    const include_scope tables = include_table(ctx, in, document, ok);
     if(!ok)
         return false;
     const std::string_view raw = in.attribute("filename").value();
     const std::optional<include_target> target = raw.starts_with("package://") ? package_target(ctx, in, document, raw) : spell_include(ctx, in, raw, document);
     if(!target)
         return false;
-    const include_tables current(ctx, table);
+    const include_tables current(ctx, tables);
     return route_include(ctx, in, *target, out);
 }
 

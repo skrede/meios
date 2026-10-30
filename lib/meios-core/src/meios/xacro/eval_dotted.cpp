@@ -158,7 +158,7 @@ value parse_dotted(parser &p, std::string_view head)
     const std::string_view member = p.peek().text;
     ++p.pos;
     if(const std::optional<scope_namespace> space = p.scope.namespace_of(head))
-        return namespace_member(p, *space, member);
+        return namespace_member(p, *space, head, member);
     if(head == "xacro" && member == "load_yaml")
         return parse_load_yaml(p);
     const name_read bound = read_name(p.scope, head, p.nesting);

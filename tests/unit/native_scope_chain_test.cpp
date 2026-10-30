@@ -12,8 +12,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <variant>
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 
 using meios::detail::chain_access;
 
@@ -35,9 +37,15 @@ meios::detail::macro_def taking(const char *param)
     return def;
 }
 
+const meios::detail::macro_def *defined(const meios::detail::macro_chain &macros, std::string_view name)
+{
+    const meios::detail::macro_entry *found = macros.find(macros.cursor(), name);
+    return found ? std::get_if<meios::detail::macro_def>(found) : nullptr;
+}
+
 void refuse_inside(meios::eval_scope &scope, meios::detail::macro_chain &macros)
 {
-    const meios::detail::invocation_frame frame(scope, macros);
+    const meios::detail::invocation_frame frame(scope, chain_access::cursor(scope), macros, macros.cursor());
     scope.set("inner", meios::value{ std::int64_t{ 7 } });
     macros.define("inner", meios::detail::macro_def{});
     throw std::runtime_error("refused");
@@ -122,7 +130,7 @@ TEST_CASE("a frame left by an exception drops its symbol and macro tables", "[na
     REQUIRE_FALSE(scope.contains("inner"));
     REQUIRE(macros.mark().size == 1);
     REQUIRE(macros.cursor() == 0);
-    REQUIRE_FALSE(macros.find("inner").has_value());
+    REQUIRE(defined(macros, "inner") == nullptr);
 }
 
 TEST_CASE("a macro lookup walks outward from the current table and the innermost definition wins", "[native][scope]")
@@ -133,10 +141,10 @@ TEST_CASE("a macro lookup walks outward from the current table and the innermost
     const meios::detail::table_mark mark = macros.mark();
     macros.push(macros.cursor());
     macros.define("shadowed", taking("b"));
-    REQUIRE(macros.find("outer")->params == std::vector<std::string>{ "a" });
-    REQUIRE(macros.find("shadowed")->params == std::vector<std::string>{ "b" });
+    REQUIRE(defined(macros, "outer")->params == std::vector<std::string>{ "a" });
+    REQUIRE(defined(macros, "shadowed")->params == std::vector<std::string>{ "b" });
     macros.pop_to(mark);
-    REQUIRE(macros.find("shadowed")->params.empty());
+    REQUIRE(defined(macros, "shadowed")->params.empty());
 }
 
 TEST_CASE("a scope moves with its tables", "[native][scope]")

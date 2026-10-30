@@ -63,13 +63,14 @@ bool define_macro(expand_ctx &ctx, pugi::xml_node in)
     return true;
 }
 
-bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
+bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, pugi::xml_node call,
                        pugi::xml_node out, const std::filesystem::path &document)
 {
+    const macro_def &def = found.def;
     call_binding bound;
     if(!ctx.charge_work(call) || !bind_call(ctx, def, call, document, bound))
         return false;
-    const invocation_frame frame(ctx.scope, ctx.macros);
+    const invocation_frame frame(ctx.scope, found.symbols, ctx.macros, found.macros);
     std::map<std::string, block_arg> outer = std::exchange(ctx.blocks, std::move(bound.blocks));
     for(std::size_t i = 0; i < def.params.size(); ++i)
         chain_access::define(ctx.scope, frame.table(), def.params[i], bound.values[i]);

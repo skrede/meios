@@ -95,6 +95,15 @@ std::string undefined_name(const eval_scope &scope, std::string_view name)
     return message;
 }
 
+// The reference renders a namespace read as a value by printing its tables, built-in functions and
+// their addresses included, which differs from run to run, so the read refuses here instead.
+value refuse_namespace_read(parser &p, std::string_view spelling)
+{
+    const std::string named(spelling);
+    return p.fail("'" + named + "' names an include namespace, which has no value of its own; read one of its names as "
+                  + named + ".<name>");
+}
+
 value parse_name(parser &p)
 {
     const level_guard level(p);
@@ -110,6 +119,7 @@ value parse_name(parser &p)
     if(name == "pi") return real_result(p, 3.141592653589793);
     const name_read bound = read_name(p.scope, name, p.nesting);
     if(bound.failed()) return p.fail_reported(bound.failure);
+    if(bound.space) return refuse_namespace_read(p, name);
     if(!bound.bound)
         return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
     return *bound.bound;

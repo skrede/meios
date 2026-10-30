@@ -1,5 +1,6 @@
 #include "eval_parser.h"
 #include "eval_session.h"
+#include "macro_tables.h"
 #include "structural_detail.h"
 #include "substitution_detail.h"
 
@@ -99,7 +100,7 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return insert_block(ctx, in, out);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
-    const std::optional<macro_def> found = ctx.macros.find(name.substr(6));
+    const std::optional<resolved_macro> found = resolve_macro(ctx.macros, ctx.scope, name.substr(6));
     if(found)
         return instantiate_macro(ctx, *found, in, out, document);
     return fail(ctx, in, diagnostic_code::xacro_structural_error,

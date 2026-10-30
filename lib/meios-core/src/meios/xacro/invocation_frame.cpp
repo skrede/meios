@@ -7,11 +7,11 @@
 namespace meios::detail
 {
 
-invocation_frame::invocation_frame(eval_scope &scope, macro_chain &macros)
-    : m_mark(chain_access::mark(scope)), m_scope(scope),
-      m_table(chain_access::push(scope, chain_access::cursor(scope))), m_macros(macros), m_macro_mark(macros.mark())
+invocation_frame::invocation_frame(eval_scope &scope, std::size_t symbols, macro_chain &macros, std::size_t macro_parent)
+    : m_mark(chain_access::mark(scope)), m_scope(scope), m_table(chain_access::push(scope, symbols)), m_macros(macros),
+      m_macro_mark(macros.mark())
 {
-    m_macros.push(m_macros.cursor());
+    m_macros.push(macro_parent);
 }
 
 invocation_frame::~invocation_frame()

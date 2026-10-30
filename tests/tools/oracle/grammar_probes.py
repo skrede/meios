@@ -10,7 +10,6 @@ HERE = Path(__file__).resolve().parent
 
 GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "property_value_and_remove_together",
-                           "include_namespace_dotted_macro",
                            "include_optional_missing_file",
                            "macro_called_by_name_attribute",
                            "element_named_by_attribute",
@@ -79,7 +78,6 @@ GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "attribute_on_document_root",
                            "element_renamed_to_conditional",
                            "element_renamed_to_macro_call",
-                           "namespace_parent_scope_skips_namespace",
                            "comment_evaluated_under_eval_comments",
                            "comment_before_xacro_element_removed",
                            "processing_instruction_kept",
@@ -123,7 +121,9 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("include_namespace_dotted_property", "include_namespace_dotted_property", None),
                             ("namespace_property_sees_later_global", "namespace_property_sees_later_global", None),
                             ("namespace_falls_through_to_parent", "namespace_falls_through_to_parent", None),
-                            ("namespace_replaced_by_second_include", "namespace_replaced_by_second_include", None))
+                            ("namespace_replaced_by_second_include", "namespace_replaced_by_second_include", None),
+                            ("include_namespace_dotted_macro", "include_namespace_dotted_macro", None),
+                            ("namespace_parent_scope_skips_namespace", "namespace_parent_scope_skips_namespace", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

@@ -42,6 +42,8 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"namespace_property_sees_later_global", "namespace_property_sees_later_global", {}},
         agreement_probe{"namespace_falls_through_to_parent", "namespace_falls_through_to_parent", {}},
         agreement_probe{"namespace_replaced_by_second_include", "namespace_replaced_by_second_include", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
+        agreement_probe{"include_namespace_dotted_macro", "include_namespace_dotted_macro", {}},
+        agreement_probe{"namespace_parent_scope_skips_namespace", "namespace_parent_scope_skips_namespace", {}, std::nullopt, {}, {}, {}, true},
 };
 
 }

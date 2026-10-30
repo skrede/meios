@@ -5,6 +5,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
+#include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_kind.h"
 #include "meios/xacro/detail/numeric.h"
 
@@ -48,6 +49,18 @@ value classify(std::string_view text)
 namespace
 {
 
+// The reference skips namespaces only when the current table is not one, which is a macro call's,
+// so a macro a namespace holds writes into its caller's table, while a namespaced file's own
+// top level writes into the including table.
+std::size_t parent_table(const eval_scope &scope, std::size_t current)
+{
+    std::optional<std::size_t> target = chain_access::parent(scope, current);
+    if(!chain_access::is_namespace(scope, current))
+        while(target && chain_access::is_namespace(scope, *target))
+            target = chain_access::parent(scope, *target);
+    return target.value_or(chain_access::document_table);
+}
+
 // The reference picks the table a property is stored in by the scope attribute alone: the
 // document's for "global", the caller's for "parent", and the current one for any other value, an
 // unknown one included. A document-level "parent", which the reference stores into its table of
@@ -58,7 +71,7 @@ std::size_t target_table(const expand_ctx &ctx, std::string_view scope_attr)
     if(scope_attr == "global")
         return chain_access::document_table;
     if(scope_attr == "parent")
-        return chain_access::parent(ctx.scope, current).value_or(chain_access::document_table);
+        return parent_table(ctx.scope, current);
     return current;
 }
 
