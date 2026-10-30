@@ -92,7 +92,8 @@ GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "include_namespace_not_text",
                            "property_removes_builtin",
                            "comment_evaluation_switched_off",
-                           "find_without_package_index")
+                           "find_without_package_index",
+                           "property_chain_deeper_than_depth_ceiling")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.

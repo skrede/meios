@@ -1,0 +1,35 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="p0" value="${p1}"/>
+  <xacro:property name="p1" value="${p2}"/>
+  <xacro:property name="p2" value="${p3}"/>
+  <xacro:property name="p3" value="${p4}"/>
+  <xacro:property name="p4" value="${p5}"/>
+  <xacro:property name="p5" value="${p6}"/>
+  <xacro:property name="p6" value="${p7}"/>
+  <xacro:property name="p7" value="${p8}"/>
+  <xacro:property name="p8" value="${p9}"/>
+  <xacro:property name="p9" value="${p10}"/>
+  <xacro:property name="p10" value="${p11}"/>
+  <xacro:property name="p11" value="${p12}"/>
+  <xacro:property name="p12" value="${p13}"/>
+  <xacro:property name="p13" value="${p14}"/>
+  <xacro:property name="p14" value="${p15}"/>
+  <xacro:property name="p15" value="${p16}"/>
+  <xacro:property name="p16" value="${p17}"/>
+  <xacro:property name="p17" value="${p18}"/>
+  <xacro:property name="p18" value="${p19}"/>
+  <xacro:property name="p19" value="${p20}"/>
+  <xacro:property name="p20" value="${p21}"/>
+  <xacro:property name="p21" value="${p22}"/>
+  <xacro:property name="p22" value="${p23}"/>
+  <xacro:property name="p23" value="${p24}"/>
+  <xacro:property name="p24" value="${p25}"/>
+  <xacro:property name="p25" value="${p26}"/>
+  <xacro:property name="p26" value="${p27}"/>
+  <xacro:property name="p27" value="${p28}"/>
+  <xacro:property name="p28" value="${p29}"/>
+  <xacro:property name="p29" value="${p30}"/>
+  <xacro:property name="p30" value="${p31}"/>
+  <xacro:property name="p31" value="1"/>
+  <link name="l${p0}"/>
+</robot>

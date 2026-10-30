@@ -580,11 +580,11 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**One hundred and twelve ways this evaluator differs from canonical xacro are measured, and further ones no row
+**One hundred and thirteen ways this evaluator differs from canonical xacro are measured, and further ones no row
 can carry are written down beside them.** That is not a claim that the list is complete. The reviewed
-manifest carries one hundred and twelve rows and the differential drives them on every push in both directions,
+manifest carries one hundred and thirteen rows and the differential drives them on every push in both directions,
 so a divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
-Eighty-five of them are the grammar record's, set out after this list. Of the rest, fifteen are a meaning
+Eighty-six of them are the grammar record's, set out after this list. Of the rest, fifteen are a meaning
 upstream has and this grammar refuses — the first five
 entries below, the argument helper the seventh names, and the mapping key an auxiliary document did not
 write as text, which has an entry of its own further down, and an include climbing above its document's
@@ -641,7 +641,7 @@ nothing names them individually. A fourth difference the manifest cannot carry i
 written with, further down: it is observable on Windows alone, and the job that renders a fresh
 upstream to compare against runs on Linux, where both implementations write the same character.
 
-**The grammar record lists eighty-five measured differences in xacro's own grammar that are not yet
+**The grammar record lists eighty-six measured differences in xacro's own grammar that are not yet
 closed.** Each is a construct of the element grammar, the attribute lists, the substitution lexer or
 its commands, measured against the pinned reference on a minimized document both implementations read,
 and each is a row of the divergence manifest held in both directions; none is claimed to agree. They
@@ -677,7 +677,8 @@ evaluates to a list, which upstream refuses, a property removing a built-in cons
 warns about and keeps, and a find read with no package index. The pinned install ships none, so there
 upstream refuses every find as a substitution it cannot support, where this side refuses a find no
 configured source answers as unresolved; that probe alone is rendered without the package index
-vendored beside the oracle. A
+vendored beside the oracle. Last, they are a chain of properties, each reading the next, deeper
+than the expression-depth ceiling admits, which upstream renders and which refuses here. A
 probe marked to keep comments is compared on its comments and processing instructions as well, which
 the canonical text drops. Its probes can be handed caller arguments, ordered
 package roots, their stage as working directory and one fixed environment, so that held finds, root
@@ -907,6 +908,22 @@ exactly; and none of the four operations exposes a length or an index, because t
 string-length function and no string subscript. A byte sequence that is not well-formed text cannot be
 written into an XML document in the first place. The difference is real in the implementation and has
 no spelling that reaches it from a description.
+
+**A chain of properties, each reading the next, renders sixteen deep here, where the reference renders
+one hundred and sixty-five.** A property is evaluated at its first read, so a property whose value reads
+another nests one evaluation inside the other. Each nested read is charged against the expression-depth
+ceiling at a cost measured in stack, so a long chain refuses with `expansion_budget_exceeded`, located
+at the innermost definition it reached, rather than running the thread out of stack. With the built-in
+evaluator, a chain of sixteen properties, `p0` written as `${p1}` down to a sixteenth holding a number,
+renders, and a chain of seventeen refuses; a read written inside parentheses or arithmetic is charged
+its nesting as well, so such a chain refuses sooner. The reference bounds the same chain only by its
+interpreter's recursion limit: measured against the pinned xacro 2.1.1, it renders a chain of one
+hundred and sixty-five and refuses one of one hundred and sixty-six with "maximum recursion depth
+exceeded". The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest compares a
+chain of thirty-two. A description that needs a longer chain can write each property after the one it
+reads and mark every eighth `lazy_eval="false"`: such a property is evaluated where it is written and
+caches its value, so a later read stops there, and the chain of thirty-two written that way renders on
+both sides.
 
 ## Command-line behavior
 
@@ -1154,8 +1171,8 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| One hundred and twelve measured differences | The one hundred and twelve rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| Eighty-five measured differences of the grammar record, not yet closed | The eighty-five entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
+| One hundred and thirteen measured differences | The one hundred and thirteen rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Eighty-six measured differences of the grammar record, not yet closed | The eighty-six entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
 | Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for this side reads `REFUSED` exactly where the standing says it refuses. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, and by the `property_shadows_pi`, `property_removes_builtin`, `macro_name_with_xacro_prefix` and `include_glob_matching_nothing` rows. |
 | Eleven generated cases differ from the pinned reference, each recorded | The eleven rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |
@@ -1168,6 +1185,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | `$(dirname)` renders the directory of the file it is written in | The `dirname_command` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_identity.the directory command names the located directory of the file it is written in`, which pins the value inside a package include and a beside include and at the top, from two working directories. The relative and empty top-level values and the linked-directory value are carried by the measurement the entry states. |
 | A located path is written with generic separators | The assertions in `xacro_subst_command` that compose an expected path in the generic spelling, and `xacro_arg.a nested arg default resolves at declaration`, which is where the last native spelling was found. No manifest row is possible, and the entry says why. |
 | The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry this side's behavior. |
+| A chain of properties each reading the next renders sixteen deep here, where the reference renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The reference's one hundred and sixty-five, and the rewritten chain rendering on both sides, were measured while this page was written and are carried by nothing. |
 
 ### Command-line behavior
 

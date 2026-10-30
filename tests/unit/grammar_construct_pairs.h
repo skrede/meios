@@ -24,7 +24,7 @@ inline constexpr pairing element_pairings[] = {
         {"tag.xacro_property", carrier::agreement, "property_evaluated_at_first_read property_never_read_undefined_name property_never_read_dollar_run", standing::agrees},
         {"tag.xacro_property", carrier::agreement, "property_deferred_in_macro_reads_parameter", standing::agrees},
         {"tag.xacro_property", carrier::manifest, "property_quoted_value block_property_before_block_parameter", standing::open},
-        {"tag.xacro_property", carrier::manifest, "property_block_body_inserted", standing::refuses_listed},
+        {"tag.xacro_property", carrier::manifest, "property_block_body_inserted property_chain_deeper_than_depth_ceiling", standing::refuses_listed},
         {"tag.xacro_macro", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"tag.xacro_macro", carrier::agreement, "property_parent_scope_in_macro global_property_over_argument macro_defined_in_macro_used_after_call", standing::agrees},
         {"tag.xacro_macro", carrier::manifest, "macro_params_unicode_space_between argument_lent_from_uncalled_macro", standing::open},

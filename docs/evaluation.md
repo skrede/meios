@@ -137,7 +137,11 @@ costs in stack rather than one apiece: descending into the grammar is one and a 
 weighted from the depth at which each shape was measured to exhaust a 512 KiB thread. So the one
 ceiling leaves both shapes the same headroom, and a document nesting
 expression spans past it refuses at a stated position rather than running out of stack; commands,
-which end at their first closing parenthesis, do not nest at all.
+which end at their first closing parenthesis, do not nest at all. A property evaluated at its first
+read nests too: each such read is a level charged seventeen on top of the nesting of the expression
+that reads it, so a chain of sixteen properties each reading the next renders and one of seventeen
+refuses with `expansion_budget_exceeded`, where the reference renders a chain of one hundred and
+sixty-five, a difference [known limitations](known-limitations.md#expression-evaluation) lists.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
@@ -891,9 +895,9 @@ describes:
   and the documents the enumeration above names, twenty-seven of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and twelve rows of it: fourteen
+  manifest `differential_divergences.cases` records, one hundred and thirteen rows of it: fourteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's eighty-five document probes, a group listed in
+  and the grammar record's eighty-six document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
