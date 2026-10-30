@@ -14,8 +14,6 @@
 namespace meios::detail
 {
 
-void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name);
-
 void seed_declared_args(expand_ctx &ctx, pugi::xml_node node);
 
 std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name);

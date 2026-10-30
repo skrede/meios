@@ -32,8 +32,6 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "macro_params_unicode_space_between",
                            "argument_lent_from_false_conditional",
                            "argument_lent_from_uncalled_macro",
-                           "macro_parameter_twice_read_after_call",
-                           "macro_parameter_twice_over_outer",
                            "property_exact_span_open_span_unread",
                            "include_missing_element_before_parent",
                            "include_missing_element_before_parent_nested",
@@ -116,7 +114,9 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("env_variable_unset", "env_variable_unset", None),
                             ("call_empty_macro", "call_empty_macro", None),
                             ("optenv_command_without_name", "optenv_command_without_name", None),
-                            ("arg_command_without_name", "arg_command_without_name", None))
+                            ("arg_command_without_name", "arg_command_without_name", None),
+                            ("macro_parameter_twice_read_after_call", "macro_parameter_twice_read_after_call", None),
+                            ("macro_parameter_twice_over_outer", "macro_parameter_twice_over_outer", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

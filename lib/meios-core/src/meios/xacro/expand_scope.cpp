@@ -1,3 +1,4 @@
+#include "scope_chain.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/value.h"
@@ -18,24 +19,6 @@
 
 namespace meios::detail
 {
-
-namespace
-{
-
-// The prior an ancestor frame must record is the value it actually holds, which the
-// writing invocation's own parameter may be masking in the shared flat scope.
-// When the written name is a parameter of the writing macro, use the outer value that
-// invocation saved on entry instead of the live (masked) lookup.
-std::optional<value> ancestor_prior(const expand_ctx &ctx, std::string_view name)
-{
-    if(!ctx.param_saves.empty())
-        for(const saved_binding &saved : *ctx.param_saves.back())
-            if(saved.first == name)
-                return saved.second;
-    return ctx.scope.lookup(name);
-}
-
-}
 
 // The number kinds are tried before the boolean spellings, which is what leaves "1" an
 // integer rather than a true; the reference orders its own literal conversion the same way,
@@ -59,27 +42,23 @@ value classify(std::string_view text)
     return value{ std::string(text) };
 }
 
-// An empty (default) or "local" scope records into the current frame, so a property
-// written inside a macro reverts when that macro exits (macro-local); at document scope
-// (no frame) a default write records nowhere and persists. scope="parent" records into
-// the caller's frame so an inner write reaches the immediate caller yet reverts when it
-// exits; "global" and unknown scopes record nowhere and so persist.
-void record_scoped(expand_ctx &ctx, std::string_view scope_attr, std::string_view name)
+namespace
 {
-    std::size_t depth = ctx.prop_frames.size();
-    std::size_t target = 0;
-    if((scope_attr == "local" || scope_attr.empty()) && depth >= 1)
-        target = depth - 1;
-    else if(scope_attr == "parent" && depth >= 2)
-        target = depth - 2;
-    else
-        return;
-    prop_frame &frame = ctx.prop_frames[target];
-    for(const saved_binding &prior : frame)
-        if(prior.first == name)
-            return;
-    frame.emplace_back(std::string(name), scope_attr == "parent" ? ancestor_prior(ctx, name)
-                                                                  : ctx.scope.lookup(name));
+
+// The reference picks the table a property is stored in by the scope attribute alone: the
+// document's for "global", the caller's for "parent", and the current one for any other value, an
+// unknown one included. A document-level "parent", which the reference stores into its table of
+// built-ins, lands in the document table.
+std::size_t target_table(const expand_ctx &ctx, std::string_view scope_attr)
+{
+    const std::size_t current = chain_access::cursor(ctx.scope);
+    if(scope_attr == "global")
+        return chain_access::document_table;
+    if(scope_attr == "parent")
+        return chain_access::parent(ctx.scope, current).value_or(chain_access::document_table);
+    return current;
+}
+
 }
 
 // The reference's grab_property treats the written value and the fallback as mutually exclusive
@@ -103,8 +82,7 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
         substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, chosen));
     if(!ok)
         return false;
-    record_scoped(ctx, in.attribute("scope").value(), name);
-    ctx.scope.set(name, bound);
+    chain_access::define(ctx.scope, target_table(ctx, in.attribute("scope").value()), name, bound);
     return true;
 }
 

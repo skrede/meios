@@ -254,3 +254,5 @@ env_variable_unset	agreement
 call_empty_macro	agreement
 optenv_command_without_name	agreement
 arg_command_without_name	agreement
+macro_parameter_twice_read_after_call	agreement
+macro_parameter_twice_over_outer	agreement

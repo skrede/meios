@@ -20,6 +20,8 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"call_empty_macro", "call_empty_macro", {}, meios::diagnostic_code::xacro_structural_error, "xacro:call is missing the 'macro' attribute"},
         agreement_probe{"optenv_command_without_name", "optenv_command_without_name", {}, meios::diagnostic_code::unresolved_env, "must specify an environment variable"},
         agreement_probe{"arg_command_without_name", "arg_command_without_name", {}, meios::diagnostic_code::unresolved_arg, "must specify a variable name"},
+        agreement_probe{"macro_parameter_twice_read_after_call", "macro_parameter_twice_read_after_call", {}, meios::diagnostic_code::undefined_property, "name 'a' is not defined"},
+        agreement_probe{"macro_parameter_twice_over_outer", "macro_parameter_twice_over_outer", {}, std::nullopt, {}, {}, {}, true},
 };
 
 }

@@ -6,6 +6,8 @@
 #include "meios/xacro/yaml_parser_handle.h"
 #include "meios/xacro/text_resource_loader.h"
 
+#include "meios/xacro/detail/table_chain.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -22,39 +24,45 @@
 namespace meios
 {
 
+namespace detail
+{
+struct chain_access;
+}
+
+// A write and an erase act on the current table; a read walks from it outward through the tables
+// of the enclosing calls to the document's, so the innermost binding of a name is the one read.
 class eval_scope
 {
+    friend struct detail::chain_access;
+
 public:
     eval_scope()
             : m_load_text_cb()
             , m_parse_yaml_cb()
+            , m_chain()
             , m_active_document()
             , m_arguments()
-            , m_properties()
     {
     }
 
     void set(std::string_view name, value entry)
     {
-        m_properties.insert_or_assign(std::string(name), std::move(entry));
+        m_chain.table(m_chain.cursor()).set(name, std::move(entry));
     }
 
     std::optional<value> lookup(std::string_view name) const
     {
-        std::unordered_map<std::string, value>::const_iterator it = m_properties.find(std::string(name));
-        if(it == m_properties.end())
-            return std::nullopt;
-        return it->second;
+        return m_chain.lookup(name);
     }
 
     bool contains(std::string_view name) const
     {
-        return m_properties.find(std::string(name)) != m_properties.end();
+        return m_chain.holder(name).has_value();
     }
 
     void erase(std::string_view name)
     {
-        m_properties.erase(std::string(name));
+        m_chain.table(m_chain.cursor()).erase(name);
     }
 
     // $(arg n) reads this table and an expression reads the other, so a property of an
@@ -130,9 +138,9 @@ public:
 private:
     text_resource_loader m_load_text_cb;
     std::shared_ptr<const yaml_parser_handle> m_parse_yaml_cb;
+    detail::table_chain m_chain;
     std::filesystem::path m_active_document;
     std::unordered_map<std::string, value> m_arguments;
-    std::unordered_map<std::string, value> m_properties;
 };
 
 }

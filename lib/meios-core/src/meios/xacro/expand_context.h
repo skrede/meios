@@ -64,13 +64,6 @@ struct block_arg
     pugi::xml_node source;
 };
 
-// A macro parameter's outer value, captured on entry and restored on exit.
-using saved_binding = std::pair<std::string, std::optional<value>>;
-
-// One macro invocation's record of prior property values, reverted when the
-// invocation exits so a scoped write does not leak past its owning frame.
-using prop_frame = std::vector<saved_binding>;
-
 // Forwards every record unchanged and keeps the first coded, located error as a
 // structured cause. A layer beneath expansion names the specific failure — an undefined
 // name, an unresolvable package, a rejected asset — while the walk above it knows only
@@ -101,9 +94,8 @@ private:
 };
 
 // Threads the whole expansion: name scope, package sources, both budget counters,
-// the macro table, the include cycle stack, the active block bindings, and the stack
-// of per-invocation property frames. Parsed include documents are parked in owned so
-// macro bodies stay live across files.
+// the macro table, the include cycle stack and the active block bindings. Parsed include
+// documents are parked in owned so macro bodies stay live across files.
 struct expand_ctx
 {
     expand_ctx(eval_scope &s, source_stack &src, const expansion_limits &lim, const include_options &inc,
@@ -139,11 +131,6 @@ struct expand_ctx
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;
-    std::vector<prop_frame> prop_frames;
-    // Parallel to prop_frames: the outer bindings each live invocation masked
-    // with its parameters, so a scope="parent" write can record the value the
-    // ancestor frame actually holds rather than the writing macro's private param.
-    std::vector<const std::vector<saved_binding> *> param_saves;
     // The first terminal failure, kept so the walk reports one structured cause; a later
     // failure neither replaces it nor emits a second error-level diagnostic.
     std::optional<expansion_error> terminal;

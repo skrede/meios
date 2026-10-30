@@ -1,4 +1,6 @@
 #include "macro_bind.h"
+#include "scope_chain.h"
+#include "invocation_frame.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/eval_scope.h"
@@ -9,9 +11,9 @@
 #include <pugixml.hpp>
 
 #include <map>
-#include <ranges>
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -45,42 +47,6 @@ bool substitute_defaults(expand_ctx &ctx, const macro_def &def, pugi::xml_node c
     return true;
 }
 
-void set_params(expand_ctx &ctx, const macro_def &def, const std::vector<value> &values,
-                std::vector<saved_binding> &saved)
-{
-    for(std::size_t i = 0; i < def.params.size(); ++i)
-    {
-        saved.emplace_back(def.params[i], ctx.scope.lookup(def.params[i]));
-        ctx.scope.set(def.params[i], values[i]);
-    }
-}
-
-void restore_params(expand_ctx &ctx, const std::vector<saved_binding> &saved)
-{
-    for(const saved_binding &entry : saved)
-    {
-        if(entry.second)
-            ctx.scope.set(entry.first, *entry.second);
-        else
-            ctx.scope.erase(entry.first);
-    }
-}
-
-// Reverting in reverse restores the true pre-invocation value when a name was written
-// more than once inside the frame.
-void revert_prop_frame(expand_ctx &ctx)
-{
-    prop_frame &frame = ctx.prop_frames.back();
-    for(const saved_binding &entry : std::views::reverse(frame))
-    {
-        if(entry.second)
-            ctx.scope.set(entry.first, *entry.second);
-        else
-            ctx.scope.erase(entry.first);
-    }
-    ctx.prop_frames.pop_back();
-}
-
 }
 
 bool define_macro(expand_ctx &ctx, pugi::xml_node in)
@@ -103,11 +69,10 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
     call_binding bound;
     if(!ctx.charge_work(call) || !bind_call(ctx, def, call, document, bound))
         return false;
-    std::vector<saved_binding> saved;
-    ctx.prop_frames.emplace_back();
-    ctx.param_saves.push_back(&saved);
+    const invocation_frame frame(ctx.scope);
     std::map<std::string, block_arg> outer = std::exchange(ctx.blocks, std::move(bound.blocks));
-    set_params(ctx, def, bound.values, saved);
+    for(std::size_t i = 0; i < def.params.size(); ++i)
+        chain_access::define(ctx.scope, frame.table(), def.params[i], bound.values[i]);
     bool ok = substitute_defaults(ctx, def, call, document);
     if(ok)
     {
@@ -115,9 +80,6 @@ bool instantiate_macro(expand_ctx &ctx, const macro_def &def, pugi::xml_node cal
         ok = process_children(ctx, def.body, out, document);
         ctx.origins.pop_back();
     }
-    ctx.param_saves.pop_back();
-    revert_prop_frame(ctx);
-    restore_params(ctx, saved);
     ctx.blocks = std::move(outer);
     return ok;
 }
