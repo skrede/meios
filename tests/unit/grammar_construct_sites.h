@@ -36,7 +36,7 @@ inline constexpr pairing site_pairings[] = {
         {"raise.unused_block", carrier::agreement, "macro_call_unused_block macro_call_unused_blocks", standing::agrees},
         {"raise.unused_block", carrier::generated, "macro_005", standing::agrees},
         {"raise.undefined_parameters", carrier::agreement, "macro_default_empty", standing::agrees},
-        {"raise.xacro_conditional", carrier::agreement, "property_lazy_eval_not_boolean", standing::agrees},
+        {"raise.xacro_conditional", carrier::agreement, "property_lazy_eval_not_boolean property_remove_not_boolean", standing::agrees},
         {"raise.xacro_conditional", carrier::manifest, "conditional_real_one conditional_upper_true conditional_empty", standing::open},
         {"raise.xacro_conditional", carrier::manifest, "conditional_quoted_text", standing::refuses_listed},
         {"raise.undefined_block", carrier::agreement, "insert_block_undefined", standing::agrees},

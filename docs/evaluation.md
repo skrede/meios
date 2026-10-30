@@ -52,6 +52,7 @@ description needing Python behavior the grammar does not carry; it has
   [the resource helper](#the-resource-helper).
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
   are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
+  A property may shadow a built-in name such as `pi`, with a warning, as it may upstream.
 
 **What a bound value is, before an expression ever reads it.** A property and a macro parameter each
 bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
@@ -742,7 +743,8 @@ namespace upstream, so `${math.pi}` works there and is refused here as an unsupp
 Upstream also falls through from any include namespace to the mathematics names, so `${n.pi}`, and
 `${math.pi}` under an include whose namespace is `math`, render there; here the fall-through reaches
 the names of the file that wrote the include and stops short of the mathematics names, so both refuse
-as an undefined name. The reference's
+as an undefined name; the `include_namespace_reads_mathematics_name` row of the manifest records the
+first. The reference's
 argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
 / `error` / `fatal`) are not exposed at all: a call to any of the reference's helpers but
 `xacro.load_yaml` refuses under either evaluator, and the refusal names `xacro.load_yaml` as the only
@@ -904,13 +906,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and thirty-nine agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, thirty-nine of them the grammar record's, each held to a
+- **The committed probes**: one hundred and fifty agreement probes, the `agreement` rows of the inventory
+  and the documents the enumeration above names, fifty of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and seven rows of it: fourteen
+  manifest `differential_divergences.cases` records, one hundred and two rows of it: fourteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's eighty document probes, a group listed in
+  and the grammar record's seventy-five document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -962,9 +964,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty-two agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty-five agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-fifteen are recorded differences on which this side refuses; and thirty-eight are recorded differences on
+fifteen are recorded differences on which this side refuses; and thirty-five are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`

@@ -81,6 +81,10 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
                         meios::diagnostic_code::xacro_structural_error,
                         "'dict' object has no attribute '_setitem'"},
         agreement_probe{"property_removes_builtin", "property_removes_builtin", {}},
+        agreement_probe{"property_remove_not_boolean", "property_remove_not_boolean", {}, meios::diagnostic_code::xacro_structural_error, "Xacro conditional"},
+        agreement_probe{"property_remove_spelled_as_number", "property_remove_spelled_as_number", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
+        agreement_probe{"property_remove_as_expression", "property_remove_as_expression", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
+        agreement_probe{"property_default_for_builtin", "property_default_for_builtin", {}},
 };
 
 }

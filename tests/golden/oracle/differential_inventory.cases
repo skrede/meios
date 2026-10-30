@@ -291,3 +291,7 @@ property_removed_in_macro_erases_parameter	agreement
 property_shadows_pi	agreement
 parent_scope_at_document_level	agreement
 property_removes_builtin	agreement
+property_remove_not_boolean	agreement
+property_remove_spelled_as_number	agreement
+property_remove_as_expression	agreement
+property_default_for_builtin	agreement

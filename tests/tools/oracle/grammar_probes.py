@@ -80,7 +80,9 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "comment_evaluation_switched_off",
                            "find_without_package_index",
                            "property_chain_deeper_than_depth_ceiling",
-                           "include_namespace_read_as_value")
+                           "include_namespace_read_as_value",
+                           "include_namespace_reads_mathematics_name",
+                           "property_empty_named_pi")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -129,7 +131,11 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("property_removed_in_macro_erases_parameter", "property_removed_in_macro_erases_parameter", None),
                             ("property_shadows_pi", "property_shadows_pi", None),
                             ("parent_scope_at_document_level", "parent_scope_at_document_level", None),
-                            ("property_removes_builtin", "property_removes_builtin", None))
+                            ("property_removes_builtin", "property_removes_builtin", None),
+                            ("property_remove_not_boolean", "property_remove_not_boolean", None),
+                            ("property_remove_spelled_as_number", "property_remove_spelled_as_number", None),
+                            ("property_remove_as_expression", "property_remove_as_expression", None),
+                            ("property_default_for_builtin", "property_default_for_builtin", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.
