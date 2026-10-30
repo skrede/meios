@@ -1,4 +1,5 @@
 #include "meios/xacro/scope_chain.h"
+#include "meios/xacro/macro_tables.h"
 #include "meios/xacro/invocation_frame.h"
 
 #include <meios/xacro/value.h>
@@ -7,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -26,10 +28,18 @@ std::optional<std::int64_t> read(const meios::eval_scope &scope, const char *nam
     return found->integer();
 }
 
-void refuse_inside(meios::eval_scope &scope)
+meios::detail::macro_def taking(const char *param)
 {
-    const meios::detail::invocation_frame frame(scope);
+    meios::detail::macro_def def{};
+    def.params.emplace_back(param);
+    return def;
+}
+
+void refuse_inside(meios::eval_scope &scope, meios::detail::macro_chain &macros)
+{
+    const meios::detail::invocation_frame frame(scope, macros);
     scope.set("inner", meios::value{ std::int64_t{ 7 } });
+    macros.define("inner", meios::detail::macro_def{});
     throw std::runtime_error("refused");
 }
 
@@ -101,14 +111,32 @@ TEST_CASE("a definition into a named table lands there and not in the current on
     REQUIRE(read(scope, "kept") == 5);
 }
 
-TEST_CASE("a frame left by an exception drops its table", "[native][scope]")
+TEST_CASE("a frame left by an exception drops its symbol and macro tables", "[native][scope]")
 {
     meios::eval_scope scope;
+    meios::detail::macro_chain macros;
     const meios::detail::table_mark mark = chain_access::mark(scope);
-    REQUIRE_THROWS(refuse_inside(scope));
+    REQUIRE_THROWS(refuse_inside(scope, macros));
     REQUIRE(chain_access::mark(scope).size == mark.size);
     REQUIRE(chain_access::cursor(scope) == mark.cursor);
     REQUIRE_FALSE(scope.contains("inner"));
+    REQUIRE(macros.mark().size == 1);
+    REQUIRE(macros.cursor() == 0);
+    REQUIRE_FALSE(macros.find("inner").has_value());
+}
+
+TEST_CASE("a macro lookup walks outward from the current table and the innermost definition wins", "[native][scope]")
+{
+    meios::detail::macro_chain macros;
+    macros.define("outer", taking("a"));
+    macros.define("shadowed", meios::detail::macro_def{});
+    const meios::detail::table_mark mark = macros.mark();
+    macros.push(macros.cursor());
+    macros.define("shadowed", taking("b"));
+    REQUIRE(macros.find("outer")->params == std::vector<std::string>{ "a" });
+    REQUIRE(macros.find("shadowed")->params == std::vector<std::string>{ "b" });
+    macros.pop_to(mark);
+    REQUIRE(macros.find("shadowed")->params.empty());
 }
 
 TEST_CASE("a scope moves with its tables", "[native][scope]")

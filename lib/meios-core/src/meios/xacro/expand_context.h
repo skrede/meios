@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EXPAND_CONTEXT_H
 
 #include "eval_session.h"
+#include "macro_tables.h"
 #include "include_locate.h"
 
 #include "meios/xacro/budget.h"
@@ -28,7 +29,6 @@
 #include <optional>
 #include <filesystem>
 #include <functional>
-#include <string_view>
 
 namespace meios
 {
@@ -38,23 +38,6 @@ class evaluator_handle;
 
 namespace meios::detail
 {
-
-struct emit_origin
-{
-    std::filesystem::path path;
-    std::string_view text;
-};
-
-struct macro_def
-{
-    std::vector<std::string> params;
-    std::vector<std::optional<std::string>> defaults;
-    std::vector<bool> writes_default;
-    std::vector<std::string> block_params;
-    std::vector<bool> block_children;
-    pugi::xml_node body;
-    emit_origin origin;
-};
 
 // The bound subtree is the caller's block argument already expanded, parked in the context's
 // owned documents; the flag selects the node itself or only its children, as `*` and `**` do.
@@ -94,7 +77,7 @@ private:
 };
 
 // Threads the whole expansion: name scope, package sources, both budget counters,
-// the macro table, the include cycle stack and the active block bindings. Parsed include
+// the macro tables, the include cycle stack and the active block bindings. Parsed include
 // documents are parked in owned so macro bodies stay live across files.
 struct expand_ctx
 {
@@ -123,7 +106,7 @@ struct expand_ctx
     // are mutually recursive across four files, and a depth threaded through their
     // parameters is one any of them may forget to pass on.
     std::size_t depth;
-    std::map<std::string, macro_def> macros;
+    macro_chain macros;
     std::map<std::string, block_arg> blocks;
     std::vector<std::filesystem::path> include_stack;
     // The layer that served the active document, if one did, and the request it answered.

@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 94> grammar_document_probes{
+inline const std::array<document_probe, 93> grammar_document_probes{
         document_probe{false, "property_evaluated_at_first_read"},
         document_probe{false, "property_circular_definition"},
         document_probe{false, "property_self_reference"},
@@ -73,7 +73,6 @@ inline const std::array<document_probe, 94> grammar_document_probes{
         document_probe{false, "macro_named_call"},
         document_probe{false, "macro_name_with_dot"},
         document_probe{false, "macro_name_with_xacro_prefix"},
-        document_probe{false, "macro_defined_in_macro_used_after_call"},
         document_probe{false, "property_removed_in_macro_reaches_global"},
         document_probe{false, "property_removed_in_macro_erases_parameter"},
         document_probe{false, "comment_kept_in_output", false, false, {}, false, {}, {}, false, true},

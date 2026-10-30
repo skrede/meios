@@ -14,7 +14,6 @@
 
 #include <pugixml.hpp>
 
-#include <map>
 #include <cctype>
 #include <string>
 #include <optional>
@@ -100,9 +99,9 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return insert_block(ctx, in, out);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
-    auto found = ctx.macros.find(std::string(name.substr(6)));
-    if(found != ctx.macros.end())
-        return instantiate_macro(ctx, found->second, in, out, document);
+    const std::optional<macro_def> found = ctx.macros.find(name.substr(6));
+    if(found)
+        return instantiate_macro(ctx, *found, in, out, document);
     return fail(ctx, in, diagnostic_code::xacro_structural_error,
                 "unknown xacro element <" + std::string(name) + '>');
 }

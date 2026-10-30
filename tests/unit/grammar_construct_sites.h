@@ -27,7 +27,7 @@ inline constexpr pairing site_pairings[] = {
         {"raise.undefined_property_to_forward", carrier::agreement, "inherited_argument_refuses", standing::agrees},
         {"raise.undefined_property_to_forward", carrier::generated, "macro_046", standing::agrees},
         {"raise.xacro_call_is_missing_the_macro_attribute", carrier::agreement, "call_empty_macro", standing::agrees},
-        {"raise.unknown_macro_name", carrier::manifest, "macro_defined_in_macro_used_after_call", standing::open},
+        {"raise.unknown_macro_name", carrier::agreement, "macro_defined_in_macro_used_after_call", standing::agrees},
         {"raise.invalid_parameter", carrier::agreement, "macro_call_undeclared_parameter macro_call_namespace_attribute", standing::agrees},
         {"raise.invalid_parameter", carrier::generated, "macro_007", standing::agrees},
         {"raise.not_enough_blocks", carrier::generated, "macro_001", standing::agrees},
