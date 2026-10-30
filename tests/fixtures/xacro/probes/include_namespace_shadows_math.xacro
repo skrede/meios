@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="include_namespace_shadows_math.d/c.xacro" ns="math"/>
+  <link name="l${math.c}"/>
+</robot>

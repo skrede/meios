@@ -44,6 +44,19 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"namespace_replaced_by_second_include", "namespace_replaced_by_second_include", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
         agreement_probe{"include_namespace_dotted_macro", "include_namespace_dotted_macro", {}},
         agreement_probe{"namespace_parent_scope_skips_namespace", "namespace_parent_scope_skips_namespace", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"include_namespace_mapping_name",
+                        "include_namespace_mapping_name",
+                        {},
+                        meios::diagnostic_code::xacro_structural_error,
+                        "namespaces are supported with in-order option only"},
+        agreement_probe{"namespace_macro_cannot_call_outer_macro",
+                        "namespace_macro_cannot_call_outer_macro",
+                        {},
+                        meios::diagnostic_code::xacro_structural_error,
+                        "unknown macro name: xacro:outer"},
+        agreement_probe{"namespace_macro_reads_outer_global", "namespace_macro_reads_outer_global", {}},
+        agreement_probe{"namespace_nested_reads", "namespace_nested_reads", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"include_namespace_shadows_math", "include_namespace_shadows_math", {}},
 };
 
 }

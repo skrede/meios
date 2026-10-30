@@ -1,0 +1,6 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="c" value="C"/>
+  <xacro:macro name="m" params="">
+    <link name="in${c}"/>
+  </xacro:macro>
+</robot>

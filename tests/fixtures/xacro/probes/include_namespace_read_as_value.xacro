@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="include_namespace_read_as_value.d/w.xacro" ns="n"/>
+  <link name="${'a' if n else 'b'}"/>
+</robot>

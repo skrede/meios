@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="outer" params="">
+    <link name="o"/>
+  </xacro:macro>
+  <xacro:include filename="namespace_macro_cannot_call_outer_macro.d/n.xacro" ns="n"/>
+  <xacro:n.m/>
+</robot>

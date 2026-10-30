@@ -86,7 +86,8 @@ GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "property_removes_builtin",
                            "comment_evaluation_switched_off",
                            "find_without_package_index",
-                           "property_chain_deeper_than_depth_ceiling")
+                           "property_chain_deeper_than_depth_ceiling",
+                           "include_namespace_read_as_value")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -123,7 +124,12 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("namespace_falls_through_to_parent", "namespace_falls_through_to_parent", None),
                             ("namespace_replaced_by_second_include", "namespace_replaced_by_second_include", None),
                             ("include_namespace_dotted_macro", "include_namespace_dotted_macro", None),
-                            ("namespace_parent_scope_skips_namespace", "namespace_parent_scope_skips_namespace", None))
+                            ("namespace_parent_scope_skips_namespace", "namespace_parent_scope_skips_namespace", None),
+                            ("include_namespace_mapping_name", "include_namespace_mapping_name", None),
+                            ("namespace_macro_cannot_call_outer_macro", "namespace_macro_cannot_call_outer_macro", None),
+                            ("namespace_macro_reads_outer_global", "namespace_macro_reads_outer_global", None),
+                            ("namespace_nested_reads", "namespace_nested_reads", None),
+                            ("include_namespace_shadows_math", "include_namespace_shadows_math", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

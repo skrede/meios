@@ -1,0 +1,5 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="namespace_nested_reads.d/a.xacro" ns="a"/>
+  <link name="l${a.b.c}"/>
+  <xacro:a.b.m/>
+</robot>

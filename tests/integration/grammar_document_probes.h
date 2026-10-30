@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 79> grammar_document_probes{
+inline const std::array<document_probe, 80> grammar_document_probes{
         document_probe{false, "property_removed_then_read"},
         document_probe{false, "property_value_and_remove_together"},
         document_probe{false, "include_optional_missing_file"},
@@ -92,6 +92,7 @@ inline const std::array<document_probe, 79> grammar_document_probes{
         document_probe{false, "comment_evaluation_switched_off", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "find_without_package_index"},
         document_probe{false, "property_chain_deeper_than_depth_ceiling"},
+        document_probe{false, "include_namespace_read_as_value"},
 };
 
 #endif

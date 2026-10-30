@@ -17,11 +17,11 @@ are each found on the system or fetched at configure time.
 What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
 integers and reals, the addition of two strings, comparison, boolean logic, membership against a
 mapping's keys and against a string's text, subscripting into a mapping and into a sequence, one
-named string operation, a keyword-argument mapping constructor, a dotted read of a key in a document
-this evaluator loaded, a fixed set of mathematics functions, and one namespaced call that reads an
-auxiliary document. A construct
-outside that grammar is refused with a located diagnostic naming what it met — never evaluated, and
-never quietly approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
+named string operation, a keyword-argument mapping constructor, a dotted read of a name an include
+namespace holds or of a key in a document this evaluator loaded, a fixed set of mathematics
+functions, and one namespaced call that reads an auxiliary document. A construct outside that grammar
+is refused with a located diagnostic naming what it met — never evaluated, and never quietly
+approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
 description needing Python behavior the grammar does not carry; it has
 [its own section](#meioseval-python-an-explicit-backend) near the end.
 
@@ -43,6 +43,8 @@ description needing Python behavior the grammar does not carry; it has
   takes an integer subscript on the same spelling, and a negative one counts back from the end, so
   `${names[0]}` and `${names[-1]}` are its first and last elements.
 - `dict(a=1, b=2)`, which builds a mapping the rest of the grammar can read.
+- A dotted read of a name an include namespace holds: `${n.w}` after an include written with
+  `ns="n"`, falling through to the names of the file that wrote the include.
 - A dotted read of a key in a mapping this evaluator loaded: `${config.joint_limits.wrist_3.effort}`
   reaches what the subscript chain reaches. The rules that gate it are
   [below](#what-refuses-and-by-which-rule).
@@ -192,10 +194,17 @@ operand is expected and `f(1 + )` as an unexpected `)`. A closing bracket is the
 legality turns on what stands before it, which is why an empty argument list is accepted and a
 truncated argument is not.
 
-**A dotted spelling reads a loaded mapping and nothing else.** `xacro.load_yaml` is the one
-namespaced call the grammar carries; every other namespaced spelling, `math.pi` among them, is
-refused by name. A dot after a value is a member read, and it resolves only for a value that came
-out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
+**A dotted spelling reads an include namespace's names or a loaded mapping's keys, and nothing
+else.** An include written with `ns="n"` reads its file into a namespace of its own, and `${n.w}` reads
+the name `w` that file bound; a name the namespace does not hold falls through to the names of the
+file that wrote the include, and a namespace inside another reads through both dots, as `${a.b.c}`
+does. `<xacro:n.m/>` calls the macro `m` the namespace holds. A namespace has no value of its own, so
+`${n}` read bare refuses, naming the dotted spelling, where the reference reads its table, as
+[known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
+shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`.
+`xacro.load_yaml` is the one namespaced call the grammar carries; every other namespaced spelling,
+`math.pi` among them where no include names its namespace `math`, is refused by name. A dot after a
+value is a member read, and it resolves only for a value that came out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
 `${config['joint_limits']['wrist_3']['effort']}` reads, chains with a subscript in either order, and
 survives a property, a macro argument and a nested scope. A mapping a description built itself —
 what the mapping constructor below returns — has no member path at all, and neither does a loaded
@@ -729,7 +738,11 @@ truncated fragment will not parse and here because neither a brace literal nor a
 the grammar.
 
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
-namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target. The reference's
+namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target.
+Upstream also falls through from any include namespace to the mathematics names, so `${n.pi}`, and
+`${math.pi}` under an include whose namespace is `math`, render there; here the fall-through reaches
+the names of the file that wrote the include and stops short of the mathematics names, so both refuse
+as an undefined name. The reference's
 argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
 / `error` / `fatal`) are not exposed at all: a call to any of the reference's helpers but
 `xacro.load_yaml` refuses under either evaluator, and the refusal names `xacro.load_yaml` as the only
@@ -891,13 +904,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and twenty-seven agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, twenty-seven of them the grammar record's, each held to a
+- **The committed probes**: one hundred and thirty-nine agreement probes, the `agreement` rows of the inventory
+  and the documents the enumeration above names, thirty-nine of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and thirteen rows of it: fourteen
+  manifest `differential_divergences.cases` records, one hundred and seven rows of it: fourteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's eighty-six document probes, a group listed in
+  and the grammar record's eighty document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -914,8 +927,8 @@ describes:
   text; the macro family varies a parameter's name, its form and its default, and the call's children.
   A call names the parameters its macro declares, each with odds of three in four, and one undeclared
   name with odds of one in eight, and the document reads the property `b` again after the call, so a
-  parameter named `b` that shadows it must be restored for the document to render as the reference
-  renders it. The pinned reference's verdict for every case is recorded in
+  parameter named `b` that shadows it must leave with the call for the document to render as the
+  reference renders it. The pinned reference's verdict for every case is recorded in
   `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the count per family and
   the template each family's text is written into, and `generated_differential` compares this side's
   verdict with that record on every run. A verdict is the cause of a refusal or, where the document
@@ -949,9 +962,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty-one agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty-two agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-fifteen are recorded differences on which this side refuses; and thirty-nine are recorded differences on
+fifteen are recorded differences on which this side refuses; and thirty-eight are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`
@@ -969,7 +982,7 @@ are thirty-eight calls holding fewer children than the block parameters declared
 names, thirty invalid expressions, twenty-nine children no block parameter takes, twenty-one call
 attributes naming no parameter the reference reads as declared, nineteen of them the undeclared name,
 and four forwarded defaults with nothing to forward. Every case that declares `b` twice is among the
-refusals, so the restore of a parameter declared twice is reached by no case the reference renders. A
+refusals, so no case the reference renders reads `b` after a call that bound it twice. A
 render here where the reference refuses is a silent divergence, so agreement on a refusal is a real
 test, but these two families reach few verdicts on which file an include read or what a parameter
 bound. The span family is the one that compares renderings in number.
