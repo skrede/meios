@@ -1,7 +1,7 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_NAME_TABLE_H
 #define HPP_GUARD_MEIOS_XACRO_NAME_TABLE_H
 
-#include "meios/xacro/value.h"
+#include "meios/xacro/detail/scope_entry.h"
 
 #include <string>
 #include <cstddef>
@@ -33,7 +33,7 @@ public:
         return m_parent;
     }
 
-    void set(std::string_view name, value entry)
+    void set(std::string_view name, scope_entry entry)
     {
         m_entries.insert_or_assign(std::string(name), std::move(entry));
     }
@@ -43,12 +43,12 @@ public:
         return m_entries.find(std::string(name)) != m_entries.end();
     }
 
-    std::optional<value> find(std::string_view name) const
+    const scope_entry *find(std::string_view name) const
     {
-        std::unordered_map<std::string, value>::const_iterator it = m_entries.find(std::string(name));
+        std::unordered_map<std::string, scope_entry>::const_iterator it = m_entries.find(std::string(name));
         if(it == m_entries.end())
-            return std::nullopt;
-        return it->second;
+            return nullptr;
+        return &it->second;
     }
 
     void erase(std::string_view name)
@@ -58,7 +58,7 @@ public:
 
 private:
     std::optional<std::size_t> m_parent;
-    std::unordered_map<std::string, value> m_entries;
+    std::unordered_map<std::string, scope_entry> m_entries;
 };
 
 }

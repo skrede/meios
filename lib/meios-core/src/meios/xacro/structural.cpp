@@ -1,3 +1,4 @@
+#include "deferred_read.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/structural.h"
@@ -65,6 +66,7 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
                                             const std::vector<std::filesystem::path> &package_roots)
 {
     detail::expand_ctx ctx(scope, sources, limits, includes, package_roots, policy, backend, log);
+    const detail::resolver_guard resolver(ctx);
     pugi::xml_document &doc = ctx.park();
     pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
     if(!parsed)

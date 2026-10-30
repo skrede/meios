@@ -96,7 +96,7 @@ inline std::string listed(const meios::construct_set &set)
 inline std::string document_for(std::string_view expression)
 {
     return std::string(R"(<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="probe">)"
-                       R"(<xacro:property name="read" value="${)")
+                       R"(<xacro:property name="read" lazy_eval="false" value="${)")
          + std::string(expression) + R"(}"/><link name="probe"/></robot>)";
 }
 

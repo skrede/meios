@@ -185,6 +185,7 @@ inline const std::vector<agreement_probe> agreement_probes{
                         "Unknown substitution command",
                         "find_command_tab_before_package.d"},
         agreement_probe{"arg_command_tab_before_name", "arg_command_tab_before_name", {}, meios::diagnostic_code::unknown_substitution, "Unknown substitution command"},
+        agreement_probe{"property_forward_reference", "property_forward_reference", {}},
 };
 
 }

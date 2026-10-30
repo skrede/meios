@@ -38,6 +38,8 @@ struct parser
     bool accept(token_kind kind) { if(at(kind)) { ++pos; return true; } return false; }
     value fail(const std::string &message, diagnostic_code code = diagnostic_code::expression_error);
     value fail_unsupported(const std::string &message);
+    // A refusal whose record its source already logged, so only the kind travels on.
+    value fail_reported(eval_failure_kind kind);
     // Charges the two axes a recursive descent into the grammar grows, before it recurses:
     // one evaluation step, and one more level of nesting. The session reports and latches a
     // crossed ceiling itself, so a refusal only records the category here.

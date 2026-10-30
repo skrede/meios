@@ -5,6 +5,8 @@
 
 #include "meios/xacro/value.h"
 
+#include "meios/xacro/detail/scope_read.h"
+
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -106,10 +108,11 @@ value parse_name(parser &p)
                                   + "()' — use eval-python");
     if(p.at(token_kind::lparen)) return parse_call(p, name);
     if(name == "pi") return real_result(p, 3.141592653589793);
-    std::optional<value> bound = p.scope.lookup(name);
-    if(!bound)
+    const name_read bound = read_name(p.scope, name);
+    if(bound.failed()) return p.fail_reported(bound.failure);
+    if(!bound.bound)
         return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
-    return *bound;
+    return *bound.bound;
 }
 
 value call_math(parser &p, std::string_view name, const std::vector<value> &args)

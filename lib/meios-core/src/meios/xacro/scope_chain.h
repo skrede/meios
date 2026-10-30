@@ -4,9 +4,12 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 
+#include "meios/xacro/detail/scope_entry.h"
 #include "meios/xacro/detail/table_chain.h"
 
+#include <string>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <optional>
 #include <string_view>
@@ -48,6 +51,23 @@ struct chain_access
     static void define(eval_scope &scope, std::size_t table, std::string_view name, value entry)
     {
         scope.m_chain.table(table).set(name, std::move(entry));
+    }
+
+    static void define_deferred(eval_scope &scope, std::size_t table, std::string_view name,
+                                std::string text, std::size_t origin)
+    {
+        const std::uint64_t generation = scope.m_chain.generation();
+        scope.m_chain.table(table).set(name, deferred_text{ std::move(text), origin, generation });
+    }
+
+    static void install(eval_scope &scope, deferred_resolve resolve, deferred_cycle cycle)
+    {
+        scope.m_chain.install(std::move(resolve), std::move(cycle));
+    }
+
+    static void uninstall(eval_scope &scope)
+    {
+        scope.m_chain.uninstall();
     }
 };
 

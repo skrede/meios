@@ -9,6 +9,8 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_handle.h"
 
+#include "meios/xacro/detail/scope_read.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -95,9 +97,12 @@ std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
     const std::string_view name = trim(expr);
     if(is_identifier(name))
     {
-        std::optional<value> bound = ctx.scope.lookup(name);
-        if(bound)
-            return reclassified(*bound);
+        const name_read bound = read_name(ctx.scope, name);
+        ctx.last_kind = bound.failure;
+        if(bound.failed())
+            return std::nullopt;
+        if(bound.bound)
+            return reclassified(*bound.bound);
     }
     std::string resolved;
     if(!scan_inner(ctx, expr, resolved))

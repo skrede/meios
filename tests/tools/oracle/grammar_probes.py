@@ -8,13 +8,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
-                           "property_circular_definition",
-                           "property_self_reference",
-                           "property_never_read_undefined_name",
-                           "property_never_read_dollar_run",
-                           "property_default_reads_later_property",
-                           "property_removed_then_read",
+GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "property_value_and_remove_together",
                            "include_namespace_bare_name",
                            "include_namespace_dotted_property",
@@ -32,7 +26,6 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "macro_params_unicode_space_between",
                            "argument_lent_from_false_conditional",
                            "argument_lent_from_uncalled_macro",
-                           "property_exact_span_open_span_unread",
                            "include_missing_element_before_parent",
                            "include_missing_element_before_parent_nested",
                            "include_find_missing_element_before_parent",
@@ -95,7 +88,6 @@ GRAMMAR_DOCUMENT_PROBES = ("property_evaluated_at_first_read",
                            "comment_evaluated_under_eval_comments",
                            "comment_before_xacro_element_removed",
                            "processing_instruction_kept",
-                           "property_reads_later_global_in_macro",
                            "include_glob_matching_nothing",
                            "include_namespace_not_text",
                            "property_removes_builtin",
@@ -117,7 +109,15 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("macro_parameter_twice_read_after_call", "macro_parameter_twice_read_after_call", None),
                             ("macro_parameter_twice_over_outer", "macro_parameter_twice_over_outer", None),
                             ("macro_defined_in_macro_used_after_call", "macro_defined_in_macro_used_after_call", None),
-                            ("property_unknown_scope_in_macro", "property_unknown_scope_in_macro", None))
+                            ("property_unknown_scope_in_macro", "property_unknown_scope_in_macro", None),
+                            ("property_evaluated_at_first_read", "property_evaluated_at_first_read", None),
+                            ("property_circular_definition", "property_circular_definition", None),
+                            ("property_self_reference", "property_self_reference", None),
+                            ("property_never_read_undefined_name", "property_never_read_undefined_name", None),
+                            ("property_never_read_dollar_run", "property_never_read_dollar_run", None),
+                            ("property_default_reads_later_property", "property_default_reads_later_property", None),
+                            ("property_exact_span_open_span_unread", "property_exact_span_open_span_unread", None),
+                            ("property_reads_later_global_in_macro", "property_reads_later_global_in_macro", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

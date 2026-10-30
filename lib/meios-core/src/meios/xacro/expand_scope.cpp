@@ -1,9 +1,11 @@
 #include "scope_chain.h"
 #include "boolean_value.h"
+#include "deferred_read.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
+#include "meios/xacro/value_kind.h"
 #include "meios/xacro/detail/numeric.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
@@ -79,15 +81,42 @@ std::optional<bool> lazy_eval(expand_ctx &ctx, pugi::xml_node in, const std::fil
     return flag;
 }
 
-std::optional<value> authored_value(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
-                                    const std::filesystem::path &document)
+bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
+                  const std::filesystem::path &document, std::string_view name)
 {
     bool ok = true;
     const std::string authored = strip_authored_markers(in.attribute(attribute).value());
-    value bound = substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, attribute));
+    const value bound = substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, attribute));
     if(!ok)
-        return std::nullopt;
-    return bound;
+        return false;
+    chain_access::define(ctx.scope, target_table(ctx, in.attribute("scope").value()), name, bound);
+    return true;
+}
+
+// The reference evaluates a property it stores in another table than the current one where it is
+// written, whatever lazy_eval says.
+bool deferrable(pugi::xml_node in)
+{
+    const std::string_view scope = in.attribute("scope").value();
+    return scope != "global" && scope != "parent";
+}
+
+// The reference converts a lazy text to a number or a boolean when it reads as one and defers only
+// what stays a string. A string with no '$' is stored as written, which is what evaluating it
+// would give.
+void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
+                 const std::filesystem::path &document, std::string_view name)
+{
+    const std::size_t table = chain_access::cursor(ctx.scope);
+    std::string authored = strip_authored_markers(in.attribute(attribute).value());
+    value literal = classify(authored);
+    if(literal.kind() != value_kind::string || authored.find('$') == std::string::npos)
+    {
+        chain_access::define(ctx.scope, table, name, std::move(literal));
+        return;
+    }
+    const std::size_t origin = record_origin(ctx, in, attribute, document);
+    chain_access::define_deferred(ctx.scope, table, name, std::move(authored), origin);
 }
 
 }
@@ -109,10 +138,10 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     const std::optional<bool> lazy = lazy_eval(ctx, in, document);
     if(!lazy)
         return false;
-    const std::optional<value> bound = authored_value(ctx, in, fallback ? "default" : "value", document);
-    if(!bound)
-        return false;
-    chain_access::define(ctx.scope, target_table(ctx, in.attribute("scope").value()), name, *bound);
+    const char *attribute = fallback ? "default" : "value";
+    if(!*lazy || !deferrable(in))
+        return define_eager(ctx, in, attribute, document, name);
+    define_lazy(ctx, in, attribute, document, name);
     return true;
 }
 

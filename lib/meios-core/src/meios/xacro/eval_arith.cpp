@@ -32,6 +32,13 @@ value parser::fail_unsupported(const std::string &message)
     return value{};
 }
 
+value parser::fail_reported(eval_failure_kind kind)
+{
+    if(ok) failure = kind;
+    ok = false;
+    return value{};
+}
+
 bool parser::refuse_exhausted()
 {
     if(ok) failure = eval_failure_kind::exhausted;

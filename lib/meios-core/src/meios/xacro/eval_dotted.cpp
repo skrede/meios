@@ -7,6 +7,8 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_render.h"
 
+#include "meios/xacro/detail/scope_read.h"
+
 #include <span>
 #include <string>
 #include <vector>
@@ -181,9 +183,11 @@ value parse_dotted(parser &p, std::string_view head)
     ++p.pos;
     if(head == "xacro" && member == "load_yaml")
         return parse_load_yaml(p);
-    const std::optional<value> bound = p.scope.lookup(head);
-    if(bound)
-        return member_of(p, *bound, member);
+    const name_read bound = read_name(p.scope, head);
+    if(bound.failed())
+        return p.fail_reported(bound.failure);
+    if(bound.bound)
+        return member_of(p, *bound.bound, member);
     if(p.scope.has_argument(head))
         return p.fail(undefined_name(p.scope, head), diagnostic_code::undefined_property);
     return refuse_call_target(p, head, member);

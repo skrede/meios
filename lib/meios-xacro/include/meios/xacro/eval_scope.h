@@ -24,9 +24,12 @@
 namespace meios
 {
 
+class eval_scope;
+
 namespace detail
 {
 struct chain_access;
+inline name_read read_name(const eval_scope &scope, std::string_view name);
 }
 
 // A write and an erase act on the current table; a read walks from it outward through the tables
@@ -34,6 +37,7 @@ struct chain_access;
 class eval_scope
 {
     friend struct detail::chain_access;
+    friend detail::name_read detail::read_name(const eval_scope &scope, std::string_view name);
 
 public:
     eval_scope()
@@ -52,7 +56,7 @@ public:
 
     std::optional<value> lookup(std::string_view name) const
     {
-        return m_chain.lookup(name);
+        return m_chain.read(name).bound;
     }
 
     bool contains(std::string_view name) const
@@ -138,7 +142,10 @@ public:
 private:
     text_resource_loader m_load_text_cb;
     std::shared_ptr<const yaml_parser_handle> m_parse_yaml_cb;
-    detail::table_chain m_chain;
+    // A scope is single-threaded: a read may evaluate a property's deferred text and cache the
+    // answer in place. Once expand returns, a deferred text nothing read is still contained but
+    // reads as absent, since the expansion that could evaluate it is gone.
+    mutable detail::table_chain m_chain;
     std::filesystem::path m_active_document;
     std::unordered_map<std::string, value> m_arguments;
 };

@@ -3,6 +3,7 @@
 
 #include "eval_session.h"
 #include "macro_tables.h"
+#include "deferred_read.h"
 #include "include_locate.h"
 
 #include "meios/xacro/budget.h"
@@ -114,6 +115,8 @@ struct expand_ctx
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;
+    // Where each deferred text the scope holds was written; a deferred entry indexes this list.
+    std::vector<deferred_origin> deferred;
     // The first terminal failure, kept so the walk reports one structured cause; a later
     // failure neither replaces it nor emits a second error-level diagnostic.
     std::optional<expansion_error> terminal;

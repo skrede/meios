@@ -49,7 +49,7 @@ struct tally
 // argument, and a property a macro body defines locally before republishing it.
 std::string carried_through_every_route()
 {
-    return document("<xacro:property name=\"copy\" value=\"${x}\"/>"
+    return document("<xacro:property name=\"copy\" value=\"${x}\" lazy_eval=\"false\"/>"
                     "<xacro:macro name=\"m\" params=\"d:=${x} a\">"
                     "<xacro:property name=\"inner\" value=\"${d}\"/>"
                     "<xacro:property name=\"from_default\" value=\"${d}\" scope=\"global\"/>"
@@ -89,7 +89,7 @@ TEST_CASE("a mapping crosses a property, a macro and a nested scope intact", "[n
     meios::source_stack sources;
     meios::log_sink silent;
 
-    const std::string source                                                 = document("<xacro:property name=\"copy\" value=\"${config}\"/>"
+    const std::string source                                                 = document("<xacro:property name=\"copy\" value=\"${config}\" lazy_eval=\"false\"/>"
                                                                                         "<xacro:macro name=\"m\" params=\"table:=${config}\">"
                                                                                         "<xacro:property name=\"inner\" value=\"${table}\" scope=\"global\"/>"
                                                                                         "</xacro:macro><xacro:m/>");
@@ -107,9 +107,9 @@ TEST_CASE("an exact substitution keeps the evaluated type where mixed text rende
     meios::source_stack sources;
     meios::log_sink silent;
 
-    const std::string source = document("<xacro:property name=\"exact\" value=\"${1+1}\"/>"
-                                        "<xacro:property name=\"mixed\" value=\"n${1+1}\"/>"
-                                        "<xacro:property name=\"real\" value=\"${1/2}\"/>");
+    const std::string source = document("<xacro:property name=\"exact\" value=\"${1+1}\" lazy_eval=\"false\"/>"
+                                        "<xacro:property name=\"mixed\" value=\"n${1+1}\" lazy_eval=\"false\"/>"
+                                        "<xacro:property name=\"real\" value=\"${1/2}\" lazy_eval=\"false\"/>");
     REQUIRE(meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, silent).has_value());
 
     REQUIRE(scope.lookup("exact")->kind() == meios::value_kind::integer);

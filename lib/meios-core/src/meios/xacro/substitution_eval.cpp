@@ -8,6 +8,9 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/evaluator_handle.h"
 
+#include "meios/xacro/detail/scope_read.h"
+#include "meios/xacro/detail/scope_entry.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -46,14 +49,15 @@ static_assert(text_evaluator<core_text_evaluator>);
 namespace
 {
 
-std::optional<std::string> string_property(const eval_scope &names, std::string_view name)
+// Answers a bound string, or a refused read, and nothing for the evaluator to take over.
+name_read string_property(const eval_scope &names, std::string_view name)
 {
     if(!is_identifier(name))
-        return std::nullopt;
-    std::optional<value> bound = names.lookup(name);
-    if(bound && bound->kind() == value_kind::string)
-        return bound->text();
-    return std::nullopt;
+        return name_read{ std::nullopt, eval_failure_kind::none };
+    name_read read = read_name(names, name);
+    if(read.bound && read.bound->kind() != value_kind::string)
+        read.bound.reset();
+    return read;
 }
 
 std::optional<std::string> run_backend(subst_ctx &ctx, const eval_scope &names, std::string_view expr, log_sink &sink)
@@ -81,10 +85,13 @@ std::optional<std::string> run_backend(subst_ctx &ctx, const eval_scope &names, 
 // was said about it must reach the author too.
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression, const eval_scope &names)
 {
-    std::string_view expr             = trim(expression);
-    std::optional<std::string> direct = string_property(names, expr);
-    if(direct)
-        return direct;
+    std::string_view expr  = trim(expression);
+    const name_read direct = string_property(names, expr);
+    ctx.last_kind          = direct.failure;
+    if(direct.failed())
+        return std::nullopt;
+    if(direct.bound)
+        return direct.bound->text();
     latching_sink loud(ctx);
     if(ctx.mode == eval_policy::fail)
         return run_backend(ctx, names, expr, loud);

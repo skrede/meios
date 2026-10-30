@@ -24,6 +24,14 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"macro_parameter_twice_over_outer", "macro_parameter_twice_over_outer", {}, std::nullopt, {}, {}, {}, true},
         agreement_probe{"macro_defined_in_macro_used_after_call", "macro_defined_in_macro_used_after_call", {}, meios::diagnostic_code::xacro_structural_error, "unknown macro name: xacro:inner"},
         agreement_probe{"property_unknown_scope_in_macro", "property_unknown_scope_in_macro", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
+        agreement_probe{"property_evaluated_at_first_read", "property_evaluated_at_first_read", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"property_circular_definition", "property_circular_definition", {}, meios::diagnostic_code::xacro_structural_error, "circular variable definition"},
+        agreement_probe{"property_self_reference", "property_self_reference", {}, meios::diagnostic_code::xacro_structural_error, "circular variable definition"},
+        agreement_probe{"property_never_read_undefined_name", "property_never_read_undefined_name", {}},
+        agreement_probe{"property_never_read_dollar_run", "property_never_read_dollar_run", {}},
+        agreement_probe{"property_default_reads_later_property", "property_default_reads_later_property", {}},
+        agreement_probe{"property_exact_span_open_span_unread", "property_exact_span_open_span_unread", {}},
+        agreement_probe{"property_reads_later_global_in_macro", "property_reads_later_global_in_macro", {}},
 };
 
 }

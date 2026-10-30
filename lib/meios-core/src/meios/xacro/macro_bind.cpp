@@ -3,6 +3,8 @@
 
 #include "meios/xacro/structural.h"
 
+#include "meios/xacro/detail/scope_read.h"
+
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
@@ -38,9 +40,12 @@ bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
 {
     if(def != "^" && def.rfind("^|", 0) != 0)
         return bind_literal(ctx, call, def, document, bound);
-    if(std::optional<value> inherited = ctx.scope.lookup(name))
+    const name_read inherited = read_name(ctx.scope, name);
+    if(inherited.failed())
+        return false;
+    if(inherited.bound)
     {
-        bound = *inherited;
+        bound = *inherited.bound;
         return true;
     }
     if(def.rfind("^|", 0) == 0)
