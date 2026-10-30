@@ -117,7 +117,12 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("property_never_read_dollar_run", "property_never_read_dollar_run", None),
                             ("property_default_reads_later_property", "property_default_reads_later_property", None),
                             ("property_exact_span_open_span_unread", "property_exact_span_open_span_unread", None),
-                            ("property_reads_later_global_in_macro", "property_reads_later_global_in_macro", None))
+                            ("property_reads_later_global_in_macro", "property_reads_later_global_in_macro", None),
+                            ("property_deferred_reads_definer_table", "property_deferred_reads_definer_table", None),
+                            ("property_deferred_in_macro_reads_parameter", "property_deferred_in_macro_reads_parameter", None),
+                            ("property_lazy_eval_not_boolean", "property_lazy_eval_not_boolean", None),
+                            ("macro_default_forwards_deferred_global", "macro_default_forwards_deferred_global", None),
+                            ("property_deferred_yaml_read_where_read", "property_deferred_yaml_read_where_read", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

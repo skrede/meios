@@ -58,11 +58,20 @@ order is what leaves `1` an integer rather than a true, and `yes` and `no` strin
 booleans. So `<xacro:property name="hand" value="false"/>`
 followed by `${'' if hand else prefix}` takes the branch a reader expects; a non-empty string would
 take the other one. The same reading is applied to whatever an expression evaluates to, so
-`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does. A property's value is evaluated
-where the property is written, against the bindings above it, where the reference stores the text and
-evaluates it when the name is read, so a property whose value fails refuses here even if nothing
-reads it, and one naming a property written below it refuses here and renders there;
-[known limitations](known-limitations.md#expression-evaluation) records the measurement.
+`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
+
+**A property's value is evaluated at its first read, in the table that defined it.** As the reference
+does, the text written in `value` or `default` is stored where the property is written, and the first
+expression that reads the name evaluates it with the defining table current; the value, or the
+refusal, is cached in that table. So a property may name one written below it; a property written in
+a macro body reads that call's parameters, while one written outside the macro and read from its body
+does not; and a property nothing reads is never evaluated, so a value that would fail refuses nothing.
+A text whose evaluation reads its own name again, directly or through others, refuses as a circular
+variable definition naming each step. A property written with `lazy_eval="false"`, or with `scope`
+set to `global` or `parent`, is evaluated where it is written, against the bindings above it;
+`lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns, nothing evaluates
+a stored text any more: a property whose text holds an expression and that the expansion never read
+reads absent from the scope.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An
 argument — a declared default, or an override a caller hands the load — binds the characters that
@@ -878,13 +887,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and thirteen agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, fourteen of them the grammar record's, each held to a
+- **The committed probes**: one hundred and twenty-seven agreement probes, the `agreement` rows of the inventory
+  and the documents the enumeration above names, twenty-seven of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and twenty-one rows of it: fifteen
+  manifest `differential_divergences.cases` records, one hundred and twelve rows of it: fourteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's ninety-three document probes, a group listed in
+  and the grammar record's eighty-five document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -936,9 +945,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty-one agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-fifteen are recorded differences on which this side refuses; and forty are recorded differences on
+fifteen are recorded differences on which this side refuses; and thirty-nine are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`

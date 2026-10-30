@@ -1,0 +1,3 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="p" value="${xacro.load_yaml('property_deferred_yaml_read_where_read.yaml')['k']}"/>
+</robot>

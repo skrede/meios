@@ -32,6 +32,11 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_default_reads_later_property", "property_default_reads_later_property", {}},
         agreement_probe{"property_exact_span_open_span_unread", "property_exact_span_open_span_unread", {}},
         agreement_probe{"property_reads_later_global_in_macro", "property_reads_later_global_in_macro", {}},
+        agreement_probe{"property_deferred_reads_definer_table", "property_deferred_reads_definer_table", {}, meios::diagnostic_code::undefined_property, "name 'x' is not defined"},
+        agreement_probe{"property_deferred_in_macro_reads_parameter", "property_deferred_in_macro_reads_parameter", {}},
+        agreement_probe{"property_lazy_eval_not_boolean", "property_lazy_eval_not_boolean", {}, meios::diagnostic_code::xacro_structural_error, "Xacro conditional"},
+        agreement_probe{"macro_default_forwards_deferred_global", "macro_default_forwards_deferred_global", {}},
+        agreement_probe{"property_deferred_yaml_read_where_read", "property_deferred_yaml_read_where_read", {}},
 };
 
 }
