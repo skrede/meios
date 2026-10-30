@@ -9,12 +9,20 @@
 #include "meios/diagnostic/source_location.h"
 
 #include <string>
+#include <vector>
 #include <cstddef>
 #include <optional>
+#include <functional>
 #include <string_view>
 
 namespace meios::detail
 {
+
+struct read_anchor
+{
+    source_location at;
+    std::reference_wrapper<log_sink> sink;
+};
 
 // Every counter and every failure fact one load produces lives here, so the evaluator
 // configuration a caller may share between two loads owns none of it. Each charge runs
@@ -28,6 +36,7 @@ struct eval_session
             , span_depth(0)
             , failure(eval_failure_kind::none)
             , terminal()
+            , anchors()
     {
     }
 
@@ -46,6 +55,10 @@ struct eval_session
     std::size_t span_depth;
     eval_failure_kind failure;
     std::optional<expansion_error> terminal;
+    // The substitutions reading right now, innermost last. A deferred property resolved beneath
+    // one names it as the read site and reports a refusal into its sink, so the reading layer
+    // receives one record whichever depth refused.
+    std::vector<read_anchor> anchors;
 
     bool charge_bytes(std::size_t amount, log_sink &log, const source_location &at);
     bool charge_tokens(std::size_t amount, log_sink &log, const source_location &at);
@@ -59,10 +72,24 @@ struct eval_session
     bool admits_numeric_magnitude(double magnitude, log_sink &log, const source_location &at);
     bool enter_span(std::size_t cost, log_sink &log, const source_location &at);
     void leave_span(std::size_t cost);
+    std::optional<read_anchor> reading() const;
 
 private:
     bool charge(std::size_t &counter, std::size_t ceiling, std::size_t amount, std::string_view axis, log_sink &log, const source_location &at);
     bool admits(std::size_t &counter, std::size_t ceiling, std::size_t depth, std::string_view axis, log_sink &log, const source_location &at);
+};
+
+// Holds the substitution's anchor for as long as it reads, and drops it on every return path.
+class anchor_guard
+{
+public:
+    anchor_guard(eval_session &session, const source_location &at, log_sink &sink);
+    anchor_guard(const anchor_guard &) = delete;
+    anchor_guard &operator=(const anchor_guard &) = delete;
+    ~anchor_guard();
+
+private:
+    eval_session &m_session;
 };
 
 void latch_exhausted(eval_session &session, std::string_view axis, log_sink &log, const source_location &at);

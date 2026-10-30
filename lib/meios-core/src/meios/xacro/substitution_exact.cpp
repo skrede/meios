@@ -126,6 +126,8 @@ expected<std::optional<value>, expansion_error> substitute_exact(
     const source_location &at)
 {
     subst_ctx ctx(log, sources, scope, document, policy, backend, session, at);
+    latching_sink reader(ctx);
+    const anchor_guard anchor(session, at, reader);
     std::optional<value> bound = eval_exact(ctx, expr);
     const bool retained = !bound && ctx.last_kind == eval_failure_kind::unsupported
                        && (policy == eval_policy::warn || policy == eval_policy::skip);

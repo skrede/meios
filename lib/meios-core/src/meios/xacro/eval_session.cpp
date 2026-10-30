@@ -6,6 +6,7 @@
 
 #include <string>
 #include <cstddef>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -122,6 +123,24 @@ bool eval_session::enter_span(std::size_t cost, log_sink &log, const source_loca
 void eval_session::leave_span(std::size_t cost)
 {
     span_depth -= cost;
+}
+
+std::optional<read_anchor> eval_session::reading() const
+{
+    if(anchors.empty())
+        return std::nullopt;
+    return anchors.back();
+}
+
+anchor_guard::anchor_guard(eval_session &session, const source_location &at, log_sink &sink)
+    : m_session(session)
+{
+    m_session.anchors.push_back(read_anchor{ at, sink });
+}
+
+anchor_guard::~anchor_guard()
+{
+    m_session.anchors.pop_back();
 }
 
 }

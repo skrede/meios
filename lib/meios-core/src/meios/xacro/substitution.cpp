@@ -1,5 +1,6 @@
 #include "eval_session.h"
 #include "substitution_lex.h"
+#include "substitution_sinks.h"
 #include "substitution_detail.h"
 
 #include "meios/xacro/substitution.h"
@@ -92,6 +93,9 @@ expected<substitution, expansion_error> substitute_refined(
     std::optional<std::size_t> attr_index)
 {
     subst_ctx ctx(log, sources, scope, document, policy, backend, session, at);
+    // A deferred read reports its refusal into the anchor, which makes it this scan's cause too.
+    latching_sink reader(ctx);
+    const anchor_guard anchor(session, at, reader);
     ctx.host = host;
     ctx.host_text = host_text;
     ctx.attr_index = attr_index;
