@@ -148,3 +148,32 @@ TEST_CASE("a read of an argument other than through the argument command refuses
         }
     }
 }
+
+TEST_CASE("a property's lazy_eval read as a boolean leaves the binding as it was", "[xacro][scope][property]")
+{
+    for(const char *spelling : {"false", "0", "${False}", "true", ""})
+    {
+        DYNAMIC_SECTION(spelling)
+        {
+            meios::log_sink silent;
+            const expansion_result out = expand_body(std::string(R"(<xacro:property name="p" value="v" lazy_eval=")") + spelling + R"("/><link name="${p}"/>)", silent);
+            REQUIRE(out.has_value());
+            REQUIRE(out->document.find(R"(name="v")") != std::string::npos);
+        }
+    }
+}
+
+TEST_CASE("a property's lazy_eval outside the boolean rule refuses as the reference does", "[xacro][scope][property]")
+{
+    for(const char *spelling : {"yes", "1.0"})
+    {
+        DYNAMIC_SECTION(spelling)
+        {
+            meios::log_sink silent;
+            const expansion_result out = expand_body(std::string(R"(<xacro:property name="p" value="v" lazy_eval=")") + spelling + R"("/><link name="${p}"/>)", silent);
+            REQUIRE_FALSE(out.has_value());
+            REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
+            REQUIRE(out.error().message == std::string("Xacro conditional \"") + spelling + "\" evaluated to \"" + spelling + "\", which is not a boolean expression.");
+        }
+    }
+}

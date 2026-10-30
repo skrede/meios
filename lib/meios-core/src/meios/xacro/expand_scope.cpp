@@ -1,4 +1,5 @@
 #include "scope_chain.h"
+#include "boolean_value.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/value.h"
@@ -59,6 +60,36 @@ std::size_t target_table(const expand_ctx &ctx, std::string_view scope_attr)
     return current;
 }
 
+// The reference reads lazy_eval from what its text evaluation returns, so an attribute that is one
+// exact expression is read by its type and any other by its text; an empty one reads true.
+std::optional<bool> lazy_eval(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
+{
+    const std::string authored = strip_authored_markers(in.attribute("lazy_eval").value());
+    if(authored.empty())
+        return true;
+    bool ok = true;
+    const value read = substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "lazy_eval"));
+    if(!ok)
+        return std::nullopt;
+    const std::optional<bool> flag = get_boolean_value(read);
+    if(!flag)
+        fail(ctx, in, diagnostic_code::xacro_structural_error,
+             "Xacro conditional \"" + authored + "\" evaluated to \"" + read.text().value_or("")
+                 + "\", which is not a boolean expression.");
+    return flag;
+}
+
+std::optional<value> authored_value(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
+                                    const std::filesystem::path &document)
+{
+    bool ok = true;
+    const std::string authored = strip_authored_markers(in.attribute(attribute).value());
+    value bound = substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, attribute));
+    if(!ok)
+        return std::nullopt;
+    return bound;
+}
+
 }
 
 // The reference's grab_property treats the written value and the fallback as mutually exclusive
@@ -75,14 +106,13 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     std::string_view name = in.attribute("name").value();
     if(fallback && ctx.scope.contains(name))
         return true;
-    const char *chosen = fallback ? "default" : "value";
-    bool ok = true;
-    const std::string authored = strip_authored_markers(in.attribute(chosen).value());
-    const value bound =
-        substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, chosen));
-    if(!ok)
+    const std::optional<bool> lazy = lazy_eval(ctx, in, document);
+    if(!lazy)
         return false;
-    chain_access::define(ctx.scope, target_table(ctx, in.attribute("scope").value()), name, bound);
+    const std::optional<value> bound = authored_value(ctx, in, fallback ? "default" : "value", document);
+    if(!bound)
+        return false;
+    chain_access::define(ctx.scope, target_table(ctx, in.attribute("scope").value()), name, *bound);
     return true;
 }
 
