@@ -63,7 +63,8 @@ foreach(stem IN ITEMS native_oracle_records native_oracle_pins native_corpus_rec
     meios_add_native_test(${stem} record)
 endforeach()
 # A unit carrier names a test case of a stem, which the pairing gate finds only in the sources that
-# stem's target compiles, listed one stem per line once generation resolves them.
+# stem's target compiles, listed one stem per line once generation resolves them. The list is read
+# back in binary, so it is written with LF on every platform, or each line's last path keeps a '\r'.
 if(TARGET grammar_constructs_test)
     set(unit_stem_sources "")
     foreach(stem IN LISTS meios_module_test_stems)
@@ -71,7 +72,8 @@ if(TARGET grammar_constructs_test)
             string(APPEND unit_stem_sources "${stem}\t$<JOIN:$<TARGET_PROPERTY:${stem}_test,SOURCES>,\t>\n")
         endif()
     endforeach()
-    file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt CONTENT "${unit_stem_sources}")
+    file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt CONTENT "${unit_stem_sources}"
+        NEWLINE_STYLE UNIX)
     target_compile_definitions(grammar_constructs_test PRIVATE
         MEIOS_UNIT_STEM_SOURCES="${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt")
 endif()

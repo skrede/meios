@@ -488,6 +488,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The recorder's venv is built from the running interpreter, and the global-symbol record lists
+      # that interpreter's math names, so it must be the version the committed records were taken with.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
       - name: Install pugixml
         run: |
           git clone https://github.com/zeux/pugixml.git pugixml-src
