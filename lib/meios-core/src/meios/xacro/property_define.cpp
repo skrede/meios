@@ -48,6 +48,14 @@ std::optional<bool> flag_attribute(expand_ctx &ctx, pugi::xml_node in, const cha
     return flag;
 }
 
+// A property with neither a value nor a default is stored by the reference under a block's key,
+// which no built-in shares, so only a written value or default can redefine one.
+void warn_stored(expand_ctx &ctx, pugi::xml_node in, const char *attribute, std::string_view name)
+{
+    if(in.attribute(attribute))
+        warn_global_symbol(ctx, in, name);
+}
+
 bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
                   const std::filesystem::path &document, std::string_view name)
 {
@@ -56,7 +64,13 @@ bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
     const value bound = substitute_attr_value(ctx, in, authored, document, ok, attr_dom_index(in, attribute));
     if(!ok)
         return false;
-    chain_access::define(ctx.scope, property_target(ctx, in.attribute("scope").value()), name, bound);
+    const std::optional<std::size_t> target = property_target(ctx, in.attribute("scope").value());
+    if(!target)
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    "xacro:property \"" + std::string(name)
+                        + "\" is stored in the parent scope, and at document level there is no parent table to store it in");
+    warn_stored(ctx, in, attribute, name);
+    chain_access::define(ctx.scope, *target, name, bound);
     return true;
 }
 
@@ -74,6 +88,7 @@ bool deferrable(pugi::xml_node in)
 void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
                  const std::filesystem::path &document, std::string_view name)
 {
+    warn_stored(ctx, in, attribute, name);
     const std::size_t table = chain_access::cursor(ctx.scope);
     std::string authored = strip_authored_markers(in.attribute(attribute).value());
     value literal = classify(authored);
@@ -101,8 +116,8 @@ bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std:
 }
 
 // The reference's grab_property, in its order: remove is read before the three attributes are
-// held exclusive, a removal acts only on a name some table holds, and a fallback binds only where
-// none does; an argument of the same name does not count. A property carrying neither value nor
+// held exclusive, a removal acts only on a defined name, and a fallback binds only where the name
+// is not defined, a built-in counting as defined and an argument of the same name not counting. A property carrying neither value nor
 // default binds the empty string, a removal of a name no table holds included.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
@@ -115,9 +130,9 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     if(std::ranges::count(given, true) > 1)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     "Property attributes default, value, and remove are mutually exclusive: " + std::string(name));
-    if(*remove && remove_property(ctx, name))
+    if(*remove && remove_property(ctx, in, name))
         return true;
-    if(fallback && ctx.scope.contains(name))
+    if(fallback && property_defined(ctx, name))
         return true;
     return store(ctx, in, fallback ? "default" : "value", document, name);
 }

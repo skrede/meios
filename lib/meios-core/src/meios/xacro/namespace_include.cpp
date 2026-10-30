@@ -50,6 +50,7 @@ include_scope include_table(expand_ctx &ctx, pugi::xml_node in, const std::files
     if(!ok)
         return including;
     const std::size_t macros = ctx.macros.open_namespace(*name);
+    warn_global_symbol(ctx, in, *name);
     return include_scope{ chain_access::open_namespace(ctx.scope, *name), macros };
 }
 

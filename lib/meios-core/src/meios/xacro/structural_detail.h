@@ -69,9 +69,12 @@ private:
 };
 
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
-std::size_t property_target(const expand_ctx &ctx, std::string_view scope_attr);
-// False where no table holds the name, which leaves the property to be defined as written.
-bool remove_property(expand_ctx &ctx, std::string_view name);
+// Absent for a document-level parent scope, which the reference refuses once the value is evaluated.
+std::optional<std::size_t> property_target(const expand_ctx &ctx, std::string_view scope_attr);
+bool property_defined(const expand_ctx &ctx, std::string_view name);
+// False where the name is not defined, which leaves the property to be defined as written.
+bool remove_property(expand_ctx &ctx, pugi::xml_node in, std::string_view name);
+void warn_global_symbol(expand_ctx &ctx, pugi::xml_node in, std::string_view name);
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 
 bool parse_params(std::string_view spec, macro_def &def);

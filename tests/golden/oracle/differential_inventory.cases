@@ -288,3 +288,6 @@ property_removed_then_read	agreement
 property_value_and_remove_together	agreement
 property_removed_in_macro_reaches_global	agreement
 property_removed_in_macro_erases_parameter	agreement
+property_shadows_pi	agreement
+parent_scope_at_document_level	agreement
+property_removes_builtin	agreement

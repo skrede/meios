@@ -116,10 +116,10 @@ value parse_name(parser &p)
         return p.fail_unsupported("the Python constructor '" + std::string(name)
                                   + "()' — use eval-python");
     if(p.at(token_kind::lparen)) return parse_call(p, name);
-    if(name == "pi") return real_result(p, 3.141592653589793);
     const name_read bound = read_name(p.scope, name, p.nesting);
     if(bound.failed()) return p.fail_reported(bound.failure);
     if(bound.space) return refuse_namespace_read(p, name);
+    if(!bound.bound && name == "pi") return real_result(p, 3.141592653589793);
     if(!bound.bound)
         return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
     return *bound.bound;

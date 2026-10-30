@@ -64,8 +64,10 @@ inline constexpr pairing site_pairings[] = {
         {"raise.substitution_args_not_supported", carrier::manifest, "find_without_package_index", standing::refuses_listed},
 
         {"warning.unknown_attribute_s", carrier::unit, "xacro_property.an attribute outside a property's attribute list raises no warning here", standing::agrees},
-        {"warning.redefining_global_symbol", carrier::manifest, "property_shadows_pi", standing::open},
-        {"warning.cannot_remove_global_symbol", carrier::manifest, "property_removes_builtin", standing::open},
+        {"warning.redefining_global_symbol", carrier::agreement, "property_shadows_pi", standing::agrees},
+        {"warning.redefining_global_symbol", carrier::unit, "xacro_property.a property named pi shadows the built-in and warns that it redefines a global symbol", standing::agrees},
+        {"warning.cannot_remove_global_symbol", carrier::agreement, "property_removes_builtin", standing::agrees},
+        {"warning.cannot_remove_global_symbol", carrier::unit, "xacro_property.removing a built-in keeps it and warns that a global symbol cannot be removed", standing::agrees},
         {"warning.include_tag_s_filename_spec", carrier::manifest, "include_glob_matching_nothing", standing::refuses_listed},
         {"warning.inconsistent_namespace_redefinitions_for", carrier::unit, "xacro_include_read.an include redeclaring a namespace prefix raises no warning here", standing::agrees},
         {"warning.child_elements_of_a_xacro_include_tag_are_ignored", carrier::unit, "xacro_include_read.an include's child elements are ignored with no warning here",

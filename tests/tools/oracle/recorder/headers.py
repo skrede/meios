@@ -89,4 +89,12 @@ HEADERS = {
         "same id takes its function's name and a third its line. A quote escapes a",
         "backslash, a tab and a newline as \\\\, \\t and \\n. Rows are ordered by module, line and id.",
     ],
+    "global_symbols.cases": [
+        "name. One row per key of the table of built-in names the pinned xacro reads beneath",
+        "every property, sorted, read off the table its own create_global_symbols builds rather",
+        "than listed: a property storing one of these names is warned about, removing one keeps",
+        "it, and a fallback for one binds nothing. Most rows are the public names of the",
+        "interpreter's mathematics module, which the table exposes bare, so the record belongs to",
+        "the interpreter that ran the recorder as much as to the pinned xacro.",
+    ],
 }

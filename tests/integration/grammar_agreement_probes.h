@@ -73,6 +73,14 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
                         {},
                         meios::diagnostic_code::undefined_property,
                         "name 'b' is not defined"},
+
+        agreement_probe{"property_shadows_pi", "property_shadows_pi", {}},
+        agreement_probe{"parent_scope_at_document_level",
+                        "parent_scope_at_document_level",
+                        {},
+                        meios::diagnostic_code::xacro_structural_error,
+                        "'dict' object has no attribute '_setitem'"},
+        agreement_probe{"property_removes_builtin", "property_removes_builtin", {}},
 };
 
 }

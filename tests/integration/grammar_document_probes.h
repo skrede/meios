@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 76> grammar_document_probes{
+inline const std::array<document_probe, 73> grammar_document_probes{
         document_probe{false, "include_optional_missing_file"},
         document_probe{false, "macro_called_by_name_attribute"},
         document_probe{false, "element_named_by_attribute"},
@@ -48,7 +48,6 @@ inline const std::array<document_probe, 76> grammar_document_probes{
         document_probe{false, "property_unicode_digit"},
         document_probe{false, "property_infinity_spelling"},
         document_probe{false, "macro_argument_literal_reading"},
-        document_probe{false, "property_shadows_pi"},
         document_probe{false, "conditional_real_one"},
         document_probe{false, "conditional_upper_true"},
         document_probe{false, "conditional_empty"},
@@ -70,7 +69,6 @@ inline const std::array<document_probe, 76> grammar_document_probes{
         document_probe{false, "included_root_namespace_lifted"},
         document_probe{false, "macro_namespace_lifted"},
         document_probe{false, "cdata_kept_verbatim"},
-        document_probe{false, "parent_scope_at_document_level"},
         document_probe{false, "attribute_under_conditional"},
         document_probe{false, "attribute_under_macro_body"},
         document_probe{false, "attribute_under_included_root"},
@@ -84,7 +82,6 @@ inline const std::array<document_probe, 76> grammar_document_probes{
         document_probe{false, "processing_instruction_kept", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "include_glob_matching_nothing"},
         document_probe{false, "include_namespace_not_text"},
-        document_probe{false, "property_removes_builtin"},
         document_probe{false, "comment_evaluation_switched_off", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "find_without_package_index"},
         document_probe{false, "property_chain_deeper_than_depth_ceiling"},

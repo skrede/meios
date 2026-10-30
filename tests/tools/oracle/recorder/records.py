@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 from recorder.headers import HEADERS
-from recorder.grammar import grammar_rows, pinned_sources
+from recorder.grammar import global_symbol_rows, grammar_rows, pinned_sources
 from recorder.yaml_rows import collision_rows, rendering_rows, scalar_rows, unit_tag_rows
 from recorder.facts import robot_facts
 from recorder.ledger import LEDGER, ledger_rows
@@ -36,6 +36,7 @@ def records(tmp, share, versions):
         RECORD: (HEADERS[RECORD], generated_rows(tmp)),
         "grammar_constructs.cases": (HEADERS["grammar_constructs.cases"],
                                      grammar_rows(pinned_sources())),
+        "global_symbols.cases": (HEADERS["global_symbols.cases"], global_symbol_rows()),
         LEDGER: (HEADERS[LEDGER], ledger_rows(measured)),
         **{one.record: (facts, measured[key_of(one)]) for one in CORPUS_DOCUMENTS},
     }

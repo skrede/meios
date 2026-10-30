@@ -144,3 +144,9 @@ def pinned_sources():
     imported_from_pin("xacro")
     package = Path(importlib.util.find_spec("xacro").origin).parent
     return {name: (package / name).read_text(encoding="utf-8") for name in MODULES}
+
+
+def global_symbol_rows():
+    imported_from_pin("xacro")
+    import xacro
+    return [(name,) for name in sorted(xacro.create_global_symbols())]

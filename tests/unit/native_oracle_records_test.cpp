@@ -48,6 +48,10 @@ constexpr std::string_view measured[] = {"PINS",
 // record is counted without the refusal an empty measurement gets.
 constexpr std::string_view reviewed = "generated_divergences.cases";
 
+// A list of names read off upstream rather than a measurement of something, so its rows carry a
+// subject alone.
+constexpr std::string_view listing = "global_symbols.cases";
+
 std::string value_of(std::string_view file, std::string_view key)
 {
     const std::optional<oracle::row> found = oracle::lookup(oracle::load_rows(file), key);
@@ -82,6 +86,7 @@ TEST_CASE("the upstream measurements are present, non-empty, and complete", "[or
     std::ifstream in(std::filesystem::path{MEIOS_GOLDEN_DIR} / "oracle" / reviewed);
     REQUIRE(in);
     total += oracle::rows_of(in).size();
+    total += oracle::load_rows(listing).size();
     REQUIRE(total == static_cast<std::size_t>(MEIOS_ORACLE_RECORD_ROWS));
 }
 
