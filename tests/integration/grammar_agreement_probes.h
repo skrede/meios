@@ -87,6 +87,9 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_default_for_builtin", "property_default_for_builtin", {}},
         agreement_probe{"block_evaluated_where_inserted", "block_evaluated_where_inserted", {}},
         agreement_probe{"block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", {}},
+        agreement_probe{"property_block_body_inserted", "property_block_body_inserted", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"block_property_before_block_parameter", "block_property_before_block_parameter", {}},
+        agreement_probe{"property_empty_named_pi", "property_empty_named_pi", {}},
 };
 
 }

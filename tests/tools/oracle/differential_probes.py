@@ -40,7 +40,6 @@ DOCUMENT_PROBES = ("non_text_mapping_key",
                    "argument_above_declaration",
                    "include_parent_directory",
                    "include_absolute_path",
-                   "include_sole_block",
                    "dirname_command",
                    "include_outside_link",
                    "include_package_filename",
@@ -196,4 +195,5 @@ AGREEMENT_PROBES = (("property_default_over_argument", "property_default_over_ar
                     ("include_find_tab_after_package", "include_find_tab_after_package", None),
                     ("find_command_tab_before_package", "find_command_tab_before_package", None),
                     ("arg_command_tab_before_name", "arg_command_tab_before_name", None),
-                    ("property_forward_reference", "property_forward_reference", None)) + GRAMMAR_AGREEMENT_PROBES
+                    ("property_forward_reference", "property_forward_reference", None),
+                    ("include_sole_block", "include_sole_block", None)) + GRAMMAR_AGREEMENT_PROBES

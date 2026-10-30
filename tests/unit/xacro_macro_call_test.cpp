@@ -183,3 +183,17 @@ TEST_CASE("a default sees a property the call's own child defines", "[xacro][mac
     REQUIRE(out.has_value());
     REQUIRE(out->document.find("name=\"from_child\"") != std::string::npos);
 }
+
+TEST_CASE("a block parameter left without an element refuses before a default is read", "[xacro][macro][call]")
+{
+    meios::log_sink silent;
+    require_refusal(expand_doc(R"(<xacro:macro name="m" params="a:=${nope} *b"/><xacro:m/>)", silent), structural,
+                    "Not enough blocks \"*b\"");
+}
+
+TEST_CASE("a call whose only child is an include holds no block", "[xacro][macro][call]")
+{
+    meios::log_sink silent;
+    const std::string call = R"(<xacro:macro name="w" params="*c"/><xacro:w><xacro:include filename="$(find pkg)/m.xacro"/></xacro:w>)";
+    require_refusal(expand_calling_include(call, silent, child_property), structural, "Not enough blocks");
+}

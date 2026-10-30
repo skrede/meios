@@ -12,6 +12,7 @@
 #include <utility>
 #include <optional>
 #include <filesystem>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -19,12 +20,29 @@ namespace meios::detail
 namespace
 {
 
+// The reference evaluates a cloned block's own attributes before its children even where only the
+// children are inserted, so a wrapper attribute that no longer evaluates refuses the insertion.
+bool evaluate_wrapper(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
+{
+    std::size_t attr_index = 0;
+    for(pugi::xml_attribute attr : in.attributes())
+    {
+        bool ok = true;
+        if(std::string_view(attr.name()) != "xmlns:xacro")
+            substitute_attr(ctx, in, attr.value(), document, ok, attr_index);
+        if(!ok)
+            return false;
+        ++attr_index;
+    }
+    return true;
+}
+
 bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
                 const std::filesystem::path &document)
 {
     if(!block.content_only)
         return emit_element(ctx, block.node, out, document);
-    return process_children(ctx, block.node, out, document);
+    return evaluate_wrapper(ctx, block.node, document) && process_children(ctx, block.node, out, document);
 }
 
 }

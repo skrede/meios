@@ -131,3 +131,67 @@ TEST_CASE("an insertion naming no block bound anywhere on the chain refuses", "[
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
     REQUIRE(out.error().message == "Undefined block \"c\"");
 }
+
+TEST_CASE("a property holding element content is a block that insert_block inserts", "[xacro][block][property]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc(R"(<xacro:property name="blk"><visual/></xacro:property><link name="l"><xacro:insert_block name="blk"/></link>)",
+                   silent);
+    REQUIRE(out.has_value());
+    REQUIRE(flat(out) == R"(<robot name="p"><link name="l"><visual></visual></link></robot>)");
+}
+
+TEST_CASE("a document-level block property wins over a block parameter of the same name", "[xacro][block][property]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc(R"(<xacro:property name="b"><link name="pb"/></xacro:property>)" + std::string(inserts_once)
+                       + R"(<xacro:m><link name="cb"/></xacro:m>)",
+                   silent);
+    REQUIRE(out.has_value());
+    REQUIRE(flat(out) == R"(<robot name="p"><link name="pb"></link></robot>)");
+}
+
+TEST_CASE("a property writing neither attribute inserts nothing", "[xacro][block][property]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc(R"(<xacro:property name="p"/><link name="l"><xacro:insert_block name="p"/></link>)", silent);
+    REQUIRE(out.has_value());
+    REQUIRE(flat(out) == R"(<robot name="p"><link name="l"></link></robot>)");
+}
+
+TEST_CASE("removing a name no table holds stores the property's content as a block", "[xacro][block][property]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc(R"(<xacro:property name="r" remove="true"><link name="rb"/></xacro:property><xacro:insert_block name="r"/>)",
+                   silent);
+    REQUIRE(out.has_value());
+    REQUIRE(flat(out) == R"(<robot name="p"><link name="rb"></link></robot>)");
+}
+
+TEST_CASE("a refusal inside a block property is located on the property's own line", "[xacro][block][property]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc("\n<xacro:property name=\"b\"><link name=\"${nope}\"/></xacro:property>\n\n<xacro:insert_block name=\"b\"/>\n",
+                   silent);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+    REQUIRE(out.error().loc.file == "inline.xacro");
+    REQUIRE(out.error().loc.line == 2);
+}
+
+TEST_CASE("a content-only block's wrapper attributes are evaluated again where it is inserted", "[xacro][block]")
+{
+    meios::log_sink silent;
+    const expansion_result out =
+        expand_doc("\n<xacro:macro name=\"m\" params=\"**b\">\n<xacro:insert_block name=\"b\"/>\n</xacro:macro>\n"
+                   "<xacro:m><w a=\"$${nope}\"><link name=\"x\"/></w></xacro:m>\n",
+                   silent);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
+    REQUIRE(out.error().loc.line == 3);
+}

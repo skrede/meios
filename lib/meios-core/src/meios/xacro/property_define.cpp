@@ -1,4 +1,5 @@
 #include "scope_chain.h"
+#include "block_entries.h"
 #include "boolean_value.h"
 #include "deferred_read.h"
 #include "structural_detail.h"
@@ -48,12 +49,11 @@ std::optional<bool> flag_attribute(expand_ctx &ctx, pugi::xml_node in, const cha
     return flag;
 }
 
-// A property with neither a value nor a default is stored by the reference under a block's key,
-// which no built-in shares, so only a written value or default can redefine one.
-void warn_stored(expand_ctx &ctx, pugi::xml_node in, const char *attribute, std::string_view name)
+bool refuse_parent(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
 {
-    if(in.attribute(attribute))
-        warn_global_symbol(ctx, in, name);
+    return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                "xacro:property \"" + std::string(name)
+                    + "\" is stored in the parent scope, and at document level there is no parent table to store it in");
 }
 
 bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
@@ -66,11 +66,23 @@ bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
         return false;
     const std::optional<std::size_t> target = property_target(ctx, in.attribute("scope").value());
     if(!target)
-        return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "xacro:property \"" + std::string(name)
-                        + "\" is stored in the parent scope, and at document level there is no parent table to store it in");
-    warn_stored(ctx, in, attribute, name);
+        return refuse_parent(ctx, in, name);
+    warn_global_symbol(ctx, in, name);
     chain_access::define(ctx.scope, *target, name, bound);
+    return true;
+}
+
+// The reference stores the property element itself under the block key `**name`, which no read and
+// no built-in shares, and inserts its children wherever insert_block names it.
+bool define_block_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document,
+                           std::string_view name)
+{
+    const std::optional<std::size_t> target = property_target(ctx, in.attribute("scope").value());
+    if(!target)
+        return refuse_parent(ctx, in, name);
+    const emit_origin origin = ctx.origins.empty() ? emit_origin{ document, {} } : ctx.origins.back();
+    ctx.blocks.push_back(parked_block{ in, true, origin });
+    chain_access::define_block(ctx.scope, *target, "**" + std::string(name), ctx.blocks.size() - 1);
     return true;
 }
 
@@ -88,7 +100,7 @@ bool deferrable(pugi::xml_node in)
 void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
                  const std::filesystem::path &document, std::string_view name)
 {
-    warn_stored(ctx, in, attribute, name);
+    warn_global_symbol(ctx, in, name);
     const std::size_t table = chain_access::cursor(ctx.scope);
     std::string authored = strip_authored_markers(in.attribute(attribute).value());
     value literal = classify(authored);
@@ -107,6 +119,8 @@ bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std:
     const std::optional<bool> lazy = flag_attribute(ctx, in, "lazy_eval", true, document);
     if(!lazy)
         return false;
+    if(!in.attribute(attribute))
+        return define_block_property(ctx, in, document, name);
     if(!*lazy || !deferrable(in))
         return define_eager(ctx, in, attribute, document, name);
     define_lazy(ctx, in, attribute, document, name);
@@ -117,8 +131,8 @@ bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std:
 
 // The reference's grab_property, in its order: remove is read before the three attributes are
 // held exclusive, a removal acts only on a defined name, and a fallback binds only where the name
-// is not defined, a built-in counting as defined and an argument of the same name not counting. A property carrying neither value nor
-// default binds the empty string, a removal of a name no table holds included.
+// is not defined, a built-in counting as defined and an argument of the same name not counting. A
+// property carrying neither value nor default is a block, a removal of a name no table holds included.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     const std::optional<bool> remove = flag_attribute(ctx, in, "remove", false, document);

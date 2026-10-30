@@ -12,7 +12,6 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "macro_called_by_name_attribute",
                            "element_named_by_attribute",
                            "attribute_set_on_parent",
-                           "property_block_body_inserted",
                            "property_name_from_expression",
                            "property_name_not_identifier",
                            "property_name_double_underscore",
@@ -56,7 +55,6 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "macro_name_with_dot",
                            "macro_name_with_xacro_prefix",
                            "comment_kept_in_output",
-                           "block_property_before_block_parameter",
                            "xacro_attribute_removed",
                            "xacro_attribute_never_evaluated",
                            "included_root_namespace_lifted",
@@ -79,8 +77,7 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "find_without_package_index",
                            "property_chain_deeper_than_depth_ceiling",
                            "include_namespace_read_as_value",
-                           "include_namespace_reads_mathematics_name",
-                           "property_empty_named_pi")
+                           "include_namespace_reads_mathematics_name")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -135,7 +132,10 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("property_remove_as_expression", "property_remove_as_expression", None),
                             ("property_default_for_builtin", "property_default_for_builtin", None),
                             ("block_evaluated_where_inserted", "block_evaluated_where_inserted", None),
-                            ("block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", None))
+                            ("block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", None),
+                            ("property_block_body_inserted", "property_block_body_inserted", None),
+                            ("block_property_before_block_parameter", "block_property_before_block_parameter", None),
+                            ("property_empty_named_pi", "property_empty_named_pi", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

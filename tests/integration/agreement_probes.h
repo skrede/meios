@@ -186,6 +186,7 @@ inline const std::vector<agreement_probe> agreement_probes{
                         "find_command_tab_before_package.d"},
         agreement_probe{"arg_command_tab_before_name", "arg_command_tab_before_name", {}, meios::diagnostic_code::unknown_substitution, "Unknown substitution command"},
         agreement_probe{"property_forward_reference", "property_forward_reference", {}},
+        agreement_probe{"include_sole_block", "include_sole_block", {}, meios::diagnostic_code::xacro_structural_error, "Not enough blocks"},
 };
 
 }

@@ -20,12 +20,12 @@ namespace differential
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline const std::array<document_probe, 14> document_probes{
+inline const std::array<document_probe, 13> document_probes{
         document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
         document_probe{false, "argument_helper_call"},     document_probe{false, "argument_above_declaration"},
         document_probe{false, "include_parent_directory"}, document_probe{false, "include_absolute_path", true},
-        document_probe{false, "include_sole_block"},       document_probe{false, "dirname_command"},
-        document_probe{false, "include_outside_link"},     document_probe{false, "include_package_filename", false, true},
+        document_probe{false, "dirname_command"},          document_probe{false, "include_outside_link"},
+        document_probe{false, "include_package_filename", false, true},
         document_probe{false, "find_relative_root", false, false, "find_relative_root.d"},
         document_probe{false, "find_dotted_root", false, false, "./find_dotted_root.d", true},
         document_probe{false, "include_find_climbs_out_of_package", false, false, "include_find_climbs_out_of_package.d", true},

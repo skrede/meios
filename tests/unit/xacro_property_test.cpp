@@ -85,18 +85,13 @@ TEST_CASE("a property whose default attribute is empty binds the empty string",
     REQUIRE(out->document.find(R"(name="xy")") != std::string::npos);
 }
 
-// Measured rather than chosen: upstream turns a property carrying neither attribute into a
-// block-valued name no expression can read, and this side binds the empty string. Nothing in
-// this file changes that; the case records what the binding is so a later change to it is
-// visible rather than silent.
-TEST_CASE("a property writing neither attribute still binds the empty string",
-          "[xacro][scope][property]")
+TEST_CASE("a property writing neither attribute is a block that no read reaches", "[xacro][scope][property]")
 {
     meios::log_sink silent;
     const expansion_result out =
         expand_body(R"(<xacro:property name="p"/><link name="x${p}y"/>)", silent);
-    REQUIRE(out.has_value());
-    REQUIRE(out->document.find(R"(name="xy")") != std::string::npos);
+    REQUIRE_FALSE(out.has_value());
+    REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
 }
 
 TEST_CASE("the minimized fallback-attribute document renders the argument's text",

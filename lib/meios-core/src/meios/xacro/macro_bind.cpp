@@ -60,6 +60,20 @@ std::string call_refusal(std::string_view what, std::string_view name, const mac
     return std::string(what) + " \"" + std::string(name) + "\" when instantiating macro '" + def.body.attribute("name").value() + '\'';
 }
 
+std::vector<pugi::xml_node> element_children(pugi::xml_node root)
+{
+    std::vector<pugi::xml_node> kids;
+    for(pugi::xml_node child : root.children())
+        if(child.type() == pugi::node_element)
+            kids.push_back(child);
+    return kids;
+}
+
+std::string block_spelling(const macro_def &def, std::size_t i)
+{
+    return (def.block_children[i] ? "**" : "*") + def.block_params[i];
+}
+
 // Every attribute is checked and evaluated in document order, as the reference does, so the first
 // refusal reported is the first one written. An attribute spelled like a block parameter, or a
 // namespace declaration, names no parameter the reference accepts either.
@@ -82,7 +96,8 @@ bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
 // The reference evaluates the whole call node in the caller's own macros and symbols before it
 // captures a single block, so a block argument is evaluated whether or not the receiving macro
 // ever inserts it, and an insert the caller wrote resolves against the caller's blocks. The
-// callee's table binds what that walk produced once binding succeeded.
+// callee's table binds what that walk produced once binding succeeded. A block parameter left
+// without an element refuses here, before any default is read.
 bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                  const std::filesystem::path &document, std::vector<bound_block> &blocks)
 {
@@ -90,17 +105,17 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     pugi::xml_node root = ctx.park().append_child("blocks");
     if(!process_children(ctx, call, root, document))
         return false;
-    std::vector<pugi::xml_node> kids;
-    for(pugi::xml_node child : root.children())
-        if(child.type() == pugi::node_element)
-            kids.push_back(child);
+    const std::vector<pugi::xml_node> kids = element_children(root);
     if(kids.size() > def.block_params.size())
         return fail(ctx, call, diagnostic_code::xacro_structural_error,
                     call_refusal("Unused block", kids[def.block_params.size()].name(), def));
+    if(kids.size() < def.block_params.size())
+        return fail(ctx, call, diagnostic_code::xacro_structural_error,
+                    call_refusal("Not enough blocks", block_spelling(def, kids.size()), def));
     for(std::size_t i = 0; i < kids.size(); ++i)
     {
         ctx.blocks.push_back(parked_block{ kids[i], def.block_children[i], origin });
-        blocks.push_back(bound_block{ (def.block_children[i] ? "**" : "*") + def.block_params[i], ctx.blocks.size() - 1 });
+        blocks.push_back(bound_block{ block_spelling(def, i), ctx.blocks.size() - 1 });
     }
     return true;
 }

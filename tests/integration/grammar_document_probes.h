@@ -11,12 +11,11 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 73> grammar_document_probes{
+inline const std::array<document_probe, 70> grammar_document_probes{
         document_probe{false, "include_optional_missing_file"},
         document_probe{false, "macro_called_by_name_attribute"},
         document_probe{false, "element_named_by_attribute"},
         document_probe{false, "attribute_set_on_parent"},
-        document_probe{false, "property_block_body_inserted"},
         document_probe{false, "property_name_from_expression"},
         document_probe{false, "property_name_not_identifier"},
         document_probe{false, "property_name_double_underscore"},
@@ -61,7 +60,6 @@ inline const std::array<document_probe, 73> grammar_document_probes{
         document_probe{false, "macro_name_with_dot"},
         document_probe{false, "macro_name_with_xacro_prefix"},
         document_probe{false, "comment_kept_in_output", false, false, {}, false, {}, {}, false, true},
-        document_probe{false, "block_property_before_block_parameter"},
         document_probe{false, "xacro_attribute_removed"},
         document_probe{false, "xacro_attribute_never_evaluated"},
         document_probe{false, "included_root_namespace_lifted"},
@@ -85,7 +83,6 @@ inline const std::array<document_probe, 73> grammar_document_probes{
         document_probe{false, "property_chain_deeper_than_depth_ceiling"},
         document_probe{false, "include_namespace_read_as_value"},
         document_probe{false, "include_namespace_reads_mathematics_name"},
-        document_probe{false, "property_empty_named_pi"},
 };
 
 #endif
