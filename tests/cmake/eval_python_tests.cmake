@@ -151,6 +151,22 @@ if(TARGET meios_eval-python)
         catch_discover_tests(eval_python_argument_test TEST_PREFIX "eval_python_argument.")
     endif()
 
+    set(eval_python_scope_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_scope_test.cpp)
+    if(EXISTS ${eval_python_scope_src})
+        add_executable(eval_python_scope_test ${eval_python_scope_src}
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_scope_chain_test.cpp)
+        target_link_libraries(eval_python_scope_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python pugixml::pugixml
+                Catch2::Catch2WithMain)
+        # The chain cases read the cost a deferred level is charged, a core-private constant, so the
+        # admitted length is counted from the same figure the core evaluator is bounded by.
+        target_include_directories(eval_python_scope_test PRIVATE
+            ${meios_SOURCE_DIR}/lib/meios-core/src)
+        meios_enable_coverage(eval_python_scope_test)
+        meios_warnings(eval_python_scope_test)
+        catch_discover_tests(eval_python_scope_test TEST_PREFIX "eval_python_scope.")
+    endif()
+
     set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
     if(EXISTS ${urdf_yaml_flatten_src})
         add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})

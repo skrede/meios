@@ -1282,6 +1282,27 @@ anything outside it with a `file:line` diagnostic naming one of four rules — `
 `meios::unrestricted_python_evaluator` applies none of those rules and evaluates whatever CPython
 evaluates, `${__import__('os').getcwd()}` included.
 
+**Under both classes a name is read when Python evaluates it**, at any depth of the expression: the
+expression is evaluated over a mapping that reads the scope as its globals, as the reference evaluates
+over its table of properties, so a name inside a lambda, a generator expression or a comprehension is
+read the way one at the top level is. A property is evaluated only if the expression reads it:
+`${'x' if c else b}` with `c` true never evaluates `b`, whatever `b`'s own text would do. A name is
+looked up in the scope first, then among the mathematics names and the two spellings of the
+resource helper, then among the builtins, so a property shadows a mathematics name of its spelling:
+a property `pi` written `3` reads `3`, as it does under the built-in evaluator. A property whose own
+text refuses is never replaced by the mathematics name or builtin of its spelling; the read refuses,
+carrying the one record that text's evaluation logged. An include namespace is read through a dot,
+`${n.w}`, falling through to the names of the file that wrote the include and stopping short of the
+mathematics names, as under the built-in evaluator, and a member no table holds raises
+`name 'w' is not defined`. A property's text evaluated at its first read under this backend is
+charged against the expression-depth ceiling as the built-in evaluator charges it, and a circular
+definition refuses the same way. The backend reports no nesting of its own, so each level is charged
+seventeen alone: a chain of fifteen properties each reading the next inside arithmetic renders under
+it, where nine do under the built-in evaluator, and one longer refuses with `expansion_budget_exceeded`.
+Measured on a 512 KiB thread with the ceiling lifted, the interpreter's own parser refuses such a chain
+of forty-nine properties, before the thread runs out. The `eval_python_scope` cases carry all of this,
+and run each namespace document under the built-in evaluator as well.
+
 The unrestricted class is reachable only from C++. The command-line tool never constructs it and
 carries no flag for it, so arbitrary code execution is never one flag away from an ad-hoc invocation
 on a file somebody sent you; choosing it is a compile-time act, an include line and a construction

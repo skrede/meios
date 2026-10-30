@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_EVAL_PYTHON_EVAL_DETAIL_H
 
 #include "interpreter.h"
+#include "python_eval_proxy.h"
 #include "python_eval_convert.h"
 #include "python_eval_namespace.h"
 
@@ -23,8 +24,7 @@ namespace meios::detail
 
 inline std::string evaluate_in(const pybind11::dict &priv, std::string_view expr, yaml_context &ctx, const pybind11::object &builtins)
 {
-    pybind11::dict globals = user_globals(priv, ctx, builtins);
-    seed_scope(priv, globals, expr, ctx.scope);
+    const pybind11::object globals = scope_globals(priv, ctx, builtins);
     return format_result(priv, ctx.log, pybind11::eval(std::string(expr), globals));
 }
 

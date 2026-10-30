@@ -16,6 +16,10 @@ open('/etc/passwd').read()	refuse	non-allowlisted-builtin
 ().__class__.__bases__	refuse	dunder-identifier	
 ().__class__.__bases__[0].__subclasses__()	refuse	dunder-identifier	
 load_yaml.__globals__	refuse	dunder-identifier	Reaches a live module without naming any builtin, so the allowlist alone would not close it.
+n.__class__	refuse	dunder-identifier	An include namespace is read through an object whose attribute hook calls back into the scope, so its class, its hook and the hook's defining globals are reached only through a dunder name.
+n.__getattr__.__globals__	refuse	dunder-identifier	
+n.__dict__	refuse	dunder-identifier	
+(lambda: 0).__globals__	refuse	dunder-identifier	A lambda's globals are the mapping every name of the expression is read through, which holds the scope reader.
 # Traversal written inside a string constant.
 '{0.__globals__}'.format(load_yaml)	refuse	format-traversal	The dunder here sits inside a string constant the walk deliberately never inspects, so the identifier rule cannot see it and the formatting primitive itself is refused instead.
 '{0.__globals__[builtins]}'.format(load_yaml)	refuse	format-traversal	

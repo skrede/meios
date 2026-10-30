@@ -141,13 +141,13 @@ TEST_CASE("a circular definition refuses as circular rather than on the depth ce
     CHECK(cycle.errors == 1);
 }
 
-// Measured by driving each chain until the process died on a 512 KiB thread: 175 reads of `${p}`,
-// 80 of `${p + 1}`, and two read from inside a hundred parentheses. The longest chain the ceiling
+// Measured by driving each chain until the process died on a 512 KiB thread: 147 reads of `${p}`,
+// 73 of `${p + 1}`, and two read from inside a hundred parentheses. The longest chain the ceiling
 // admits is counted rather than derived from the charge, so a change to either side shows here.
 TEST_CASE("a deferred chain keeps the headroom every other nested shape has", "[native][depth]")
 {
-    constexpr std::size_t bare_reads_exhausting = 175;
-    constexpr std::size_t arithmetic_reads_exhausting = 80;
+    constexpr std::size_t bare_reads_exhausting = 147;
+    constexpr std::size_t arithmetic_reads_exhausting = 73;
     constexpr std::size_t parenthesized_reads_exhausting = 2;
     const std::string open(100, '(');
 

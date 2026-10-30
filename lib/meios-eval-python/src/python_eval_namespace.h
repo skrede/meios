@@ -65,7 +65,7 @@ inline pybind11::set bound_names(std::string_view expr, const eval_scope &scope)
     pybind11::set bound;
     for(const std::string &name : identifiers(expr))
     {
-        if(scope.lookup(name))
+        if(scope.contains(name))
             bound.add(pybind11::str(name));
     }
     return bound;
@@ -124,29 +124,6 @@ inline pybind11::object curated_builtins(const pybind11::dict &priv)
 inline pybind11::object real_builtins()
 {
     return pybind11::module_::import("builtins");
-}
-
-// pybind11 injects the real builtins module into any globals dict that lacks the key, on every
-// eval and exec alike, so the chosen builtins have to be the dict's first entry or they are inert.
-inline pybind11::dict user_globals(const pybind11::dict &priv, yaml_context &ctx, const pybind11::object &builtins)
-{
-    pybind11::dict globals;
-    globals["__builtins__"] = builtins;
-    globals.attr("update")(priv["math_names"]());
-    pybind11::object helper = yaml_helper(priv, ctx);
-    globals["load_yaml"]    = helper;
-    globals["xacro"]        = pybind11::module_::import("types").attr("SimpleNamespace")(pybind11::arg("load_yaml") = helper);
-    return globals;
-}
-
-inline void seed_scope(const pybind11::dict &priv, pybind11::dict &globals, std::string_view expr, const eval_scope &scope)
-{
-    for(const std::string &name : identifiers(expr))
-    {
-        std::optional<value> bound = scope.lookup(name);
-        if(bound)
-            globals[pybind11::str(name)] = to_py_object(priv, *bound);
-    }
 }
 
 }
