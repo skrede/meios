@@ -580,11 +580,11 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**One hundred and two ways this evaluator differs from canonical xacro are measured, and further ones no row
+**Ninety-six ways this evaluator differs from canonical xacro are measured, and further ones no row
 can carry are written down beside them.** That is not a claim that the list is complete. The reviewed
-manifest carries one hundred and two rows and the differential drives them on every push in both directions,
+manifest carries ninety-six rows and the differential drives them on every push in both directions,
 so a divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
-Seventy-five of them are the grammar record's, set out after this list. Of the rest, fifteen are a meaning
+Seventy of them are the grammar record's, set out after this list. Of the rest, fifteen are a meaning
 upstream has and this grammar refuses — the first five
 entries below, the argument helper the seventh names, and the mapping key an auxiliary document did not
 write as text, which has an entry of its own further down, and an include climbing above its document's
@@ -618,16 +618,16 @@ filename, the `include_glob_filename` row, whose entries are under sources and r
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Eight differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+Seven differ in the other direction, rendering here where upstream refuses: a closing brace inside a
 string literal, one expression span written inside another, the absolute value, an argument declared
-without a default, a `$(arg n)` written above its own declaration, a block parameter a call leaves
-without an element, `$(dirname)`, and a `package://` include filename. The first two follow from a
+without a default, a `$(arg n)` written above its own declaration, `$(dirname)`, and a `package://`
+include filename. The first two follow from a
 span scanner that folds over quotes and counts depth where the reference's pattern does neither, so
 the reference truncates the span and never hands its evaluator a whole expression to refuse. The third
 is a difference in what the evaluator itself carries: the reference's expression globals hold the
 mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
 raises an undefined name there, while every other name on this grammar's mathematics list renders on
-both sides. The next four have entries of their own further down, and the last has one under sources
+both sides. The next three have entries of their own further down, and the last has one under sources
 and resolution. And four render on both sides with different answers. `and` and `or` yield a boolean
 here rather than the deciding operand, so `${1 or 2}` is `True` here and `1` there, which is deliberate
 and measured, not an oversight. And `$(find)` through a package root configured by a relative spelling,
@@ -646,12 +646,12 @@ nothing names them individually. A fourth difference the manifest cannot carry i
 written with, further down: it is observable on Windows alone, and the job that renders a fresh
 upstream to compare against runs on Linux, where both implementations write the same character.
 
-**The grammar record lists seventy-five measured differences in xacro's own grammar that are not yet
+**The grammar record lists seventy measured differences in xacro's own grammar that are not yet
 closed.** Each is a construct of the element grammar, the attribute lists, the substitution lexer or
 its commands, measured against the pinned reference on a minimized document both implementations read,
 and each is a row of the divergence manifest held in both directions; none is claimed to agree. They
 are an `optional` include whose file is missing, `xacro:call`, `xacro:element`,
-`xacro:attribute`, a property with a block body, a property name written as an expression or not an
+`xacro:attribute`, a property name written as an expression or not an
 identifier or opening with a double underscore, and `xacro:targetNamespace` on the root. They are also
 a no-break space between two parameter specs, an argument declared only inside a false conditional or a
 macro never called, a missing directory before a parent step beside the document and under a find, a
@@ -664,9 +664,8 @@ are also upstream's literal reading of a property's or a macro argument's text, 
 single quotes and reads a padded or signed number, a Unicode digit and a spelling of infinity as a
 number; a condition of `1.0`, `TRUE`, the empty text or an expression yielding text; a property, a
 macro, a conditional, a negated conditional or an include missing its required attribute; and a macro
-named `call`, holding a dot or written with the `xacro:` prefix. They are also a block evaluated again
-where it is inserted, an outer call's block seen by a nested call, a block property found before a block parameter
-of the same name, an attribute in xacro's namespace, which upstream removes before evaluating, a
+named `call`, holding a dot or written with the `xacro:` prefix. They are also an attribute in xacro's
+namespace, which upstream removes before evaluating, a
 namespace declaration lifted from an included root and from a macro, character data kept unread,
 `xacro:attribute` under a conditional, a macro body, an included root, a block wrapper, a block element
 and the document's root, `xacro:element` renamed to a conditional and to a macro call, comments,
@@ -678,26 +677,23 @@ a table and this side because it does not read a bracketed list literal, and a f
 package index. The pinned install ships none, so there upstream refuses every find as a substitution it cannot support, where this side refuses a find no
 configured source answers as unresolved; that probe alone is rendered without the package index
 vendored beside the oracle. They are also a chain of properties, each reading the next, deeper
-than the expression-depth ceiling admits, which upstream renders and which refuses here. They are
-also an include namespace read as a value, which upstream reads as the table holding its names and
+than the expression-depth ceiling admits, which upstream renders and which refuses here. Last, they
+are an include namespace read as a value, which upstream reads as the table holding its names and
 which refuses here, and a mathematics name read through an include namespace, which upstream reaches
 by falling through past the names of the file that wrote the include and which refuses here as an
-undefined name. Last, they are a property named `pi` written with neither a value nor a default,
-which upstream stores as a block under a name of its own, so the constant stays readable, and which
-binds the empty text here and shadows the constant. A
-probe marked to keep comments is compared on its comments and processing instructions as well, which
-the canonical text drops. Its probes can be handed caller arguments, ordered
+undefined name. A probe marked to keep comments is compared on its comments and processing
+instructions as well, which the canonical text drops. Its probes can be handed caller arguments, ordered
 package roots, their stage as working directory and one fixed environment, so that held finds, root
 precedence and the command layer are measured on equal terms. The warning upstream gives for an
 attribute a property does not declare is not compared by the differential, and none is raised here.
 
 **Every construct of the pinned xacro grammar is paired with what measures it, or with the evidence
-that no document reaches it; thirty-five are recorded differences not yet closed.** The grammar is the derived
+that no document reaches it; thirty-two are recorded differences not yet closed.** The grammar is the derived
 record `grammar_constructs.cases`: ninety-seven constructs, one per element branch, attribute list,
 lexer token, substitution command, special form, raise site and warning site of the pinned source.
-Eighty-five are measured. Thirty-five of them have at least one recorded difference on which this side
-renders something other than upstream; fifteen more have recorded differences only where this side
-refuses; and thirty-five are carried by measurements on which both implementations agree, four of
+Eighty-five are measured. Thirty-two of them have at least one recorded difference on which this side
+renders something other than upstream; sixteen more have recorded differences only where this side
+refuses; and thirty-seven are carried by measurements on which both implementations agree, four of
 them warning sites carried by a unit case alone, where upstream warns and this side gives no
 warning and renders the same document. The seven constructs of the `${}` expression surface and the
 command-line driver are left to the boundary rather than measured here. The five sites no document
@@ -711,12 +707,12 @@ after a built-in redefines it with a warning, and removing a built-in keeps it w
 `property_shadows_pi` and `property_removes_builtin` agreement probes compare the documents on both
 sides, and unit cases pin each warning, which the differential does not compare.
 
-**Eleven generated cases differ from the pinned reference, and a reviewed row records each.** The
+**Nine generated cases differ from the pinned reference, and a reviewed row records each.** The
 generated comparison the
 [evaluation page](evaluation.md#the-input-space-the-comparison-was-measured-over) describes
 draws six hundred cases from a committed grammar and seed and compares this side's whole rendered
 document, as canonical text, with the pinned reference's recorded one, and two refusals by the code
-each gives for its cause. Eleven disagree, and
+each gives for its cause. Nine disagree, and
 `generated_divergences.cases` holds a row for each, with the reason it stays. Five are include
 filenames whose parent element after a find leaves the find's package, which refuse here and read the
 sibling package's file there, the difference of the climbing entry under sources and resolution. One is
@@ -727,14 +723,13 @@ the reference refuses as not a directory and which reads the file here, though t
 a file beside the document refuses here too; no other entry states it. And two are an element missing
 before a parent element beside the document, which the reference refuses for want of the missing
 directory and which cancels by its spelling here, the difference of the `..` entry; one of the two then
-reads its file from the configured package root, the fallback entry's difference. The last two are
-macro calls holding only a property for a block parameter, which both sides refuse for different
-causes, the difference of the block-parameter entry. A generated case
+reads its file from the configured package root, the fallback entry's difference. A generated case
 that starts to disagree, or a row whose case stops disagreeing as recorded, fails the comparison.
 
 **A block argument's contents now take effect where the caller wrote them, and a description that
-relied on them not doing so will refuse.** A macro's block argument is expanded once, at the call site,
-in the caller's macros and scope — which is what the reference does, and which this evaluator did not
+relied on them not doing so will refuse.** A macro's block argument is expanded at the call site, in
+the caller's macros and scope, before the macro binds it, and walked again wherever the macro inserts
+it, in the inserting scope — which is what the reference does, and which this evaluator did not
 do until recently: it used to expand a block only if the receiving macro inserted it. Two consequences
 are visible on descriptions that load today. A property, an include or a nested macro call written
 inside a block the receiving macro never inserts now takes effect anyway. And a block argument naming a
@@ -748,25 +743,6 @@ parameter inserted only behind a false condition. So a description that was only
 against meios, and that hid a defect inside an unreachable block, will stop loading, as it never
 loaded upstream. There is no shim, alias or migration note: this
 project is pre-release and the behavior was changed outright.
-
-**A block parameter a call leaves without an element renders here when the macro never inserts it,
-where the reference refuses the call.** The reference expands a macro call's own children first and
-then takes one element for each `*` or `**` parameter, and refuses the whole call with "Not enough
-blocks" for any parameter left without one. Here a block parameter binds whatever the expanded call
-holds, and only inserting a block nobody supplied refuses. The opposite shape agrees: a call holding
-more elements than the macro has block parameters refuses with the reference's "Unused block", naming
-the first element left over, at the call's own `file:line`, as it refuses there; the
-`macro_call_unused_block` and `macro_call_unused_blocks` agreement probes hold it. Measured against the
-pinned reference on minimized documents, a macro taking `*content` and never inserting it refuses
-upstream and renders here when its call holds nothing but an include of a document that binds only a
-property, when the call holds only a `<xacro:property>`, and when the call is empty; a `**content`
-parameter called with only such an include does the same. Where the macro does insert the block, both
-sides refuse with the same code in different words: "Not enough blocks" upstream, and here
-`xacro_structural_error` naming the unknown block. Where a parameter's default refuses, the causes
-differ: the reference refuses for want of the block before it reads any default, and here the default
-is read when the call binds, before the block is inserted, and refuses first. The direction is the permissive one, so a call that loads here can fail
-there. The include case is the `include_sole_block` row the manifest carries; the other shapes are the
-same rule, and the measurement above is what records them.
 
 **A space outside ASCII between two macro parameters separates them upstream and not here, and both
 sides render.** The reference reads a macro's `params` with a pattern whose whitespace class, applied
@@ -1124,7 +1100,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes seventy-two claims — the bold sentence that opens each entry above — and this table
+This page makes seventy-four claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -1191,12 +1167,11 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| One hundred and two measured differences | The one hundred and two rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| Seventy-five measured differences of the grammar record, not yet closed | The seventy-five entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
+| Ninety-six measured differences | The ninety-six rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Seventy measured differences of the grammar record, not yet closed | The seventy entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
 | Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for this side reads `REFUSED` exactly where the standing says it refuses. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, by the `macro_name_with_xacro_prefix` and `include_glob_matching_nothing` rows, and by the `property_shadows_pi` and `property_removes_builtin` agreement probes beside the `xacro_property` cases that pin the two warnings for the built-in names. |
-| Eleven generated cases differ from the pinned reference, each recorded | The eleven rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |
-| A block parameter left without an element renders when the macro never inserts it | The `include_sole_block` row of the divergence manifest, driven as a whole document through both implementations, for the include instance. The other shapes the entry names, a call holding only a property, an empty call and a `**` parameter, are carried by the measurement the entry states and by nothing that runs. The refusal on both sides where the block is inserted is held to the same code by the generated macro cases the reference refuses with "Not enough blocks", and a default refusing first by the `macro_042` and `macro_048` rows of `generated_divergences.cases`, driven in both directions by `generated_differential`. The surplus refusal is held to upstream by the `macro_call_unused_block` and `macro_call_unused_blocks` agreement verdicts of `native_differential`, beside `xacro_macro_call.elements a call passes beyond the macro's block parameters refuse, naming the first left over`. |
+| Nine generated cases differ from the pinned reference, each recorded | The nine rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| A block argument's contents take effect where the caller wrote them | The `block_property_never_inserted`, `block_global_call_never_inserted`, `block_emitting_call_never_inserted`, `block_include_never_inserted`, `block_unbound_never_inserted` and `block_unbound_discarded` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. The insertion walked again in the inserting scope is held to upstream by the `block_evaluated_where_inserted`, `block_inserted_twice_evaluated_each_time`, `block_reads_inserting_scope`, `block_wrapper_attribute_evaluated` and `block_parameter_seen_by_nested_call` agreement verdicts. |
 | A space outside ASCII between two macro parameters separates them upstream and not here | **Nothing** beyond the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line on one crafted document, and the list holding only such a space on a second. A case would write such a space between two parameters and assert the binding. |
 | An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |

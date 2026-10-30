@@ -135,7 +135,20 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", None),
                             ("property_block_body_inserted", "property_block_body_inserted", None),
                             ("block_property_before_block_parameter", "block_property_before_block_parameter", None),
-                            ("property_empty_named_pi", "property_empty_named_pi", None))
+                            ("property_empty_named_pi", "property_empty_named_pi", None),
+                            ("block_reads_inserting_scope", "block_reads_inserting_scope", None),
+                            ("property_empty_read_as_value", "property_empty_read_as_value", None),
+                            ("property_empty_inserted_as_block", "property_empty_inserted_as_block", None),
+                            ("property_removed_absent_inserted_as_block", "property_removed_absent_inserted_as_block", None),
+                            ("block_wrapper_attribute_evaluated", "block_wrapper_attribute_evaluated", None),
+                            ("block_inserted_twice_evaluated_each_time", "block_inserted_twice_evaluated_each_time", None),
+                            ("block_property_reads_caller_parameter", "block_property_reads_caller_parameter", None),
+                            ("property_without_value_keeps_value", "property_without_value_keeps_value", None),
+                            ("property_remove_false_keeps_value", "property_remove_false_keeps_value", None),
+                            ("property_removed_absent_inserts_nothing", "property_removed_absent_inserts_nothing", None),
+                            ("block_property_parent_scope_after_call", "block_property_parent_scope_after_call", None),
+                            ("block_property_local_gone_after_call", "block_property_local_gone_after_call", None),
+                            ("block_property_lazy_eval_undefined", "block_property_lazy_eval_undefined", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

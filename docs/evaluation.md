@@ -346,23 +346,40 @@ it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings
 integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
 value at all is a null that spells `None`.
 
-**A block argument's contents are evaluated at the call site, on both sides.** A macro's block
-argument is expanded once, where the caller wrote it, in the caller's macros and scope; the block
-parameters then bind to the element children of that expanded result. This evaluator used to expand a
-block only where the receiving macro inserted it, which made an undefined name inside a discarded
+**A block argument's contents are evaluated at the call site and walked again where they are
+inserted, on both sides.** A macro's block argument is expanded where the caller wrote it, in the
+caller's macros and scope; the block parameters then bind to the element children of that expanded
+result, in the call's own table. Where a macro inserts a block, its contents are walked again in the
+inserting scope, as the reference walks them: a span the call site left escaped, `$${x}`, is evaluated
+at each insertion and reads the inserting call's parameters, and a `**` block's wrapper has its
+attributes evaluated again, and discarded, before its children are inserted. A block a call hands on
+is seen by a macro its body calls. This evaluator used to expand a block only where the receiving
+macro inserted it, which made an undefined name inside a discarded
 block a load failure upstream and nothing at all here. That difference is closed, and the two sides now
 agree on the failure as well as on the rendering. The change is visible on descriptions that load: a
 side effect written inside a block nobody inserts now takes effect, and a block naming an unbound
 property now fails the load whether or not it is reached. [Known limitations](known-limitations.md)
-says so in the reader's own terms.
+says so in the reader's own terms. The `block_` agreement probes hold the insertion against a fresh
+upstream render, among them a block inserted twice and a block reading the inserting call's parameter.
 
-**A block parameter a call leaves without an element renders here and refuses there.** The reference
-expands a macro call's children and then refuses the call with "Not enough blocks" for any `*` or `**`
-parameter left without an element, so a call holding only an `<xacro:include>` of a document that binds
-a property, only a property, or nothing at all refuses there even when the macro never inserts the
-block. Here a block parameter binds what the expanded call holds, and only inserting a block nobody
-supplied refuses, which it does on both sides. The include shape is a reviewed divergence, so the
-comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+**A property written with no value is a block, as the reference stores it.** A property with neither
+`value` nor `default` binds no value: its element content is stored as a block of the property's name,
+in the table its `scope` selects, and `<xacro:insert_block>` inserts that content, walked in the
+inserting scope, so a block property inserted from a macro body reads that call's parameters. A block
+property is found before a block parameter of the same name. An expression span does not reach a
+block, so `${p}` over a property written with nothing refuses as an undefined name, inserting it
+inserts nothing, and a name already bound to a value keeps that value. A removal of a name no table
+holds stores its content the same way. The `property_` and `block_property_` agreement probes hold
+these against a fresh upstream render.
+
+**A call that leaves a block parameter without an element refuses, as the reference refuses it.** The
+reference expands a macro call's children and then refuses the call with "Not enough blocks" for any
+`*` or `**` parameter left without an element, before it reads any default, so a call holding only an
+`<xacro:include>` of a document that binds a property, only a property, or nothing at all refuses even
+when the macro never inserts the block. The same refusal is raised here, under
+`xacro_structural_error` at the call's own `file:line`, naming the first parameter left without an
+element. The `include_sole_block` agreement probe and the generated macro cases the reference refuses
+with "Not enough blocks" hold it, two of them over a default that would refuse if it were read.
 
 **A macro call binds in the reference's order, and refuses where the reference refuses.** The reference
 binds a call's attributes in document order, then takes the call's expanded children as its block
@@ -906,13 +923,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and fifty agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, fifty of them the grammar record's, each held to a
-  fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
+- **The committed probes**: one hundred and sixty-nine agreement probes, the `agreement` rows of the
+  inventory and the documents the enumeration above names, sixty-eight of them the grammar record's,
+  each held to a fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and two rows of it: fourteen
+  manifest `differential_divergences.cases` records, ninety-six rows of it: thirteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's seventy-five document probes, a group listed in
+  and the grammar record's seventy document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -940,17 +957,15 @@ describes:
   attribute is compared. Two refusals agree only on the same cause: upstream's exception class, which
   the record's cause column carries beside the refusal's first line, and its message stem, mapped
   through `tests/refusal_causes.h` to the code this side gives, the same rule the probes follow. An
-  upstream refusal no row maps fails the run. Eleven cases disagree, and
+  upstream refusal no row maps fails the run. Nine cases disagree, and
   `tests/golden/oracle/generated_divergences.cases` records each as a reviewed row with its reason:
   five where a parent element after a find leaves the find's package, the difference the
   `include_find_climbs_out_of_package` row records; one where a find held in an argument makes the
   filename absolute, the difference the `include_absolute_path` row records; one where a separator
-  after the file a find names is read here and refused as not a directory by the reference; two
+  after the file a find names is read here and refused as not a directory by the reference; and two
   where an element missing before a parent element beside the document cancels by its spelling here,
-  one of them then found through the configured sources; and two macro calls that both sides refuse
-  for different causes, the reference for want of a block before it reads any default and this side
-  on a default that is a run of dollars, read before any block is inserted.
-  [Known limitations](known-limitations.md) discloses all five.
+  one of them then found through the configured sources. [Known limitations](known-limitations.md)
+  discloses all four.
 
 **The grammar these parts are held to is derived from the pinned reference's own source, and the build
 pairs each of its constructs with what carries it.** `tests/golden/oracle/grammar_constructs.cases`
@@ -964,9 +979,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty-five agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty-seven agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-fifteen are recorded differences on which this side refuses; and thirty-five are recorded differences on
+sixteen are recorded differences on which this side refuses; and thirty-two are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`

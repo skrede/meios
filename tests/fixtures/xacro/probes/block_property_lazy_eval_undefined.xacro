@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="b" lazy_eval="${q}"><link name="qb"/></xacro:property>
+  <xacro:insert_block name="b"/>
+</robot>

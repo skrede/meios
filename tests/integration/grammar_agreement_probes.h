@@ -90,6 +90,19 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_block_body_inserted", "property_block_body_inserted", {}, std::nullopt, {}, {}, {}, true},
         agreement_probe{"block_property_before_block_parameter", "block_property_before_block_parameter", {}},
         agreement_probe{"property_empty_named_pi", "property_empty_named_pi", {}},
+        agreement_probe{"block_reads_inserting_scope", "block_reads_inserting_scope", {}},
+        agreement_probe{"property_empty_read_as_value", "property_empty_read_as_value", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
+        agreement_probe{"property_empty_inserted_as_block", "property_empty_inserted_as_block", {}},
+        agreement_probe{"property_removed_absent_inserted_as_block", "property_removed_absent_inserted_as_block", {}},
+        agreement_probe{"block_wrapper_attribute_evaluated", "block_wrapper_attribute_evaluated", {}, meios::diagnostic_code::undefined_property, "name 'nope' is not defined"},
+        agreement_probe{"block_inserted_twice_evaluated_each_time", "block_inserted_twice_evaluated_each_time", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"block_property_reads_caller_parameter", "block_property_reads_caller_parameter", {}, std::nullopt, {}, {}, {}, true},
+        agreement_probe{"property_without_value_keeps_value", "property_without_value_keeps_value", {}},
+        agreement_probe{"property_remove_false_keeps_value", "property_remove_false_keeps_value", {}},
+        agreement_probe{"property_removed_absent_inserts_nothing", "property_removed_absent_inserts_nothing", {}},
+        agreement_probe{"block_property_parent_scope_after_call", "block_property_parent_scope_after_call", {}},
+        agreement_probe{"block_property_local_gone_after_call", "block_property_local_gone_after_call", {}, meios::diagnostic_code::xacro_structural_error, "Undefined block \"b\""},
+        agreement_probe{"block_property_lazy_eval_undefined", "block_property_lazy_eval_undefined", {}, meios::diagnostic_code::undefined_property, "name 'q' is not defined"},
 };
 
 }

@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="x" value="G"/>
+  <xacro:macro name="m" params="x *b">
+    <xacro:insert_block name="b"/>
+  </xacro:macro>
+  <xacro:m x="P"><link name="a${x}$${x}"/></xacro:m>
+</robot>
