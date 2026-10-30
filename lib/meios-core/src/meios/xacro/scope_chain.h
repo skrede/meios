@@ -48,6 +48,16 @@ struct chain_access
         scope.m_chain.pop_to(at);
     }
 
+    static std::size_t enter(eval_scope &scope, std::size_t table)
+    {
+        return scope.m_chain.enter(table);
+    }
+
+    static std::size_t open_namespace(eval_scope &scope, std::string_view name)
+    {
+        return scope.m_chain.open_namespace(name);
+    }
+
     static void define(eval_scope &scope, std::size_t table, std::string_view name, value entry)
     {
         scope.m_chain.table(table).set(name, std::move(entry));

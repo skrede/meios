@@ -95,9 +95,28 @@ public:
         return *m_tables[index];
     }
 
-    std::optional<std::size_t> holder(std::string_view name) const
+    std::size_t enter(std::size_t table)
     {
-        for(std::optional<std::size_t> at = m_cursor; at; at = m_tables[*at]->parent())
+        return std::exchange(m_cursor, table);
+    }
+
+    // The namespace's table falls through to the current one and is bound there under its name, so
+    // a second namespace of that name replaces the first. The cursor stays where it was.
+    std::size_t open_namespace(std::string_view name)
+    {
+        m_tables.push_back(std::make_unique<name_table>(m_cursor, true));
+        m_tables[m_cursor]->set(name, namespace_entry{ m_tables.size() - 1, m_generation });
+        return m_tables.size() - 1;
+    }
+
+    bool live(const namespace_entry &space) const
+    {
+        return space.generation == m_generation && space.table < m_tables.size();
+    }
+
+    std::optional<std::size_t> holder(std::size_t from, std::string_view name) const
+    {
+        for(std::optional<std::size_t> at = from; at; at = m_tables[*at]->parent())
             if(m_tables[*at]->contains(name))
                 return at;
         return std::nullopt;
@@ -118,16 +137,18 @@ public:
         pop_to(table_mark{ 1, 0 });
     }
 
-    name_read read(std::string_view name, std::size_t carried = 0)
+    name_read read(std::size_t from, std::string_view name, std::size_t carried = 0)
     {
-        const std::optional<std::size_t> at = holder(name);
+        const std::optional<std::size_t> at = holder(from, name);
         if(!at)
-            return name_read{ std::nullopt, eval_failure_kind::none };
+            return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
         const scope_entry &entry = *m_tables[*at]->find(name);
         if(const value *bound = std::get_if<value>(&entry))
-            return name_read{ *bound, eval_failure_kind::none };
+            return name_read{ *bound, eval_failure_kind::none, std::nullopt };
         if(const failed_read *failed = std::get_if<failed_read>(&entry))
-            return name_read{ std::nullopt, failed->kind };
+            return name_read{ std::nullopt, failed->kind, std::nullopt };
+        if(const namespace_entry *space = std::get_if<namespace_entry>(&entry))
+            return name_read{ std::nullopt, eval_failure_kind::none, live(*space) ? std::optional(*space) : std::nullopt };
         return resolve(*at, name, std::get<deferred_text>(entry), carried);
     }
 
@@ -153,9 +174,9 @@ private:
     name_read resolve(std::size_t table, std::string_view name, deferred_text deferred, std::size_t carried)
     {
         if(!m_resolve_cb || deferred.generation != m_generation)
-            return name_read{ std::nullopt, eval_failure_kind::none };
+            return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
         if(resolving(table, name))
-            return name_read{ std::nullopt, m_cycle_cb(m_resolving, name) };
+            return name_read{ std::nullopt, m_cycle_cb(m_resolving, name), std::nullopt };
         m_resolving.push_back(resolve_step{ table, std::string(name), deferred.origin });
         const std::size_t reader = std::exchange(m_cursor, table);
         name_read answer = m_resolve_cb(deferred, carried);

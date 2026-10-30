@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EVAL_SCOPE_H
 
 #include "meios/xacro/value.h"
+#include "meios/xacro/scope_namespace.h"
 #include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/yaml_parser_handle.h"
 #include "meios/xacro/text_resource_loader.h"
@@ -17,6 +18,7 @@
 #include <string>
 #include <cstddef>
 #include <utility>
+#include <variant>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -39,6 +41,8 @@ class eval_scope
 {
     friend struct detail::chain_access;
     friend detail::name_read detail::read_name(const eval_scope &scope, std::string_view name, std::size_t carried);
+    friend detail::name_read detail::read_member(const eval_scope &scope, const scope_namespace &space,
+                                                 std::string_view name, std::size_t carried);
 
 public:
     eval_scope()
@@ -57,17 +61,36 @@ public:
 
     std::optional<value> lookup(std::string_view name) const
     {
-        return m_chain.read(name).bound;
+        return m_chain.read(m_chain.cursor(), name).bound;
     }
 
     bool contains(std::string_view name) const
     {
-        return m_chain.holder(name).has_value();
+        return m_chain.holder(m_chain.cursor(), name).has_value();
     }
 
     void erase(std::string_view name)
     {
         m_chain.table(m_chain.cursor()).erase(name);
+    }
+
+    // A read through a namespace walks from its table outward to the table the include was read
+    // in, so a name the namespace lacks is read there. Finding a namespace evaluates nothing.
+    std::optional<scope_namespace> namespace_of(std::string_view name) const
+    {
+        return named_space(m_chain.cursor(), name);
+    }
+
+    std::optional<scope_namespace> namespace_of(const scope_namespace &space, std::string_view name) const
+    {
+        return m_chain.live(space.m_entry) ? named_space(space.m_entry.table, name) : std::nullopt;
+    }
+
+    std::optional<value> lookup(const scope_namespace &space, std::string_view name) const
+    {
+        if(!m_chain.live(space.m_entry))
+            return std::nullopt;
+        return m_chain.read(space.m_entry.table, name).bound;
     }
 
     // $(arg n) reads this table and an expression reads the other, so a property of an
@@ -149,6 +172,15 @@ private:
     mutable detail::table_chain m_chain;
     std::filesystem::path m_active_document;
     std::unordered_map<std::string, value> m_arguments;
+
+    std::optional<scope_namespace> named_space(std::size_t from, std::string_view name) const
+    {
+        const std::optional<std::size_t> at = m_chain.holder(from, name);
+        const detail::namespace_entry *found = at ? std::get_if<detail::namespace_entry>(m_chain.table(*at).find(name)) : nullptr;
+        if(!found || !m_chain.live(*found))
+            return std::nullopt;
+        return scope_namespace(*found);
+    }
 };
 
 }

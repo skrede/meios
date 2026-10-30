@@ -43,6 +43,25 @@ bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out);
 bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                     const std::filesystem::path &document);
 
+// The table an include's file expands in: a namespace the include names, opened and bound in the
+// current table, or the current table itself. A cleared ok is a namespace that refused.
+std::size_t include_table(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, bool &ok);
+
+// Makes an include's table current for as long as its file expands, and the including one current
+// again on whichever path the expansion returns.
+class include_tables
+{
+public:
+    include_tables(expand_ctx &ctx, std::size_t symbols);
+    include_tables(const include_tables &) = delete;
+    include_tables &operator=(const include_tables &) = delete;
+    ~include_tables();
+
+private:
+    expand_ctx &m_ctx;
+    std::size_t m_including;
+};
+
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 

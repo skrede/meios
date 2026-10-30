@@ -37,6 +37,11 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_lazy_eval_not_boolean", "property_lazy_eval_not_boolean", {}, meios::diagnostic_code::xacro_structural_error, "Xacro conditional"},
         agreement_probe{"macro_default_forwards_deferred_global", "macro_default_forwards_deferred_global", {}},
         agreement_probe{"property_deferred_yaml_read_where_read", "property_deferred_yaml_read_where_read", {}},
+        agreement_probe{"include_namespace_bare_name", "include_namespace_bare_name", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
+        agreement_probe{"include_namespace_dotted_property", "include_namespace_dotted_property", {}},
+        agreement_probe{"namespace_property_sees_later_global", "namespace_property_sees_later_global", {}},
+        agreement_probe{"namespace_falls_through_to_parent", "namespace_falls_through_to_parent", {}},
+        agreement_probe{"namespace_replaced_by_second_include", "namespace_replaced_by_second_include", {}, meios::diagnostic_code::undefined_property, "name 'w' is not defined"},
 };
 
 }

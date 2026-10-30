@@ -16,14 +16,15 @@ namespace meios
 namespace detail
 {
 
-// One of the reference's symbol tables: the names a document, or one macro call, bound itself,
-// and the table a read falls through to when a name is not among them. The parent is an index
-// into the owning chain, absent only for the document table.
+// One of the reference's symbol tables: the names a document, one macro call, or one include
+// namespace bound itself, and the table a read falls through to when a name is not among them.
+// The parent is an index into the owning chain, absent only for the document table.
 class name_table
 {
 public:
-    explicit name_table(std::optional<std::size_t> parent)
-            : m_parent(parent)
+    explicit name_table(std::optional<std::size_t> parent, bool space = false)
+            : m_space(space)
+            , m_parent(parent)
             , m_entries()
     {
     }
@@ -31,6 +32,11 @@ public:
     std::optional<std::size_t> parent() const
     {
         return m_parent;
+    }
+
+    bool is_namespace() const
+    {
+        return m_space;
     }
 
     void set(std::string_view name, scope_entry entry)
@@ -57,6 +63,7 @@ public:
     }
 
 private:
+    bool m_space;
     std::optional<std::size_t> m_parent;
     std::unordered_map<std::string, scope_entry> m_entries;
 };

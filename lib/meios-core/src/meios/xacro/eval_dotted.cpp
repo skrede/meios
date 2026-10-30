@@ -1,11 +1,11 @@
 #include "lexer.h"
 #include "eval_parser.h"
-#include "reference_names.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/value_render.h"
+#include "meios/xacro/scope_namespace.h"
 
 #include "meios/xacro/detail/scope_read.h"
 
@@ -26,31 +26,6 @@ namespace
 value refuse_dotted(parser &p)
 {
     return p.fail_unsupported("dotted access in an expression — use eval-python");
-}
-
-// Upstream's math and python namespaces exist under neither evaluator, which bind those names bare.
-std::string unbound_head(std::string_view head)
-{
-    if(head == "math")
-        return " — neither evaluator binds a math namespace; write the bare name, as pi or sin(x)";
-    if(head == "python")
-        return " — neither evaluator binds a python namespace; the python evaluator binds its builtins bare, as len(x)";
-    if(listed(mathematics_names, head) || listed(python_builtins, head))
-        return " — use eval-python";
-    return " — neither evaluator binds '" + std::string(head) + "'";
-}
-
-// Both python evaluators bind the xacro namespace to load_yaml alone, so advising one for any
-// other helper would send the reader to an evaluator that refuses the same call.
-value refuse_call_target(parser &p, std::string_view head, std::string_view member)
-{
-    const std::string target = "unsupported call target '" + std::string(head) + '.' + std::string(member) + "'";
-    if(head != "xacro")
-        return p.fail_unsupported(target + unbound_head(head));
-    std::string message = target + " — xacro.load_yaml is the only helper either evaluator exposes";
-    if(member == "arg")
-        message += "; an argument is read with the $(arg) command";
-    return p.fail_unsupported(message);
 }
 
 // Measured into tests/golden/oracle/collisions.cases, and checked against it rather than
@@ -171,16 +146,19 @@ value parse_member(parser &p, const value &base)
     return member_of(p, base, member);
 }
 
-// The one namespaced call the measured surface uses. A head naming an argument refuses as a bare
-// read of it does; a head naming nothing else in scope is a namespace and refuses by name, because
-// a description that means something else here than it does upstream is worse than one that will
-// not load; a head naming a value reaches the same gate a dot after a subexpression reaches.
+// An include namespace is looked up first, so one named xacro shadows the load_yaml helper, as a
+// symbol of that name does upstream. A head naming an argument refuses as a bare read of it does; a
+// head naming nothing in scope refuses by name, because a description that means something else
+// here than it does upstream is worse than one that will not load; a head naming a value reaches
+// the same gate a dot after a subexpression reaches.
 value parse_dotted(parser &p, std::string_view head)
 {
     if(!p.at(token_kind::name))
         return refuse_dotted(p);
     const std::string_view member = p.peek().text;
     ++p.pos;
+    if(const std::optional<scope_namespace> space = p.scope.namespace_of(head))
+        return namespace_member(p, *space, member);
     if(head == "xacro" && member == "load_yaml")
         return parse_load_yaml(p);
     const name_read bound = read_name(p.scope, head, p.nesting);

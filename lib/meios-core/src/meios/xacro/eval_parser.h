@@ -8,6 +8,7 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/core_evaluator.h"
+#include "meios/xacro/scope_namespace.h"
 
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -150,6 +151,8 @@ value parse_name(parser &p);
 std::string undefined_name(const eval_scope &scope, std::string_view name);
 value parse_dict(parser &p);
 value parse_dotted(parser &p, std::string_view head);
+value namespace_member(parser &p, const scope_namespace &space, std::string_view member);
+value refuse_call_target(parser &p, std::string_view head, std::string_view member);
 value parse_load_yaml(parser &p);
 value parse_member(parser &p, const value &base);
 value member_of(parser &p, const value &base, std::string_view member);
