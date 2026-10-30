@@ -9,7 +9,6 @@
 
 #include <pugixml.hpp>
 
-#include <map>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -81,14 +80,13 @@ bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
 }
 
 // The reference evaluates the whole call node in the caller's own macros and symbols before it
-// captures a single block, so a block argument means what it means where the caller wrote it and
-// is evaluated whether or not the receiving macro ever inserts it. That is also what terminates a
-// forwarded insert: the callee binds a literal subtree rather than an insert command that would
-// resolve again against the binding which produced it. The caller's blocks stay installed while
-// the children expand; the callee's map is built aside and installed only once binding succeeded.
+// captures a single block, so a block argument is evaluated whether or not the receiving macro
+// ever inserts it, and an insert the caller wrote resolves against the caller's blocks. The
+// callee's table binds what that walk produced once binding succeeded.
 bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
-                 const std::filesystem::path &document, std::map<std::string, block_arg> &blocks)
+                 const std::filesystem::path &document, std::vector<bound_block> &blocks)
 {
+    const emit_origin origin = ctx.origins.empty() ? emit_origin{ document, {} } : ctx.origins.back();
     pugi::xml_node root = ctx.park().append_child("blocks");
     if(!process_children(ctx, call, root, document))
         return false;
@@ -100,7 +98,10 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
         return fail(ctx, call, diagnostic_code::xacro_structural_error,
                     call_refusal("Unused block", kids[def.block_params.size()].name(), def));
     for(std::size_t i = 0; i < kids.size(); ++i)
-        blocks.insert_or_assign(def.block_params[i], block_arg{ def.block_children[i], kids[i] });
+    {
+        ctx.blocks.push_back(parked_block{ kids[i], def.block_children[i], origin });
+        blocks.push_back(bound_block{ (def.block_children[i] ? "**" : "*") + def.block_params[i], ctx.blocks.size() - 1 });
+    }
     return true;
 }
 

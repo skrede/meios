@@ -97,7 +97,7 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(name == "xacro:if" || name == "xacro:unless")
         return conditional(ctx, in, out, document);
     if(name == "xacro:insert_block")
-        return insert_block(ctx, in, out);
+        return insert_block(ctx, in, out, document);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
     const std::optional<resolved_macro> found = resolve_macro(ctx.macros, ctx.scope, name.substr(6));

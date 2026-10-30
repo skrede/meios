@@ -127,7 +127,7 @@ TEST_CASE("a macro forwarding its own block argument renders the caller's elemen
             == R"(<robot name="p"><link name="a"><origin xyz="1 2 3"></origin></link></robot>)");
 }
 
-TEST_CASE("a block argument inserting the parameter it is bound to refuses as an unknown block",
+TEST_CASE("a block argument inserting the parameter it is bound to refuses as an undefined block",
           "[xacro][block]")
 {
     meios::log_sink silent;
@@ -137,7 +137,7 @@ TEST_CASE("a block argument inserting the parameter it is bound to refuses as an
                    silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message.find("unknown block 'b'") != std::string::npos);
+    REQUIRE(out.error().message == "Undefined block \"b\"");
 }
 
 TEST_CASE("a block parameter selecting the node and one selecting its children stay distinguishable",
@@ -169,17 +169,17 @@ TEST_CASE("a span refusing inside a block is located in the file the caller wrot
     REQUIRE(out.error().loc.file == "top.xacro");
 }
 
-TEST_CASE("text a block's first expansion produced is not evaluated again on insertion",
+TEST_CASE("text a block's first expansion produced is evaluated again on insertion",
           "[xacro][block]")
 {
     meios::log_sink silent;
     const expansion_result out =
-        expand_doc(R"(<xacro:property name="brace" value="${'$' + '{x}'}"/>)"
+        expand_doc(R"(<xacro:property name="x" value="X"/>)"
                    R"(<xacro:macro name="m" params="*b"><xacro:insert_block name="b"/></xacro:macro>)"
-                   R"(<xacro:m><link name="${brace}"/></xacro:m>)",
+                   R"(<xacro:m><note>$${x}</note></xacro:m>)",
                    silent);
     REQUIRE(out.has_value());
-    REQUIRE(out->document.find("${x}") != std::string::npos);
+    REQUIRE(meios::canonical_xml(out->document) == R"(<robot name="p"><note>X</note></robot>)");
 }
 
 TEST_CASE("a block inserted twice yields two subtrees and is charged for both", "[xacro][block]")

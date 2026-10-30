@@ -56,8 +56,6 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "macro_name_with_dot",
                            "macro_name_with_xacro_prefix",
                            "comment_kept_in_output",
-                           "block_evaluated_where_inserted",
-                           "block_parameter_seen_by_nested_call",
                            "block_property_before_block_parameter",
                            "xacro_attribute_removed",
                            "xacro_attribute_never_evaluated",
@@ -135,7 +133,9 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("property_remove_not_boolean", "property_remove_not_boolean", None),
                             ("property_remove_spelled_as_number", "property_remove_spelled_as_number", None),
                             ("property_remove_as_expression", "property_remove_as_expression", None),
-                            ("property_default_for_builtin", "property_default_for_builtin", None))
+                            ("property_default_for_builtin", "property_default_for_builtin", None),
+                            ("block_evaluated_where_inserted", "block_evaluated_where_inserted", None),
+                            ("block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

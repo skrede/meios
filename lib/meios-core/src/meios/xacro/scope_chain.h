@@ -93,6 +93,20 @@ struct chain_access
         scope.m_chain.table(table).set(name, deferred_text{ std::move(text), origin, generation });
     }
 
+    static void define_block(eval_scope &scope, std::size_t table, std::string_view key, std::size_t block)
+    {
+        scope.m_chain.table(table).set(key, block_entry{ block, scope.m_chain.generation() });
+    }
+
+    // The reference looks a name up as a content-only block across the whole chain before it looks
+    // it up as a single one, so a nearer `*name` does not hide a farther `**name`.
+    static std::optional<std::size_t> find_block(const eval_scope &scope, std::string_view name)
+    {
+        if(const std::optional<std::size_t> content = block_under(scope, "**" + std::string(name)))
+            return content;
+        return block_under(scope, "*" + std::string(name));
+    }
+
     static void install(eval_scope &scope, deferred_resolve resolve, deferred_cycle cycle)
     {
         scope.m_chain.install(std::move(resolve), std::move(cycle));
@@ -101,6 +115,16 @@ struct chain_access
     static void uninstall(eval_scope &scope)
     {
         scope.m_chain.uninstall();
+    }
+
+private:
+    static std::optional<std::size_t> block_under(const eval_scope &scope, const std::string &key)
+    {
+        const std::optional<std::size_t> at = scope.m_chain.holder(scope.m_chain.cursor(), key);
+        const block_entry *found = at ? std::get_if<block_entry>(scope.m_chain.table(*at).find(key)) : nullptr;
+        if(!found || found->generation != scope.m_chain.generation())
+            return std::nullopt;
+        return found->block;
     }
 };
 

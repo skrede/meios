@@ -58,7 +58,7 @@ expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits 
                        const std::shared_ptr<evaluator_handle> &inject, log_sink &lg)
     : scope(s), seeded_args(), sources(src), limits(lim), includes(inc), package_roots(roots), eval_limits(), session(eval_limits), observer(lg),
       log(observer), mode(policy), backend(inject), counters(), depth(0), macros(), blocks(),
-      include_stack(), served(), owned(), owned_text(), origins(), deferred(),
+      include_stack(), served(), owned(), owned_text(), origins(), insert_site(), deferred(),
       terminal(), ok(true)
 {
 }
@@ -178,9 +178,12 @@ bool fail(expand_ctx &ctx, const source_location &loc, diagnostic_code code,
 
 // A typed xacro emit always anchors on the hosting node's real position; with no
 // origin on the stack, or a node pugixml never gave a buffer offset, fall back to the
-// document path at 0:0 rather than dropping to a code-less, locationless emit.
+// insertion a block is walked again for, or else to the document path at 0:0 rather than
+// dropping to a code-less, locationless emit.
 source_location locate(const expand_ctx &ctx, pugi::xml_node in)
 {
+    if(in.offset_debug() < 0 && ctx.insert_site)
+        return *ctx.insert_site;
     if(ctx.origins.empty() || in.offset_debug() < 0)
         return source_location{ ctx.origins.empty() ? std::filesystem::path{} : ctx.origins.back().path,
                                 0, 0 };

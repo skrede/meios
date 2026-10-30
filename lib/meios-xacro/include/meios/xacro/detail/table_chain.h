@@ -147,9 +147,10 @@ public:
             return name_read{ *bound, eval_failure_kind::none, std::nullopt };
         if(const failed_read *failed = std::get_if<failed_read>(&entry))
             return name_read{ std::nullopt, failed->kind, std::nullopt };
-        if(const namespace_entry *space = std::get_if<namespace_entry>(&entry))
-            return name_read{ std::nullopt, eval_failure_kind::none, live(*space) ? std::optional(*space) : std::nullopt };
-        return resolve(*at, name, std::get<deferred_text>(entry), carried);
+        if(const deferred_text *deferred = std::get_if<deferred_text>(&entry))
+            return resolve(*at, name, *deferred, carried);
+        const namespace_entry *space = std::get_if<namespace_entry>(&entry);
+        return name_read{ std::nullopt, eval_failure_kind::none, space && live(*space) ? std::optional(*space) : std::nullopt };
     }
 
 private:

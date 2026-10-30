@@ -10,7 +10,6 @@
 
 #include <pugixml.hpp>
 
-#include <map>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -71,20 +70,18 @@ bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, pugi::xml_n
     if(!ctx.charge_work(call) || !bind_call(ctx, def, call, document, bound))
         return false;
     const invocation_frame frame(ctx.scope, found.symbols, ctx.macros, found.macros);
-    std::map<std::string, block_arg> outer = std::exchange(ctx.blocks, std::move(bound.blocks));
     for(std::size_t i = 0; i < def.params.size(); ++i)
     {
         warn_global_symbol(ctx, call, def.params[i]);
         chain_access::define(ctx.scope, frame.table(), def.params[i], bound.values[i]);
     }
-    bool ok = substitute_defaults(ctx, def, call, document);
-    if(ok)
-    {
-        ctx.origins.push_back(def.origin);
-        ok = process_children(ctx, def.body, out, document);
-        ctx.origins.pop_back();
-    }
-    ctx.blocks = std::move(outer);
+    for(const bound_block &block : bound.blocks)
+        chain_access::define_block(ctx.scope, frame.table(), block.key, block.block);
+    if(!substitute_defaults(ctx, def, call, document))
+        return false;
+    ctx.origins.push_back(def.origin);
+    const bool ok = process_children(ctx, def.body, out, document);
+    ctx.origins.pop_back();
     return ok;
 }
 

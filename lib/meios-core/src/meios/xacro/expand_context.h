@@ -3,6 +3,7 @@
 
 #include "eval_session.h"
 #include "macro_tables.h"
+#include "block_entries.h"
 #include "deferred_read.h"
 #include "include_locate.h"
 
@@ -21,7 +22,6 @@
 
 #include <pugixml.hpp>
 
-#include <map>
 #include <set>
 #include <memory>
 #include <string>
@@ -39,14 +39,6 @@ class evaluator_handle;
 
 namespace meios::detail
 {
-
-// The bound subtree is the caller's block argument already expanded, parked in the context's
-// owned documents; the flag selects the node itself or only its children, as `*` and `**` do.
-struct block_arg
-{
-    bool children;
-    pugi::xml_node source;
-};
 
 // Forwards every record unchanged and keeps the first coded, located error as a
 // structured cause. A layer beneath expansion names the specific failure — an undefined
@@ -78,7 +70,7 @@ private:
 };
 
 // Threads the whole expansion: name scope, package sources, both budget counters,
-// the macro tables, the include cycle stack and the active block bindings. Parsed include
+// the macro tables, the include cycle stack and the blocks the calls bound. Parsed include
 // documents are parked in owned so macro bodies stay live across files.
 struct expand_ctx
 {
@@ -108,13 +100,17 @@ struct expand_ctx
     // parameters is one any of them may forget to pass on.
     std::size_t depth;
     macro_chain macros;
-    std::map<std::string, block_arg> blocks;
+    // The blocks every call bound; a block entry indexes this list.
+    std::vector<parked_block> blocks;
     std::vector<std::filesystem::path> include_stack;
     // The layer that served the active document, if one did, and the request it answered.
     std::optional<served_document> served;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;
+    // Where the block being walked again was inserted: a node the call's first walk produced has no
+    // offset of its own, so a refusal on it is located here.
+    std::optional<source_location> insert_site;
     // Where each deferred text the scope holds was written; a deferred entry indexes this list.
     std::vector<deferred_origin> deferred;
     // The first terminal failure, kept so the walk reports one structured cause; a later

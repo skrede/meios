@@ -295,3 +295,5 @@ property_remove_not_boolean	agreement
 property_remove_spelled_as_number	agreement
 property_remove_as_expression	agreement
 property_default_for_builtin	agreement
+block_evaluated_where_inserted	agreement
+block_parameter_seen_by_nested_call	agreement

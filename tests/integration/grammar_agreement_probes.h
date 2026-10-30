@@ -85,6 +85,8 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_remove_spelled_as_number", "property_remove_spelled_as_number", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
         agreement_probe{"property_remove_as_expression", "property_remove_as_expression", {}, meios::diagnostic_code::undefined_property, "name 'p' is not defined"},
         agreement_probe{"property_default_for_builtin", "property_default_for_builtin", {}},
+        agreement_probe{"block_evaluated_where_inserted", "block_evaluated_where_inserted", {}},
+        agreement_probe{"block_parameter_seen_by_nested_call", "block_parameter_seen_by_nested_call", {}},
 };
 
 }

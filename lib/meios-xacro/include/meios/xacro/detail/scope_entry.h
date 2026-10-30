@@ -40,10 +40,19 @@ struct namespace_entry
     std::uint64_t generation;
 };
 
-using scope_entry = std::variant<value, deferred_text, failed_read, namespace_entry>;
+// A block parameter bound under its starred name: an index into the blocks the expansion that bound
+// it keeps, valid only while that expansion runs.
+struct block_entry
+{
+    std::size_t block;
+    std::uint64_t generation;
+};
+
+using scope_entry = std::variant<value, deferred_text, failed_read, namespace_entry, block_entry>;
 
 // A read's four answers: a value, absence (nothing bound, failure none), a refusal of kind failure
 // whose record a deferred evaluation already logged, or an include namespace, which has no value.
+// A block has no value either, and reads as absent.
 struct name_read
 {
     std::optional<value> bound;
