@@ -183,7 +183,7 @@ value parse_dotted(parser &p, std::string_view head)
     ++p.pos;
     if(head == "xacro" && member == "load_yaml")
         return parse_load_yaml(p);
-    const name_read bound = read_name(p.scope, head);
+    const name_read bound = read_name(p.scope, head, p.nesting);
     if(bound.failed())
         return p.fail_reported(bound.failure);
     if(bound.bound)

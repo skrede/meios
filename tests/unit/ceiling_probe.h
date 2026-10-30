@@ -102,6 +102,18 @@ inline std::string nested_expressions(std::size_t levels)
     return text;
 }
 
+// Property i reads property i + 1 through `${<open>p<i+1><close>}` and the last is bound to 1, so a
+// document reading p0 resolves every deferred text in turn, each from inside the read before it.
+inline std::string deferred_chain(std::size_t levels, std::string_view open = "", std::string_view close = "")
+{
+    std::string body;
+    for(std::size_t at = 0; at < levels; ++at)
+        body += "<xacro:property name=\"p" + std::to_string(at) + "\" value=\"${" + std::string(open) + "p"
+              + std::to_string(at + 1) + std::string(close) + "}\"/>\n";
+    body += "<xacro:property name=\"p" + std::to_string(levels) + "\" value=\"1\"/>\n<link name=\"${p0}\"/>\n";
+    return "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">\n" + body + "</robot>";
+}
+
 }
 
 #endif

@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <string>
+#include <cstddef>
 #include <utility>
 #include <optional>
 #include <filesystem>
@@ -29,7 +30,7 @@ class eval_scope;
 namespace detail
 {
 struct chain_access;
-inline name_read read_name(const eval_scope &scope, std::string_view name);
+inline name_read read_name(const eval_scope &scope, std::string_view name, std::size_t carried = 0);
 }
 
 // A write and an erase act on the current table; a read walks from it outward through the tables
@@ -37,7 +38,7 @@ inline name_read read_name(const eval_scope &scope, std::string_view name);
 class eval_scope
 {
     friend struct detail::chain_access;
-    friend detail::name_read detail::read_name(const eval_scope &scope, std::string_view name);
+    friend detail::name_read detail::read_name(const eval_scope &scope, std::string_view name, std::size_t carried);
 
 public:
     eval_scope()

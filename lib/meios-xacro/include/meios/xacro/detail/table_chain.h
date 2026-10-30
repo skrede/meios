@@ -37,7 +37,7 @@ struct resolve_step
     std::size_t origin;
 };
 
-using deferred_resolve = std::function<name_read(const deferred_text &)>;
+using deferred_resolve = std::function<name_read(const deferred_text &, std::size_t)>;
 using deferred_cycle = std::function<eval_failure_kind(const std::vector<resolve_step> &, std::string_view)>;
 
 // Tables live in an arena and name their parent by index, so truncating to a mark drops a call's
@@ -118,7 +118,7 @@ public:
         pop_to(table_mark{ 1, 0 });
     }
 
-    name_read read(std::string_view name)
+    name_read read(std::string_view name, std::size_t carried = 0)
     {
         const std::optional<std::size_t> at = holder(name);
         if(!at)
@@ -128,7 +128,7 @@ public:
             return name_read{ *bound, eval_failure_kind::none };
         if(const failed_read *failed = std::get_if<failed_read>(&entry))
             return name_read{ std::nullopt, failed->kind };
-        return resolve(*at, name, std::get<deferred_text>(entry));
+        return resolve(*at, name, std::get<deferred_text>(entry), carried);
     }
 
 private:
@@ -150,7 +150,7 @@ private:
     // The text is evaluated with its own table current, as the reference evaluates it against the
     // table holding the key, and the answer replaces the text there whether it is a value or a
     // refusal. A text written by an expansion that has since returned reads as nothing.
-    name_read resolve(std::size_t table, std::string_view name, deferred_text deferred)
+    name_read resolve(std::size_t table, std::string_view name, deferred_text deferred, std::size_t carried)
     {
         if(!m_resolve_cb || deferred.generation != m_generation)
             return name_read{ std::nullopt, eval_failure_kind::none };
@@ -158,7 +158,7 @@ private:
             return name_read{ std::nullopt, m_cycle_cb(m_resolving, name) };
         m_resolving.push_back(resolve_step{ table, std::string(name), deferred.origin });
         const std::size_t reader = std::exchange(m_cursor, table);
-        name_read answer = m_resolve_cb(deferred);
+        name_read answer = m_resolve_cb(deferred, carried);
         m_cursor = reader;
         m_resolving.pop_back();
         if(answer.bound)

@@ -1,4 +1,5 @@
 #include "scope_chain.h"
+#include "eval_session.h"
 #include "deferred_read.h"
 #include "expand_context.h"
 #include "structural_detail.h"
@@ -20,6 +21,7 @@
 #include <vector>
 #include <cstddef>
 #include <utility>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 
@@ -37,11 +39,44 @@ source_location definition_at(const expand_ctx &ctx, std::size_t origin)
     return offset_location(from.origin.text, from.host.offset_debug(), from.origin.path);
 }
 
+// One resolution's span level, released by the same unwind that abandons it. A crossed ceiling is
+// reported by the session against the real sink, so a refused level only answers the kind.
+class resolution_level
+{
+public:
+    resolution_level(expand_ctx &ctx, std::size_t weight, const source_location &at)
+        : m_ctx(ctx), m_weight(weight), m_entered(ctx.session.enter_span(weight, ctx.log, at))
+    {
+    }
+
+    resolution_level(const resolution_level &) = delete;
+    resolution_level &operator=(const resolution_level &) = delete;
+
+    ~resolution_level()
+    {
+        if(m_entered)
+            m_ctx.session.leave_span(m_weight);
+    }
+
+    bool admitted() const
+    {
+        return m_entered;
+    }
+
+private:
+    expand_ctx &m_ctx;
+    std::size_t m_weight;
+    bool m_entered;
+};
+
 // A refusal is located inside the definition's own text, but the active document stays the file
 // being processed: the reference resolves a relative path when the property is read, not where it
 // was written.
-name_read resolve_deferred(expand_ctx &ctx, const deferred_text &deferred)
+name_read resolve_deferred(expand_ctx &ctx, const deferred_text &deferred, std::size_t carried)
 {
+    const resolution_level level(ctx, carried + deferred_read_cost, definition_at(ctx, deferred.origin));
+    if(!level.admitted())
+        return name_read{ std::nullopt, eval_failure_kind::exhausted };
     const deferred_origin from = ctx.deferred[deferred.origin];
     ctx.origins.push_back(from.origin);
     bool ok = true;
@@ -81,7 +116,8 @@ resolver_guard::resolver_guard(expand_ctx &ctx)
     : m_ctx(ctx)
 {
     chain_access::install(
-        ctx.scope, [&ctx](const deferred_text &deferred) { return resolve_deferred(ctx, deferred); },
+        ctx.scope,
+        [&ctx](const deferred_text &deferred, std::size_t carried) { return resolve_deferred(ctx, deferred, carried); },
         [&ctx](const std::vector<resolve_step> &path, std::string_view repeated) {
             return refuse_cycle(ctx, path, repeated);
         });
