@@ -580,11 +580,11 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**One hundred and twenty-four ways this evaluator differs from canonical xacro are measured, and further ones no row
+**One hundred and twenty-one ways this evaluator differs from canonical xacro are measured, and further ones no row
 can carry are written down beside them.** That is not a claim that the list is complete. The reviewed
-manifest carries one hundred and twenty-four rows and the differential drives them on every push in both directions,
+manifest carries one hundred and twenty-one rows and the differential drives them on every push in both directions,
 so a divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
-Ninety-six of them are the grammar record's, set out after this list. Of the rest, sixteen are a meaning
+Ninety-three of them are the grammar record's, set out after this list. Of the rest, sixteen are a meaning
 upstream has and this grammar refuses — the first five
 entries below, the argument helper the seventh names, a property read before it is written and the
 mapping key an auxiliary document did not write as text, which have entries of their own further down,
@@ -642,7 +642,7 @@ nothing names them individually. A fourth difference the manifest cannot carry i
 written with, further down: it is observable on Windows alone, and the job that renders a fresh
 upstream to compare against runs on Linux, where both implementations write the same character.
 
-**The grammar record lists ninety-six measured differences in xacro's own grammar that are not yet
+**The grammar record lists ninety-three measured differences in xacro's own grammar that are not yet
 closed.** Each is a construct of the element grammar, the attribute lists, the substitution lexer or
 its commands, measured against the pinned reference on a minimized document both implementations read,
 and each is a row of the divergence manifest held in both directions; none is claimed to agree. They
@@ -653,23 +653,22 @@ name, an `optional` include whose file is missing, `xacro:call`, `xacro:element`
 property with a block body, a property name written as an expression or not an identifier or opening
 with a double underscore, and `xacro:targetNamespace` on the root. They are also a no-break space
 between two parameter specs, an argument declared only inside a false conditional or a macro never
-called, a parameter declared twice read after its call and over an outer property, an unread property
-holding an unterminated span inside a literal, a missing directory before a parent step beside the
-document and under a find, a find held in a property or an argument and composed into a filename, a
-find composed onto text, the root that answers a find when two hold its package, a trailing separator
-after a file under a find, `$(cwd)`, `$(eval)` with a leading space, with nothing after it and with a
-blank expression, `$(env)` with a second word, the spacing of `$(optenv)`'s fallback words, the empty
-`$()`, and an auxiliary document's explicit mapping key with no content. They are also upstream's
-literal reading of a property's or a macro argument's text, which removes enclosing single quotes and
-reads a padded or signed number, a Unicode digit and a spelling of infinity as a number; a property
-named `pi`; a condition of `1.0`, `TRUE`, the empty text or an expression yielding text; a property, a
-macro, a conditional, a negated conditional or an include missing its required attribute; a macro
-named `call`, holding a dot or written with the `xacro:` prefix; a macro defined inside another and
-called after it returns; and `remove` inside a macro reaching a global property or a parameter. They are
-also a block evaluated again where it is inserted, an outer call's block seen by a nested call, a block
-property found before a block parameter of the same name, an attribute in xacro's namespace, which
-upstream removes before evaluating, a namespace declaration lifted from an included root and from a
-macro, character data kept unread, a property bound in the parent scope at document level,
+called, an unread property holding an unterminated span inside a literal, a missing directory before a
+parent step beside the document and under a find, a find held in a property or an argument and composed
+into a filename, a find composed onto text, the root that answers a find when two hold its package, a
+trailing separator after a file under a find, `$(cwd)`, `$(eval)` with a leading space, with nothing
+after it and with a blank expression, `$(env)` with a second word, the spacing of `$(optenv)`'s
+fallback words, the empty `$()`, and an auxiliary document's explicit mapping key with no content. They
+are also upstream's literal reading of a property's or a macro argument's text, which removes enclosing
+single quotes and reads a padded or signed number, a Unicode digit and a spelling of infinity as a
+number; a property named `pi`; a condition of `1.0`, `TRUE`, the empty text or an expression yielding
+text; a property, a macro, a conditional, a negated conditional or an include missing its required
+attribute; a macro named `call`, holding a dot or written with the `xacro:` prefix; and `remove` inside
+a macro reaching a global property or a parameter. They are also a block evaluated again where it is
+inserted, an outer call's block seen by a nested call, a block property found before a block parameter
+of the same name, an attribute in xacro's namespace, which upstream removes before evaluating, a
+namespace declaration lifted from an included root and from a macro, character data kept unread, a
+property bound in the parent scope at document level,
 `xacro:attribute` under a conditional, a macro body, an included root, a block wrapper, a block element
 and the document's root, `xacro:element` renamed to a conditional and to a macro call, a namespaced
 property seeing a later global, a namespace read falling through to its parent, a parent scope set
@@ -689,12 +688,12 @@ precedence and the command layer are measured on equal terms. The warning upstre
 attribute a property does not declare is not compared by the differential, and none is raised here.
 
 **Every construct of the pinned xacro grammar is paired with what measures it, or with the evidence
-that no document reaches it; forty-one are recorded differences not yet closed.** The grammar is the derived
+that no document reaches it; forty are recorded differences not yet closed.** The grammar is the derived
 record `grammar_constructs.cases`: ninety-seven constructs, one per element branch, attribute list,
 lexer token, substitution command, special form, raise site and warning site of the pinned source.
-Eighty-five are measured. Forty-one of them have at least one recorded difference on which this side
+Eighty-five are measured. Forty of them have at least one recorded difference on which this side
 renders something other than upstream; fifteen more have recorded differences only where this side
-refuses; and twenty-nine are carried by measurements on which both implementations agree, four of
+refuses; and thirty are carried by measurements on which both implementations agree, four of
 them warning sites carried by a unit case alone, where upstream warns and this side gives no
 warning and renders the same document. The seven constructs of the `${}` expression surface and the
 command-line driver are left to the boundary rather than measured here. The five sites no document
@@ -1174,8 +1173,8 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| One hundred and twenty-four measured differences | The one hundred and twenty-four rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| Ninety-six measured differences of the grammar record, not yet closed | The ninety-six entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
+| One hundred and twenty-one measured differences | The one hundred and twenty-one rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| Ninety-three measured differences of the grammar record, not yet closed | The ninety-three entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
 | Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for this side reads `REFUSED` exactly where the standing says it refuses. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, and by the `property_shadows_pi`, `property_removes_builtin`, `macro_name_with_xacro_prefix` and `include_glob_matching_nothing` rows. |
 | Eleven generated cases differ from the pinned reference, each recorded | The eleven rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The six `block_` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. |

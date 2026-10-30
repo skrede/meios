@@ -878,13 +878,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and nine agreement probes, the `agreement` rows of the inventory
-  and the documents the enumeration above names, ten of them the grammar record's, each held to a
+- **The committed probes**: one hundred and thirteen agreement probes, the `agreement` rows of the inventory
+  and the documents the enumeration above names, fourteen of them the grammar record's, each held to a
   fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, one hundred and twenty-four rows of it: fifteen
+  manifest `differential_divergences.cases` records, one hundred and twenty-one rows of it: fifteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's ninety-six document probes, a group listed in
+  and the grammar record's ninety-three document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -936,9 +936,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: twenty-nine agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-fifteen are recorded differences on which this side refuses; and forty-one are recorded differences on
+fifteen are recorded differences on which this side refuses; and forty are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`

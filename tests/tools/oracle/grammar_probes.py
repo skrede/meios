@@ -116,7 +116,8 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("arg_command_without_name", "arg_command_without_name", None),
                             ("macro_parameter_twice_read_after_call", "macro_parameter_twice_read_after_call", None),
                             ("macro_parameter_twice_over_outer", "macro_parameter_twice_over_outer", None),
-                            ("macro_defined_in_macro_used_after_call", "macro_defined_in_macro_used_after_call", None))
+                            ("macro_defined_in_macro_used_after_call", "macro_defined_in_macro_used_after_call", None),
+                            ("property_unknown_scope_in_macro", "property_unknown_scope_in_macro", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

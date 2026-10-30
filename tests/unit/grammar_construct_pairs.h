@@ -58,7 +58,7 @@ inline constexpr pairing element_pairings[] = {
         {"attrs.xacro_macro", carrier::manifest, "macro_name_with_xacro_prefix", standing::refuses_listed},
         {"attrs.xacro_property", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"attrs.xacro_property", carrier::agreement, "property_eager_in_unmodelled_element property_parent_scope_in_macro global_property_over_argument", standing::agrees},
-        {"attrs.xacro_property", carrier::agreement, "property_default_over_argument", standing::agrees},
+        {"attrs.xacro_property", carrier::agreement, "property_default_over_argument property_unknown_scope_in_macro", standing::agrees},
         {"attrs.xacro_property", carrier::manifest, "property_evaluated_at_first_read property_self_reference property_removed_then_read", standing::open},
         {"attrs.xacro_property", carrier::manifest, "property_value_and_remove_together property_quoted_value", standing::open},
         {"attrs.xacro_property", carrier::manifest, "property_padded_number property_signed_number property_unicode_digit property_infinity_spelling property_shadows_pi",
