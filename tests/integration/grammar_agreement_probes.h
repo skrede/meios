@@ -57,6 +57,22 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"namespace_macro_reads_outer_global", "namespace_macro_reads_outer_global", {}},
         agreement_probe{"namespace_nested_reads", "namespace_nested_reads", {}, std::nullopt, {}, {}, {}, true},
         agreement_probe{"include_namespace_shadows_math", "include_namespace_shadows_math", {}},
+        agreement_probe{"property_removed_then_read", "property_removed_then_read", {}, meios::diagnostic_code::undefined_property, "name 'b' is not defined"},
+        agreement_probe{"property_value_and_remove_together",
+                        "property_value_and_remove_together",
+                        {},
+                        meios::diagnostic_code::xacro_structural_error,
+                        "Property attributes default, value, and remove are mutually exclusive: b"},
+        agreement_probe{"property_removed_in_macro_reaches_global",
+                        "property_removed_in_macro_reaches_global",
+                        {},
+                        meios::diagnostic_code::undefined_property,
+                        "name 'b' is not defined"},
+        agreement_probe{"property_removed_in_macro_erases_parameter",
+                        "property_removed_in_macro_erases_parameter",
+                        {},
+                        meios::diagnostic_code::undefined_property,
+                        "name 'b' is not defined"},
 };
 
 }

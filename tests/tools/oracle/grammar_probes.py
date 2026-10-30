@@ -8,9 +8,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
-                           "property_value_and_remove_together",
-                           "include_optional_missing_file",
+GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "macro_called_by_name_attribute",
                            "element_named_by_attribute",
                            "attribute_set_on_parent",
@@ -58,8 +56,6 @@ GRAMMAR_DOCUMENT_PROBES = ("property_removed_then_read",
                            "macro_named_call",
                            "macro_name_with_dot",
                            "macro_name_with_xacro_prefix",
-                           "property_removed_in_macro_reaches_global",
-                           "property_removed_in_macro_erases_parameter",
                            "comment_kept_in_output",
                            "block_evaluated_where_inserted",
                            "block_parameter_seen_by_nested_call",
@@ -129,7 +125,11 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("namespace_macro_cannot_call_outer_macro", "namespace_macro_cannot_call_outer_macro", None),
                             ("namespace_macro_reads_outer_global", "namespace_macro_reads_outer_global", None),
                             ("namespace_nested_reads", "namespace_nested_reads", None),
-                            ("include_namespace_shadows_math", "include_namespace_shadows_math", None))
+                            ("include_namespace_shadows_math", "include_namespace_shadows_math", None),
+                            ("property_removed_then_read", "property_removed_then_read", None),
+                            ("property_value_and_remove_together", "property_value_and_remove_together", None),
+                            ("property_removed_in_macro_reaches_global", "property_removed_in_macro_reaches_global", None),
+                            ("property_removed_in_macro_erases_parameter", "property_removed_in_macro_erases_parameter", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

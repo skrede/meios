@@ -70,8 +70,8 @@ TEST_CASE("a property writing both a value and a default attribute refuses",
         R"(<xacro:property name="p" value="v" default="d"/><link name="${p}"/>)", silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message.find("value") != std::string::npos);
-    REQUIRE(out.error().message.find("default") != std::string::npos);
+    REQUIRE(out.error().message.find("Property attributes default, value, and remove are mutually exclusive: p")
+            != std::string::npos);
     REQUIRE(out.error().loc.line == 1);
 }
 

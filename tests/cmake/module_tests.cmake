@@ -57,7 +57,8 @@ if(TARGET io_source_stack_test)
     target_sources(io_source_stack_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/io_source_answers_test.cpp)
 endif()
 if(TARGET xacro_property_test)
-    target_sources(xacro_property_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_property_warning_test.cpp)
+    target_sources(xacro_property_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_property_warning_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_property_remove_test.cpp)
 endif()
 if(TARGET xacro_deferred_test)
     target_sources(xacro_deferred_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_deferred_record_test.cpp

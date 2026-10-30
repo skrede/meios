@@ -22,7 +22,7 @@ inline constexpr pairing site_pairings[] = {
         {"raise.macro_names_must_not_contain_reserved_for_namespaces", carrier::manifest, "macro_name_with_dot", standing::open},
         {"raise.property_names_must_be_valid_python_identifiers", carrier::manifest, "property_name_not_identifier", standing::open},
         {"raise.property_names_must_not_start_with_double_underscore", carrier::manifest, "property_name_double_underscore", standing::open},
-        {"raise.property_attributes_default_value_and_remove_are_mutually_exclusive", carrier::manifest, "property_value_and_remove_together", standing::open},
+        {"raise.property_attributes_default_value_and_remove_are_mutually_exclusive", carrier::agreement, "property_value_and_remove_together", standing::agrees},
         {"raise.xacroexception_handle_expr", carrier::agreement, "argument_by_bare_name dollar_run_inside_expression", standing::agrees},
         {"raise.undefined_property_to_forward", carrier::agreement, "inherited_argument_refuses", standing::agrees},
         {"raise.undefined_property_to_forward", carrier::generated, "macro_046", standing::agrees},

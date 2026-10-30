@@ -78,6 +78,14 @@ struct chain_access
         scope.m_chain.table(table).set(name, std::move(entry));
     }
 
+    // The reference's removal pops the name from the current table and from every table a read
+    // falls through to, the document table included.
+    static void remove(eval_scope &scope, std::string_view name)
+    {
+        for(std::optional<std::size_t> at = scope.m_chain.cursor(); at; at = scope.m_chain.table(*at).parent())
+            scope.m_chain.table(*at).erase(name);
+    }
+
     static void define_deferred(eval_scope &scope, std::size_t table, std::string_view name,
                                 std::string text, std::size_t origin)
     {
