@@ -43,10 +43,9 @@ std::string hop_chain(std::size_t hops)
     return expression + ".x}";
 }
 
-chain_read read_expression(const include_tree::tree &held, std::string_view expression)
+chain_read read_document(const include_tree::tree &held, std::string_view included, std::string_view body)
 {
-    held.write("w.xacro", include_tree::robot("<xacro:property name=\"x\" value=\"7\"/>"));
-    const std::string body               = "<xacro:include filename=\"w.xacro\" ns=\"n\"/><link name=\"l" + std::string(expression) + "\"/>";
+    held.write("w.xacro", include_tree::robot(included));
     const std::filesystem::path document = held.write("top.xacro", include_tree::robot(body));
     meios::log_sink silent;
     meios::capturing_log_sink log(silent);
@@ -58,6 +57,24 @@ chain_read read_expression(const include_tree::tree &held, std::string_view expr
     if(out.has_value())
         return chain_read{out->document, meios::diagnostic_code::unspecified, std::string(), log.errors(), record};
     return chain_read{std::nullopt, out.error().code, out.error().message, log.errors(), record};
+}
+
+chain_read read_expression(const include_tree::tree &held, std::string_view expression)
+{
+    const std::string body = "<xacro:include filename=\"w.xacro\" ns=\"n\"/><link name=\"l" + std::string(expression) + "\"/>";
+    return read_document(held, "<xacro:property name=\"x\" value=\"7\"/>", body);
+}
+
+// The included file binds only c, so every other member a read names falls through past it.
+chain_read read_through(const include_tree::tree &held, std::string_view ns, std::string_view expression, std::string_view before = {})
+{
+    const std::string body = std::string(before) + "<xacro:include filename=\"w.xacro\" ns=\"" + std::string(ns) + "\"/><link name=\"l" + std::string(expression) + "\"/>";
+    return read_document(held, "<xacro:property name=\"c\" value=\"C\"/>", body);
+}
+
+bool refuses_undefined(const chain_read &got, std::string_view name)
+{
+    return !got.document && got.code == meios::diagnostic_code::undefined_property && got.message.find("name '" + std::string(name) + "' is not defined") != std::string::npos;
 }
 
 chain_read read_chain(const include_tree::tree &held, std::size_t hops)
@@ -137,4 +154,32 @@ TEST_CASE("a dotted read stopping at a nested namespace refuses naming its spell
     CHECK(!got.document);
     CHECK(got.code == meios::diagnostic_code::expression_error);
     CHECK(got.message.find("'n.n' names an include namespace") != std::string::npos);
+}
+
+TEST_CASE("a read through an include namespace falls through to the mathematics constant", "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    CHECK(renders(read_through(held, "n", "${n.pi}"), "l3.141592653589793"));
+    CHECK(renders(read_through(held, "math", "${math.pi}"), "l3.141592653589793"));
+    CHECK(renders(read_through(held, "n", "${n.n.pi}"), "l3.141592653589793"));
+}
+
+TEST_CASE("a call through an include namespace dispatches as the bare call does", "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    CHECK(renders(read_through(held, "n", "${n.sin(0)}"), "l0.0"));
+    CHECK(renders(read_through(held, "n", "${n.max(1, 2)}"), "l2"));
+}
+
+TEST_CASE("a name the global table lacks refuses through an include namespace", "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    CHECK(refuses_undefined(read_through(held, "n", "${n.abs(-2)}"), "abs"));
+    CHECK(refuses_undefined(read_through(held, "n", "${n.e}"), "e"));
+}
+
+TEST_CASE("a property of the including file wins over the mathematics constant", "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    CHECK(renders(read_through(held, "n", "${n.pi}", "<xacro:property name=\"pi\" value=\"3\"/>"), "l3"));
 }

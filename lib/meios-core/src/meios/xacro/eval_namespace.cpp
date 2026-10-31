@@ -65,13 +65,19 @@ private:
     std::size_t m_held;
 };
 
+// A member no table binds is answered by upstream's global names, as a bare name is, so a call
+// reaches only the functions that table lists and any other name refuses as the bare read does.
 value member_value(parser &p, const name_read &read, std::string_view name)
 {
     if(read.failed())
         return p.fail_reported(read.failure);
-    if(!read.bound)
-        return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
-    return *read.bound;
+    if(read.bound)
+        return *read.bound;
+    if(!p.at(token_kind::lparen))
+        return unbound_name(p, name);
+    if(listed(root_symbols, name))
+        return call_name(p, name);
+    return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
 }
 
 // The members after the first sit at every second token from the walk's start, each behind its dot.

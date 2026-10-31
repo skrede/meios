@@ -101,6 +101,22 @@ TEST_CASE("a member no table binds refuses as an undefined name", "[eval_python]
     REQUIRE(both_refuse_once(held, include_as("w.xacro", "n") + link("a${n.nope}"), "name 'nope' is not defined"));
 }
 
+TEST_CASE("a mathematics name no table binds is read through a namespace", "[eval_python][scope]")
+{
+    const include_tree::tree held;
+    held.write("c.xacro", include_tree::robot(property("c", "C")));
+    REQUIRE(both_render(held, include_as("c.xacro", "n") + link("l${n.pi}"), "l3.141592653589793"));
+    REQUIRE(both_render(held, include_as("c.xacro", "n") + link("l${n.n.pi}"), "l3.141592653589793"));
+}
+
+TEST_CASE("a function no table binds is called through a namespace", "[eval_python][scope]")
+{
+    const include_tree::tree held;
+    held.write("c.xacro", include_tree::robot(property("c", "C")));
+    REQUIRE(both_render(held, include_as("c.xacro", "n") + link("l${n.sin(0)}"), "l0.0"));
+    REQUIRE(both_render(held, include_as("c.xacro", "n") + link("l${n.max(1, 2)}"), "l2"));
+}
+
 TEST_CASE("a namespace member whose text fails gives one record", "[eval_python][scope]")
 {
     const include_tree::tree held;

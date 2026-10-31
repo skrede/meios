@@ -148,6 +148,8 @@ value parse_power(parser &p);
 value parse_postfix(parser &p);
 value parse_atom(parser &p);
 value parse_name(parser &p);
+value call_name(parser &p, std::string_view name);
+value unbound_name(parser &p, std::string_view name);
 std::string undefined_name(const eval_scope &scope, std::string_view name);
 value parse_dict(parser &p);
 value parse_dotted(parser &p, std::string_view head);

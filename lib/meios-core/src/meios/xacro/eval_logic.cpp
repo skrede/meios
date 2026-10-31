@@ -104,6 +104,21 @@ value refuse_namespace_read(parser &p, std::string_view spelling)
                   + named + ".<name>");
 }
 
+value call_name(parser &p, std::string_view name)
+{
+    if(name == "dict") return parse_dict(p);
+    if(is_constructor(name))
+        return p.fail_unsupported("the Python constructor '" + std::string(name)
+                                  + "()' — use eval-python");
+    return parse_call(p, name);
+}
+
+value unbound_name(parser &p, std::string_view name)
+{
+    if(name == "pi") return real_result(p, 3.141592653589793);
+    return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
+}
+
 value parse_name(parser &p)
 {
     const level_guard level(p);
@@ -111,17 +126,11 @@ value parse_name(parser &p)
     std::string_view name = p.peek().text;
     ++p.pos;
     if(p.accept(token_kind::dot)) return parse_dotted(p, name);
-    if(p.at(token_kind::lparen) && name == "dict") return parse_dict(p);
-    if(p.at(token_kind::lparen) && is_constructor(name))
-        return p.fail_unsupported("the Python constructor '" + std::string(name)
-                                  + "()' — use eval-python");
-    if(p.at(token_kind::lparen)) return parse_call(p, name);
+    if(p.at(token_kind::lparen)) return call_name(p, name);
     const name_read bound = read_name(p.scope, name, p.nesting);
     if(bound.failed()) return p.fail_reported(bound.failure);
     if(bound.space) return refuse_namespace_read(p, name);
-    if(!bound.bound && name == "pi") return real_result(p, 3.141592653589793);
-    if(!bound.bound)
-        return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
+    if(!bound.bound) return unbound_name(p, name);
     return *bound.bound;
 }
 

@@ -76,8 +76,7 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "comment_evaluation_switched_off",
                            "find_without_package_index",
                            "property_chain_deeper_than_depth_ceiling",
-                           "include_namespace_read_as_value",
-                           "include_namespace_reads_mathematics_name")
+                           "include_namespace_read_as_value")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -120,6 +119,7 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("namespace_macro_reads_outer_global", "namespace_macro_reads_outer_global", None),
                             ("namespace_nested_reads", "namespace_nested_reads", None),
                             ("include_namespace_shadows_math", "include_namespace_shadows_math", None),
+                            ("include_namespace_reads_mathematics_name", "include_namespace_reads_mathematics_name", None),
                             ("property_removed_then_read", "property_removed_then_read", None),
                             ("property_value_and_remove_together", "property_value_and_remove_together", None),
                             ("property_removed_in_macro_reaches_global", "property_removed_in_macro_reaches_global", None),

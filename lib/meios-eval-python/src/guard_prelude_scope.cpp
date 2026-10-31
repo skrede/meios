@@ -35,10 +35,16 @@ std::string_view scope_reads()
 std::string_view scope_namespace_class()
 {
     return "class _ScopeNamespace:\n"
-           "    __slots__ = ('__meios_member__',)\n"
+           "    __slots__ = ('__meios_member__', '__meios_fallback__')\n"
            "\n"
            "    def __getattr__(self, item):\n"
-           "        return object.__getattribute__(self, '__meios_member__')(item)\n"
+           "        found = object.__getattribute__(self, '__meios_member__')(item)\n"
+           "        if found is not _ABSENT:\n"
+           "            return found\n"
+           "        for names in object.__getattribute__(self, '__meios_fallback__'):\n"
+           "            if item in names:\n"
+           "                return names[item]\n"
+           "        raise NameError(\"name '\" + item + \"' is not defined\")\n"
            "\n";
 }
 
