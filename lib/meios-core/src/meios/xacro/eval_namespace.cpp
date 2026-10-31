@@ -11,6 +11,7 @@
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
+#include <cstddef>
 #include <optional>
 #include <string_view>
 
@@ -31,18 +32,55 @@ std::string unbound_head(std::string_view head)
     return " — neither evaluator binds '" + std::string(head) + "'";
 }
 
-// A namespace inside another is read through in turn, and one an expression stops at has no value,
-// as a bare one has none.
-value inner_member(parser &p, const scope_namespace &outer, const std::string &spelling, std::string_view name)
+// Each hop of a dotted read holds one level of the shared expression-depth ceiling until the walk
+// returns, so no chain of namespaces is longer than the ceiling every other nesting shares.
+class hop_levels
 {
-    const std::optional<scope_namespace> inner = p.scope.namespace_of(outer, name);
-    if(!inner || !p.accept(token_kind::dot))
-        return refuse_namespace_read(p, spelling);
-    if(!p.at(token_kind::name))
-        return p.fail_unsupported("dotted access in an expression — use eval-python");
-    const std::string_view member = p.peek().text;
-    ++p.pos;
-    return namespace_member(p, *inner, spelling, member);
+public:
+    explicit hop_levels(parser &owner)
+            : m_p(owner)
+            , m_held(0)
+    {
+    }
+
+    hop_levels(const hop_levels &)            = delete;
+    hop_levels &operator=(const hop_levels &) = delete;
+
+    ~hop_levels()
+    {
+        for(; m_held > 0; --m_held)
+            m_p.leave_level();
+    }
+
+    bool enter()
+    {
+        if(!m_p.enter_level())
+            return false;
+        ++m_held;
+        return true;
+    }
+
+private:
+    parser &m_p;
+    std::size_t m_held;
+};
+
+value member_value(parser &p, const name_read &read, std::string_view name)
+{
+    if(read.failed())
+        return p.fail_reported(read.failure);
+    if(!read.bound)
+        return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
+    return *read.bound;
+}
+
+// The members after the first sit at every second token from the walk's start, each behind its dot.
+std::string walked_spelling(const parser &p, std::string_view head, std::string_view member, std::size_t from)
+{
+    std::string spelling = std::string(head) + '.' + std::string(member);
+    for(std::size_t at = from + 1; at < p.pos; at += 2)
+        spelling += '.' + std::string(p.tokens[at].text);
+    return spelling;
 }
 
 }
@@ -61,17 +99,28 @@ value refuse_call_target(parser &p, std::string_view head, std::string_view memb
 }
 
 // The reference's namespace forwards a dot to its own lookup, which falls through to the table the
-// include was read in and evaluates a deferred member in the table that holds it.
+// include was read in and evaluates a deferred member in the table that holds it. A namespace inside
+// another is read through in turn, and one an expression stops at has no value, as a bare one has none.
 value namespace_member(parser &p, const scope_namespace &space, std::string_view spelling, std::string_view member)
 {
-    const name_read read = read_member(p.scope, space, member, p.nesting);
-    if(read.failed())
-        return p.fail_reported(read.failure);
-    if(read.space)
-        return inner_member(p, space, std::string(spelling) + '.' + std::string(member), member);
-    if(!read.bound)
-        return p.fail(undefined_name(p.scope, member), diagnostic_code::undefined_property);
-    return *read.bound;
+    hop_levels levels(p);
+    const std::size_t from            = p.pos;
+    std::optional<scope_namespace> at = space;
+    for(std::string_view name = member;;)
+    {
+        if(!levels.enter())
+            return value{};
+        const name_read read = read_member(p.scope, *at, name, p.nesting);
+        if(read.failed() || !read.space)
+            return member_value(p, read, name);
+        at = p.scope.namespace_of(*at, name);
+        if(!at || !p.accept(token_kind::dot))
+            return refuse_namespace_read(p, walked_spelling(p, spelling, member, from));
+        if(!p.at(token_kind::name))
+            return p.fail_unsupported("dotted access in an expression — use eval-python");
+        name = p.peek().text;
+        ++p.pos;
+    }
 }
 
 }

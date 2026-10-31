@@ -69,7 +69,8 @@ if(TARGET xacro_macro_call_test)
 endif()
 if(TARGET xacro_namespace_test)
     target_sources(xacro_namespace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_namespace_macro_test.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_namespace_handle_test.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_namespace_handle_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_namespace_walk_test.cpp)
 endif()
 if(TARGET xacro_include_read_test)
     target_sources(xacro_include_read_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_warning_test.cpp)
