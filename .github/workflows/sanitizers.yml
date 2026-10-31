@@ -29,17 +29,29 @@ jobs:
           - label: tsan
             flags: "-fsanitize=thread -fno-omit-frame-pointer -g"
             corpus: "ON"
+          - label: asan-ubsan-eval-python
+            flags: "-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+            corpus: "OFF"
+            eval_python: true
 
     env:
       CC: clang-18
       CXX: clang++-18
       # UBSan recovers and exits zero by default, so a report would leave the step green.
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-      ASAN_OPTIONS: halt_on_error=1
+      # The embedded interpreter is never finalized by design, so the python leg
+      # alone turns leak detection off rather than report what it deliberately keeps.
+      ASAN_OPTIONS: ${{ matrix.eval_python && 'halt_on_error=1:detect_leaks=0' || 'halt_on_error=1' }}
       TSAN_OPTIONS: halt_on_error=1
 
     steps:
       - uses: actions/checkout@v4
+
+      # python3-yaml comes from the image's own repositories and is built for the
+      # same interpreter python3-dev configures against.
+      - name: Install Python development headers and the yaml module
+        if: matrix.eval_python
+        run: sudo apt-get update && sudo apt-get install -y python3-dev python3-yaml
 
       # Only the thread-sanitizer leg fetches the pinned corpus, so its sweep for
       # unnamed races drives real robot descriptions through the loader instead of
@@ -54,7 +66,8 @@ jobs:
             -DMEIOS_CMAKE_FETCH_DEPS=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_CXX_FLAGS="${{ matrix.flags }}" \
-            -DCMAKE_C_FLAGS="${{ matrix.flags }}"
+            -DCMAKE_C_FLAGS="${{ matrix.flags }}" \
+            ${{ matrix.eval_python && '-DMEIOS_EVAL_PYTHON_SUPPORT=ON -DMEIOS_REQUIRE_EVAL_PYTHON=ON' || '' }}
 
       # The correctness constraint: the instrumentation must reach the library,
       # not only the tests. Prove it against the compile database before building
@@ -71,6 +84,19 @@ jobs:
 
       - name: Build
         run: cmake --build build
+
+      # The suite runs unfiltered, so a tree that lost the python backend's tests
+      # would still pass; the python leg proves they are registered first.
+      - name: Assert the python backend's tests are registered
+        if: matrix.eval_python
+        run: |
+          cd build
+          registered=$(ctest -N -R '^eval_python' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "FAIL: no eval_python test is registered" >&2
+            exit 1
+          fi
+          echo "eval_python registered $registered test(s)"
 
       - name: Test
         run: cd build && ctest --output-on-failure

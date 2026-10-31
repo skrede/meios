@@ -65,6 +65,13 @@ TEST_CASE("a namespace member is read through a dot", "[eval_python][scope]")
     REQUIRE(both_render(held, include_as("w.xacro", "n") + link("a${n.w}"), "a7"));
 }
 
+TEST_CASE("a namespace member named like a private attribute is read through a dot", "[eval_python][scope]")
+{
+    const include_tree::tree held;
+    held.write("m.xacro", include_tree::robot(property("_member", "m7")));
+    REQUIRE(both_render(held, include_as("m.xacro", "n") + link("a${n._member}"), "am7"));
+}
+
 TEST_CASE("a member the namespace lacks is read from the table the include was read in", "[eval_python][scope]")
 {
     const include_tree::tree held;

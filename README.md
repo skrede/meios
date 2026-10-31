@@ -283,7 +283,7 @@ a required gate would be a visible decision rather than a silent one:
 
 | Workflow | What it watches | Why advisory |
 |---|---|---|
-| Sanitizers | asan/ubsan and tsan, with a step asserting the library object really carries the instrumentation; plus four fuzz harnesses, existence checked, run 60s each | findings are triaged, not merge-blocking |
+| Sanitizers | asan/ubsan and tsan, with a step asserting the library object really carries the instrumentation, and asan/ubsan once more with the python backend built; plus four fuzz harnesses, existence checked, run 60s each | findings are triaged, not merge-blocking |
 | Clang-Tidy | first-party `lib/` translation units | the check itself says so, in its own job output |
 | Canary | newest-toolchain drift, `gcc:latest`, warnings-as-errors forced off | a benign new-compiler diagnostic must not red-light the pipeline |
 

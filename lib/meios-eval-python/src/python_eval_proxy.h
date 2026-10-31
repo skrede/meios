@@ -72,8 +72,8 @@ inline pybind11::object namespace_member_reader(const pybind11::dict &priv, yaml
 
 inline pybind11::object namespace_proxy(const pybind11::dict &priv, yaml_context &ctx, const scope_namespace &space)
 {
-    pybind11::object proxy = priv["_ScopeNamespace"]();
-    proxy.attr("_member")  = namespace_member_reader(priv, ctx, space);
+    pybind11::object proxy         = priv["_ScopeNamespace"]();
+    proxy.attr("__meios_member__") = namespace_member_reader(priv, ctx, space);
     return proxy;
 }
 

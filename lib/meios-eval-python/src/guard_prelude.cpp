@@ -1,11 +1,15 @@
 #include "guard_prelude.h"
 
+#include <string>
 #include <string_view>
 
 namespace meios::detail
 {
 
-std::string_view guard_prelude_source()
+namespace
+{
+
+std::string_view name_tables()
 {
     return "import ast, math, builtins\n"
            "\n"
@@ -26,8 +30,12 @@ std::string_view guard_prelude_source()
            "\n"
            "def math_names():\n"
            "    return {n: getattr(math, n) for n in _MATH}\n"
-           "\n"
-           "def _named(node):\n"
+           "\n";
+}
+
+std::string_view dunder_walk()
+{
+    return "def _named(node):\n"
            "    if isinstance(node, ast.Name):\n"
            "        return node.id\n"
            "    if isinstance(node, ast.Attribute):\n"
@@ -44,8 +52,12 @@ std::string_view guard_prelude_source()
            "        if name.startswith('__'):\n"
            "            return name\n"
            "    return ''\n"
-           "\n"
-           "# The formatting mini-language performs attribute access and subscripting on text\n"
+           "\n";
+}
+
+std::string_view traversal_walk()
+{
+    return "# The formatting mini-language performs attribute access and subscripting on text\n"
            "# written inside a string constant, which the walk never inspects; the traversal is\n"
            "# therefore invisible and the primitive itself is refused instead.\n"
            "def _offending_traversal(tree):\n"
@@ -56,8 +68,12 @@ std::string_view guard_prelude_source()
            "            if node.id in _TRAVERSAL:\n"
            "                return node.id\n"
            "    return ''\n"
-           "\n"
-           "def _offending_builtin(tree, bound):\n"
+           "\n";
+}
+
+std::string_view builtin_walk()
+{
+    return "def _offending_builtin(tree, bound):\n"
            "    for node in ast.walk(tree):\n"
            "        if isinstance(node, ast.FormattedValue):\n"
            "            # A conversion specifier is a call to a withheld builtin that names no\n"
@@ -71,8 +87,12 @@ std::string_view guard_prelude_source()
            "            if node.id in _WITHHELD and node.id not in bound:\n"
            "                return node.id\n"
            "    return ''\n"
-           "\n"
-           "# ast.walk descends into a lambda or comprehension body, where the reference\n"
+           "\n";
+}
+
+std::string_view expression_check()
+{
+    return "# ast.walk descends into a lambda or comprehension body, where the reference\n"
            "# implementation's co_names check cannot reach: those bodies are nested code\n"
            "# objects whose names never appear in the top-level co_names tuple.\n"
            "def check_expression(expr, bound):\n"
@@ -90,81 +110,23 @@ std::string_view guard_prelude_source()
            "    if name:\n"
            "        return 'non-allowlisted-builtin: ' + name\n"
            "    return ''\n"
-           "\n"
-           "_ABSENT = object()\n"
-           "\n"
-           "class _ScopeReadFailed(Exception):\n"
-           "    pass\n"
-           "\n"
-           "# The reference evaluates over its table as globals, so every name read at any depth of\n"
-           "# the expression, a lambda or a generator body included, is looked up here, the scope\n"
-           "# before the mathematics names and helpers and both before the builtins.\n"
-           "class _ScopeGlobals(dict):\n"
-           "    __slots__ = ('_read', '_fallback')\n"
-           "\n"
-           "    def __missing__(self, name):\n"
-           "        found = self._read(name)\n"
-           "        if found is not _ABSENT:\n"
-           "            return found\n"
-           "        if name in self._fallback:\n"
-           "            return self._fallback[name]\n"
-           "        raise KeyError(name)\n"
-           "\n"
-           "class _ScopeNamespace:\n"
-           "    __slots__ = ('_member',)\n"
-           "\n"
-           "    def __getattr__(self, item):\n"
-           "        return self._member(item)\n"
-           "\n"
-           "def _unit(factor):\n"
-           "    def _construct(loader, node):\n"
-           "        return factor * float(loader.construct_scalar(node))\n"
-           "    return _construct\n"
-           "\n"
-           "def parse_yaml(text):\n"
-           "    import yaml\n"
-           "    for tag, factor in _UNITS:\n"
-           "        yaml.SafeLoader.add_constructor(tag, _unit(factor))\n"
-           "    return yaml.load(text, Loader=yaml.SafeLoader)\n"
-           "\n"
-           "def _key_hint(keys):\n"
-           "    names = sorted(str(k) for k in keys)\n"
-           "    if not names:\n"
-           "        return 'it is empty'\n"
-           "    shown = 'keys are: ' + ', '.join(names[:6])\n"
-           "    if len(names) > 6:\n"
-           "        return shown + ' (+' + str(len(names) - 6) + ' more)'\n"
-           "    return shown\n"
-           "\n"
-           "# Ported near-verbatim from ros/xacro at revision\n"
-           "# da4b3849f8320903d625250089f67f0632be86f2, xacro/__init__.py:81-110.\n"
-           "class _YamlList(list):\n"
-           "    @staticmethod\n"
-           "    def wrap(item):\n"
-           "        if isinstance(item, dict):\n"
-           "            return _YamlDict(item)\n"
-           "        if isinstance(item, list):\n"
-           "            return _YamlList(item)\n"
-           "        return item\n"
-           "\n"
-           "    def __getitem__(self, idx):\n"
-           "        return _YamlList.wrap(list.__getitem__(self, idx))\n"
-           "\n"
-           "    def __iter__(self):\n"
-           "        for item in list.__iter__(self):\n"
-           "            yield _YamlList.wrap(item)\n"
-           "\n"
-           "class _YamlDict(dict):\n"
-           "    def __getattr__(self, item):\n"
-           "        try:\n"
-           "            return _YamlList.wrap(dict.__getitem__(self, item))\n"
-           "        except KeyError:\n"
-           "            raise AttributeError(\"the yaml mapping has no key '\" + str(item)\n"
-           "                                 + \"'; \" + _key_hint(self.keys())) from None\n"
-           "\n"
-           "    # The alias makes subscript and dotted access one operation, so provenance and the\n"
-           "    # missing-key diagnostic reach both spellings.\n"
-           "    __getitem__ = __getattr__\n";
+           "\n";
+}
+
+std::string guard_source()
+{
+    std::string text;
+    for(const std::string_view part : {name_tables(), dunder_walk(), traversal_walk(), builtin_walk(), expression_check()})
+        text += part;
+    return text;
+}
+
+}
+
+std::string_view guard_prelude_source()
+{
+    static const std::string text = guard_source() + scope_prelude_source();
+    return text;
 }
 
 }
