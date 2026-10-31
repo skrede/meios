@@ -14,12 +14,17 @@
 #include <pybind11/embed.h>
 
 #include <string>
+#include <cstddef>
 #include <optional>
 
 namespace meios::detail
 {
 
 inline pybind11::object namespace_proxy(const pybind11::dict &priv, yaml_context &ctx, const scope_namespace &space, const pybind11::tuple &fallback);
+
+// The interpreter's frames stay on the stack beneath the evaluation a read starts, as a parser's
+// do, so a read carries the nesting they are worth.
+inline constexpr std::size_t python_read_nesting = 9;
 
 inline pybind11::error_already_set raised(const pybind11::handle &type, const std::string &message)
 {
@@ -47,7 +52,7 @@ inline pybind11::object scope_name_reader(const pybind11::dict &priv, yaml_conte
     return pybind11::cpp_function(
             [priv, &ctx, fallback](const std::string &name)
             {
-                const name_read read = read_name(ctx.scope, name);
+                const name_read read = read_name(ctx.scope, name, python_read_nesting);
                 if(const std::optional<scope_namespace> space = read.space ? ctx.scope.namespace_of(name) : std::nullopt)
                     return namespace_proxy(priv, ctx, *space, fallback);
                 return read_answer(priv, ctx, read);
@@ -59,7 +64,7 @@ inline pybind11::object namespace_member_reader(const pybind11::dict &priv, yaml
     return pybind11::cpp_function(
             [priv, &ctx, space, fallback](const std::string &item)
             {
-                const name_read read = read_member(ctx.scope, space, item);
+                const name_read read = read_member(ctx.scope, space, item, python_read_nesting);
                 if(const std::optional<scope_namespace> inner = read.space ? ctx.scope.namespace_of(space, item) : std::nullopt)
                     return namespace_proxy(priv, ctx, *inner, fallback);
                 return read_answer(priv, ctx, read);

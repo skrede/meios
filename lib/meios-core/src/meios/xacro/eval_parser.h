@@ -42,8 +42,9 @@ struct parser
     // A refusal whose record its source already logged, so only the kind travels on.
     value fail_reported(eval_failure_kind kind);
     // Charges the two axes a recursive descent into the grammar grows, before it recurses:
-    // one evaluation step, and one more level of nesting. The session reports and latches a
-    // crossed ceiling itself, so a refusal only records the category here.
+    // one evaluation step, and one more level of nesting above the spans the parser stands in,
+    // so a parser and the levels beneath it share one ceiling. The session reports and latches
+    // a crossed ceiling itself, so a refusal only records the category here.
     bool enter_level();
     void leave_level() { --nesting; }
     bool refuse_exhausted();

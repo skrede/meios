@@ -49,7 +49,7 @@ bool parser::refuse_exhausted()
 bool parser::enter_level()
 {
     if(!session.charge_steps(1, log, anchor)) return refuse_exhausted();
-    if(!session.admits_expression_depth(nesting + 1, log, anchor)) return refuse_exhausted();
+    if(!session.admits_expression_depth(session.span_depth + nesting + 1, log, anchor)) return refuse_exhausted();
     ++nesting;
     return true;
 }

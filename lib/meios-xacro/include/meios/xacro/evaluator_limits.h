@@ -18,10 +18,10 @@ inline constexpr std::size_t default_byte_ceiling = 8'000'000;
 inline constexpr std::size_t default_token_ceiling = 1'000'000;
 inline constexpr std::size_t default_step_ceiling = 10'000'000;
 // One recursive entry into the expression grammar is one stack frame, and a balanced
-// parenthesis pair costs twelve of them. This admits twenty bracket levels, against a
-// deepest measured expression of twenty-six entries and a stack exhausted at some 2 400
-// entries on a 512 KiB thread.
-inline constexpr std::size_t default_expression_depth_ceiling = 256;
+// parenthesis pair costs twelve of them. This admits fourteen bracket levels, against a
+// deepest measured expression of twenty-six entries, and leaves the deepest of every nested
+// shape ninefold stack headroom on a 512 KiB thread in unoptimized gcc and clang builds.
+inline constexpr std::size_t default_expression_depth_ceiling = 188;
 // An alias denotes a whole anchored subtree, and nesting anchors multiplies that: measured
 // with the reference loader at a fan-out of nine and one anchor per level, five levels fit in
 // 258 input bytes and denote 2 790 063 expanded characters, six fit in 304 and denote

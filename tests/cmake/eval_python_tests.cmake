@@ -158,10 +158,6 @@ if(TARGET meios_eval-python)
         target_link_libraries(eval_python_scope_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python pugixml::pugixml
                 Catch2::Catch2WithMain)
-        # The chain cases read the cost a deferred level is charged, a core-private constant, so the
-        # admitted length is counted from the same figure the core evaluator is bounded by.
-        target_include_directories(eval_python_scope_test PRIVATE
-            ${meios_SOURCE_DIR}/lib/meios-core/src)
         meios_enable_coverage(eval_python_scope_test)
         meios_warnings(eval_python_scope_test)
         catch_discover_tests(eval_python_scope_test TEST_PREFIX "eval_python_scope.")

@@ -96,6 +96,11 @@ foreach(stem IN ITEMS native_yaml native_yaml_ceiling native_yaml_resolver nativ
     meios_add_native_test(${stem} yaml)
 endforeach()
 
+# The headroom cases meter the shapes the depth cases bound, so they build into the same stem.
+if(TARGET native_span_depth_test)
+    target_sources(native_span_depth_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/native_span_headroom_test.cpp)
+endif()
+
 # This stem alone reads the project's own listfiles, so the module directory reaches it and no
 # other stem gains a coupling to a directory it never opens.
 if(TARGET native_corpus_record_test)

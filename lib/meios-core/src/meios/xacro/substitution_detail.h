@@ -120,12 +120,9 @@ inline void record_terminal(subst_ctx &ctx, diagnostic_code code, const std::str
 
 bool refuse_recorded(subst_ctx &ctx, const expansion_error &cause);
 
-// The expression-depth axis counts stack frames in units of one recursive entry into the
-// expression grammar, so a nested scan, costing more than one entry, is charged what it costs.
-// Measured on a 512 KiB thread by driving each shape until the process died: 2 424 grammar
-// entries and 870 nested scans survive, where 2 448 and 880 do not. So charged, the one ceiling
-// leaves both shapes ninefold headroom.
-inline constexpr std::size_t nested_scan_cost = 3;
+// A nested scan's frames, in grammar entries; so charged, nested spans keep the ninefold stack
+// headroom on a 512 KiB thread that the grammar's own nesting keeps.
+inline constexpr std::size_t nested_scan_cost = 4;
 
 // One level of span nesting, released by the same unwind that abandons it. A crossed ceiling is
 // reported by the session against the real sink, so its cause is copied here for the caller.

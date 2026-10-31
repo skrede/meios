@@ -1,8 +1,5 @@
+#include "stack_meter.h"
 #include "eval_python_scope_fixture.h"
-
-#include "meios/xacro/deferred_read.h"
-
-#include <meios/xacro/evaluator_limits.h>
 
 #include <meios/diagnostic/diagnostic_code.h>
 
@@ -11,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <cstddef>
+#include <optional>
 #include <string_view>
 
 using scope_probe::include_as;
@@ -33,11 +31,6 @@ bool both_refuse_once(const include_tree::tree &held, std::string_view body, std
             scope_probe::refuses_once(scope_probe::load_with(held, body, nullptr), naming);
 }
 
-std::size_t admitted_levels()
-{
-    return meios::default_expression_depth_ceiling / meios::detail::deferred_read_cost;
-}
-
 // Property i reads property i + 1 inside arithmetic, so no level is a bare read the substitution layer
 // answers and every one is an evaluation in the interpreter.
 std::string arithmetic_chain(std::size_t levels)
@@ -48,10 +41,11 @@ std::string arithmetic_chain(std::size_t levels)
     return body + property("p" + std::to_string(levels), "1") + link("${p0}");
 }
 
-std::size_t longest_chain()
+// Stopped one past the pinned length, so a chain that grew reads one level too long.
+std::size_t longest_chain(std::size_t cap)
 {
     std::size_t levels = 0;
-    while(levels < 64 && load(arithmetic_chain(levels + 1)).out.has_value())
+    while(levels < cap && load(arithmetic_chain(levels + 1)).out.has_value())
         ++levels;
     return levels;
 }
@@ -131,19 +125,32 @@ TEST_CASE("a circular definition read by the backend refuses as circular", "[eva
     REQUIRE(got.out.error().code == meios::diagnostic_code::xacro_structural_error);
 }
 
-// Measured on a 512 KiB thread with the ceiling raised: the interpreter's own parser refuses this chain
-// at 48 levels, raising "Parser stack overflowed", and the thread outlives it, so the ceiling's
-// refusal is the one a reader meets and the interpreter's is a second guard behind it.
-TEST_CASE("a deferred chain read by the backend refuses on the shared ceiling, short of the interpreter's guard", "[eval_python][scope]")
+// CPython 3.14 refuses this chain with "Parser stack overflowed" at 48 levels, and earlier versions
+// have no such guard, so the ceiling's charge on each read is what keeps the thread's headroom.
+TEST_CASE("a deferred chain read by the backend refuses on the shared ceiling one level past its pin", "[eval_python][scope]")
 {
-    constexpr std::size_t interpreter_refuses_at = 48;
-    const std::size_t most                       = longest_chain();
-    CHECK(most > 0);
-    CHECK(most <= admitted_levels());
-    CHECK(most < interpreter_refuses_at);
+    const std::size_t most = longest_chain(7);
+    CHECK(most == 6);
     const scope_probe::loaded refused = load(arithmetic_chain(most + 1));
     REQUIRE(scope_probe::refuses_once(refused, "expression depth ceiling"));
     REQUIRE(refused.out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+}
+
+// The empty chain runs once unmetered first, so statics it initializes do not count against the
+// fixed cost alone.
+TEST_CASE("a deferred chain read by the backend keeps ninefold headroom", "[eval_python][scope]")
+{
+    if(!stack_meter::headroom_measured)
+        SKIP("the stack figures belong to an unoptimized, uninstrumented POSIX build");
+    constexpr std::size_t thread_stack      = 512 * 1024;
+    bool rendered                           = load(arithmetic_chain(0)).out.has_value();
+    const std::optional<std::size_t> base   = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(0)).out.has_value() && rendered; });
+    const std::optional<std::size_t> loaded = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(6)).out.has_value() && rendered; });
+    REQUIRE(base);
+    REQUIRE(loaded);
+    CHECK(rendered);
+    INFO("stack used with no level " << *base << " bytes, with the admitted length " << *loaded);
+    CHECK(stack_meter::keeps_ninefold(*base, *loaded, thread_stack));
 }
 
 TEST_CASE("a dunder traversal from a namespace or from a lambda refuses under the guard", "[eval_python][scope]")

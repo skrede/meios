@@ -14,15 +14,9 @@ namespace meios::detail
 
 struct expand_ctx;
 
-// The expression-depth axis counts stack frames in units of one recursive entry into the
-// expression grammar. A deferred read keeps the reading parser's frames live, charged as its
-// nesting, while the resolution beneath it runs a substitution and a parser of its own, charged
-// this. Measured on a 512 KiB thread by driving each chain until the process died: 146 reads of
-// `${p}` and 72 of `${p + 1}` survive, where 147 and 73 do not, and one read from inside a hundred
-// parentheses survives where two do not. So charged, the one ceiling admits 15, 8 and none of
-// them, ninefold under each. The python evaluator reports no nesting, so 14 of its `${p + 1}` are
-// admitted, and its interpreter's own parser refuses the 48th before the thread runs out.
-inline constexpr std::size_t deferred_read_cost = 17;
+// A deferred level's own substitution and resolution, in grammar entries, on top of the reader's
+// carried nesting; so charged, every deferred chain keeps ninefold headroom on a 512 KiB thread.
+inline constexpr std::size_t deferred_read_cost = 19;
 
 // Where a deferred text was written: the property element, the attribute that holds the text, and
 // the file the element came from, so its evaluation reports a refusal inside that text.

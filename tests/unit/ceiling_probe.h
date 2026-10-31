@@ -8,9 +8,12 @@
 
 #include <meios/io/source_stack.h>
 
+#include <meios/diagnostic/diagnostic_code.h>
+
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <optional>
 #include <functional>
 #include <string_view>
 
@@ -82,6 +85,46 @@ inline resolved substitute(std::string_view raw, meios::eval_policy policy, meio
         meios::detail::substitute_refined(raw, scope, sources, "inline.xacro", policy, {}, session,
                                           sink, {});
     return resolved{ out.has_value(), out ? out->text : std::string(), heard.messages };
+}
+
+// The count each shape is admitted to, read off the one ceiling and the cost a level of that
+// shape is charged against it.
+inline std::size_t admitted(std::size_t cost)
+{
+    return meios::default_expression_depth_ceiling / cost;
+}
+
+inline resolved resolve(const std::string &raw)
+{
+    const meios::evaluator_limits defaults;
+    meios::detail::eval_session session(defaults);
+    meios::eval_scope scope;
+    scope.set("n", meios::value{std::string("n")});
+    return substitute(raw, meios::eval_policy::fail, session, scope);
+}
+
+struct loaded
+{
+    bool rendered;
+    std::optional<meios::diagnostic_code> refused;
+    std::size_t errors;
+};
+
+inline loaded load(const std::string &document)
+{
+    recorder heard;
+    meios::log_sink_f sink{std::ref(heard)};
+    meios::eval_scope scope;
+    meios::source_stack sources{};
+    const meios::expected<meios::expansion, meios::expansion_error> out = meios::expand(document, scope, sources, "inline.xacro", meios::expansion_limits{}, sink);
+    if(out)
+        return loaded{true, std::nullopt, heard.messages.size()};
+    return loaded{false, out.error().code, heard.messages.size()};
+}
+
+inline bool refused_on_depth(const loaded &out)
+{
+    return !out.rendered && out.refused == meios::diagnostic_code::expansion_budget_exceeded && out.errors == 1;
 }
 
 inline std::string nested_arguments(std::size_t levels)

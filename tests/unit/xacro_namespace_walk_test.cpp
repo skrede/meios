@@ -22,9 +22,9 @@ namespace
 {
 
 constexpr std::size_t thread_stack = 512 * 1024;
-// The default ceiling of 256 less the thirteen levels a dotted read already holds and the one its
+// The default ceiling of 188 less the thirteen levels a dotted read already holds and the one its
 // last member takes.
-constexpr std::size_t longest_admitted = 242;
+constexpr std::size_t longest_admitted = 174;
 
 struct chain_read
 {
@@ -123,7 +123,7 @@ TEST_CASE("the longest dotted read through namespaces renders and one hop more r
                                           longest = longest_renderable(held, longest_admitted + 1);
                                           past    = read_chain(held, longest + 1);
                                       }));
-    CHECK(longest == 242);
+    CHECK(longest == 174);
     REQUIRE(past);
     CHECK(refuses_on_depth(*past));
 }
