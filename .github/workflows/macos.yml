@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     name: build (AppleClang)
     steps:
       - uses: actions/checkout@v4
@@ -189,7 +189,7 @@ jobs:
   # branch. Its focused per-stem steps guard a selector that discovers nothing -- how the tests
   # register, not what the processor is -- and the leg above runs them; without them nothing here
   # would notice a tree that registered nothing, so the suite run carries --no-tests=error.
-  # Untested otherwise: x86_64 codegen and macOS 15's libc++, where float from_chars has lagged.
+  # Untested otherwise: x86_64 codegen, where libc++'s float from_chars has lagged.
   build-intel:
     runs-on: macos-15-intel
     name: build (AppleClang, macOS 15 x86_64)
@@ -220,7 +220,7 @@ jobs:
         run: cd build && ctest --output-on-failure --no-tests=error
 
   examples:
-    runs-on: macos-14
+    runs-on: macos-15
     name: examples (MEIOS_BUILD_EXAMPLES)
     steps:
       - uses: actions/checkout@v4
@@ -266,7 +266,7 @@ jobs:
           ctest -R '^example_' --output-on-failure --no-tests=error
 
   docs:
-    runs-on: macos-14
+    runs-on: macos-15
     name: docs (MEIOS_BUILD_DOCS compile-gate)
     steps:
       - uses: actions/checkout@v4
@@ -295,7 +295,7 @@ jobs:
         run: cmake --build build --target doc_snippets
 
   tools:
-    runs-on: macos-14
+    runs-on: macos-15
     name: tools (MEIOS_BUILD_TOOLS + CLI unit tests)
     steps:
       - uses: actions/checkout@v4
@@ -335,7 +335,7 @@ jobs:
         run: cd build && ctest --output-on-failure
 
   property-tests:
-    runs-on: macos-14
+    runs-on: macos-15
     name: property-tests (RapidCheck xacro_eval_prop)
     steps:
       - uses: actions/checkout@v4
@@ -367,7 +367,7 @@ jobs:
         run: cd build && ctest --output-on-failure
 
   install-test:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -415,7 +415,7 @@ jobs:
   # longer, so a staged prefix can carry it and a program that builds none of the
   # library can assert the model it received.
   clean-consumer:
-    runs-on: macos-14
+    runs-on: macos-15
     name: clean consumer (pinned expression-valued description, both acquisition routes)
     steps:
       - uses: actions/checkout@v4
@@ -503,7 +503,7 @@ jobs:
             build-consumer-installed build-consumer-fetched
 
   enrichments:
-    runs-on: macos-14
+    runs-on: macos-15
     name: enrichments (scanners + archive-zip + ros)
     steps:
       - uses: actions/checkout@v4
@@ -598,7 +598,7 @@ jobs:
   # The harness hands this build's generator to every case's sub-configure, so configuring with Xcode
   # is what runs the deploy and flatten cases under it.
   harness-xcode:
-    runs-on: macos-14
+    runs-on: macos-15
     name: build integration (Xcode generator)
     steps:
       - uses: actions/checkout@v4
