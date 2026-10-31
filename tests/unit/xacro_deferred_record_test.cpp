@@ -12,6 +12,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace
 {
@@ -54,15 +55,28 @@ struct error_recorder
     }
 };
 
-std::vector<error_record> errors_of(const std::string &body)
+struct recorded
+{
+    meios::expected<meios::expansion, meios::expansion_error> out;
+    std::vector<error_record> errors;
+};
+
+recorded errors_in(meios::eval_scope &scope, const std::string &body)
 {
     std::vector<error_record> errors;
     meios::log_sink_f log{ error_recorder{ errors } };
     meios::source_stack sources{};
-    meios::eval_scope scope;
     const std::string source = "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">\n" + body + "</robot>";
-    REQUIRE_FALSE(meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log).has_value());
-    return errors;
+    meios::expected<meios::expansion, meios::expansion_error> out = meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
+    return recorded{ std::move(out), std::move(errors) };
+}
+
+std::vector<error_record> errors_of(const std::string &body)
+{
+    meios::eval_scope scope;
+    recorded run = errors_in(scope, body);
+    REQUIRE_FALSE(run.out.has_value());
+    return std::move(run.errors);
 }
 
 }
@@ -120,4 +134,28 @@ TEST_CASE("a caret default forwarding a refused deferred text gives the inner re
     REQUIRE(errors.size() == 1);
     CHECK(errors.front().code == meios::diagnostic_code::undefined_property);
     CHECK(errors.front().loc.line == 2);
+}
+
+TEST_CASE("a second expansion over a scope whose deferred text refused reports the name once, located", "[xacro][deferred]")
+{
+    meios::eval_scope scope;
+    REQUIRE_FALSE(errors_in(scope, "<xacro:property name=\"x\" value=\"${y}\"/>\n<link name=\"${x}\"/>\n").out.has_value());
+    const recorded second = errors_in(scope, "<link name=\"${x}\"/>\n");
+    REQUIRE_FALSE(second.out.has_value());
+    CHECK(second.out.error().code == meios::diagnostic_code::undefined_property);
+    CHECK(second.out.error().message.find("name 'x' is not defined") != std::string::npos);
+    REQUIRE(second.errors.size() == 1);
+    CHECK(second.errors.front().code == meios::diagnostic_code::undefined_property);
+    CHECK_FALSE(second.errors.front().loc.file.empty());
+    CHECK(second.errors.front().loc.line == 2);
+}
+
+TEST_CASE("a default binds over a deferred text an earlier expansion over the scope left unread", "[xacro][deferred]")
+{
+    meios::eval_scope scope;
+    REQUIRE(errors_in(scope, "<xacro:property name=\"z\" value=\"${1+1}\"/>\n").out.has_value());
+    const recorded second = errors_in(scope, "<xacro:property name=\"z\" default=\"5\"/>\n<link name=\"l${z}\"/>\n");
+    REQUIRE(second.out.has_value());
+    CHECK(second.out->document.find("<link name=\"l5\"/>") != std::string::npos);
+    CHECK(second.errors.empty());
 }

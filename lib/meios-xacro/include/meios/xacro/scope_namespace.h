@@ -18,8 +18,8 @@ inline name_read read_member(const eval_scope &scope, const scope_namespace &spa
                              std::size_t carried = 0);
 }
 
-// An include namespace, which an expression reads through a dot. It names a table of the expansion
-// that opened it, so once that expansion has returned every read through it is absent.
+// An include namespace, which an expression reads through a dot. The handle is valid only while the
+// call that opened the namespace runs; afterwards every read through it is absent.
 class scope_namespace
 {
     friend class eval_scope;

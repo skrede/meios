@@ -5,6 +5,7 @@
 
 #include <string>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <optional>
 #include <string_view>
@@ -22,11 +23,17 @@ namespace detail
 class name_table
 {
 public:
-    explicit name_table(std::optional<std::size_t> parent, bool space = false)
+    name_table(std::uint64_t serial, std::optional<std::size_t> parent, bool space = false)
             : m_space(space)
+            , m_serial(serial)
             , m_parent(parent)
             , m_entries()
     {
+    }
+
+    std::uint64_t serial() const
+    {
+        return m_serial;
     }
 
     std::optional<std::size_t> parent() const
@@ -62,8 +69,15 @@ public:
         m_entries.erase(std::string(name));
     }
 
+    template<typename Predicate>
+    void erase_if(Predicate predicate)
+    {
+        std::erase_if(m_entries, [&predicate](const std::pair<const std::string, scope_entry> &entry) { return predicate(entry.second); });
+    }
+
 private:
     bool m_space;
+    std::uint64_t m_serial;
     std::optional<std::size_t> m_parent;
     std::unordered_map<std::string, scope_entry> m_entries;
 };

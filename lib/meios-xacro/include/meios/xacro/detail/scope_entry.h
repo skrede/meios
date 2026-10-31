@@ -32,12 +32,12 @@ struct failed_read
     eval_failure_kind kind;
 };
 
-// An include namespace bound under its name: the table it opened, valid only while the expansion
-// that opened it runs, since that expansion's return drops the table.
+// An include namespace bound under its name: the table it opened, and that table's serial. No later
+// table takes the serial, so the entry names one table for that table's whole life.
 struct namespace_entry
 {
     std::size_t table;
-    std::uint64_t generation;
+    std::uint64_t serial;
 };
 
 // A block parameter bound under its starred name: an index into the blocks the expansion that bound

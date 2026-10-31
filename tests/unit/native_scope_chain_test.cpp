@@ -154,3 +154,24 @@ TEST_CASE("a scope moves with its tables", "[native][scope]")
     meios::eval_scope moved = std::move(scope);
     REQUIRE(read(moved, "x") == 1);
 }
+
+TEST_CASE("a namespace kept past its call reads nothing, not the namespace a later call opens in its place", "[native][scope]")
+{
+    meios::eval_scope scope;
+    const meios::detail::table_mark mark = chain_access::mark(scope);
+    chain_access::push(scope, chain_access::cursor(scope));
+    const std::size_t first = chain_access::open_namespace(scope, "n");
+    chain_access::define(scope, first, "w", meios::value{ std::int64_t{ 1 } });
+    const std::optional<meios::scope_namespace> kept = scope.namespace_of("n");
+    REQUIRE(kept.has_value());
+    chain_access::pop_to(scope, mark);
+    chain_access::push(scope, chain_access::cursor(scope));
+    REQUIRE(chain_access::open_namespace(scope, "n") == first);
+    chain_access::define(scope, first, "w", meios::value{ std::int64_t{ 2 } });
+    const std::optional<meios::scope_namespace> fresh = scope.namespace_of("n");
+    REQUIRE(fresh.has_value());
+    CHECK_FALSE(scope.lookup(*kept, "w").has_value());
+    CHECK_FALSE(scope.namespace_of(*kept, "n").has_value());
+    CHECK(scope.lookup(*fresh, "w") == std::optional<meios::value>(meios::value{ std::int64_t{ 2 } }));
+    CHECK(scope.namespace_of(*fresh, "n").has_value());
+}

@@ -131,7 +131,7 @@ TEST_CASE("a namespace an expansion opened is found by name only while it runs",
     held.write("w.xacro", include_tree::robot(property("w", "7")));
     meios::eval_scope scope;
     REQUIRE(include_tree::renders_link(expand_in(scope, held, include_as("w.xacro", "n") + "<link name=\"a${n.w}\"/>"), "a7"));
-    REQUIRE(scope.contains("n"));
+    REQUIRE_FALSE(scope.contains("n"));
     REQUIRE_FALSE(scope.namespace_of("n").has_value());
 }
 

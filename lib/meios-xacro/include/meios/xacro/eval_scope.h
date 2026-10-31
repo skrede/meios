@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/scope_namespace.h"
+#include "meios/xacro/eval_failure_kind.h"
 #include "meios/xacro/evaluator_limits.h"
 #include "meios/xacro/yaml_parser_handle.h"
 #include "meios/xacro/text_resource_loader.h"
@@ -94,6 +95,22 @@ public:
         return m_chain.read_in(space.m_entry, name).bound;
     }
 
+    // A refused deferred read answers nothing and sets the failure, whose record is already logged,
+    // so an evaluator returns that kind unchanged instead of reporting the name again.
+    std::optional<value> lookup(std::string_view name, eval_failure_kind &failure) const
+    {
+        detail::name_read read = m_chain.read(m_chain.cursor(), name);
+        failure                = read.failure;
+        return std::move(read.bound);
+    }
+
+    std::optional<value> lookup(const scope_namespace &space, std::string_view name, eval_failure_kind &failure) const
+    {
+        detail::name_read read = m_chain.read_in(space.m_entry, name);
+        failure                = read.failure;
+        return std::move(read.bound);
+    }
+
     // $(arg n) reads this table and an expression reads the other, so a property of an
     // argument's name is a second binding beside the argument, never a write to it.
     void bind_argument(std::string_view name, value entry)
@@ -168,8 +185,8 @@ private:
     text_resource_loader m_load_text_cb;
     std::shared_ptr<const yaml_parser_handle> m_parse_yaml_cb;
     // A scope is single-threaded: a read may evaluate a property's deferred text and cache the
-    // answer in place. Once expand returns, a deferred text nothing read is still contained but
-    // reads as absent, since the expansion that could evaluate it is gone.
+    // answer in place. Once expand returns only plain values remain, so contains and lookup agree
+    // on every name.
     mutable detail::table_chain m_chain;
     std::filesystem::path m_active_document;
     std::unordered_map<std::string, value> m_arguments;

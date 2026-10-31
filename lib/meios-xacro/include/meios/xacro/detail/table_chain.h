@@ -37,11 +37,12 @@ class table_chain
 public:
     table_chain()
             : m_cursor(0)
+            , m_serials(0)
             , m_generation(0)
             , m_resolver()
             , m_tables()
     {
-        m_tables.push_back(std::make_unique<name_table>(std::nullopt));
+        m_tables.push_back(std::make_unique<name_table>(m_serials++, std::nullopt));
     }
 
     std::size_t cursor() const
@@ -61,7 +62,7 @@ public:
 
     std::size_t push(std::size_t parent)
     {
-        m_tables.push_back(std::make_unique<name_table>(parent));
+        m_tables.push_back(std::make_unique<name_table>(m_serials++, parent));
         m_cursor = m_tables.size() - 1;
         return m_cursor;
     }
@@ -91,14 +92,14 @@ public:
     // a second namespace of that name replaces the first. The cursor stays where it was.
     std::size_t open_namespace(std::string_view name)
     {
-        m_tables.push_back(std::make_unique<name_table>(m_cursor, true));
-        m_tables[m_cursor]->set(name, namespace_entry{ m_tables.size() - 1, m_generation });
+        m_tables.push_back(std::make_unique<name_table>(m_serials++, m_cursor, true));
+        m_tables[m_cursor]->set(name, namespace_entry{ m_tables.size() - 1, m_tables.back()->serial() });
         return m_tables.size() - 1;
     }
 
     bool live(const namespace_entry &space) const
     {
-        return space.generation == m_generation && space.table < m_tables.size();
+        return space.table < m_tables.size() && m_tables[space.table]->serial() == space.serial;
     }
 
     std::optional<std::size_t> holder(std::size_t from, std::string_view name) const
@@ -124,10 +125,13 @@ public:
         m_resolver.attach(std::move(resolve), std::move(cycle));
     }
 
+    // Only plain values outlive the expansion, so a later one reads every other entry as absent and
+    // a default binds over it. Nothing is evaluated on the way out.
     void uninstall()
     {
         m_resolver.detach();
         pop_to(table_mark{ 1, 0 });
+        m_tables[0]->erase_if([](const scope_entry &entry) { return !std::holds_alternative<value>(entry); });
     }
 
     name_read read(std::size_t from, std::string_view name, std::size_t carried = 0)
@@ -155,6 +159,7 @@ public:
 
 private:
     std::size_t m_cursor;
+    std::uint64_t m_serials;
     std::uint64_t m_generation;
     deferred_resolver m_resolver;
     std::vector<std::unique_ptr<name_table>> m_tables;
