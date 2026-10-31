@@ -92,6 +92,7 @@ TEST_CASE("the upstream measurements are present, non-empty, and complete", "[or
 
 TEST_CASE("the measurements name the upstream that produced them", "[oracle]")
 {
+    CHECK(value_of("PINS", "python") == "3.14");
     CHECK(value_of("PINS", "xacro") == "2.1.1");
     CHECK(value_of("PINS", "PyYAML") == "6.0.3");
     CHECK(value_of("PINS", "ur_description") == "4.3.1");

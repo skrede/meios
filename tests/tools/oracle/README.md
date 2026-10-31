@@ -6,7 +6,9 @@ them. `differential.py`, below, is what puts the pinned oracle under continuous 
 
 Two packages are pinned exactly and installed into a virtual environment beneath the build tree:
 `xacro==2.1.1` and `PyYAML==6.0.3`. Nothing else is installed, and neither is linked into or
-installed by this project.
+installed by this project. The interpreter is pinned to its minor version, 3.14, because the
+global-symbol record lists the running interpreter's mathematics names; a run under any other minor
+version refuses before it builds or enters the environment.
 
 The versions the records name are read from the environment that produced them, and the run refuses
 before measuring anything if either module was imported from outside that environment. The child

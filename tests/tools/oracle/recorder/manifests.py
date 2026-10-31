@@ -59,6 +59,7 @@ def source_pin(share, listfile, name):
 def pin_rows(versions, share):
     listfile = (REPO / "cmake" / "corpus.cmake").read_text(encoding="utf-8")
     sources = dict.fromkeys(one.upstream for one in CORPUS_DOCUMENTS)
-    return [("xacro", versions["xacro"], "-"), ("PyYAML", versions["pyyaml"], "-")] \
+    return [("python", versions["python"], "-"), ("xacro", versions["xacro"], "-"),
+            ("PyYAML", versions["pyyaml"], "-")] \
         + [source_pin(share, listfile, name) for name in sources]
 

@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 from importlib import metadata
 
+INTERPRETER = (3, 14)
 PINS = (("xacro", "2.1.1"), ("pyyaml", "6.0.3"))
 MODULES = {"xacro": "xacro", "pyyaml": "yaml"}
 TOOLING = ("pip", "setuptools", "wheel")
@@ -20,7 +21,18 @@ def distributions(python):
     return dict(line.lower().split("==", 1) for line in listing.split() if "==" in line)
 
 
+# The global-symbol record lists the running interpreter's mathematics names, so its minor version is
+# part of what produced every measurement.
+def pinned_interpreter():
+    have = "{}.{}".format(*sys.version_info[:2])
+    if tuple(sys.version_info[:2]) != INTERPRETER:
+        sys.exit("oracle: this runs under Python {}, where {}.{} is pinned; nothing was measured"
+                 .format(have, *INTERPRETER))
+    return have
+
+
 def bootstrap(venv):
+    pinned_interpreter()
     python = interpreter(venv)
     if not python.exists():
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
@@ -57,7 +69,7 @@ def imported_from_pin(module_name):
 # The record's claim that exactly these distributions produced every measurement below it is a fact
 # only if the run reads the versions out of the environment it measures in.
 def measured_pins():
-    versions = {}
+    versions = {"python": pinned_interpreter()}
     for name, want in PINS:
         imported_from_pin(MODULES[name])
         have = metadata.version(name)
