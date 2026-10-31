@@ -41,11 +41,8 @@ struct chain_access
 
     static std::optional<std::size_t> namespace_table(const eval_scope &scope, std::size_t from, std::string_view name)
     {
-        const std::optional<std::size_t> at = scope.m_chain.holder(from, name);
-        const namespace_entry *found = at ? std::get_if<namespace_entry>(scope.m_chain.table(*at).find(name)) : nullptr;
-        if(!found || !scope.m_chain.live(*found))
-            return std::nullopt;
-        return found->table;
+        const std::optional<namespace_entry> found = scope.m_chain.namespace_at(from, name);
+        return found ? std::optional(found->table) : std::nullopt;
     }
 
     static table_mark mark(const eval_scope &scope)

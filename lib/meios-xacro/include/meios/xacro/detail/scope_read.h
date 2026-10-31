@@ -5,10 +5,8 @@
 
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/scope_namespace.h"
-#include "meios/xacro/eval_failure_kind.h"
 
 #include <cstddef>
-#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -29,9 +27,7 @@ inline name_read read_name(const eval_scope &scope, std::string_view name, std::
 inline name_read read_member(const eval_scope &scope, const scope_namespace &space, std::string_view name,
                              std::size_t carried)
 {
-    if(!scope.m_chain.live(space.m_entry))
-        return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
-    return scope.m_chain.read(space.m_entry.table, name, carried);
+    return scope.m_chain.read_in(space.m_entry, name, carried);
 }
 
 }

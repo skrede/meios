@@ -18,7 +18,6 @@
 #include <string>
 #include <cstddef>
 #include <utility>
-#include <variant>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -78,19 +77,21 @@ public:
     // in, so a name the namespace lacks is read there. Finding a namespace evaluates nothing.
     std::optional<scope_namespace> namespace_of(std::string_view name) const
     {
-        return named_space(m_chain.cursor(), name);
+        const std::optional<detail::namespace_entry> found = m_chain.namespace_at(m_chain.cursor(), name);
+        return found ? std::optional(scope_namespace(*found)) : std::nullopt;
     }
 
     std::optional<scope_namespace> namespace_of(const scope_namespace &space, std::string_view name) const
     {
-        return m_chain.live(space.m_entry) ? named_space(space.m_entry.table, name) : std::nullopt;
+        if(!m_chain.live(space.m_entry))
+            return std::nullopt;
+        const std::optional<detail::namespace_entry> found = m_chain.namespace_at(space.m_entry.table, name);
+        return found ? std::optional(scope_namespace(*found)) : std::nullopt;
     }
 
     std::optional<value> lookup(const scope_namespace &space, std::string_view name) const
     {
-        if(!m_chain.live(space.m_entry))
-            return std::nullopt;
-        return m_chain.read(space.m_entry.table, name).bound;
+        return m_chain.read_in(space.m_entry, name).bound;
     }
 
     // $(arg n) reads this table and an expression reads the other, so a property of an
@@ -172,15 +173,6 @@ private:
     mutable detail::table_chain m_chain;
     std::filesystem::path m_active_document;
     std::unordered_map<std::string, value> m_arguments;
-
-    std::optional<scope_namespace> named_space(std::size_t from, std::string_view name) const
-    {
-        const std::optional<std::size_t> at = m_chain.holder(from, name);
-        const detail::namespace_entry *found = at ? std::get_if<detail::namespace_entry>(m_chain.table(*at).find(name)) : nullptr;
-        if(!found || !m_chain.live(*found))
-            return std::nullopt;
-        return scope_namespace(*found);
-    }
 };
 
 }

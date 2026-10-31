@@ -3,19 +3,18 @@
 
 #include "meios/xacro/detail/name_table.h"
 #include "meios/xacro/detail/scope_entry.h"
+#include "meios/xacro/detail/deferred_resolver.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/eval_failure_kind.h"
 
 #include <memory>
-#include <string>
 #include <vector>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
 #include <variant>
 #include <optional>
-#include <functional>
 #include <string_view>
 
 namespace meios
@@ -30,16 +29,6 @@ struct table_mark
     std::size_t cursor;
 };
 
-struct resolve_step
-{
-    std::size_t table;
-    std::string name;
-    std::size_t origin;
-};
-
-using deferred_resolve = std::function<name_read(const deferred_text &, std::size_t)>;
-using deferred_cycle = std::function<eval_failure_kind(const std::vector<resolve_step> &, std::string_view)>;
-
 // Tables live in an arena and name their parent by index, so truncating to a mark drops a call's
 // table together with every table opened beneath it and leaves no parent dangling. Index 0 is the
 // document table and is never dropped.
@@ -49,10 +38,8 @@ public:
     table_chain()
             : m_cursor(0)
             , m_generation(0)
-            , m_resolving()
+            , m_resolver()
             , m_tables()
-            , m_cycle_cb()
-            , m_resolve_cb()
     {
         m_tables.push_back(std::make_unique<name_table>(std::nullopt));
     }
@@ -122,18 +109,24 @@ public:
         return std::nullopt;
     }
 
+    std::optional<namespace_entry> namespace_at(std::size_t from, std::string_view name) const
+    {
+        const std::optional<std::size_t> at = holder(from, name);
+        const namespace_entry *found = at ? std::get_if<namespace_entry>(m_tables[*at]->find(name)) : nullptr;
+        if(!found || !live(*found))
+            return std::nullopt;
+        return *found;
+    }
+
     void install(deferred_resolve resolve, deferred_cycle cycle)
     {
         ++m_generation;
-        m_resolve_cb = std::move(resolve);
-        m_cycle_cb = std::move(cycle);
+        m_resolver.attach(std::move(resolve), std::move(cycle));
     }
 
     void uninstall()
     {
-        m_resolve_cb = nullptr;
-        m_cycle_cb = nullptr;
-        m_resolving.clear();
+        m_resolver.detach();
         pop_to(table_mark{ 1, 0 });
     }
 
@@ -153,36 +146,31 @@ public:
         return name_read{ std::nullopt, eval_failure_kind::none, space && live(*space) ? std::optional(*space) : std::nullopt };
     }
 
+    name_read read_in(const namespace_entry &space, std::string_view name, std::size_t carried = 0)
+    {
+        if(!live(space))
+            return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
+        return read(space.table, name, carried);
+    }
+
 private:
     std::size_t m_cursor;
     std::uint64_t m_generation;
-    std::vector<resolve_step> m_resolving;
+    deferred_resolver m_resolver;
     std::vector<std::unique_ptr<name_table>> m_tables;
-    deferred_cycle m_cycle_cb;
-    deferred_resolve m_resolve_cb;
-
-    bool resolving(std::size_t table, std::string_view name) const
-    {
-        for(const resolve_step &step : m_resolving)
-            if(step.table == table && step.name == name)
-                return true;
-        return false;
-    }
 
     // The text is evaluated with its own table current, as the reference evaluates it against the
     // table holding the key, and the answer replaces the text there whether it is a value or a
     // refusal. A text written by an expansion that has since returned reads as nothing.
     name_read resolve(std::size_t table, std::string_view name, deferred_text deferred, std::size_t carried)
     {
-        if(!m_resolve_cb || deferred.generation != m_generation)
+        if(!m_resolver.attached() || deferred.generation != m_generation)
             return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
-        if(resolving(table, name))
-            return name_read{ std::nullopt, m_cycle_cb(m_resolving, name), std::nullopt };
-        m_resolving.push_back(resolve_step{ table, std::string(name), deferred.origin });
+        if(const std::optional<eval_failure_kind> refused = m_resolver.cycle(table, name))
+            return name_read{ std::nullopt, *refused, std::nullopt };
         const std::size_t reader = std::exchange(m_cursor, table);
-        name_read answer = m_resolve_cb(deferred, carried);
+        name_read answer = m_resolver.evaluate(table, name, deferred, carried);
         m_cursor = reader;
-        m_resolving.pop_back();
         if(answer.bound)
             m_tables[table]->set(name, *answer.bound);
         else
