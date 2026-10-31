@@ -37,13 +37,13 @@ the work that would close it.
   are resolved by a built-in evaluator that starts no interpreter. Its grammar is range-checked
   arithmetic, comparison, boolean logic, membership against a mapping and against a string, subscripts
   into a mapping and into a sequence, the conditional expression, four string meanings including one
-  named split, a keyword-argument mapping constructor, a dotted read of a loaded document's key, a
-  fixed set of mathematics functions, and `xacro.load_yaml` for an auxiliary configuration document;
-  a construct outside it is refused with a located diagnostic naming what it
-  met, and eleven finite ceilings bound the evaluator. Nothing in that grammar can name the filesystem,
-  the network or the process — the one route to a file is `xacro.load_yaml`, where C++ resolves the
-  spec, enforces containment and reads the bytes before the evaluator sees one. A trusted description needing
-  comprehensions, f-strings or string methods can opt into a
+  named split, a keyword-argument mapping constructor, a dotted read of a loaded document's key or of
+  a name an include namespace holds, a fixed set of mathematics functions, and `xacro.load_yaml` for
+  an auxiliary configuration document; a construct outside it is refused with a located diagnostic
+  naming what it met, and eleven finite ceilings bound the evaluator. Nothing in that grammar can
+  name the filesystem, the network or the process — the one route to a file is `xacro.load_yaml`,
+  where C++ resolves the spec, enforces containment and reads the bytes before the evaluator sees
+  one. A trusted description needing comprehensions, f-strings or string methods can opt into a
   [documented backend](docs/evaluation.md) driving a *found* (never fetched) interpreter instead.
 - **Layered package resolution:** `package://` and `$(find)` resolve through an ordered stack of
   package sources — a directory, a ROS package layout, an in-memory tree, a bundle. A

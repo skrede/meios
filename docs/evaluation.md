@@ -71,11 +71,14 @@ refusal, is cached in that table. So a property may name one written below it; a
 a macro body reads that call's parameters, while one written outside the macro and read from its body
 does not; and a property nothing reads is never evaluated, so a value that would fail refuses nothing.
 A text whose evaluation reads its own name again, directly or through others, refuses as a circular
-variable definition naming each step. A property written with `lazy_eval="false"`, or with `scope`
-set to `global` or `parent`, is evaluated where it is written, against the bindings above it;
-`lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns, nothing evaluates
-a stored text any more: a property whose text holds an expression and that the expansion never read
-reads absent from the scope.
+variable definition under `xacro_structural_error`, naming each step with the line that defined it:
+`circular variable definition: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. The reference names the
+steps without their lines and adds a second line, `Consider disabling lazy evaluation via
+lazy_eval="false"`, which this refusal does not carry. A property written with `lazy_eval="false"`,
+or with `scope` set to `global` or `parent`, is evaluated where it is written, against the bindings
+above it; `lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns,
+nothing evaluates a stored text any more: a property whose text holds an expression and that the
+expansion never read reads absent from the scope.
 
 **A property's name is evaluated and checked before anything else about it, as the reference checks
 it.** The `name` attribute is required, and it is evaluated as an attribute is, so `name="${p}_x"`
@@ -215,8 +218,12 @@ the bare spelling reads: `${n.pi}` reads the constant and `${n.sin(0)}` calls th
 through a namespace to a name the reference's global table does not hold refuses as an undefined
 name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A namespace inside
 another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro `m` the
-namespace holds. A namespace has no value of its own, so `${n}` read bare refuses, naming the dotted
-spelling, where the reference reads its table, as
+namespace holds. A call in that macro's body of a macro the including file defined, `<xacro:outer/>`,
+refuses on both sides: here as `unknown xacro element <xacro:outer>`, where the reference says
+`unknown macro name: xacro:outer`. The comparator holds the reference's wording and this side's
+`xacro_structural_error` to the same cause, so the `namespace_macro_cannot_call_outer_macro`
+agreement probe agrees. A namespace has no value of its own, so `${n}` read bare refuses, naming the
+dotted spelling, where the reference reads its table, as
 [known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
 shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`, and
 `${math.pi}` reads the constant by falling through.
@@ -889,7 +896,11 @@ What is compared, exactly:
   `argument_redeclared_` documents, `argument_declared_in_skipped_branch`,
   `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
   `argument_default_reads_itself_before_redeclaration`, whose default reads its own name before a
-  later declaration. The meios side is what the load path builds, under the caller
+  later declaration. The last two stand alone: `property_forward_reference`, a property whose value
+  reads one written below it, and `include_sole_block`, a call whose one child is an include binding a
+  property, refused on both sides as leaving its block parameter without an element. Together these
+  are ninety-seven documents and four second drives, the hundred and one agreement probes the grammar
+  record does not hold. The meios side is what the load path builds, under the caller
   arguments a consumer would hand it, written back out by the serializer the command line flattens
   with; the expansion alone is held to the same render beside it. Two refusals agree only on their
   cause: upstream's own wording and this side's diagnostic code, both named per document, and upstream's
