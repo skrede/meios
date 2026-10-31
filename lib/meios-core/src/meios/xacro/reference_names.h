@@ -30,6 +30,11 @@ inline constexpr std::string_view root_symbols[] = {"False",  "True",      "abs_
 inline constexpr std::string_view python_builtins[] = {"abs",  "min",   "max", "round", "len",    "str",   "int",       "float", "bool", "list",
                                                        "dict", "tuple", "set", "sum",   "sorted", "range", "enumerate", "zip",   "any",  "all"};
 
+// Python's hard keywords, its keyword.kwlist under Python 3.14; a soft keyword such as match is a name.
+inline constexpr std::string_view python_keywords[] = {"False",  "None",     "True", "and",    "as",      "assert", "async",  "await",  "break", "class",  "continue", "def",
+                                                       "del",    "elif",     "else", "except", "finally", "for",    "from",   "global", "if",    "import", "in",       "is",
+                                                       "lambda", "nonlocal", "not",  "or",     "pass",    "raise",  "return", "try",    "while", "with",   "yield"};
+
 inline bool listed(std::span<const std::string_view> names, std::string_view name)
 {
     return std::ranges::find(names, name) != names.end();

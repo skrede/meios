@@ -114,13 +114,13 @@ TEST_CASE("after expand an unread deferred property reads absent and every other
                              "<xacro:property name=\"read\" value=\"${2+2}\"/>\n"
                              "<link name=\"l${read}\"/>\n"
                              "<xacro:property name=\"eager\" value=\"${3+3}\" lazy_eval=\"false\"/>\n"
-                             "<xacro:property name=\"global\" value=\"${4+4}\" scope=\"global\"/>\n")
+                             "<xacro:property name=\"stored\" value=\"${4+4}\" scope=\"global\"/>\n")
                 .has_value());
     CHECK_FALSE(scope.lookup("unread").has_value());
     CHECK_FALSE(scope.contains("unread"));
     CHECK(scope.lookup("read") == std::optional<meios::value>(meios::value{ std::int64_t{ 4 } }));
     CHECK(scope.lookup("eager") == std::optional<meios::value>(meios::value{ std::int64_t{ 6 } }));
-    CHECK(scope.lookup("global") == std::optional<meios::value>(meios::value{ std::int64_t{ 8 } }));
+    CHECK(scope.lookup("stored") == std::optional<meios::value>(meios::value{ std::int64_t{ 8 } }));
 }
 
 TEST_CASE("a second expansion over one scope reads what the first left unread as absent", "[xacro][deferred]")

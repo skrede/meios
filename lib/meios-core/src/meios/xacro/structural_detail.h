@@ -70,6 +70,8 @@ private:
 };
 
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
+// Absent where the name refused, as the reference refuses it before it reads anything else.
+std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document);
 // Absent for a document-level parent scope, which the reference refuses once the value is evaluated.
 std::optional<std::size_t> property_target(const expand_ctx &ctx, std::string_view scope_attr);
 bool property_defined(const expand_ctx &ctx, std::string_view name);

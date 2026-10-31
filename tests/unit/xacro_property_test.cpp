@@ -144,18 +144,26 @@ TEST_CASE("a read of an argument other than through the argument command refuses
     }
 }
 
-TEST_CASE("a property's lazy_eval read as a boolean leaves the binding as it was", "[xacro][scope][property]")
+TEST_CASE("an eager lazy_eval spelling evaluates at the definition and a lazy one never evaluates an unread value", "[xacro][scope][property]")
 {
-    for(const char *spelling : {"false", "0", "${False}", "true", ""})
-    {
-        DYNAMIC_SECTION(spelling)
+    const auto define = [](const char *spelling) {
+        meios::log_sink silent;
+        return expand_body(std::string(R"(<xacro:property name="p" value="${nope}" lazy_eval=")") + spelling + R"("/><link name="l"/>)", silent);
+    };
+    for(const char *eager : {"false", "0", "${False}"})
+        DYNAMIC_SECTION("eager " << eager)
         {
-            meios::log_sink silent;
-            const expansion_result out = expand_body(std::string(R"(<xacro:property name="p" value="v" lazy_eval=")") + spelling + R"("/><link name="${p}"/>)", silent);
-            REQUIRE(out.has_value());
-            REQUIRE(out->document.find(R"(name="v")") != std::string::npos);
+            const expansion_result out = define(eager);
+            REQUIRE_FALSE(out.has_value());
+            REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
         }
-    }
+    for(const char *lazy : {"true", ""})
+        DYNAMIC_SECTION("lazy " << lazy)
+        {
+            const expansion_result out = define(lazy);
+            REQUIRE(out.has_value());
+            REQUIRE(out->document.find(R"(name="l")") != std::string::npos);
+        }
 }
 
 TEST_CASE("a property's lazy_eval outside the boolean rule refuses as the reference does", "[xacro][scope][property]")

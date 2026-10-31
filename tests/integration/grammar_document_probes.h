@@ -11,14 +11,11 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 69> grammar_document_probes{
+inline const std::array<document_probe, 65> grammar_document_probes{
         document_probe{false, "include_optional_missing_file"},
         document_probe{false, "macro_called_by_name_attribute"},
         document_probe{false, "element_named_by_attribute"},
         document_probe{false, "attribute_set_on_parent"},
-        document_probe{false, "property_name_from_expression"},
-        document_probe{false, "property_name_not_identifier"},
-        document_probe{false, "property_name_double_underscore"},
         document_probe{false, "root_target_namespace"},
         document_probe{
                 false, "include_find_answering_root_only", false, false, {}, false, {}, {"include_find_answering_root_only.d/r1", "include_find_answering_root_only.d/r2"}, false},
@@ -51,7 +48,6 @@ inline const std::array<document_probe, 69> grammar_document_probes{
         document_probe{false, "conditional_upper_true"},
         document_probe{false, "conditional_empty"},
         document_probe{false, "conditional_quoted_text"},
-        document_probe{false, "property_without_name"},
         document_probe{false, "macro_without_name"},
         document_probe{false, "conditional_without_value"},
         document_probe{false, "unless_without_value"},

@@ -2,15 +2,22 @@
 #include "reference_names.h"
 #include "structural_detail.h"
 
+#include "meios/xacro/value.h"
+#include "meios/xacro/structural.h"
 #include "meios/xacro/eval_scope.h"
+#include "meios/xacro/value_render.h"
 
 #include "meios/diagnostic/level.h"
+#include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
 
 #include <string>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <algorithm>
+#include <filesystem>
 #include <string_view>
 
 namespace meios::detail
@@ -31,6 +38,54 @@ std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t cur
     return target;
 }
 
+// A byte of 0x80 or above stands for any non-ASCII character, because Python admits identifiers of
+// any script.
+bool identifier_byte(std::uint8_t byte, bool leading)
+{
+    const bool letter = (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') || byte == '_' || byte >= 0x80;
+    return letter || (!leading && byte >= '0' && byte <= '9');
+}
+
+// The reference's is_valid_name: the name parses as one bare Python name, which no hard keyword does.
+bool python_identifier(std::string_view name)
+{
+    const auto continues = [](char c) { return identifier_byte(static_cast<std::uint8_t>(c), false); };
+    return !name.empty() && identifier_byte(static_cast<std::uint8_t>(name.front()), true) && std::ranges::all_of(name.substr(1), continues) && !listed(python_keywords, name);
+}
+
+bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
+{
+    if(!python_identifier(name))
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must be valid python identifiers: " + name);
+    if(name.starts_with("__"))
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: " + name);
+    return true;
+}
+
+}
+
+// The reference requires the name and evaluates it as text before it reads anything else about the
+// property, so a single expression keeps its type and a name that is not text cannot key a table;
+// the text is then checked as a Python name, and for a leading double underscore.
+std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
+{
+    if(!in.attribute("name"))
+    {
+        fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:property: missing attribute 'name'");
+        return std::nullopt;
+    }
+    const std::string authored = strip_authored_markers(in.attribute("name").value());
+    bool ok                    = true;
+    const value evaluated      = substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "name"));
+    if(!ok)
+        return std::nullopt;
+    const std::optional<std::string> name = evaluated.text();
+    if(!name)
+        fail(ctx, in, diagnostic_code::xacro_structural_error,
+             "xacro:property name=\"" + authored + "\" evaluates to a " + std::string(kind_name(evaluated.kind())) + ", and a property must be named by text");
+    if(!name || !valid_property_name(ctx, in, *name))
+        return std::nullopt;
+    return name;
 }
 
 // The reference picks the table a property is stored in by the scope attribute alone: the

@@ -129,26 +129,29 @@ bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std:
 
 }
 
-// The reference's grab_property, in its order: remove is read before the three attributes are
-// held exclusive, a removal acts only on a defined name, and a fallback binds only where the name
-// is not defined, a built-in counting as defined and an argument of the same name not counting. A
-// property carrying neither value nor default is a block, a removal of a name no table holds included.
+// The reference's grab_property, in its order: the name is evaluated and checked first, remove is
+// read before the three attributes are held exclusive, a removal acts only on a defined name, and a
+// fallback binds only where the name is not defined, a built-in counting as defined and an argument
+// of the same name not counting. A property carrying neither value nor default is a block, a removal
+// of a name no table holds included.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
+    const std::optional<std::string> name = property_name(ctx, in, document);
+    if(!name)
+        return false;
     const std::optional<bool> remove = flag_attribute(ctx, in, "remove", false, document);
     if(!remove)
         return false;
-    const std::string_view name = in.attribute("name").value();
     const bool fallback = static_cast<bool>(in.attribute("default"));
     const std::array<bool, 3> given{ static_cast<bool>(in.attribute("value")), fallback, *remove };
     if(std::ranges::count(given, true) > 1)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "Property attributes default, value, and remove are mutually exclusive: " + std::string(name));
-    if(*remove && remove_property(ctx, in, name))
+                    "Property attributes default, value, and remove are mutually exclusive: " + *name);
+    if(*remove && remove_property(ctx, in, *name))
         return true;
-    if(fallback && property_defined(ctx, name))
+    if(fallback && property_defined(ctx, *name))
         return true;
-    return store(ctx, in, fallback ? "default" : "value", document, name);
+    return store(ctx, in, fallback ? "default" : "value", document, *name);
 }
 
 }
