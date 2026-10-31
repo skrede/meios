@@ -44,7 +44,8 @@ description needing Python behavior the grammar does not carry; it has
   `${names[0]}` and `${names[-1]}` are its first and last elements.
 - `dict(a=1, b=2)`, which builds a mapping the rest of the grammar can read.
 - A dotted read of a name an include namespace holds: `${n.w}` after an include written with
-  `ns="n"`, falling through to the names of the file that wrote the include.
+  `ns="n"`, falling through to the names of the file that wrote the include and then to the global
+  names.
 - A dotted read of a key in a mapping this evaluator loaded: `${config.joint_limits.wrist_3.effort}`
   reaches what the subscript chain reaches. The rules that gate it are
   [below](#what-refuses-and-by-which-rule).
@@ -75,6 +76,14 @@ set to `global` or `parent`, is evaluated where it is written, against the bindi
 `lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns, nothing evaluates
 a stored text any more: a property whose text holds an expression and that the expansion never read
 reads absent from the scope.
+
+**A property's name is evaluated and checked before anything else about it, as the reference checks
+it.** The `name` attribute is required, and it is evaluated as an attribute is, so `name="${p}_x"`
+with `p` bound to `a` binds `a_x`. What it evaluates to must be text, and that text a Python
+identifier that is not one of the language's reserved keywords and does not open with a double
+underscore. A name failing any of these refuses under `xacro_structural_error` before `remove`,
+`default` or `value` is read. The `property_name_` and `property_without_name` agreement probes hold
+these against a fresh upstream render.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An
 argument — a declared default, or an override a caller hands the load — binds the characters that
@@ -136,15 +145,18 @@ the reference does: `$(arg ${a + b})` reads the argument the sum names, and a sp
 words refuses.
 
 All of that nesting is charged against the expression-depth ceiling, and each shape is charged what it
-costs in stack rather than one apiece: descending into the grammar is one and a nested scan is three,
-weighted from the depth at which each shape was measured to exhaust a 512 KiB thread. So the one
-ceiling leaves both shapes the same headroom, and a document nesting
-expression spans past it refuses at a stated position rather than running out of stack; commands,
-which end at their first closing parenthesis, do not nest at all. A property evaluated at its first
-read nests too: each such read is a level charged seventeen on top of the nesting of the expression
-that reads it, so a chain of sixteen properties each reading the next renders and one of seventeen
-refuses with `expansion_budget_exceeded`, where the reference renders a chain of one hundred and
-sixty-five, a difference [known limitations](known-limitations.md#expression-evaluation) lists.
+costs in stack rather than one apiece: descending into the grammar is one and a nested scan is four.
+An expression's own nesting counts on the same ceiling as the spans it stands inside, so an
+expression inside a nested span has that much less room. So charged, every shape the ceiling admits
+keeps ninefold headroom on a 512 KiB thread, which the test suite measures in an unoptimized build,
+and a document nesting expression spans past it refuses at a stated position rather than running
+out of stack; commands, which end at their first closing parenthesis, do not nest at all. A property
+evaluated at its first read nests too: each such read is a level charged nineteen on top of the
+nesting of the expression that reads it, so a chain of ten properties each reading the next renders
+and one of eleven refuses with `expansion_budget_exceeded`, where the reference renders a chain of one
+hundred and sixty-five, a difference [known limitations](known-limitations.md#expression-evaluation)
+lists. A read inside arithmetic carries that nesting as well, so a chain of `${p1 + 1}` reads renders
+six properties deep.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
@@ -198,11 +210,16 @@ truncated argument is not.
 **A dotted spelling reads an include namespace's names or a loaded mapping's keys, and nothing
 else.** An include written with `ns="n"` reads its file into a namespace of its own, and `${n.w}` reads
 the name `w` that file bound; a name the namespace does not hold falls through to the names of the
-file that wrote the include, and a namespace inside another reads through both dots, as `${a.b.c}`
-does. `<xacro:n.m/>` calls the macro `m` the namespace holds. A namespace has no value of its own, so
-`${n}` read bare refuses, naming the dotted spelling, where the reference reads its table, as
+file that wrote the include and then, as the reference's does, to the global names, reading what
+the bare spelling reads: `${n.pi}` reads the constant and `${n.sin(0)}` calls the function. A call
+through a namespace to a name the reference's global table does not hold refuses as an undefined
+name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A namespace inside
+another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro `m` the
+namespace holds. A namespace has no value of its own, so `${n}` read bare refuses, naming the dotted
+spelling, where the reference reads its table, as
 [known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
-shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`.
+shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`, and
+`${math.pi}` reads the constant by falling through.
 `xacro.load_yaml` is the one namespaced call the grammar carries; every other namespaced spelling,
 `math.pi` among them where no include names its namespace `math`, is refused by name. A dot after a
 value is a member read, and it resolves only for a value that came out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
@@ -240,7 +257,7 @@ wrong-kind subscript key is an `error` and terminal under every policy.
 **Eleven ceilings bound the evaluator.** They are the auxiliary document's node count (100 000),
 nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 000), tokens lexed
 (1 000 000), evaluation steps (10 000 000) and elements built into a collection the grammar
-produces (100 000) over the whole load; and, for any one expression, its nesting depth (256), its
+produces (100 000) over the whole load; and, for any one expression, its nesting depth (188), its
 token count (10 000), the magnitude of an exponentiation's operands (1 000 000 000 000) and the
 length in bytes of a string it produces (1 000 000). Six of them accumulate across every expression
 in one load rather than resetting per expression, so a document cannot spend a bounded budget an
@@ -756,12 +773,11 @@ truncated fragment will not parse and here because neither a brace literal nor a
 the grammar.
 
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
-namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target.
-Upstream also falls through from any include namespace to the mathematics names, so `${n.pi}`, and
-`${math.pi}` under an include whose namespace is `math`, render there; here the fall-through reaches
-the names of the file that wrote the include and stops short of the mathematics names, so both refuse
-as an undefined name; the `include_namespace_reads_mathematics_name` row of the manifest records the
-first. The reference's
+namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target
+when no include names its namespace `math`. Through an include namespace the two sides agree: both
+fall through to the global names, so `${n.pi}`, and `${math.pi}` under an include whose namespace is
+`math`, render on both, and the `include_namespace_reads_mathematics_name` agreement probe holds the
+first against a fresh upstream render. The reference's
 argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
 / `error` / `fatal`) are not exposed at all: a call to any of the reference's helpers but
 `xacro.load_yaml` refuses under either evaluator, and the refusal names `xacro.load_yaml` as the only
@@ -923,13 +939,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and sixty-nine agreement probes, the `agreement` rows of the
-  inventory and the documents the enumeration above names, sixty-eight of them the grammar record's,
+- **The committed probes**: one hundred and seventy-four agreement probes, the `agreement` rows of the
+  inventory and the documents the enumeration above names, seventy-three of them the grammar record's,
   each held to a fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, ninety-six rows of it: thirteen
+  manifest `differential_divergences.cases` records, ninety-two rows of it: thirteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's seventy document probes, a group listed in
+  and the grammar record's sixty-six document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -979,9 +995,9 @@ pairing states is checked against it; a site no document reaches is paired with 
 and its standing stays open. A construct said to agree points only at a measurement on which
 both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
 row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty-seven agree,
+Counting each construct by its least settled pairing, eighty-five are measured: thirty-nine agree,
 four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-sixteen are recorded differences on which this side refuses; and thirty-two are recorded differences on
+sixteen are recorded differences on which this side refuses; and thirty are recorded differences on
 which it renders something else. The seven constructs of the `${}` expression surface and the
 command-line driver are paired with the boundary rather than measured here. Five sites, four raise
 sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`
@@ -1292,13 +1308,17 @@ resource helper, then among the builtins, so a property shadows a mathematics na
 a property `pi` written `3` reads `3`, as it does under the built-in evaluator. A property whose own
 text refuses is never replaced by the mathematics name or builtin of its spelling; the read refuses,
 carrying the one record that text's evaluation logged. An include namespace is read through a dot,
-`${n.w}`, falling through to the names of the file that wrote the include and stopping short of the
-mathematics names, as under the built-in evaluator, and a member no table holds raises
-`name 'w' is not defined`. A property's text evaluated at its first read under this backend is
+`${n.w}`, falling through to the names of the file that wrote the include and then to the names a
+bare read reaches, as under the built-in evaluator, so `${n.pi}` reads the constant and `${n.sin(0)}`
+calls the function. Those names are this backend's, so `${n.abs(-2)}` renders here as the bare call
+does, where the reference's global table holds no `abs` and refuses it; a member no name answers
+raises `name 'w' is not defined`. A property's text evaluated at its first read under this backend is
 charged against the expression-depth ceiling as the built-in evaluator charges it, and a circular
-definition refuses the same way. The backend reports no nesting of its own, so each level is charged
-seventeen alone: a chain of fifteen properties each reading the next inside arithmetic renders under
-it, where nine do under the built-in evaluator, and one longer refuses with `expansion_budget_exceeded`.
+definition refuses the same way. Each read this backend makes carries a nesting of nine, for the
+interpreter's frames that stay on the stack beneath the evaluation the read starts, so each level is
+charged that beside the nineteen a deferred read costs: a chain of seven properties each reading the
+next inside arithmetic renders under it, where six do under the built-in evaluator, and one longer
+refuses with `expansion_budget_exceeded`.
 Measured on a 512 KiB thread with the ceiling lifted, the interpreter's own parser refuses such a chain
 of forty-nine properties, before the thread runs out. The `eval_python_scope` cases carry all of this,
 and run each namespace document under the built-in evaluator as well.

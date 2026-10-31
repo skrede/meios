@@ -106,7 +106,7 @@ inline constexpr pairing element_pairings[] = {
         {"token.expr", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.expr", carrier::expression, "e01 e02 n06", standing::agrees},
         {"token.expr", carrier::agreement, "property_exact_span_open_span_unread", standing::agrees},
-        {"token.expr", carrier::manifest, "conditional_quoted_text xacro_attribute_never_evaluated", standing::refuses_listed},
+        {"token.expr", carrier::manifest, "conditional_quoted_text xacro_attribute_never_evaluated sum_not_a_reference_global", standing::refuses_listed},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.extension", carrier::agreement, "command_nested_in_default include_find_composed", standing::agrees},
         {"token.extension", carrier::manifest, "empty_command include_find_composed_reads_neighbor", standing::refuses_listed},
