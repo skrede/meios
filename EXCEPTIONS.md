@@ -11,5 +11,4 @@ must stay under the ceiling — the default is to decompose, never to widen the 
 
 | Path | Ceiling exceeded | Reason |
 |------|------------------|--------|
-
-_No exceptions are registered._
+| `lib/meios-core/src/meios/xacro/unicode_decomposition_data.cpp` | file, 200 lines | Generated from Python 3.14's unicodedata and diffed against a fresh regeneration in CI; one table whose entries index one shared pool, so splitting it would scatter a generated whole no reader edits by hand. |

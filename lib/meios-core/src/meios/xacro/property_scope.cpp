@@ -1,4 +1,5 @@
 #include "scope_chain.h"
+#include "identifier_text.h"
 #include "reference_names.h"
 #include "structural_detail.h"
 
@@ -14,9 +15,7 @@
 
 #include <string>
 #include <cstddef>
-#include <cstdint>
 #include <optional>
-#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -38,24 +37,9 @@ std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t cur
     return target;
 }
 
-// A byte of 0x80 or above stands for any non-ASCII character, because Python admits identifiers of
-// any script.
-bool identifier_byte(std::uint8_t byte, bool leading)
-{
-    const bool letter = (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') || byte == '_' || byte >= 0x80;
-    return letter || (!leading && byte >= '0' && byte <= '9');
-}
-
-// The reference's is_valid_name: the name parses as one bare Python name, which no hard keyword does.
-bool python_identifier(std::string_view name)
-{
-    const auto continues = [](char c) { return identifier_byte(static_cast<std::uint8_t>(c), false); };
-    return !name.empty() && identifier_byte(static_cast<std::uint8_t>(name.front()), true) && std::ranges::all_of(name.substr(1), continues) && !listed(python_keywords, name);
-}
-
 bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
 {
-    if(!python_identifier(name))
+    if(!valid_python_name(name))
         return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must be valid python identifiers: " + name);
     if(name.starts_with("__"))
         return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: " + name);

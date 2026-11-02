@@ -1,5 +1,7 @@
 #include "argument_conversion.h"
 
+#include "meios/detail/utf8.h"
+
 #include "meios/xacro/value.h"
 #include "meios/xacro/detail/numeric.h"
 
@@ -29,31 +31,6 @@ constexpr char32_t digit_zeros[] = {0x30,    0x660,   0x6F0,   0x7C0,   0x966,  
 constexpr char32_t spaces[] = {0x9,    0xA,    0xB,    0xC,    0xD,    0x1C,   0x1D,   0x1E,   0x1F,   0x20,   0x85,   0xA0,   0x1680, 0x2000, 0x2001,
                                0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000};
 
-constexpr char32_t malformed = 0xFFFFFFFF;
-
-struct code_point
-{
-    char32_t value;
-    std::size_t length;
-};
-
-code_point decode(std::string_view text, std::size_t at)
-{
-    const auto lead          = static_cast<unsigned char>(text[at]);
-    const std::size_t length = lead < 0x80 ? 1 : lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 0;
-    if(length == 0 || at + length > text.size())
-        return code_point{malformed, 1};
-    char32_t value = length == 1 ? lead : static_cast<char32_t>(lead & (0x7F >> length));
-    for(std::size_t k = 1; k < length; ++k)
-    {
-        const auto next = static_cast<unsigned char>(text[at + k]);
-        if((next & 0xC0) != 0x80)
-            return code_point{malformed, 1};
-        value = (value << 6) | static_cast<char32_t>(next & 0x3F);
-    }
-    return code_point{value, length};
-}
-
 bool space(char32_t point)
 {
     return std::ranges::find(spaces, point) != std::ranges::end(spaces);
@@ -65,7 +42,7 @@ std::string_view stripped(std::string_view text)
     std::size_t end   = 0;
     for(std::size_t at = 0; at < text.size();)
     {
-        const code_point one = decode(text, at);
+        const utf8_point one = decode_utf8(text, at);
         if(!space(one.value))
         {
             begin = std::min(begin, at);
@@ -81,7 +58,7 @@ std::size_t take_digit(std::string_view text, std::size_t at, std::string &out)
 {
     if(at >= text.size())
         return std::string_view::npos;
-    const code_point one = decode(text, at);
+    const utf8_point one = decode_utf8(text, at);
     for(char32_t zero : digit_zeros)
         if(one.value >= zero && one.value < zero + 10)
         {

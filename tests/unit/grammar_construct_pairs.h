@@ -82,7 +82,7 @@ inline constexpr pairing element_pairings[] = {
         {"attrs.xacro_property", carrier::agreement, "property_removed_absent_inserted_as_block property_removed_absent_inserts_nothing", standing::agrees},
         {"attrs.xacro_property", carrier::agreement, "property_without_value_keeps_value property_remove_false_keeps_value", standing::agrees},
         {"attrs.xacro_property", carrier::agreement, "block_property_parent_scope_after_call block_property_lazy_eval_undefined", standing::agrees},
-        {"attrs.xacro_property", carrier::agreement, "property_name_from_expression property_without_name", standing::agrees},
+        {"attrs.xacro_property", carrier::agreement, "property_name_from_expression property_without_name property_name_non_ascii_binds", standing::agrees},
         {"attrs.xacro_property", carrier::manifest, "property_quoted_value", standing::open},
         {"attrs.xacro_property", carrier::manifest, "property_padded_number property_signed_number property_unicode_digit property_infinity_spelling", standing::open},
         {"attrs.xacro_call", carrier::agreement, "call_empty_macro", standing::agrees},

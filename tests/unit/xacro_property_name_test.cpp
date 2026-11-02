@@ -90,13 +90,28 @@ TEST_CASE("a property name opening with a double underscore refuses before remov
             REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: __x"));
         }
     }
+    const expansion_result out = expand_body(R"(<xacro:property name="__π" value="1"/><link name="l"/>)");
+    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: __π"));
 }
 
-TEST_CASE("a non-ASCII, underscored or soft-keyword property name binds", "[xacro][scope][property]")
+TEST_CASE("a non-ASCII, underscored or soft-keyword property name the reference admits binds", "[xacro][scope][property]")
 {
-    const expansion_result out = expand_body(R"(<xacro:property name="π" value="1"/><xacro:property name="_m" value="2"/>)"
-                                             R"(<xacro:property name="match" value="3"/><link name="l${_m}${match}"/>)");
+    const expansion_result out = expand_body(R"(<xacro:property name="π" value="1"/><xacro:property name="a·" value="4"/>)"
+                                             R"(<xacro:property name="Ω" value="5"/><xacro:property name="x́" value="6"/><xacro:property name="é" value="7"/>)"
+                                             R"(<xacro:property name="_m" value="2"/><xacro:property name="match" value="3"/><link name="l${_m}${match}"/>)");
     REQUIRE(renders(out, R"(<link name="l23"/>)"));
+}
+
+TEST_CASE("a property name that is not a python identifier outside ASCII refuses as the reference does", "[xacro][scope][property]")
+{
+    for(const char *name : {"a€", "＿x", "·a", "ﬁ", "ａ", "é", "Ω", "_＿x"})
+    {
+        DYNAMIC_SECTION(name)
+        {
+            const expansion_result out = expand_body(std::string(R"(<xacro:property name=")") + name + R"(" value="1"/><link name="l"/>)");
+            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, std::string("Property names must be valid python identifiers: ") + name));
+        }
+    }
 }
 
 TEST_CASE("a property without a name attribute refuses before anything else about it is read", "[xacro][scope][property]")

@@ -86,7 +86,7 @@ foreach(stem IN ITEMS native_value native_value_key native_value_scope native_re
                       native_branch_logic native_limits native_ceilings
                       native_span_depth native_depth_guard native_step_growth
                       native_ceiling_location native_elements native_scope_chain
-                      native_boolean_value native_root_symbols)
+                      native_boolean_value native_root_symbols native_identifier)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 
@@ -128,3 +128,10 @@ if(TARGET native_oracle_records_test)
     target_compile_definitions(native_oracle_records_test PRIVATE
         MEIOS_ORACLE_RECORD_ROWS=${MEIOS_ORACLE_RECORD_ROWS})
 endif()
+
+# The identifier probe answers the core's identifier rules one line at a time, so the Unicode
+# generator can hold them to the interpreter over more strings than a test case could list.
+add_executable(identifier_probe ${CMAKE_CURRENT_SOURCE_DIR}/tools/unicode/identifier_probe.cpp)
+target_include_directories(identifier_probe PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
+target_link_libraries(identifier_probe PRIVATE meios::core)
+meios_warnings(identifier_probe)

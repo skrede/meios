@@ -8,4 +8,7 @@ if(Python3_Interpreter_FOUND)
             COMMAND ${Python3_EXECUTABLE} -I -m unittest discover
                 -s ${CMAKE_CURRENT_SOURCE_DIR}/tools/oracle -p test_${oracle_tool_case}.py)
     endforeach()
+    add_test(NAME unicode_tools.identifier_tables
+        COMMAND ${Python3_EXECUTABLE} -I -m unittest discover
+            -s ${CMAKE_CURRENT_SOURCE_DIR}/tools/unicode -p test_identifier_tables.py)
 endif()

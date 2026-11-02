@@ -18,3 +18,7 @@ tests/**/*.yaml text eol=lf
 # FATALs on Windows alone.
 tests/fixtures/**/*.xacro text eol=lf
 tests/fixtures/**/*.urdf text eol=lf
+
+# A generated Unicode table is diffed byte for byte against a fresh regeneration, so a CRLF checkout
+# must not make the two differ.
+lib/meios-core/src/meios/xacro/unicode_*_data.cpp text eol=lf
