@@ -13,6 +13,7 @@
 
 #include "meios/xacro/detail/scope_entry.h"
 #include "meios/xacro/detail/table_chain.h"
+#include "meios/xacro/detail/scoped_exchange.h"
 
 #include "meios/detail/text_location.h"
 
@@ -105,9 +106,8 @@ name_read evaluate_level(expand_ctx &ctx, const deferred_text &deferred, std::si
     if(!level.admitted())
         return name_read{ std::nullopt, eval_failure_kind::exhausted };
     const deferred_origin from = ctx.deferred[deferred.origin];
-    ctx.origins.push_back(from.origin);
+    const scoped_push<std::vector<emit_origin>> defining(ctx.origins, from.origin);
     std::optional<value> bound = substitute_level(ctx, from, deferred.text, log);
-    ctx.origins.pop_back();
     if(bound)
         return name_read{ std::move(*bound), eval_failure_kind::none };
     const bool exhausted = ctx.session.failure == eval_failure_kind::exhausted;
@@ -124,10 +124,9 @@ name_read resolve_deferred(expand_ctx &ctx, const deferred_text &deferred, std::
     if(!answer.failed())
         return answer;
     ctx.ok = false;
-    const pugi::xml_node host = ctx.deferred[deferred.origin].host;
     const std::optional<source_location> read = reader ? std::optional<source_location>(reader->at) : std::nullopt;
     const std::optional<expansion_error> composed =
-        level_log.report(host.attribute("name").value(), definition_at(ctx, deferred.origin), read);
+        level_log.report(ctx.deferred[deferred.origin].name, definition_at(ctx, deferred.origin), read);
     if(!reader && composed)
         record_terminal(ctx, *composed);
     return answer;
@@ -150,10 +149,10 @@ eval_failure_kind refuse_cycle(expand_ctx &ctx, const std::vector<resolve_step> 
 }
 
 std::size_t record_origin(expand_ctx &ctx, pugi::xml_node host, const char *attribute,
-                          const std::filesystem::path &document)
+                          const std::filesystem::path &document, std::string_view name)
 {
     const emit_origin origin = ctx.origins.empty() ? emit_origin{ document, {} } : ctx.origins.back();
-    ctx.deferred.push_back(deferred_origin{ host, attr_dom_index(host, attribute), origin, document });
+    ctx.deferred.push_back(deferred_origin{ host, attr_dom_index(host, attribute), origin, document, std::string(name) });
     return ctx.deferred.size() - 1;
 }
 

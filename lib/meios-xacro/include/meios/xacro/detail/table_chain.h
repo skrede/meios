@@ -3,6 +3,7 @@
 
 #include "meios/xacro/detail/name_table.h"
 #include "meios/xacro/detail/scope_entry.h"
+#include "meios/xacro/detail/scoped_exchange.h"
 #include "meios/xacro/detail/deferred_resolver.h"
 
 #include "meios/xacro/value.h"
@@ -173,9 +174,8 @@ private:
             return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
         if(const std::optional<eval_failure_kind> refused = m_resolver.cycle(table, name))
             return name_read{ std::nullopt, *refused, std::nullopt };
-        const std::size_t reader = std::exchange(m_cursor, table);
+        const scoped_exchange<std::size_t> reader(m_cursor, table);
         name_read answer = m_resolver.evaluate(table, name, deferred, carried);
-        m_cursor = reader;
         if(answer.bound)
             m_tables[table]->set(name, *answer.bound);
         else

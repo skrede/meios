@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_DEFERRED_RESOLVER_H
 
 #include "meios/xacro/detail/scope_entry.h"
+#include "meios/xacro/detail/scoped_exchange.h"
 
 #include "meios/xacro/eval_failure_kind.h"
 
@@ -69,10 +70,8 @@ public:
 
     name_read evaluate(std::size_t table, std::string_view name, const deferred_text &deferred, std::size_t carried)
     {
-        m_resolving.push_back(resolve_step{ table, std::string(name), deferred.origin });
-        name_read answer = m_resolve_cb(deferred, carried);
-        m_resolving.pop_back();
-        return answer;
+        const scoped_push<std::vector<resolve_step>> step(m_resolving, resolve_step{ table, std::string(name), deferred.origin });
+        return m_resolve_cb(deferred, carried);
     }
 
 private:

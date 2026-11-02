@@ -147,3 +147,18 @@ TEST_CASE("a refused deferred property read in a macro call's argument names the
     CHECK(errors.front().loc.line == 2);
     CHECK(errors.front().message.find("when evaluating 'p' (defined at inline.xacro:2), read at inline.xacro:4") != std::string::npos);
 }
+
+TEST_CASE("a refused deferred property named by an expression is named by what its name evaluates to", "[xacro][deferred]")
+{
+    const outcome out = expand_body("<xacro:property name=\"p\" value=\"a\"/>\n"
+                                    "<xacro:property name=\"${p}_x\" value=\"${nope}\"/>\n"
+                                    "<link name=\"${a_x}\"/>\n");
+    REQUIRE_FALSE(out.result.has_value());
+    const std::vector<record> errors = at_level(out.records, meios::level::error);
+    REQUIRE(errors.size() == 1);
+    CHECK(errors.front().code == meios::diagnostic_code::undefined_property);
+    CHECK(errors.front().loc.line == 3);
+    CHECK(occurrences(errors.front().message, "when evaluating 'a_x' (defined at inline.xacro:3), read at inline.xacro:4") == 1);
+    CHECK(errors.front().message.find("${p}_x") == std::string::npos);
+    CHECK(out.result.error().message == errors.front().message);
+}

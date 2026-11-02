@@ -63,7 +63,8 @@ if(TARGET xacro_property_test)
 endif()
 if(TARGET xacro_deferred_test)
     target_sources(xacro_deferred_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_deferred_record_test.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_deferred_chain_test.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_deferred_chain_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_deferred_unwind_test.cpp)
 endif()
 if(TARGET xacro_macro_call_test)
     target_sources(xacro_macro_call_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_macro_lifetime_test.cpp)

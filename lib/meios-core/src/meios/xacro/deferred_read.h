@@ -5,9 +5,11 @@
 
 #include <pugixml.hpp>
 
+#include <string>
 #include <cstddef>
 #include <optional>
 #include <filesystem>
+#include <string_view>
 
 namespace meios::detail
 {
@@ -19,17 +21,19 @@ struct expand_ctx;
 inline constexpr std::size_t deferred_read_cost = 19;
 
 // Where a deferred text was written: the property element, the attribute that holds the text, and
-// the file the element came from, so its evaluation reports a refusal inside that text.
+// the file the element came from, so its evaluation reports a refusal inside that text. The name is
+// the one the name attribute evaluated to, the name the table holds.
 struct deferred_origin
 {
     pugi::xml_node host;
     std::optional<std::size_t> attr_index;
     emit_origin origin;
     std::filesystem::path document;
+    std::string name;
 };
 
 std::size_t record_origin(expand_ctx &ctx, pugi::xml_node host, const char *attribute,
-                          const std::filesystem::path &document);
+                          const std::filesystem::path &document, std::string_view name);
 
 // Lets the scope evaluate deferred texts for as long as one expansion runs. The scope outlives the
 // context the evaluation needs, so every return from expand has to detach it, and it leaves the

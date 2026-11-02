@@ -109,7 +109,7 @@ void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
         chain_access::define(ctx.scope, table, name, std::move(literal));
         return;
     }
-    const std::size_t origin = record_origin(ctx, in, attribute, document);
+    const std::size_t origin = record_origin(ctx, in, attribute, document, name);
     chain_access::define_deferred(ctx.scope, table, name, std::move(authored), origin);
 }
 
