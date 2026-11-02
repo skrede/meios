@@ -171,11 +171,24 @@ TEST_CASE("a call through an include namespace dispatches as the bare call does"
     CHECK(renders(read_through(held, "n", "${n.max(1, 2)}"), "l2"));
 }
 
-TEST_CASE("a name the global table lacks refuses through an include namespace", "[xacro][namespace]")
+TEST_CASE("a call to a function the global table does not list refuses through an include namespace", "[xacro][namespace]")
 {
     const include_tree::tree held;
     CHECK(refuses_undefined(read_through(held, "n", "${n.abs(-2)}"), "abs"));
-    CHECK(refuses_undefined(read_through(held, "n", "${n.e}"), "e"));
+}
+
+TEST_CASE("a global name other than pi refuses through an include namespace under the built-in evaluator, each constant as it refuses bare, where the reference renders it",
+          "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    for(const char *constant : {"e", "tau", "inf", "nan"})
+    {
+        INFO(constant);
+        CHECK(refuses_undefined(read_through(held, "n", std::string("${n.") + constant + "}"), constant));
+        CHECK(refuses_undefined(read_through(held, "n", std::string("${") + constant + "}"), constant));
+    }
+    CHECK(refuses_undefined(read_through(held, "n", "${n.n.e}"), "e"));
+    CHECK(refuses_undefined(read_through(held, "n", "${n.math.pi}"), "math"));
 }
 
 TEST_CASE("a property of the including file wins over the mathematics constant", "[xacro][namespace]")

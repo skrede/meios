@@ -103,6 +103,15 @@ TEST_CASE("a mathematics name no table binds is read through a namespace", "[eva
     REQUIRE(both_render(held, include_as("c.xacro", "n") + link("l${n.n.pi}"), "l3.141592653589793"));
 }
 
+TEST_CASE("a mathematics constant other than pi renders through a namespace under the python backend alone", "[eval_python][scope]")
+{
+    const include_tree::tree held;
+    held.write("c.xacro", include_tree::robot(property("c", "C")));
+    const std::string body = include_as("c.xacro", "n") + link("l${n.e}");
+    REQUIRE(scope_probe::renders(scope_probe::load_with(held, body, scope_probe::python()), "l2.718281828459045"));
+    REQUIRE(scope_probe::refuses_once(scope_probe::load_with(held, body, nullptr), "name 'e' is not defined"));
+}
+
 TEST_CASE("a function no table binds is called through a namespace", "[eval_python][scope]")
 {
     const include_tree::tree held;
