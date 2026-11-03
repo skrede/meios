@@ -104,3 +104,12 @@ TEST_CASE("a bare name outside ASCII takes the route a bare ASCII name takes", "
     REQUIRE(named.out.error().code == plain.out.error().code);
     REQUIRE(named.errors == plain.errors);
 }
+
+TEST_CASE("the python evaluator reads an expression stripped of Python's whitespace at either end", "[eval_python][scope]")
+{
+    for(const char *read : {"l${\u00A0p}", "l${p\u3000}"})
+    {
+        INFO(read);
+        REQUIRE(scope_probe::renders(load(property("p", "7") + link(read)), "l7"));
+    }
+}

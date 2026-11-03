@@ -1,3 +1,4 @@
+#include "python_space.h"
 #include "argument_conversion.h"
 
 #include "meios/detail/utf8.h"
@@ -26,32 +27,6 @@ constexpr char32_t digit_zeros[] = {0x30,    0x660,   0x6F0,   0x7C0,   0x966,  
                                     0xA9D0,  0xA9F0,  0xAA50,  0xABF0,  0xFF10,  0x104A0, 0x10D30, 0x10D40, 0x11066, 0x110F0, 0x11136, 0x111D0, 0x112F0, 0x11450, 0x114D0, 0x11650,
                                     0x116C0, 0x116D0, 0x116DA, 0x11730, 0x118E0, 0x11950, 0x11BF0, 0x11C50, 0x11D50, 0x11DA0, 0x11F50, 0x16130, 0x16A60, 0x16AC0, 0x16B50, 0x16D70,
                                     0x1CCF0, 0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6, 0x1E140, 0x1E2F0, 0x1E4F0, 0x1E5F1, 0x1E950, 0x1FBF0};
-
-// What Python 3.14's str.isspace() holds, which int() and float() strip from either end.
-constexpr char32_t spaces[] = {0x9,    0xA,    0xB,    0xC,    0xD,    0x1C,   0x1D,   0x1E,   0x1F,   0x20,   0x85,   0xA0,   0x1680, 0x2000, 0x2001,
-                               0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000};
-
-bool space(char32_t point)
-{
-    return std::ranges::find(spaces, point) != std::ranges::end(spaces);
-}
-
-std::string_view stripped(std::string_view text)
-{
-    std::size_t begin = std::string_view::npos;
-    std::size_t end   = 0;
-    for(std::size_t at = 0; at < text.size();)
-    {
-        const utf8_point one = decode_utf8(text, at);
-        if(!space(one.value))
-        {
-            begin = std::min(begin, at);
-            end   = at + one.length;
-        }
-        at += one.length;
-    }
-    return begin == std::string_view::npos ? std::string_view{} : text.substr(begin, end - begin);
-}
 
 // Appends the digit at the offset in its ASCII spelling and answers the offset after it.
 std::size_t take_digit(std::string_view text, std::size_t at, std::string &out)
@@ -132,7 +107,7 @@ std::string lowered(std::string_view text)
 
 std::optional<value> converted_argument(std::string_view text)
 {
-    const std::string_view number   = stripped(text);
+    const std::string_view number   = python_stripped(text);
     const std::optional<value> read = text.find('.') == std::string_view::npos ? integer_spelling(number) : real_spelling(number);
     if(!read || read->kind() != value_kind::string)
         return read;

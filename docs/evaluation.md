@@ -63,13 +63,20 @@ text, as Python's tokenizer recognizes it, so `${ｉｆ}` is the undefined name 
 `None`, `True` or `False` outside ASCII refuses as Python refuses it, `${Ｔrue}` with
 `identifier field can't represent 'True' constant`. A character no identifier admits refuses with
 Python's own lexical message, quoting a printable character and naming only the code point of a
-non-printable one: `invalid character '€' (U+20AC)`, `invalid non-printable character U+00A0`. A name
-is stored as it is written, whether a property's, a macro parameter's or an argument's, so a macro
-parameter written in decomposed form is not read by its composed spelling, on either side. The
+non-printable one: `invalid character '€' (U+20AC)`, and `invalid non-printable character U+00A0`,
+which is Python's refusal of a no-break space inside an expression. The characters Python's
+`str.strip()` removes are removed from both ends of a `${…}` body once the body's own substitutions
+have resolved, as the reference strips the body before compiling it. These are the characters
+`str.isspace()` holds, among them the no-break space U+00A0 and the ideographic space U+3000, so a
+`${p}` written with a no-break space beside the name reads `p`, under either evaluator. The
+evaluation command's body is not stripped: the reference hands it to Python's `eval` as written, so
+the same character at either end of `$(eval …)` refuses on both sides. A name is stored as it is
+written, whether a property's, a macro parameter's or an argument's, so a macro parameter written in
+decomposed form is not read by its composed spelling, on either side. The
 `property_name_non_ascii_read`, `expression_reads_normalized_name`,
-`expression_normalized_keyword_is_a_name` and `expression_invalid_character` agreement probes hold
-these against a fresh upstream render, beside the `native_identifier_read` and
-`native_identifier_fault` cases.
+`expression_normalized_keyword_is_a_name`, `expression_invalid_character` and
+`expression_unicode_space_at_edge` agreement probes hold these against a fresh upstream render,
+beside the `native_identifier_read`, `native_identifier_fault` and `native_expression_space` cases.
 
 **What a bound value is, before an expression ever reads it.** A property and a macro parameter each
 bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
@@ -999,8 +1006,8 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and eighty-one agreement probes, the `agreement` rows of the
-  inventory and the documents the enumeration above names, eighty of them the grammar record's,
+- **The committed probes**: one hundred and eighty-two agreement probes, the `agreement` rows of the
+  inventory and the documents the enumeration above names, eighty-one of them the grammar record's,
   each held to a fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
   manifest `differential_divergences.cases` records, ninety-three rows of it: thirteen

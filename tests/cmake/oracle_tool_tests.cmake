@@ -11,4 +11,9 @@ if(Python3_Interpreter_FOUND)
     add_test(NAME unicode_tools.identifier_tables
         COMMAND ${Python3_EXECUTABLE} -I -m unittest discover
             -s ${CMAKE_CURRENT_SOURCE_DIR}/tools/unicode -p test_identifier_tables.py)
+    if(TARGET identifier_probe)
+        add_test(NAME unicode_tools.probe_protocol
+            COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_CURRENT_SOURCE_DIR}/tools/unicode/test_probe_protocol.py
+                $<TARGET_FILE:identifier_probe>)
+    endif()
 endif()

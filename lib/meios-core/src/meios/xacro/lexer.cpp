@@ -127,8 +127,10 @@ bool ascii_text(std::string_view text)
     return std::ranges::all_of(text, [](char c) { return static_cast<std::uint8_t>(c) < 0x80; });
 }
 
-// Python's tokenizer reports a character no identifier admits ahead of any syntax error in the
-// expression, so the run replaces the stream unless an earlier lexical fault already stands.
+// Python reports a character no identifier admits ahead of any syntax error, by tokenizing the
+// rest of the source once a parse fails, so the run replaces the stream unless an earlier lexical
+// fault stands. A constant spelling takes the same route, though Python raises it only where a
+// parse pass reaches the name, so behind some syntax errors Python reports the syntax error.
 std::size_t push_fault(std::string_view src, std::string_view run, std::vector<token> &out)
 {
     if(std::ranges::none_of(out, [](const token &one) { return one.kind == token_kind::error; }))

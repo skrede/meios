@@ -89,6 +89,12 @@ TEST_CASE("a name that normalizes to one of Python's constants refuses as Python
     REQUIRE(refuses_holding(shadowed, meios::diagnostic_code::expression_error, "identifier field can't represent 'True' constant"));
 }
 
+TEST_CASE("a constant spelling is reported ahead of a syntax error that comes before it", "[xacro][identifier]")
+{
+    for(std::string_view expression : {"${1 2 Ｔrue}", "${1 2 + Ｔrue}"})
+        REQUIRE(refuses_holding(read_link(expression), meios::diagnostic_code::expression_error, "identifier field can't represent 'True' constant"));
+}
+
 TEST_CASE("a character no identifier admits refuses with Python's lexical message", "[xacro][identifier]")
 {
     const std::pair<std::string_view, std::string_view> faults[] = {{"${1 € 2}", "invalid character '€' (U+20AC)"},

@@ -22,7 +22,7 @@ from recorder.environment import bootstrap, package_roots  # noqa: E402
 from recorder.expressions import expression_cases, write_seed_documents  # noqa: E402
 from differential_probes import (DIVERGENCE_PROBES, RECURSIVE_YAML, DOCUMENT_PROBES,  # noqa: E402
                                  PROBE_DIR, AGREEMENT_PROBES, probe_root, probe_mappings)
-from grammar_probes import GRAMMAR_PROBES_IN_STAGE, probe_environment, without_package_index  # noqa: E402
+from grammar_probe_staging import GRAMMAR_PROBES_IN_STAGE, probe_environment, without_package_index  # noqa: E402
 
 
 def sanitize(case_id):

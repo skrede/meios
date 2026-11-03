@@ -1,13 +1,6 @@
 # The grammar record's document probes: constructs of xacro's own grammar measured against the
 # pinned reference, each recorded as a divergence until the two sides agree.
 
-import os
-import sys
-import contextlib
-from pathlib import Path
-
-HERE = Path(__file__).resolve().parent
-
 GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "macro_called_by_name_attribute",
                            "element_named_by_attribute",
@@ -114,6 +107,7 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("expression_reads_normalized_name", "expression_reads_normalized_name", None),
                             ("expression_normalized_keyword_is_a_name", "expression_normalized_keyword_is_a_name", None),
                             ("expression_invalid_character", "expression_invalid_character", None),
+                            ("expression_unicode_space_at_edge", "expression_unicode_space_at_edge", None),
                             ("macro_default_forwards_deferred_global", "macro_default_forwards_deferred_global", None),
                             ("property_deferred_yaml_read_where_read", "property_deferred_yaml_read_where_read", None),
                             ("include_namespace_bare_name", "include_namespace_bare_name", None),
@@ -170,31 +164,3 @@ GRAMMAR_PROBE_ROOTS = {"include_find_answering_root_only": ("include_find_answer
                                                          "include_held_find_directory",
                                                          "include_find_composed_reads_neighbor",
                                                          "include_find_trailing_separator")}}
-GRAMMAR_PROBES_IN_STAGE = ("cwd_command",)
-# Rendered by the pinned install as it ships, which has no package index: the vendored one is what
-# lets every other probe's find resolve.
-GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX = ("find_without_package_index",)
-
-
-# Both sides read this one fixed environment, so no row spells a machine's own.
-def probe_environment():
-    os.environ["MEIOS_PROBE_ENV"] = "probe_value"
-    os.environ.pop("MEIOS_PROBE_UNSET", None)
-
-
-# The vendored index is taken off the import path and out of the module cache while the probe
-# renders, so upstream's own import of it fails as it does in the bare pinned install.
-@contextlib.contextmanager
-def without_package_index(case_id):
-    if case_id not in GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX:
-        yield
-        return
-    saved_path = list(sys.path)
-    saved_modules = {name: sys.modules.pop(name) for name in list(sys.modules)
-                     if name.split(".")[0] == "ament_index_python"}
-    try:
-        sys.path[:] = [one for one in sys.path if Path(one or ".").resolve() != HERE]
-        yield
-    finally:
-        sys.path[:] = saved_path
-        sys.modules.update(saved_modules)

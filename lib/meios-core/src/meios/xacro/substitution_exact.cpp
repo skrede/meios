@@ -1,5 +1,6 @@
 #include "quote_scan.h"
 #include "eval_session.h"
+#include "python_space.h"
 #include "identifier_text.h"
 #include "substitution_sinks.h"
 #include "substitution_detail.h"
@@ -95,7 +96,7 @@ value reclassified(const value &read)
 std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
 {
     ctx.last_kind = eval_failure_kind::none;
-    const std::optional<std::string> name = read_spelling(trim(expr));
+    const std::optional<std::string> name = read_spelling(python_stripped(expr));
     if(name)
     {
         const name_read bound = read_name(ctx.scope, *name);
@@ -108,13 +109,14 @@ std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
     std::string resolved;
     if(!scan_inner(ctx, expr, resolved))
         return std::nullopt;
-    ctx.last_kind = eval_failure_kind::none;
+    const std::string_view body = python_stripped(resolved);
+    ctx.last_kind               = eval_failure_kind::none;
     if(ctx.backend)
     {
-        std::optional<std::string> text = eval_expr(ctx, resolved, ctx.scope);
+        std::optional<std::string> text = eval_expr(ctx, body, ctx.scope);
         return text ? std::optional<value>(classify(*text)) : std::nullopt;
     }
-    std::optional<value> read = eval_native(ctx, resolved);
+    std::optional<value> read = eval_native(ctx, body);
     if(!read)
         return std::nullopt;
     return reclassified(*read);
