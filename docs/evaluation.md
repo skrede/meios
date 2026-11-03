@@ -55,6 +55,22 @@ description needing Python behavior the grammar does not carry; it has
   are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
   A property may shadow a built-in name such as `pi`, with a warning, as it may upstream.
 
+**A name in an expression is read under its NFKC form, as Python reads it.** Wherever an expression
+names something — a bare name, a member, a namespace member, a call target, a `dict(...)` keyword and
+a name in `$(eval)` — the name is read as its NFKC normalization, so `${ﬁ}` reads `fi`, `${ｐｉ}`
+reads `pi`, and a property bound as `π` is read by `${π}`. A keyword is recognized on the written
+text, as Python's tokenizer recognizes it, so `${ｉｆ}` is the undefined name `if`, and a spelling of
+`None`, `True` or `False` outside ASCII refuses as Python refuses it, `${Ｔrue}` with
+`identifier field can't represent 'True' constant`. A character no identifier admits refuses with
+Python's own lexical message, quoting a printable character and naming only the code point of a
+non-printable one: `invalid character '€' (U+20AC)`, `invalid non-printable character U+00A0`. A name
+is stored as it is written, whether a property's, a macro parameter's or an argument's, so a macro
+parameter written in decomposed form is not read by its composed spelling, on either side. The
+`property_name_non_ascii_read`, `expression_reads_normalized_name`,
+`expression_normalized_keyword_is_a_name` and `expression_invalid_character` agreement probes hold
+these against a fresh upstream render, beside the `native_identifier_read` and
+`native_identifier_fault` cases.
+
 **What a bound value is, before an expression ever reads it.** A property and a macro parameter each
 bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
 as one of `true`, `True`, `false` and `False`, and it stays a string only if none of those fit — the
@@ -82,11 +98,21 @@ expansion never read reads absent from the scope.
 
 **A property's name is evaluated and checked before anything else about it, as the reference checks
 it.** The `name` attribute is required, and it is evaluated as an attribute is, so `name="${p}_x"`
-with `p` bound to `a` binds `a_x`. What it evaluates to must be text, and that text a Python
-identifier that is not one of the language's reserved keywords and does not open with a double
-underscore. A name failing any of these refuses under `xacro_structural_error` before `remove`,
-`default` or `value` is read. The `property_name_` and `property_without_name` agreement probes hold
-these against a fresh upstream render.
+with `p` bound to `a` binds `a_x`. What it evaluates to must be text forming a Python identifier as
+Python 3.14 reads one under Unicode 16.0 — `_` or an XID_Start character first, XID_Continue
+characters after — that is not one of the language's hard keywords, is its own NFKC normalization,
+and does not open with a double underscore. A name failing any of these refuses under
+`xacro_structural_error` before `remove`, `default` or `value` is read, and one failing any of the
+first three refuses with `Property names must be valid python identifiers: ` and the name, as the
+reference refuses it. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is `fi`, refuse on
+both sides, and `π` binds on both. The `property_name_non_ascii_not_identifier`,
+`property_name_not_normalized` and `property_name_non_ascii_binds` agreement probes hold those three
+against a fresh upstream render, beside the other `property_name_` and the `property_without_name`
+agreement probes and the `xacro_property` cases. The identifier, normalization and printable tables
+this rule and the name reading above use are generated from Python 3.14's `unicodedata`
+(Unicode 16.0.0), and regenerated and checked against that interpreter on every CI run; the reference
+running on another interpreter reads whatever that interpreter's tables hold, so a character added or
+retired between Unicode versions is read here as 3.14 reads it.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An
 argument — a declared default, or an override a caller hands the load — binds the characters that
@@ -214,7 +240,13 @@ truncated argument is not.
 else.** An include written with `ns="n"` reads its file into a namespace of its own, and `${n.w}` reads
 the name `w` that file bound; a name the namespace does not hold falls through to the names of the
 file that wrote the include and then, as the reference's does, to the global names, reading what
-the bare spelling reads: `${n.pi}` reads the constant and `${n.sin(0)}` calls the function. A call
+that name reads bare: `${n.pi}` reads the constant and `${n.sin(0)}` calls the function. The
+constants `e`, `tau`, `inf` and `nan` refuse bare here as undefined names, so `${n.e}`, `${n.tau}`,
+`${n.inf}` and `${n.nan}` refuse as undefined names too, where the reference renders each constant
+under either spelling. `${n.math.pi}` refuses as the undefined name `math`, while the bare
+`${math.pi}` refuses as an unsupported call target, so the two spellings refuse differently here,
+and the reference renders both; the parity gaps
+[below](#where-this-diverges-from-the-compatibility-target) name what holds each of these. A call
 through a namespace to a name the reference's global table does not hold refuses as an undefined
 name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A namespace inside
 another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro `m` the
@@ -781,18 +813,35 @@ the grammar.
 
 **Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
 namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target
-when no include names its namespace `math`. Through an include namespace the two sides agree: both
-fall through to the global names, so `${n.pi}`, and `${math.pi}` under an include whose namespace is
-`math`, render on both, and the `include_namespace_reads_mathematics_name` agreement probe holds the
-first against a fresh upstream render. The reference's
-argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning`
-/ `error` / `fatal`) are not exposed at all: a call to any of the reference's helpers but
-`xacro.load_yaml` refuses under either evaluator, and the refusal names `xacro.load_yaml` as the only
-helper either exposes. The argument helper is a reviewed divergence, since it renders upstream; a
-refusal of it also names the `$(arg)` command. `map` and `filter` are not among the functions above,
-and `${list(map(...))}` does appear in real descriptions, which makes it the omission most likely to
-be met in practice. Every one of these is a loud refusal naming what it met, so it is a decision
-rather than a silent difference in what a document means.
+when no include names its namespace `math`. Through an include namespace both sides fall through to
+the global names, and they agree on `pi` and on a call to a function the global table lists:
+`${n.pi}`, `${n.n.pi}`, `${math.pi}` under an include whose namespace is `math`, and `${n.sin(0)}`
+render on both. The `include_namespace_reads_mathematics_name` agreement probe holds `${n.pi}` against
+a fresh upstream render, and the `xacro_namespace` cases "a read through an include namespace falls
+through to the mathematics constant" and "a call through an include namespace dispatches as the bare
+call does" pin this side's renders. The other constants and the `math` head differ. Under the
+built-in evaluator `${n.e}`, `${n.n.e}`, `${n.tau}`, `${n.inf}` and `${n.nan}` refuse as undefined
+names, as the bare `${e}`, `${tau}`, `${inf}` and `${nan}` do, where upstream renders both spellings;
+the `include_namespace_reads_global_constant` row holds `${n.e}` in both directions. `${n.math.pi}`
+refuses as the undefined name `math`, where the bare `${math.pi}` refuses as an unsupported call target
+whose message advises the bare name; upstream renders both, so the `math` head's two spellings refuse
+differently here, not alike. The `xacro_namespace` case "a global name other than pi refuses through an
+include namespace under the built-in evaluator, each constant as it refuses bare, where the reference
+renders it" pins each of those namespaced spellings and the bare constants, and the `native_expression`
+case "a construct outside the measured surface refuses by name" and the `native_member` case "a call
+target's refusal advises the python evaluator only for a head that evaluator binds" pin the bare
+`${math.pi}`. Upstream's render of each spelling neither that probe nor that row holds was measured
+when this was written, and nothing carries it. Under the python evaluator `${n.e}` renders
+`2.718281828459045`, as upstream renders it, which the `eval_python_scope` case "a mathematics
+constant other than pi renders through a namespace under the python backend alone" pins. The
+reference's argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`,
+`xacro.message` / `warning` / `error` / `fatal`) are not exposed at all: a call to any of the
+reference's helpers but `xacro.load_yaml` refuses under either evaluator, and the refusal names
+`xacro.load_yaml` as the only helper either exposes. The argument helper is a reviewed divergence,
+since it renders upstream; a refusal of it also names the `$(arg)` command. `map` and `filter` are not
+among the functions above, and `${list(map(...))}` does appear in real descriptions, which makes it the
+omission most likely to be met in practice. Every one of these is a loud refusal naming what it met, so
+it is a decision rather than a silent difference in what a document means.
 
 ## What this evidence covers
 
@@ -950,13 +999,13 @@ describes:
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and seventy-four agreement probes, the `agreement` rows of the
-  inventory and the documents the enumeration above names, seventy-three of them the grammar record's,
+- **The committed probes**: one hundred and eighty-one agreement probes, the `agreement` rows of the
+  inventory and the documents the enumeration above names, eighty of them the grammar record's,
   each held to a fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
   not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, ninety-two rows of it: thirteen
+  manifest `differential_divergences.cases` records, ninety-three rows of it: thirteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's sixty-six document probes, a group listed in
+  and the grammar record's sixty-seven document probes, a group listed in
   `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
   the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
   code this side gives for that cause, and an upstream refusal no row maps fails the run. The
@@ -1316,13 +1365,18 @@ read the way one at the top level is. A property is evaluated only if the expres
 `${'x' if c else b}` with `c` true never evaluates `b`, whatever `b`'s own text would do. A name is
 looked up in the scope first, then among the mathematics names and the two spellings of the
 resource helper, then among the builtins, so a property shadows a mathematics name of its spelling:
-a property `pi` written `3` reads `3`, as it does under the built-in evaluator. A property whose own
+a property `pi` written `3` reads `3`, as it does under the built-in evaluator. The restricted
+class's guard asks the scope about the name Python reads, after Python normalizes it, so a property
+shadows a withheld builtin under any spelling Python normalizes to its name: with a property `open`
+bound, `${ｏｐｅｎ}` renders it, which the `eval_python_scope` case "a property shadows the withheld
+builtin its name normalizes to, as the guard reads the name Python reads" pins. A property whose own
 text refuses is never replaced by the mathematics name or builtin of its spelling; the read refuses,
 carrying the one record that text's evaluation logged. An include namespace is read through a dot,
 `${n.w}`, falling through to the names of the file that wrote the include and then to the names a
 bare read reaches, as under the built-in evaluator, so `${n.pi}` reads the constant and `${n.sin(0)}`
-calls the function. Those names are this backend's, so `${n.abs(-2)}` renders here as the bare call
-does, where the reference's global table holds no `abs` and refuses it; a member no name answers
+calls the function. Those names are this backend's, so `${n.e}` renders `2.718281828459045` as the
+reference renders it, and `${n.abs(-2)}` renders here as the bare call does, where the reference's
+global table holds no `abs` and refuses it; a member no name answers
 raises `name 'w' is not defined`. A property's text evaluated at its first read under this backend is
 charged against the expression-depth ceiling as the built-in evaluator charges it, and a circular
 definition refuses the same way. Each read this backend makes carries a nesting of nine, for the
