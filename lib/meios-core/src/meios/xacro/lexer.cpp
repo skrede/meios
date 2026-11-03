@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "identifier_text.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/detail/numeric.h"
@@ -8,23 +9,15 @@
 #include <vector>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <optional>
+#include <algorithm>
 #include <string_view>
 
 namespace meios::detail
 {
 namespace
 {
-
-bool is_name_start(char c)
-{
-    return std::isalpha(static_cast<unsigned char>(c)) != 0 || c == '_';
-}
-
-bool is_name_char(char c)
-{
-    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
-}
 
 token classify_name(std::string_view word)
 {
@@ -129,11 +122,29 @@ std::size_t push_string(std::string_view src, std::size_t i, std::vector<token> 
     return j + 1;
 }
 
+bool ascii_text(std::string_view text)
+{
+    return std::ranges::all_of(text, [](char c) { return static_cast<std::uint8_t>(c) < 0x80; });
+}
+
+// Python's tokenizer reports a character no identifier admits ahead of any syntax error in the
+// expression, so the run replaces the stream unless an earlier lexical fault already stands.
+std::size_t push_fault(std::string_view src, std::string_view run, std::vector<token> &out)
+{
+    if(std::ranges::none_of(out, [](const token &one) { return one.kind == token_kind::error; }))
+        out.clear();
+    out.push_back(token{ token_kind::error, run });
+    return src.size();
+}
+
 std::size_t push_name(std::string_view src, std::size_t i, std::vector<token> &out)
 {
-    std::size_t j = i;
-    while(j < src.size() && is_name_char(src[j])) ++j;
-    out.push_back(classify_name(src.substr(i, j - i)));
+    const std::size_t j        = identifier_run(src, i);
+    const std::string_view run = src.substr(i, j - i);
+    if(ascii_text(run)) { out.push_back(classify_name(run)); return j; }
+    std::optional<std::string> spelling = read_spelling(run);
+    if(!spelling) return push_fault(src, run, out);
+    out.push_back(token{ token_kind::name, run, value{}, std::move(*spelling) });
     return j;
 }
 
@@ -160,7 +171,7 @@ std::vector<token> tokenize(std::string_view source)
                 && std::isdigit(static_cast<unsigned char>(source[i + 1])) != 0);
         if(std::isspace(static_cast<unsigned char>(c)) != 0) { ++i; continue; }
         if(starts_number)              { i = push_number(source, i, tokens); continue; }
-        if(is_name_start(c))           { i = push_name(source, i, tokens); continue; }
+        if(opens_identifier(c))        { i = push_name(source, i, tokens); continue; }
         if(c == '\'' || c == '"')      { i = push_string(source, i, tokens); continue; }
         std::size_t consumed = push_symbol(source, i, tokens);
         if(consumed == 0) { tokens.push_back(token{ token_kind::unsupported, source.substr(i, 1) }); break; }

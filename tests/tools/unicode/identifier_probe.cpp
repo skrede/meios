@@ -60,7 +60,8 @@ int main()
     while(std::getline(std::cin, line))
     {
         const std::string text = spelled(line);
-        std::cout << hex_points(meios::detail::python_name(text)) << '\t' << (meios::detail::valid_python_name(text) ? '1' : '0') << '\n';
+        std::cout << hex_points(meios::detail::python_name(text)) << '\t' << (meios::detail::valid_python_name(text) ? '1' : '0') << '\t'
+                  << meios::detail::identifier_fault(text).value_or("-") << '\n';
     }
     return 0;
 }

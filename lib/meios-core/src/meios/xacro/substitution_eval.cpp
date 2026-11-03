@@ -1,4 +1,5 @@
 #include "eval_session.h"
+#include "identifier_text.h"
 #include "substitution_sinks.h"
 #include "substitution_detail.h"
 
@@ -52,9 +53,10 @@ namespace
 // Answers a bound string, or a refused read, and nothing for the evaluator to take over.
 name_read string_property(const eval_scope &names, std::string_view name)
 {
-    if(!is_identifier(name))
+    const std::optional<std::string> spelling = read_spelling(name);
+    if(!spelling)
         return name_read{ std::nullopt, eval_failure_kind::none };
-    name_read read = read_name(names, name);
+    name_read read = read_name(names, *spelling);
     if(read.bound && read.bound->kind() != value_kind::string)
         read.bound.reset();
     return read;

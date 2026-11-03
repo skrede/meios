@@ -122,7 +122,15 @@ def decomposition_tables():
     return [("decomposition", "mappings", "decompositions", entries), ("char32_t", "pool", "decomposition_pool", pool)]
 
 
+# CPython's lexer quotes a character it refuses only when Py_UNICODE_ISPRINTABLE holds for it, the
+# property str.isprintable answers.
+def printable_tables():
+    found = ranges(lambda point: chr(point).isprintable(), range(0x80, LIMIT))
+    return [("code_point_range", "printable", "printable_ranges", range_cells(found))]
+
+
 def generated():
     files = [("unicode_identifier_data.cpp", identifier_tables()), ("unicode_combining_data.cpp", combining_tables()),
-             ("unicode_composition_data.cpp", composition_tables()), ("unicode_decomposition_data.cpp", decomposition_tables())]
+             ("unicode_composition_data.cpp", composition_tables()), ("unicode_decomposition_data.cpp", decomposition_tables()),
+             ("unicode_printable_data.cpp", printable_tables())]
     return [(name, source(tables), [(entry[1], len(entry[3])) for entry in tables]) for name, tables in files]

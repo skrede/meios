@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 
+#include <string>
 #include <vector>
 #include <string_view>
 
@@ -52,7 +53,14 @@ struct token
     token_kind kind;
     std::string_view text;
     value leaf;
+    std::string spelling;
 };
+
+// A name written outside ASCII is read under the NFKC spelling its token carries.
+inline std::string_view name_of(const token &one)
+{
+    return one.spelling.empty() ? one.text : std::string_view(one.spelling);
+}
 
 std::vector<token> tokenize(std::string_view source);
 

@@ -85,7 +85,7 @@ std::string walked_spelling(const parser &p, std::string_view head, std::string_
 {
     std::string spelling = std::string(head) + '.' + std::string(member);
     for(std::size_t at = from + 1; at < p.pos; at += 2)
-        spelling += '.' + std::string(p.tokens[at].text);
+        spelling += '.' + std::string(name_of(p.tokens[at]));
     return spelling;
 }
 
@@ -124,7 +124,7 @@ value namespace_member(parser &p, const scope_namespace &space, std::string_view
             return refuse_namespace_read(p, walked_spelling(p, spelling, member, from));
         if(!p.at(token_kind::name))
             return p.fail_unsupported("dotted access in an expression — use eval-python");
-        name = p.peek().text;
+        name = name_of(p.peek());
         ++p.pos;
     }
 }

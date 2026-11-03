@@ -141,7 +141,7 @@ value parse_member(parser &p, const value &base)
 {
     if(!p.at(token_kind::name))
         return refuse_dotted(p);
-    const std::string_view member = p.peek().text;
+    const std::string_view member = name_of(p.peek());
     ++p.pos;
     return member_of(p, base, member);
 }
@@ -155,7 +155,7 @@ value parse_dotted(parser &p, std::string_view head)
 {
     if(!p.at(token_kind::name))
         return refuse_dotted(p);
-    const std::string_view member = p.peek().text;
+    const std::string_view member = name_of(p.peek());
     ++p.pos;
     if(const std::optional<scope_namespace> space = p.scope.namespace_of(head))
         return namespace_member(p, *space, head, member);

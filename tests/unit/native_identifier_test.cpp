@@ -82,6 +82,23 @@ TEST_CASE("a name is valid exactly as the reference's is_valid_name admits it", 
         REQUIRE_FALSE(valid_python_name(spelled(name)));
 }
 
+TEST_CASE("a run no identifier admits answers Python's lexical message, and a readable run answers nothing", "[xacro][identifier]")
+{
+    const std::pair<std::u32string_view, std::string_view> faults[] = {{U"\u20AC", "invalid character '\u20AC' (U+20AC)"},
+                                                                       {U"a\u20ACb", "invalid character '\u20AC' (U+20AC)"},
+                                                                       {U"\u00A0", "invalid non-printable character U+00A0"},
+                                                                       {U"\uFF11", "invalid character '\uFF11' (U+FF11)"},
+                                                                       {U"\U0001F600", "invalid character '\U0001F600' (U+1F600)"},
+                                                                       {U"\U0010FFFF", "invalid non-printable character U+10FFFF"},
+                                                                       {U"\uFF34rue", "identifier field can't represent 'True' constant"}};
+    for(const auto &[run, message] : faults)
+        REQUIRE(meios::detail::identifier_fault(spelled(run)) == std::optional<std::string>(message));
+    REQUIRE(meios::detail::identifier_fault("\xCF") == std::optional<std::string>("invalid UTF-8 in expression at byte 0xCF"));
+    REQUIRE(meios::detail::identifier_fault("a\x80") == std::optional<std::string>("invalid UTF-8 in expression at byte 0x80"));
+    for(std::u32string_view run : {U"\uFB01", U"\uFF49\uFF46", U"\u03C0", U"True", U"1e", U"'x", U""})
+        REQUIRE_FALSE(meios::detail::identifier_fault(spelled(run)));
+}
+
 TEST_CASE("a long run of combining marks is put in canonical order, each class in its written order", "[xacro][identifier]")
 {
     const std::size_t pairs = 25000;
@@ -104,6 +121,9 @@ TEST_CASE("the identifier and normalization tables are sorted and hold the count
     REQUIRE(meios::detail::compositions().size() == 961);
     REQUIRE(meios::detail::decompositions().size() == 4546);
     REQUIRE(meios::detail::decomposition_pool().size() == 6586);
+    REQUIRE(ordered(meios::detail::printable_ranges()));
+    REQUIRE(meios::detail::printable_ranges().size() == 735);
+    REQUIRE(meios::detail::printable_ranges().front().first >= 0x80);
 }
 
 TEST_CASE("the compositions are sorted by pair and every decomposition lies within the pool", "[xacro][identifier]")

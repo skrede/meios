@@ -10,6 +10,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <charconv>
+#include <iterator>
 #include <optional>
 #include <algorithm>
 #include <functional>
@@ -20,6 +22,8 @@ namespace meios::detail
 
 namespace
 {
+
+constexpr std::string_view python_constants[] = {"None", "True", "False"};
 
 bool ascii_start(char32_t point)
 {
@@ -76,6 +80,31 @@ std::string encoded(std::u32string_view points)
     return out;
 }
 
+std::string hex_digits(std::uint32_t value, std::size_t width)
+{
+    char digits[8];
+    const std::to_chars_result written = std::to_chars(std::begin(digits), std::end(digits), value, 16);
+    std::string out(std::begin(digits), written.ptr);
+    std::ranges::transform(out, out.begin(), [](char c) { return c >= 'a' ? static_cast<char>(c - 'a' + 'A') : c; });
+    return std::string(width > out.size() ? width - out.size() : 0, '0') + out;
+}
+
+bool printable(char32_t point)
+{
+    return point < 0x80 ? point >= 0x20 && point < 0x7F : within(printable_ranges(), point);
+}
+
+// Parser/lexer/lexer.c verify_identifier: the character is quoted only when it is printable.
+std::string character_message(char32_t point)
+{
+    const std::string code = "U+" + hex_digits(point, 4);
+    if(!printable(point))
+        return "invalid non-printable character " + code;
+    std::string message = "invalid character '";
+    append_utf8(message, point);
+    return message + "' (" + code + ")";
+}
+
 }
 
 std::optional<std::string> python_name(std::string_view spelling)
@@ -92,6 +121,42 @@ bool valid_python_name(std::string_view name)
 {
     const std::optional<std::string> form = python_name(name);
     return form && *form == name && !listed(python_keywords, name);
+}
+
+bool opens_identifier(char byte)
+{
+    return static_cast<std::uint8_t>(byte) >= 0x80 || ascii_start(static_cast<std::uint8_t>(byte));
+}
+
+std::size_t identifier_run(std::string_view source, std::size_t at)
+{
+    while(at < source.size() && (opens_identifier(source[at]) || (source[at] >= '0' && source[at] <= '9')))
+        ++at;
+    return at;
+}
+
+std::optional<std::string> read_spelling(std::string_view run)
+{
+    std::optional<std::string> form = python_name(run);
+    if(form && *form != run && listed(python_constants, *form))
+        return std::nullopt;
+    return form;
+}
+
+std::optional<std::string> identifier_fault(std::string_view run)
+{
+    if(run.empty() || !opens_identifier(run.front()) || read_spelling(run))
+        return std::nullopt;
+    for(std::size_t at = 0; at < run.size();)
+    {
+        const utf8_point one = decode_utf8(run, at);
+        if(one.value == malformed_utf8)
+            return "invalid UTF-8 in expression at byte 0x" + hex_digits(static_cast<std::uint8_t>(run[at]), 2);
+        if(!(at == 0 ? starts(one.value) : continues(one.value)))
+            return character_message(one.value);
+        at += one.length;
+    }
+    return "identifier field can't represent '" + python_name(run).value_or(std::string()) + "' constant";
 }
 
 }

@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "identifier_text.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
@@ -9,6 +10,7 @@
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -59,6 +61,8 @@ namespace
 
 std::string lexical_message(std::string_view text)
 {
+    if(const std::optional<std::string> fault = identifier_fault(text))
+        return *fault;
     if(!text.empty() && text.front() == '\'')
         return "unterminated string literal in expression: " + std::string(text);
     return "unrecognized character in expression: '" + std::string(text) + "'";

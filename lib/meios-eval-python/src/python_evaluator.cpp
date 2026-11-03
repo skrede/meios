@@ -25,7 +25,7 @@ text_outcome eval_or_refuse(std::string_view expr, detail::yaml_context &ctx,
                             const std::string &quoted)
 {
     const py::dict priv    = detail::privileged_namespace();
-    const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(expr, ctx.scope));
+    const std::string rule = detail::refusal_rule(priv, expr, detail::bound_names(ctx.scope));
     if(!rule.empty())
         return detail::report(eval_failure_kind::refused, ctx.log,
                               "meios refused the expression " + quoted + ": " + rule);

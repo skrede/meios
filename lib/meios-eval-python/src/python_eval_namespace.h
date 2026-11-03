@@ -14,10 +14,7 @@
 
 #include <pybind11/embed.h>
 
-#include <cctype>
 #include <string>
-#include <vector>
-#include <cstddef>
 #include <optional>
 #include <string_view>
 
@@ -34,25 +31,6 @@ struct yaml_context
     std::optional<eval_failure_kind> reported;
 };
 
-inline std::vector<std::string> identifiers(std::string_view expr)
-{
-    std::vector<std::string> names;
-    std::size_t i = 0;
-    while(i < expr.size())
-    {
-        if(!std::isalpha(static_cast<unsigned char>(expr[i])) && expr[i] != '_')
-        {
-            ++i;
-            continue;
-        }
-        std::size_t start = i;
-        while(i < expr.size() && (std::isalnum(static_cast<unsigned char>(expr[i])) || expr[i] == '_'))
-            ++i;
-        names.emplace_back(expr.substr(start, i - start));
-    }
-    return names;
-}
-
 inline pybind11::dict privileged_namespace()
 {
     pybind11::dict priv;
@@ -60,18 +38,14 @@ inline pybind11::dict privileged_namespace()
     return priv;
 }
 
-inline pybind11::set bound_names(std::string_view expr, const eval_scope &scope)
+// Python hands the guard each name already normalized, so boundness is asked of the name Python
+// reads, not of the written text.
+inline pybind11::cpp_function bound_names(const eval_scope &scope)
 {
-    pybind11::set bound;
-    for(const std::string &name : identifiers(expr))
-    {
-        if(scope.contains(name))
-            bound.add(pybind11::str(name));
-    }
-    return bound;
+    return pybind11::cpp_function([&scope](const std::string &name) { return scope.contains(name); });
 }
 
-inline std::string refusal_rule(const pybind11::dict &priv, std::string_view expr, const pybind11::set &bound)
+inline std::string refusal_rule(const pybind11::dict &priv, std::string_view expr, const pybind11::object &bound)
 {
     pybind11::object rule = priv["check_expression"](pybind11::str(std::string(expr)), bound);
     return rule.cast<std::string>();

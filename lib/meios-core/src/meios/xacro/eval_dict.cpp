@@ -61,7 +61,7 @@ value parse_dict(parser &p)
                 return refuse_shape(p);
             if(!admits_element(p))
                 return value{};
-            const std::string name(p.peek().text);
+            const std::string name(name_of(p.peek()));
             p.pos += 2;
             entries.emplace_back(scalar_key(name), parse_ternary(p));
             if(!p.ok)

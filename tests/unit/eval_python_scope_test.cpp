@@ -74,3 +74,33 @@ TEST_CASE("a name nothing binds raises the interpreter's own undefined name", "[
 {
     REQUIRE(scope_probe::refuses_once(load(link("l${nope + 1}")), "name 'nope' is not defined"));
 }
+
+TEST_CASE("a property shadows the withheld builtin its name normalizes to, as the guard reads the name Python reads", "[eval_python][scope]")
+{
+    for(const char *read : {"l${\uFF4F\uFF50\uFF45\uFF4E}", "l${open}", "l${\uFF4F\uFF50\uFF45\uFF4E + 0}", "l${open + 0}"})
+    {
+        INFO(read);
+        REQUIRE(scope_probe::renders(load(property("open", "9") + link(read)), "l9"));
+    }
+}
+
+TEST_CASE("a withheld builtin read under a spelling that normalizes to it still refuses", "[eval_python][scope]")
+{
+    REQUIRE(scope_probe::refuses(load(link("l${\uFF4F\uFF50\uFF45\uFF4E}")), "non-allowlisted-builtin: open"));
+}
+
+TEST_CASE("the python evaluator reads a name under its NFKC form", "[eval_python][scope]")
+{
+    REQUIRE(scope_probe::renders(load(property("fi", "7") + link("l${\uFB01}")), "l7"));
+    REQUIRE(scope_probe::renders(load(property("fi", "7") + link("l${\uFB01 + 0}")), "l7"));
+}
+
+TEST_CASE("a bare name outside ASCII takes the route a bare ASCII name takes", "[eval_python][scope]")
+{
+    const scope_probe::loaded named = load(property("\u03C0", "${nope}") + link("l${\u03C0}"));
+    const scope_probe::loaded plain = load(property("p", "${nope}") + link("l${p}"));
+    REQUIRE_FALSE(named.out.has_value());
+    REQUIRE_FALSE(plain.out.has_value());
+    REQUIRE(named.out.error().code == plain.out.error().code);
+    REQUIRE(named.errors == plain.errors);
+}

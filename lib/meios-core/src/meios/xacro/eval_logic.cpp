@@ -123,7 +123,7 @@ value parse_name(parser &p)
 {
     const level_guard level(p);
     if(!level.admitted()) return value{};
-    std::string_view name = p.peek().text;
+    std::string_view name = name_of(p.peek());
     ++p.pos;
     if(p.accept(token_kind::dot)) return parse_dotted(p, name);
     if(p.at(token_kind::lparen)) return call_name(p, name);

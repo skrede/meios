@@ -71,7 +71,7 @@ std::optional<std::string> eval_command(subst_ctx &ctx, std::string_view body)
     bind_reference_names(over);
     for(const token &one : tokenize(body))
     {
-        const std::optional<std::string> refused = one.kind == token_kind::name ? bind_read(ctx.scope, over, one.text) : std::nullopt;
+        const std::optional<std::string> refused = one.kind == token_kind::name ? bind_read(ctx.scope, over, name_of(one)) : std::nullopt;
         if(refused)
             return refuse(ctx, *refused);
     }

@@ -49,6 +49,9 @@ std::span<const decomposition> decompositions();
 
 std::span<const char32_t> decomposition_pool();
 
+// The code points outside ASCII that Python's str.isprintable admits.
+std::span<const code_point_range> printable_ranges();
+
 }
 
 #endif

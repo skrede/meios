@@ -84,7 +84,7 @@ std::string_view builtin_walk()
            "            if node.conversion == ord('a'):\n"
            "                return 'ascii'\n"
            "        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):\n"
-           "            if node.id in _WITHHELD and node.id not in bound:\n"
+           "            if node.id in _WITHHELD and not bound(node.id):\n"
            "                return node.id\n"
            "    return ''\n"
            "\n";

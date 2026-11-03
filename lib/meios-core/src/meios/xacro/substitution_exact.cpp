@@ -1,5 +1,6 @@
 #include "quote_scan.h"
 #include "eval_session.h"
+#include "identifier_text.h"
 #include "substitution_sinks.h"
 #include "substitution_detail.h"
 
@@ -94,10 +95,10 @@ value reclassified(const value &read)
 std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
 {
     ctx.last_kind = eval_failure_kind::none;
-    const std::string_view name = trim(expr);
-    if(is_identifier(name))
+    const std::optional<std::string> name = read_spelling(trim(expr));
+    if(name)
     {
-        const name_read bound = read_name(ctx.scope, name);
+        const name_read bound = read_name(ctx.scope, *name);
         ctx.last_kind = bound.failure;
         if(bound.failed())
             return std::nullopt;

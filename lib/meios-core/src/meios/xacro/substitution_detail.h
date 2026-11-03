@@ -20,7 +20,6 @@
 
 #include <pugixml.hpp>
 
-#include <cctype>
 #include <memory>
 #include <string>
 #include <cstddef>
@@ -42,16 +41,6 @@ inline std::string_view trim(std::string_view text)
     if(begin == std::string_view::npos)
         return {};
     return text.substr(begin, text.find_last_not_of(" \t") - begin + 1);
-}
-
-inline bool is_identifier(std::string_view text)
-{
-    if(text.empty() || (!std::isalpha(static_cast<unsigned char>(text[0])) && text[0] != '_'))
-        return false;
-    for(char c : text)
-        if(!std::isalnum(static_cast<unsigned char>(c)) && c != '_')
-            return false;
-    return true;
 }
 
 // The always-on backend: it renders an expression through the core evaluator and,
