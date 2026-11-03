@@ -1,4 +1,5 @@
 #include "eval_session.h"
+#include "python_space.h"
 #include "identifier_text.h"
 #include "substitution_sinks.h"
 #include "substitution_detail.h"
@@ -107,6 +108,11 @@ std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression
     if(ctx.last_kind != eval_failure_kind::unsupported)
         buffer.replay(loud);
     return std::nullopt;
+}
+
+std::optional<std::string> eval_stripped(subst_ctx &ctx, std::string_view expression)
+{
+    return eval_expr(ctx, python_stripped(expression), ctx.scope);
 }
 
 }

@@ -138,6 +138,9 @@ private:
 
 std::optional<std::string> eval_expr(subst_ctx &ctx, std::string_view expression, const eval_scope &names);
 
+// Kept out of resolve_span so the stripped view takes no slot in each nested span's frame.
+std::optional<std::string> eval_stripped(subst_ctx &ctx, std::string_view expression);
+
 std::optional<std::string> eval_command(subst_ctx &ctx, std::string_view body);
 
 std::optional<std::string> dispatch(subst_ctx &ctx, std::string_view inner);

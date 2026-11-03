@@ -1,5 +1,4 @@
 #include "quote_scan.h"
-#include "python_space.h"
 #include "substitution_lex.h"
 #include "substitution_detail.h"
 
@@ -99,7 +98,7 @@ std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string
     refine_span_column(ctx, span_offset);
     ctx.last_kind = eval_failure_kind::none;
     if(opener == '{')
-        return eval_expr(ctx, python_stripped(resolved), ctx.scope);
+        return eval_stripped(ctx, resolved);
     if(leading_command(resolved) != "eval" && refuse_command_text(ctx, resolved, "$("))
         return std::nullopt;
     if(ctx.include)
