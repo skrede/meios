@@ -40,9 +40,9 @@ std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t cur
 bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
 {
     if(!valid_python_name(name))
-        return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must be valid python identifiers: " + name);
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:property name '" + name + "' is not a name an expression can read");
     if(name.starts_with("__"))
-        return fail(ctx, in, diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: " + name);
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:property name '" + name + "' opens with a double underscore, which a property name may not");
     return true;
 }
 
@@ -55,7 +55,7 @@ std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, con
 {
     if(!in.attribute("name"))
     {
-        fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:property: missing attribute 'name'");
+        fail(ctx, in, diagnostic_code::xacro_structural_error, "<xacro:property> requires a name attribute");
         return std::nullopt;
     }
     const std::string authored = strip_authored_markers(in.attribute("name").value());
@@ -100,7 +100,7 @@ bool remove_property(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
         return false;
     chain_access::remove(ctx.scope, name);
     if(listed(root_symbols, name))
-        ctx.log.log(level::warn, locate(ctx, in), "Cannot remove global symbol: " + std::string(name));
+        ctx.log.log(level::warn, locate(ctx, in), "removing '" + std::string(name) + "' leaves the built-in of that name bound");
     return true;
 }
 
@@ -110,7 +110,7 @@ bool remove_property(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
 void warn_global_symbol(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
 {
     if(listed(root_symbols, name))
-        ctx.log.log(level::warn, locate(ctx, in), "redefining global symbol: " + std::string(name));
+        ctx.log.log(level::warn, locate(ctx, in), '\'' + std::string(name) + "' shadows the built-in of that name");
 }
 
 }

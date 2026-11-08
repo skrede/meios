@@ -137,7 +137,7 @@ TEST_CASE("a block argument inserting the parameter it is bound to refuses as an
                    silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message == "Undefined block \"b\"");
+    REQUIRE(out.error().message == "<xacro:insert_block> names 'b', which no block parameter in scope binds");
 }
 
 TEST_CASE("a block parameter selecting the node and one selecting its children stay distinguishable",

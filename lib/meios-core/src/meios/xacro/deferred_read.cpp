@@ -135,7 +135,7 @@ name_read resolve_deferred(expand_ctx &ctx, const deferred_text &deferred, std::
 eval_failure_kind refuse_cycle(expand_ctx &ctx, const std::vector<resolve_step> &path,
                                std::string_view repeated)
 {
-    std::string message = "circular variable definition: ";
+    std::string message = "the value of '" + std::string(repeated) + "' depends on itself: ";
     for(const resolve_step &step : path)
     {
         const source_location at = definition_at(ctx, step.origin);

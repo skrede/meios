@@ -140,7 +140,7 @@ TEST_CASE("a namespace member whose text fails gives one record", "[eval_python]
 TEST_CASE("a circular definition read by the backend refuses as circular", "[eval_python][scope]")
 {
     const scope_probe::loaded got = load(property("a", "${b + 1}") + property("b", "${a + 1}") + link("l${a + 1}"));
-    REQUIRE(scope_probe::refuses_once(got, "circular variable definition"));
+    REQUIRE(scope_probe::refuses_once(got, "the value of 'a' depends on itself: a ("));
     REQUIRE(got.out.error().code == meios::diagnostic_code::xacro_structural_error);
 }
 

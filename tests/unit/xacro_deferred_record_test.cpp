@@ -122,7 +122,7 @@ TEST_CASE("a circular definition gives one record", "[xacro][deferred]")
                                                        "<link name=\"l${a}\"/>\n");
     REQUIRE(errors.size() == 1);
     CHECK(errors.front().code == meios::diagnostic_code::xacro_structural_error);
-    CHECK(errors.front().message.rfind("circular variable definition: ", 0) == 0);
+    CHECK(errors.front().message.rfind("the value of 'a' depends on itself: a (", 0) == 0);
 }
 
 TEST_CASE("a caret default forwarding a refused deferred text gives the inner record alone", "[xacro][deferred]")

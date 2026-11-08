@@ -91,8 +91,7 @@ TEST_CASE("a circular definition refuses and names every step of the cycle", "[x
                                              "<link name=\"l${a}\"/>\n");
     REQUIRE_FALSE(out.has_value());
     CHECK(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    CHECK(out.error().message
-          == "circular variable definition: a (inline.xacro:2) -> b (inline.xacro:3) -> a");
+    CHECK(out.error().message == "the value of 'a' depends on itself: a (inline.xacro:2) -> b (inline.xacro:3) -> a");
     CHECK(out.error().loc.line == 3);
 }
 
@@ -103,7 +102,7 @@ TEST_CASE("a property whose value reads its own name refuses as a cycle", "[xacr
                                              "<link name=\"l${a}\"/>\n");
     REQUIRE_FALSE(out.has_value());
     CHECK(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    CHECK(out.error().message == "circular variable definition: a (inline.xacro:3) -> a");
+    CHECK(out.error().message == "the value of 'a' depends on itself: a (inline.xacro:3) -> a");
 }
 
 TEST_CASE("after expand an unread deferred property reads absent and every other one reads its value",

@@ -60,8 +60,7 @@ TEST_CASE("a removal inside a macro body erases the call's parameter", "[xacro][
 TEST_CASE("a property writing a value and a removal together refuses", "[xacro][scope][property]")
 {
     const expansion_result out = expand_body("<xacro:property name=\"p\" value=\"1\" remove=\"true\"/><link name=\"l\"/>");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error,
-                         "Property attributes default, value, and remove are mutually exclusive: p"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "xacro:property 'p' sets more than one of default, value and remove"));
 }
 
 TEST_CASE("a removal is read with the conditionals' boolean rule, and a false one sits beside a value", "[xacro][scope][property]")
@@ -74,7 +73,7 @@ TEST_CASE("a removal is read with the conditionals' boolean rule, and a false on
         REQUIRE(include_tree::renders_link(
             expand_body(bound + "<xacro:property name=\"p\" value=\"2\" remove=\"" + std::string(flag) + "\"/>" + read), "l2"));
     REQUIRE(refuses_with(expand_body(bound + removes("p", "yes") + read), meios::diagnostic_code::xacro_structural_error,
-                         "Xacro conditional"));
+                         "xacro:property remove=\"yes\" evaluates to \"yes\", which is not a boolean"));
 }
 
 TEST_CASE("removing an include namespace's name leaves its macros unreachable", "[xacro][scope][property][namespace]")

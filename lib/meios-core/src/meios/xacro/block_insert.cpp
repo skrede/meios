@@ -56,7 +56,7 @@ bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     const std::string name = in.attribute("name").value();
     const std::optional<std::size_t> found = chain_access::find_block(ctx.scope, name);
     if(!found)
-        return fail(ctx, in, diagnostic_code::xacro_structural_error, "Undefined block \"" + name + '"');
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "<xacro:insert_block> names '" + name + "', which no block parameter in scope binds");
     const parked_block block = ctx.blocks[*found];
     std::optional<source_location> outer = std::exchange(ctx.insert_site, locate(ctx, in));
     ctx.origins.push_back(block.origin);

@@ -66,8 +66,8 @@ TEST_CASE("a call attribute naming no declared parameter refuses at the call, na
     meios::log_sink silent;
     const expansion_result out = expand_doc(std::string(one_parameter) + "\n\n<xacro:m a=\"x\" b=\"y\"/>", silent);
     require_refused_at(out, "inline.xacro", 3);
-    REQUIRE(out.error().message.find("Invalid parameter \"b\"") != std::string::npos);
-    REQUIRE(out.error().message.find("'m'") != std::string::npos);
+    REQUIRE(out.error().message.find("sets 'b', which names no parameter") != std::string::npos);
+    REQUIRE(out.error().message == "call to macro 'm' sets 'b', which names no parameter an attribute can set");
 }
 
 TEST_CASE("a call attribute spelled like a block parameter, or declaring a namespace, refuses as undeclared",
@@ -80,13 +80,13 @@ TEST_CASE("a call attribute spelled like a block parameter, or declaring a names
                    silent);
     REQUIRE_FALSE(block_named.has_value());
     REQUIRE(block_named.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(block_named.error().message.find("Invalid parameter \"blk\"") != std::string::npos);
+    REQUIRE(block_named.error().message.find("sets 'blk', which names no parameter") != std::string::npos);
 
     const expansion_result declaring =
         expand_doc(std::string(one_parameter) + R"(<xacro:m a="x" xmlns:foo="urn:foo"/>)", silent);
     REQUIRE_FALSE(declaring.has_value());
     REQUIRE(declaring.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(declaring.error().message.find("Invalid parameter \"xmlns:foo\"") != std::string::npos);
+    REQUIRE(declaring.error().message.find("sets 'xmlns:foo', which names no parameter") != std::string::npos);
 }
 
 TEST_CASE("a call to a macro defined in an included file refuses at the call's own file and line",
@@ -97,7 +97,7 @@ TEST_CASE("a call to a macro defined in an included file refuses at the call's o
         expand_calling_include("<xacro:include filename=\"$(find pkg)/m.xacro\"/>\n\n\n<xacro:m a=\"x\" b=\"y\"/>",
                                silent);
     require_refused_at(out, "top.xacro", 4);
-    REQUIRE(out.error().message.find("Invalid parameter \"b\"") != std::string::npos);
+    REQUIRE(out.error().message.find("sets 'b', which names no parameter") != std::string::npos);
 }
 
 TEST_CASE("a missing parameter of a macro defined in an included file is reported at the call",
@@ -127,8 +127,8 @@ TEST_CASE("elements a call passes beyond the macro's block parameters refuse, na
           "[xacro][macro][call]")
 {
     meios::log_sink silent;
-    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m a="x"><first/><second/></xacro:m>)", silent),
-                    structural, "Unused block \"first\"");
+    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m a="x"><first/><second/></xacro:m>)", silent), structural,
+                    "call to macro 'm' passes element <first>, which no block parameter takes");
 }
 
 TEST_CASE("a child that expands to nothing is not a block", "[xacro][macro][call]")
@@ -141,28 +141,26 @@ TEST_CASE("a child that expands to nothing is not a block", "[xacro][macro][call
 TEST_CASE("an undeclared attribute is reported before a missing parameter", "[xacro][macro][call]")
 {
     meios::log_sink silent;
-    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m b="y"/>)", silent), structural, "Invalid parameter \"b\"");
+    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m b="y"/>)", silent), structural, "sets 'b', which names no parameter");
 }
 
 TEST_CASE("an undeclared attribute is reported before a block child that refuses", "[xacro][macro][call]")
 {
     meios::log_sink silent;
-    require_refusal(expand_doc(std::string(one_block) + R"(<xacro:m a="x" b="y"><link name="${nope}"/></xacro:m>)", silent),
-                    structural, "Invalid parameter \"b\"");
+    require_refusal(expand_doc(std::string(one_block) + R"(<xacro:m a="x" b="y"><link name="${nope}"/></xacro:m>)", silent), structural, "sets 'b', which names no parameter");
 }
 
 TEST_CASE("a surplus child is reported before a missing parameter", "[xacro][macro][call]")
 {
     meios::log_sink silent;
-    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m><visual/></xacro:m>)", silent), structural,
-                    "Unused block \"visual\"");
+    require_refusal(expand_doc(std::string(one_parameter) + R"(<xacro:m><visual/></xacro:m>)", silent), structural, "passes element <visual>, which no block parameter takes");
 }
 
 TEST_CASE("call attributes refuse in document order", "[xacro][macro][call]")
 {
     meios::log_sink silent;
     const std::string bound = one_parameter;
-    require_refusal(expand_doc(bound + R"(<xacro:m b="y" a="${nope}"/>)", silent), structural, "Invalid parameter \"b\"");
+    require_refusal(expand_doc(bound + R"(<xacro:m b="y" a="${nope}"/>)", silent), structural, "sets 'b', which names no parameter");
     require_refusal(expand_doc(bound + R"(<xacro:m a="${nope}" b="y"/>)", silent), undefined, "'nope'");
 }
 
@@ -187,13 +185,12 @@ TEST_CASE("a default sees a property the call's own child defines", "[xacro][mac
 TEST_CASE("a block parameter left without an element refuses before a default is read", "[xacro][macro][call]")
 {
     meios::log_sink silent;
-    require_refusal(expand_doc(R"(<xacro:macro name="m" params="a:=${nope} *b"/><xacro:m/>)", silent), structural,
-                    "Not enough blocks \"*b\"");
+    require_refusal(expand_doc(R"(<xacro:macro name="m" params="a:=${nope} *b"/><xacro:m/>)", silent), structural, "call to macro 'm' leaves block parameter '*b' without an element");
 }
 
 TEST_CASE("a call whose only child is an include holds no block", "[xacro][macro][call]")
 {
     meios::log_sink silent;
     const std::string call = R"(<xacro:macro name="w" params="*c"/><xacro:w><xacro:include filename="$(find pkg)/m.xacro"/></xacro:w>)";
-    require_refusal(expand_calling_include(call, silent, child_property), structural, "Not enough blocks");
+    require_refusal(expand_calling_include(call, silent, child_property), structural, "leaves block parameter '*c' without an element");
 }

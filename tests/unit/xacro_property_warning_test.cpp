@@ -99,7 +99,7 @@ TEST_CASE("a property named pi shadows the built-in and warns that it redefines 
     std::vector<record> heard;
     const expansion_result out = expand_heard(R"(<xacro:property name="pi" value="3"/><link name="l${pi}"/>)", heard);
     REQUIRE(renders_link(out, "l3"));
-    REQUIRE(warned_once(heard, "redefining global symbol: pi"));
+    REQUIRE(warned_once(heard, "'pi' shadows the built-in of that name"));
 }
 
 TEST_CASE("removing a built-in keeps it and warns that a global symbol cannot be removed", "[xacro][property][warning]")
@@ -107,7 +107,7 @@ TEST_CASE("removing a built-in keeps it and warns that a global symbol cannot be
     std::vector<record> heard;
     const expansion_result out = expand_heard(R"(<xacro:property name="pi" remove="true"/><link name="l${pi}"/>)", heard);
     REQUIRE(renders_link(out, "l3.141592653589793"));
-    REQUIRE(warned_once(heard, "Cannot remove global symbol: pi"));
+    REQUIRE(warned_once(heard, "removing 'pi' leaves the built-in of that name bound"));
 }
 
 TEST_CASE("a property shadowing a built-in and then removed leaves the built-in readable", "[xacro][property][warning]")
@@ -131,7 +131,7 @@ TEST_CASE("a macro parameter named after a built-in warns that it redefines a gl
     std::vector<record> heard;
     const expansion_result out = expand_heard(R"(<xacro:macro name="m" params="sin"><link name="l${sin}"/></xacro:macro><xacro:m sin="2"/>)", heard);
     REQUIRE(renders_link(out, "l2"));
-    REQUIRE(warned_once(heard, "redefining global symbol: sin"));
+    REQUIRE(warned_once(heard, "'sin' shadows the built-in of that name"));
 }
 
 TEST_CASE("an include namespace named after a built-in warns that it redefines a global symbol", "[xacro][property][warning]")
@@ -141,7 +141,7 @@ TEST_CASE("an include namespace named after a built-in warns that it redefines a
     std::vector<record> heard;
     const expansion_result out = expand_tree_heard(held, R"(<xacro:include filename="w.xacro" ns="math"/><link name="l"/>)", heard);
     REQUIRE(renders_link(out, "l"));
-    REQUIRE(warned_once(heard, "redefining global symbol: math"));
+    REQUIRE(warned_once(heard, "'math' shadows the built-in of that name"));
 }
 
 // Upstream warns "default property value can only be defined on local scope" and binds the default too.

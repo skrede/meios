@@ -131,6 +131,6 @@ TEST_CASE("a deferred read an exception abandons leaves the including file's loc
     REQUIRE_FALSE(out.has_value());
     REQUIRE(heard.errors.size() == 1);
     CHECK(heard.errors.front().code == meios::diagnostic_code::xacro_structural_error);
-    CHECK(heard.errors.front().message == "Property names must be valid python identifiers: 1");
+    CHECK(heard.errors.front().message == "xacro:property name '1' is not a name an expression can read");
     CHECK(heard.errors.front().loc.file.filename() == "top.xacro");
 }

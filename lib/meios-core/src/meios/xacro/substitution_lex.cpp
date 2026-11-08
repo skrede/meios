@@ -37,7 +37,7 @@ namespace
 bool refuse_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::size_t base)
 {
     refine_span_column(ctx, base + dollar);
-    return refuse_terminal(ctx, diagnostic_code::expression_error, "invalid expression: " + std::string(raw.substr(dollar)));
+    return refuse_terminal(ctx, diagnostic_code::expression_error, "a run of '$' escapes only a '{' or '(' that follows it: " + std::string(raw.substr(dollar)));
 }
 
 }

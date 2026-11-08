@@ -91,7 +91,7 @@ TEST_CASE("a property name that is not a python identifier refuses as the refere
         DYNAMIC_SECTION(name)
         {
             const expansion_result out = expand_body(std::string(R"(<xacro:property name=")") + name + R"(" value="1"/><link name="l"/>)");
-            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, std::string("Property names must be valid python identifiers: ") + name));
+            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, std::string("xacro:property name '") + name + "' is not a name an expression can read"));
         }
     }
 }
@@ -103,11 +103,11 @@ TEST_CASE("a property name opening with a double underscore refuses before remov
         DYNAMIC_SECTION(remove)
         {
             const expansion_result out = expand_body(std::string(R"(<xacro:property name="__x" remove=")") + remove + R"("/><link name="l"/>)");
-            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: __x"));
+            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "xacro:property name '__x' opens with a double underscore, which a property name may not"));
         }
     }
     const expansion_result out = expand_body(R"(<xacro:property name="__π" value="1"/><link name="l"/>)");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "Property names must not start with double underscore: __π"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "xacro:property name '__π' opens with a double underscore, which a property name may not"));
 }
 
 TEST_CASE("a non-ASCII, underscored or soft-keyword property name the reference admits binds", "[xacro][scope][property]")
@@ -125,7 +125,7 @@ TEST_CASE("a property name that is not a python identifier outside ASCII refuses
         DYNAMIC_SECTION(name)
         {
             const expansion_result out = expand_body(std::string(R"(<xacro:property name=")") + name + R"(" value="1"/><link name="l"/>)");
-            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, std::string("Property names must be valid python identifiers: ") + name));
+            REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, std::string("xacro:property name '") + name + "' is not a name an expression can read"));
         }
     }
 }
@@ -133,5 +133,5 @@ TEST_CASE("a property name that is not a python identifier outside ASCII refuses
 TEST_CASE("a property without a name attribute refuses before anything else about it is read", "[xacro][scope][property]")
 {
     const expansion_result out = expand_body(R"(<xacro:property value="1" remove="${nope}"/><link name="l"/>)");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "xacro:property: missing attribute 'name'"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "<xacro:property> requires a name attribute"));
 }

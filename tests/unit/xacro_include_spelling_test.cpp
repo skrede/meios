@@ -112,5 +112,5 @@ TEST_CASE("an include filename refuses at its first refusing token, at an offset
         require_refused(expand_including(filename), meios::diagnostic_code::unterminated_substitution, names);
     }
     require_refused(expand_including("$(find nopkg)/${nope}.xacro"), meios::diagnostic_code::unresolved_find, "$(find nopkg)");
-    require_refused(expand_including("$(find ${nope})$$x"), meios::diagnostic_code::expression_error, "invalid expression: $$x");
+    require_refused(expand_including("$(find ${nope})$$x"), meios::diagnostic_code::expression_error, "a run of '$' escapes only a '{' or '(' that follows it: $$x");
 }

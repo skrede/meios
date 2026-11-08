@@ -70,8 +70,7 @@ TEST_CASE("a property writing both a value and a default attribute refuses",
         R"(<xacro:property name="p" value="v" default="d"/><link name="${p}"/>)", silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message.find("Property attributes default, value, and remove are mutually exclusive: p")
-            != std::string::npos);
+    REQUIRE(out.error().message.find("xacro:property 'p' sets more than one of default, value and remove") != std::string::npos);
     REQUIRE(out.error().loc.line == 1);
 }
 
@@ -176,7 +175,7 @@ TEST_CASE("a property's lazy_eval outside the boolean rule refuses as the refere
             const expansion_result out = expand_body(std::string(R"(<xacro:property name="p" value="v" lazy_eval=")") + spelling + R"("/><link name="${p}"/>)", silent);
             REQUIRE_FALSE(out.has_value());
             REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-            REQUIRE(out.error().message == std::string("Xacro conditional \"") + spelling + "\" evaluated to \"" + spelling + "\", which is not a boolean expression.");
+            REQUIRE(out.error().message == std::string("xacro:property lazy_eval=\"") + spelling + "\" evaluates to \"" + spelling + "\", which is not a boolean");
         }
     }
 }

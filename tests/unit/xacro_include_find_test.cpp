@@ -60,8 +60,8 @@ void require_refused(const expansion_result &out, meios::diagnostic_code code, c
 TEST_CASE("a token after an include's leading find that does not lex refuses before the package text is evaluated", "[xacro][include][find]")
 {
     const std::pair<const char *, const char *> unlexed[] = {
-        { "$(find ${nope})$$x", "invalid expression: $$x" },
-        { "$(find nopkg)$$x", "invalid expression: $$x" },
+        { "$(find ${nope})$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },
+        { "$(find nopkg)$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },
     };
     for(const auto &[filename, message] : unlexed)
     {

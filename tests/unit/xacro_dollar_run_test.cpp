@@ -73,15 +73,14 @@ TEST_CASE("a run of dollars before a brace or a parenthesis emits one dollar few
     }
 }
 
-TEST_CASE("a double dollar before anything else refuses with the reference's wording",
-          "[xacro][dollar_run]")
+TEST_CASE("a double dollar before anything else refuses naming the run", "[xacro][dollar_run]")
 {
     for(const char *raw : { "$$x", "a$$", "$$$x", "${x}$$", "$(arg y)$$" })
     {
         INFO("raw: " << raw);
-        require_refused(expand_name(raw), "invalid expression: $$");
+        require_refused(expand_name(raw), "a run of '$' escapes only a '{' or '(' that follows it: $$");
     }
-    CHECK(expand_name("$$$x").error().message == "invalid expression: $$$x");
+    CHECK(expand_name("$$$x").error().message == "a run of '$' escapes only a '{' or '(' that follows it: $$$x");
 }
 
 TEST_CASE("a single dollar before anything but an opener stays literal", "[xacro][dollar_run]")
@@ -99,20 +98,20 @@ TEST_CASE("a double dollar inside an expression body refuses as the reference le
           "[xacro][dollar_run]")
 {
     const expansion_result out = expand_name("${'$$'}");
-    require_refused(out, "invalid expression: $$'");
+    require_refused(out, "a run of '$' escapes only a '{' or '(' that follows it: $$'");
 }
 
 TEST_CASE("a double dollar in a text node refuses", "[xacro][dollar_run]")
 {
-    require_refused(expand_doc("<link name=\"l\"><t>a $$x</t></link>"), "invalid expression: $$x");
+    require_refused(expand_doc("<link name=\"l\"><t>a $$x</t></link>"), "a run of '$' escapes only a '{' or '(' that follows it: $$x");
 }
 
 TEST_CASE("a refused double dollar is terminal under a lenient policy", "[xacro][dollar_run]")
 {
     for(meios::eval_policy policy : { meios::eval_policy::warn, meios::eval_policy::skip })
     {
-        require_refused(expand_name("$$x", policy), "invalid expression: $$x");
-        require_refused(expand_name("${'$$'}", policy), "invalid expression: $$'");
+        require_refused(expand_name("$$x", policy), "a run of '$' escapes only a '{' or '(' that follows it: $$x");
+        require_refused(expand_name("${'$$'}", policy), "a run of '$' escapes only a '{' or '(' that follows it: $$'");
     }
 }
 

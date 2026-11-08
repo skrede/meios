@@ -80,10 +80,10 @@ TEST_CASE("an argument default holding a stray double dollar refuses at its decl
         bool read;
     };
     const row table[] = {
-        { "a$$x", "invalid expression: $$x", true },
-        { "a$$", "invalid expression: $$", true },
-        { "$$", "invalid expression: $$", true },
-        { "a$$x", "invalid expression: $$x", false },
+        { "a$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x", true },
+        { "a$$", "a run of '$' escapes only a '{' or '(' that follows it: $$", true },
+        { "$$", "a run of '$' escapes only a '{' or '(' that follows it: $$", true },
+        { "a$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x", false },
     };
     for(const row &r : table)
     {
@@ -119,7 +119,7 @@ TEST_CASE("a later declaration does not stand in for the first one the expansion
 {
     const expansion_result run_first = refused(declared("a$$x") + declared("b") + used);
     require_refused(run_first, diagnostic_code::expression_error);
-    CHECK(run_first.error().message == "invalid expression: $$x");
+    CHECK(run_first.error().message == "a run of '$' escapes only a '{' or '(' that follows it: $$x");
     require_refused(refused(declared("${nope}") + declared("b") + used), diagnostic_code::undefined_property);
     require_link(flattened(document(property_x + declared("${x}") + declared("b") + used)), "l_vx");
     require_link(flattened(document(declared("b") + declared("a$$x") + used)), "l_b");

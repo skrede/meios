@@ -129,7 +129,7 @@ TEST_CASE("an insertion naming no block bound anywhere on the chain refuses", "[
                    silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
-    REQUIRE(out.error().message == "Undefined block \"c\"");
+    REQUIRE(out.error().message == "<xacro:insert_block> names 'c', which no block parameter in scope binds");
 }
 
 TEST_CASE("a property holding element content is a block that insert_block inserts", "[xacro][block][property]")

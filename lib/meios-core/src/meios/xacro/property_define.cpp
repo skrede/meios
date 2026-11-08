@@ -44,8 +44,7 @@ std::optional<bool> flag_attribute(expand_ctx &ctx, pugi::xml_node in, const cha
     const std::optional<bool> flag = get_boolean_value(read);
     if(!flag)
         fail(ctx, in, diagnostic_code::xacro_structural_error,
-             "Xacro conditional \"" + authored + "\" evaluated to \"" + read.text().value_or("")
-                 + "\", which is not a boolean expression.");
+             "xacro:property " + std::string(attribute) + "=\"" + authored + "\" evaluates to \"" + read.text().value_or("") + "\", which is not a boolean");
     return flag;
 }
 
@@ -145,8 +144,7 @@ bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     const bool fallback = static_cast<bool>(in.attribute("default"));
     const std::array<bool, 3> given{ static_cast<bool>(in.attribute("value")), fallback, *remove };
     if(std::ranges::count(given, true) > 1)
-        return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                    "Property attributes default, value, and remove are mutually exclusive: " + *name);
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "xacro:property '" + *name + "' sets more than one of default, value and remove");
     if(*remove && remove_property(ctx, in, *name))
         return true;
     if(fallback && property_defined(ctx, *name))

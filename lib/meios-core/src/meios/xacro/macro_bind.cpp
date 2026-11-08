@@ -55,9 +55,9 @@ bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
     return fail(ctx, call, diagnostic_code::xacro_structural_error, message);
 }
 
-std::string call_refusal(std::string_view what, std::string_view name, const macro_def &def)
+std::string call_to(const macro_def &def)
 {
-    return std::string(what) + " \"" + std::string(name) + "\" when instantiating macro '" + def.body.attribute("name").value() + '\'';
+    return std::string("call to macro '") + def.body.attribute("name").value() + "' ";
 }
 
 std::vector<pugi::xml_node> element_children(pugi::xml_node root)
@@ -84,7 +84,7 @@ bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     {
         const auto at = std::find(def.params.begin(), def.params.end(), std::string_view(attr.name()));
         if(at == def.params.end())
-            return fail(ctx, call, diagnostic_code::xacro_structural_error, call_refusal("Invalid parameter", attr.name(), def));
+            return fail(ctx, call, diagnostic_code::xacro_structural_error, call_to(def) + "sets '" + attr.name() + "', which names no parameter an attribute can set");
         const std::size_t i = static_cast<std::size_t>(at - def.params.begin());
         if(!bind_literal(ctx, call, attr.value(), document, bound.values[i]))
             return false;
@@ -107,11 +107,9 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
         return false;
     const std::vector<pugi::xml_node> kids = element_children(root);
     if(kids.size() > def.block_params.size())
-        return fail(ctx, call, diagnostic_code::xacro_structural_error,
-                    call_refusal("Unused block", kids[def.block_params.size()].name(), def));
+        return fail(ctx, call, diagnostic_code::xacro_structural_error, call_to(def) + "passes element <" + kids[def.block_params.size()].name() + ">, which no block parameter takes");
     if(kids.size() < def.block_params.size())
-        return fail(ctx, call, diagnostic_code::xacro_structural_error,
-                    call_refusal("Not enough blocks", block_spelling(def, kids.size()), def));
+        return fail(ctx, call, diagnostic_code::xacro_structural_error, call_to(def) + "leaves block parameter '" + block_spelling(def, kids.size()) + "' without an element");
     for(std::size_t i = 0; i < kids.size(); ++i)
     {
         ctx.blocks.push_back(parked_block{ kids[i], def.block_children[i], origin });

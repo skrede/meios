@@ -54,9 +54,9 @@ TEST_CASE("a stray double dollar straight after a span refuses before the span i
           "[xacro][lex_lookahead]")
 {
     const std::pair<const char *, const char *> table[] = {
-        { "${nope}$$x", "invalid expression: $$x" },  { "$(arg unset)$$x", "invalid expression: $$x" },
-        { "${1/0}$$x", "invalid expression: $$x" },   { "${'$$'}$$x", "invalid expression: $$x" },
-        { "${x}$$x", "invalid expression: $$x" },     { "${nope}$$", "invalid expression: $$" },
+        { "${nope}$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },  { "$(arg unset)$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },
+        { "${1/0}$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },   { "${'$$'}$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },
+        { "${x}$$x", "a run of '$' escapes only a '{' or '(' that follows it: $$x" },     { "${nope}$$", "a run of '$' escapes only a '{' or '(' that follows it: $$" },
     };
     for(const auto &[raw, message] : table)
     {
@@ -105,18 +105,16 @@ TEST_CASE("the refusal is located at the token after the span", "[xacro][lex_loo
 
 TEST_CASE("the lookahead holds in a text node and in a condition", "[xacro][lex_lookahead]")
 {
-    require_refused(expand_doc("<link name=\"l\"><t>${nope}$$x</t></link>"), meios::diagnostic_code::expression_error,
-                    "invalid expression: $$x");
-    require_refused(expand_doc("<xacro:if value=\"${nope}$$x\"><link name=\"l\"/></xacro:if>"),
-                    meios::diagnostic_code::expression_error, "invalid expression: $$x");
+    require_refused(expand_doc("<link name=\"l\"><t>${nope}$$x</t></link>"), meios::diagnostic_code::expression_error, "a run of '$' escapes only a '{' or '(' that follows it: $$x");
+    require_refused(expand_doc("<xacro:if value=\"${nope}$$x\"><link name=\"l\"/></xacro:if>"), meios::diagnostic_code::expression_error,
+                    "a run of '$' escapes only a '{' or '(' that follows it: $$x");
 }
 
 TEST_CASE("a lookahead refusal is terminal under a lenient policy", "[xacro][lex_lookahead]")
 {
     for(meios::eval_policy policy : { meios::eval_policy::warn, meios::eval_policy::skip })
     {
-        require_refused(expand_name("${[1, 2]}$$x", policy), meios::diagnostic_code::expression_error,
-                        "invalid expression: $$x");
+        require_refused(expand_name("${[1, 2]}$$x", policy), meios::diagnostic_code::expression_error, "a run of '$' escapes only a '{' or '(' that follows it: $$x");
         const expansion_result unterminated = expand_name("${[1, 2]}${x", policy);
         REQUIRE_FALSE(unterminated.has_value());
         CHECK(unterminated.error().code == meios::diagnostic_code::unterminated_substitution);
