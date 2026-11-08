@@ -17,12 +17,11 @@ namespace detail
 {
 
 // A property's text as written, evaluated at its first read. The origin indexes a record the
-// expansion that wrote it keeps, which is why the entry also carries that expansion's generation.
+// expansion that wrote it keeps, and that expansion's end erases the entry.
 struct deferred_text
 {
     std::string text;
     std::size_t origin;
-    std::uint64_t generation;
 };
 
 // A deferred text whose evaluation refused. Its record is already logged, so a later read answers
@@ -45,7 +44,6 @@ struct namespace_entry
 struct block_entry
 {
     std::size_t block;
-    std::uint64_t generation;
 };
 
 using scope_entry = std::variant<value, deferred_text, failed_read, namespace_entry, block_entry>;

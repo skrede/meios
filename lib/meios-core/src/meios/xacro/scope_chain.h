@@ -9,7 +9,6 @@
 
 #include <string>
 #include <cstddef>
-#include <cstdint>
 #include <utility>
 #include <variant>
 #include <optional>
@@ -86,13 +85,12 @@ struct chain_access
     static void define_deferred(eval_scope &scope, std::size_t table, std::string_view name,
                                 std::string text, std::size_t origin)
     {
-        const std::uint64_t generation = scope.m_chain.generation();
-        scope.m_chain.table(table).set(name, deferred_text{ std::move(text), origin, generation });
+        scope.m_chain.table(table).set(name, deferred_text{ std::move(text), origin });
     }
 
     static void define_block(eval_scope &scope, std::size_t table, std::string_view key, std::size_t block)
     {
-        scope.m_chain.table(table).set(key, block_entry{ block, scope.m_chain.generation() });
+        scope.m_chain.table(table).set(key, block_entry{ block });
     }
 
     // The reference looks a name up as a content-only block across the whole chain before it looks
@@ -119,7 +117,7 @@ private:
     {
         const std::optional<std::size_t> at = scope.m_chain.holder(scope.m_chain.cursor(), key);
         const block_entry *found = at ? std::get_if<block_entry>(scope.m_chain.table(*at).find(key)) : nullptr;
-        if(!found || found->generation != scope.m_chain.generation())
+        if(!found)
             return std::nullopt;
         return found->block;
     }

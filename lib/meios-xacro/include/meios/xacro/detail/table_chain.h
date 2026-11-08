@@ -39,7 +39,6 @@ public:
     table_chain()
             : m_cursor(0)
             , m_serials(0)
-            , m_generation(0)
             , m_resolver()
             , m_tables()
     {
@@ -49,11 +48,6 @@ public:
     std::size_t cursor() const
     {
         return m_cursor;
-    }
-
-    std::uint64_t generation() const
-    {
-        return m_generation;
     }
 
     table_mark mark() const
@@ -122,7 +116,6 @@ public:
 
     void install(deferred_resolve resolve, deferred_cycle cycle)
     {
-        ++m_generation;
         m_resolver.attach(std::move(resolve), std::move(cycle));
     }
 
@@ -161,16 +154,15 @@ public:
 private:
     std::size_t m_cursor;
     std::uint64_t m_serials;
-    std::uint64_t m_generation;
     deferred_resolver m_resolver;
     std::vector<std::unique_ptr<name_table>> m_tables;
 
     // The text is evaluated with its own table current, as the reference evaluates it against the
     // table holding the key, and the answer replaces the text there whether it is a value or a
-    // refusal. A text written by an expansion that has since returned reads as nothing.
+    // refusal.
     name_read resolve(std::size_t table, std::string_view name, deferred_text deferred, std::size_t carried)
     {
-        if(!m_resolver.attached() || deferred.generation != m_generation)
+        if(!m_resolver.attached())
             return name_read{ std::nullopt, eval_failure_kind::none, std::nullopt };
         if(const std::optional<eval_failure_kind> refused = m_resolver.cycle(table, name))
             return name_read{ std::nullopt, *refused, std::nullopt };

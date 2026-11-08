@@ -71,6 +71,34 @@ bool scan_inner(subst_ctx &ctx, std::string_view expr, std::string &out)
     return level.admitted() && scan(ctx, expr, out, 0);
 }
 
+// Every text that crosses this boundary is reclassified, whether it came from a bound name or
+// from an expression, so an exact span and mixed text agree on what a numeric-looking or
+// boolean-looking text means; a collection crosses intact, having no text to reclassify. The
+// reference does the same to whatever a bound value evaluates to. An injected backend keeps the
+// text path it has always had, which is what leaves its container transport untouched.
+value reclassified(const value &read)
+{
+    return read.kind() == value_kind::string ? classify(*read.text()) : read;
+}
+
+std::optional<value> eval_scanned(subst_ctx &ctx, std::string_view expr)
+{
+    std::string resolved;
+    if(!scan_inner(ctx, expr, resolved))
+        return std::nullopt;
+    const std::string_view body = python_stripped(resolved);
+    ctx.last_kind               = eval_failure_kind::none;
+    if(ctx.backend)
+    {
+        std::optional<std::string> text = eval_expr(ctx, body, ctx.scope);
+        return text ? std::optional<value>(classify(*text)) : std::nullopt;
+    }
+    std::optional<value> read = eval_native(ctx, body);
+    if(!read)
+        return std::nullopt;
+    return reclassified(*read);
+}
+
 }
 
 std::optional<std::string_view> exact_expression(std::string_view raw)
@@ -81,16 +109,6 @@ std::optional<std::string_view> exact_expression(std::string_view raw)
     if(find_expr_close(text, 1) != text.size() - 1)
         return std::nullopt;
     return text.substr(2, text.size() - 3);
-}
-
-// Every text that crosses this boundary is reclassified, whether it came from a bound name or
-// from an expression, so an exact span and mixed text agree on what a numeric-looking or
-// boolean-looking text means; a collection crosses intact, having no text to reclassify. The
-// reference does the same to whatever a bound value evaluates to. An injected backend keeps the
-// text path it has always had, which is what leaves its container transport untouched.
-value reclassified(const value &read)
-{
-    return read.kind() == value_kind::string ? classify(*read.text()) : read;
 }
 
 std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
@@ -106,20 +124,7 @@ std::optional<value> eval_exact(subst_ctx &ctx, std::string_view expr)
         if(bound.bound)
             return reclassified(*bound.bound);
     }
-    std::string resolved;
-    if(!scan_inner(ctx, expr, resolved))
-        return std::nullopt;
-    const std::string_view body = python_stripped(resolved);
-    ctx.last_kind               = eval_failure_kind::none;
-    if(ctx.backend)
-    {
-        std::optional<std::string> text = eval_expr(ctx, body, ctx.scope);
-        return text ? std::optional<value>(classify(*text)) : std::nullopt;
-    }
-    std::optional<value> read = eval_native(ctx, body);
-    if(!read)
-        return std::nullopt;
-    return reclassified(*read);
+    return eval_scanned(ctx, expr);
 }
 
 expected<std::optional<value>, expansion_error> substitute_exact(

@@ -166,6 +166,7 @@ inline std::optional<std::size_t> stack_used(std::size_t bytes, const std::funct
 
 // A shape keeps ninefold headroom when nine times the stack its admitted chain adds still fits
 // beside the fixed cost the same document pays with no level at all.
+// Both figures are lower bounds: a deepest frame's reserved but never-written bytes go uncounted.
 inline bool keeps_ninefold(std::size_t base, std::size_t loaded, std::size_t thread)
 {
     return loaded <= base || base + 9 * (loaded - base) < thread;
