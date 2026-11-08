@@ -66,7 +66,7 @@ std::optional<std::string> bind_read(const eval_scope &scope, eval_scope &over, 
 std::optional<std::string> eval_command(subst_ctx &ctx, std::string_view body)
 {
     if(body.find("__") != std::string_view::npos)
-        return refuse(ctx, "the evaluation command's body holds a double underscore '__', which the reference refuses in it");
+        return refuse(ctx, "the evaluation command's body holds a double underscore '__', which the body may not");
     eval_scope over;
     bind_reference_names(over);
     for(const token &one : tokenize(body))

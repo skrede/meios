@@ -128,8 +128,8 @@ value member_of(parser &p, const value &base, std::string_view member)
         return p.fail_unsupported("a member written with a leading '__' reaches the object "
                                   "protocol rather than the document — use eval-python");
     if(collides(member))
-        return p.fail_unsupported("'" + std::string(member) + "' names a mapping operation "
-                                  "upstream rather than a key — write it as ['"
+        return p.fail_unsupported("'" + std::string(member) + "' names a mapping operation rather "
+                                  "than a key — write it as ['"
                                   + std::string(member) + "'] — use eval-python");
     p.exercised(evaluator_construct::dotted_member);
     return index_into(p, base, value{ std::string(member) });
