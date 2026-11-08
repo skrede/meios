@@ -1,4 +1,5 @@
 #include "oracle_records.h"
+#include "expression_causes.h"
 #include "native_expression_fixture.h"
 
 #include "meios/xacro/lexer.h"
@@ -7,10 +8,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <set>
 #include <string>
 #include <vector>
 #include <cstddef>
 #include <utility>
+#include <iterator>
 #include <optional>
 #include <string_view>
 
@@ -81,6 +84,7 @@ TEST_CASE("every measured expression evaluates to the value upstream produced",
     REQUIRE_FALSE(rows.empty());
 
     std::size_t rendered = 0;
+    std::set<std::string_view> causes;
     for(const oracle::row &one : rows)
     {
         REQUIRE(one.fields.size() == 4);
@@ -90,7 +94,9 @@ TEST_CASE("every measured expression evaluates to the value upstream produced",
         {
             REQUIRE_FALSE(one.fields[3].empty());
             REQUIRE(ran.failed);
-            CHECK(oracle::relates(ran.messages, one.fields[3]));
+            CHECK(oracle::refuses_as_recorded(one.fields[3], ran.kind, ran.codes, ran.messages));
+            if(const std::optional<oracle::expression_cause> cause = oracle::cause_of(one.fields[3]))
+                causes.insert(cause->stem);
             continue;
         }
         CHECK_FALSE(ran.failed);
@@ -99,6 +105,7 @@ TEST_CASE("every measured expression evaluates to the value upstream produced",
     }
     // A record of nothing but refusals would otherwise reduce this case to the claim that the evaluator refuses everything, which measures nothing.
     REQUIRE(rendered * 4 >= rows.size() * 3);
+    CHECK(causes.size() == std::size(oracle::expression_causes));
 }
 
 TEST_CASE("a subscript chain reads by a literal key, by a variable key and through two levels",

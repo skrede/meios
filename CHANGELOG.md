@@ -4,6 +4,19 @@ All notable, user-facing changes to meios are recorded here. The format follows 
 [Keep a Changelog](https://keepachangelog.com/). meios is in public preview: expect breaking
 changes onwards to a stable `v1.0.0` release.
 
+## Unreleased
+
+### Changed
+
+- Diagnostics from the built-in evaluator and the xacro expansion are now worded in meios's own
+  terms rather than repeating Python's or xacro's messages. The refusal classification is unchanged:
+  every refusal keeps its diagnostic code, failure kind and location, so code that branches on the
+  code is unaffected. A character no name admits is now named by its code point alone, and a
+  refusal naming an operand's kind gives it the right article, as in "an integer".
+- Under the python evaluator, a read of an include-namespace member that nothing binds no longer
+  suggests the argument command, matching the built-in evaluator. A message the interpreter raises
+  itself is still passed through as the interpreter wrote it.
+
 ## v0.2.2
 
 ### Added

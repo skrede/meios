@@ -33,9 +33,8 @@ inline std::string upstream_render(const std::string &renders_dir, const std::st
     return trimmed(slurp(scratch));
 }
 
-// A refusing render carries upstream's own wording after the verdict, which no manifest column can
-// hold: a tab is the column separator. Both sides therefore record the verdict, and the wording of
-// a refusal is what expressions.cases exists to carry.
+// A refusal is compared by its verdict alone and never by its wording, so the text after
+// upstream's verdict is dropped.
 inline std::string upstream_value(const std::string &rendered)
 {
     return refused(rendered) ? std::string("REFUSED") : rendered;

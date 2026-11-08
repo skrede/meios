@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <fstream>
 #include <istream>
-#include <sstream>
 #include <optional>
 #include <filesystem>
 #include <stdexcept>
@@ -60,18 +59,6 @@ inline std::vector<row> load_rows(std::string_view file)
     if(rows.empty())
         throw std::runtime_error("the record " + path.string() + " carries no rows");
     return rows;
-}
-
-// A recorded failure is upstream's own wording, so an independent implementation can only be held
-// to naming the same thing upstream named, not to repeating the sentence.
-inline bool relates(const std::vector<std::string> &messages, const std::string &recorded)
-{
-    std::istringstream words(recorded);
-    for(std::string word; words >> word;)
-        for(const std::string &message : messages)
-            if(word.size() >= 4 && message.find(word) != std::string::npos)
-                return true;
-    return false;
 }
 
 inline std::optional<row> lookup(const std::vector<row> &rows, std::string_view key)

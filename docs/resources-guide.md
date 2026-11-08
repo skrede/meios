@@ -476,7 +476,7 @@ A description that does not resolve fails the build, and the binary's typed diag
 build log with its file and line intact:
 
 ```
-…/ur_description/urdf/ur.urdf.xacro:8:27: [error] (undefined_property) name 'ur_typ' is not defined
+…/ur_description/urdf/ur.urdf.xacro:8:27: [error] (undefined_property) nothing in scope binds 'ur_typ'
 ```
 
 Nothing is written: not a truncated document, not an empty one, and not the temporary the step

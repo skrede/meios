@@ -3,8 +3,8 @@
 # longer reproduces also fails it, and a listed entry present under the right id but with
 # drifted recorded text fails it too -- matched by exact text, never by id alone. A document probe
 # that refuses is recorded as REFUSED followed by the diagnostic code it gives, upstream's mapped
-# through tests/refusal_causes.h. An expression probe's refusal stays REFUSED; the wording of a
-# refusal is carried by expressions.cases, because a tab is this file's column separator.
+# through tests/refusal_causes.h. An expression probe's refusal stays REFUSED. No refusal's
+# wording is compared, on either side.
 #
 # One measured difference is deliberately absent and is recorded here rather than as a row. A
 # refused disjunction carries its left operand in its rendered text where upstream carries the

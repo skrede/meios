@@ -1,4 +1,5 @@
 #include "oracle_records.h"
+#include "expression_causes.h"
 
 #include <meios/xacro.h>
 
@@ -175,10 +176,8 @@ TEST_CASE("a sequence nests inside a sequence and inside a mapping value", "[nat
     CHECK(held.rendered == "5");
 }
 
-// The expectation is read out of the record rather than written here: the spelling refuses
-// because upstream refused it, and the diagnostic has to name what upstream named.
-TEST_CASE("each recorded subscript refusal refuses here and names the same thing",
-          "[native][sequence]")
+// The spellings are read from the record, so each refuses here because upstream refused it, for the same cause.
+TEST_CASE("each recorded subscript refusal refuses here for the cause upstream recorded", "[native][sequence]")
 {
     const std::vector<oracle::row> rows = oracle::load_rows("expressions.cases");
     const std::pair<std::string_view, std::string_view> recorded[] = {
@@ -193,7 +192,7 @@ TEST_CASE("each recorded subscript refusal refuses here and names the same thing
         REQUIRE(row->fields[2] == "REFUSED");
         const probe out = evaluate(three, one.second);
         CHECK(out.failed);
-        CHECK(oracle::relates(out.messages, row->fields[3]));
+        CHECK(oracle::refuses_as_recorded(row->fields[3], out.kind, out.codes, out.messages));
     }
 }
 

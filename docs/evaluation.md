@@ -60,11 +60,11 @@ names something — a bare name, a member, a namespace member, a call target, a 
 a name in `$(eval)` — the name is read as its NFKC normalization, so `${ﬁ}` reads `fi`, `${ｐｉ}`
 reads `pi`, and a property bound as `π` is read by `${π}`. A keyword is recognized on the written
 text, as Python's tokenizer recognizes it, so `${ｉｆ}` is the undefined name `if`, and a spelling of
-`None`, `True` or `False` outside ASCII refuses as Python refuses it, `${Ｔrue}` with
-`identifier field can't represent 'True' constant`. A character no identifier admits refuses with
-Python's own lexical message, quoting a printable character and naming only the code point of a
-non-printable one: `invalid character '€' (U+20AC)`, and `invalid non-printable character U+00A0`,
-which is Python's refusal of a no-break space inside an expression. The characters Python's
+`None`, `True` or `False` outside ASCII refuses as Python refuses it, `${Ｔrue}` with `the constant
+'True' cannot be spelled outside ASCII`. A character no identifier admits refuses as Python refuses
+it, at the same code point, naming that code point and never quoting the character: `the character
+U+20AC cannot stand at its position in a name` for `€`, and `the character U+00A0 cannot stand at
+its position in a name` for a no-break space inside an expression. The characters Python's
 `str.strip()` removes are removed from both ends of a `${…}` body once the body's own substitutions
 have resolved, as the reference strips the body before compiling it. These are the characters
 `str.isspace()` holds, among them the no-break space U+00A0 and the ideographic space U+3000, so a
@@ -95,13 +95,11 @@ a macro body reads that call's parameters, while one written outside the macro a
 does not; and a property nothing reads is never evaluated, so a value that would fail refuses nothing.
 A text whose evaluation reads its own name again, directly or through others, refuses as a circular
 variable definition under `xacro_structural_error`, naming each step with the line that defined it:
-`circular variable definition: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. The reference names the
-steps without their lines and adds a second line, `Consider disabling lazy evaluation via
-lazy_eval="false"`, which this refusal does not carry. A property written with `lazy_eval="false"`,
-or with `scope` set to `global` or `parent`, is evaluated where it is written, against the bindings
-above it; `lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns,
-nothing evaluates a stored text any more: a property whose text holds an expression and that the
-expansion never read reads absent from the scope.
+`the value of 'a' depends on itself: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. A property
+written with `lazy_eval="false"`, or with `scope` set to `global` or `parent`, is evaluated where it
+is written, against the bindings above it; `lazy_eval` is read as a condition is read, so `yes`
+refuses. Once `expand` returns, nothing evaluates a stored text any more: a property whose text
+holds an expression and that the expansion never read reads absent from the scope.
 
 **A property's name is evaluated and checked before anything else about it, as the reference checks
 it.** The `name` attribute is required, and it is evaluated as an attribute is, so `name="${p}_x"`
@@ -110,16 +108,16 @@ Python 3.14 reads one under Unicode 16.0 — `_` or an XID_Start character first
 characters after — that is not one of the language's hard keywords, is its own NFKC normalization,
 and does not open with a double underscore. A name failing any of these refuses under
 `xacro_structural_error` before `remove`, `default` or `value` is read, and one failing any of the
-first three refuses with `Property names must be valid python identifiers: ` and the name, as the
-reference refuses it. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is `fi`, refuse on
-both sides, and `π` binds on both. The `property_name_non_ascii_not_identifier`,
+first three refuses naming the name, as the reference refuses it, with `xacro:property name 'a€' is
+not a name an expression can read`. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is
+`fi`, refuse on both sides, and `π` binds on both. The `property_name_non_ascii_not_identifier`,
 `property_name_not_normalized` and `property_name_non_ascii_binds` agreement probes hold those three
 against a fresh upstream render, beside the other `property_name_` and the `property_without_name`
-agreement probes and the `xacro_property` cases. The identifier, normalization and printable tables
-this rule and the name reading above use are generated from Python 3.14's `unicodedata`
-(Unicode 16.0.0), and regenerated and checked against that interpreter on every CI run; the reference
-running on another interpreter reads whatever that interpreter's tables hold, so a character added or
-retired between Unicode versions is read here as 3.14 reads it.
+agreement probes and the `xacro_property` cases. The identifier and normalization tables this rule
+and the name reading above use are generated from Python 3.14's `unicodedata` (Unicode 16.0.0), and
+regenerated and checked against that interpreter on every CI run; the reference running on another
+interpreter reads whatever that interpreter's tables hold, so a character added or retired between
+Unicode versions is read here as 3.14 reads it.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An
 argument — a declared default, or an override a caller hands the load — binds the characters that
@@ -232,10 +230,14 @@ decided by the failure's kind, and there are exactly four:
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
 Every diagnostic carries a `file:line:column` and a `diagnostic_code`, so a caller branches on a code
-rather than matching message text. `unsupported_expression` covers the whole first row,
-`undefined_property` covers both a name the scope does not bind and a key a mapping does not hold,
-and `expansion_budget_exceeded` covers a crossed ceiling. The message names the lexeme the walk
-stopped on, which is what tells you where in a long expression to look.
+rather than matching message text. The message is meios's own: where the reference refuses the same
+input, the two agree on whether it refuses and under which code, not on the words. Under the python
+evaluator, a message the interpreter raises itself, such as its refusal of a bare name nothing
+binds, is passed through as the interpreter wrote it, while the built-in evaluator writes its own.
+`unsupported_expression` covers the whole first row, `undefined_property` covers both a name the
+scope does not bind and a key a mapping does not hold, and `expansion_budget_exceeded` covers a
+crossed ceiling. The message names the lexeme the walk stopped on, which is what tells you where in
+a long expression to look.
 
 **Malformed syntax is refused before anything is evaluated.** One left-to-right walk over the token
 stream alternates operands and operators, so `1 +` is reported as an expression ending where an
@@ -258,12 +260,10 @@ through a namespace to a name the reference's global table does not hold refuses
 name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A namespace inside
 another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro `m` the
 namespace holds. A call in that macro's body of a macro the including file defined, `<xacro:outer/>`,
-refuses on both sides: here as `unknown xacro element <xacro:outer>`, where the reference says
-`unknown macro name: xacro:outer`. The comparator holds the reference's wording and this side's
-`xacro_structural_error` to the same cause, so the `namespace_macro_cannot_call_outer_macro`
-agreement probe agrees. A namespace has no value of its own, so `${n}` read bare refuses, naming the
-dotted spelling, where the reference reads its table, as
-[known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
+refuses on both sides under `xacro_structural_error`, so the
+`namespace_macro_cannot_call_outer_macro` agreement probe agrees. A namespace has no value of its
+own, so `${n}` read bare refuses, naming the dotted spelling, where the reference reads its table,
+as [known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
 shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`, and
 `${math.pi}` reads the constant by falling through.
 `xacro.load_yaml` is the one namespaced call the grammar carries; every other namespaced spelling,
@@ -436,13 +436,13 @@ holds stores its content the same way. The `property_` and `block_property_` agr
 these against a fresh upstream render.
 
 **A call that leaves a block parameter without an element refuses, as the reference refuses it.** The
-reference expands a macro call's children and then refuses the call with "Not enough blocks" for any
-`*` or `**` parameter left without an element, before it reads any default, so a call holding only an
-`<xacro:include>` of a document that binds a property, only a property, or nothing at all refuses even
-when the macro never inserts the block. The same refusal is raised here, under
-`xacro_structural_error` at the call's own `file:line`, naming the first parameter left without an
-element. The `include_sole_block` agreement probe and the generated macro cases the reference refuses
-with "Not enough blocks" hold it, two of them over a default that would refuse if it were read.
+reference expands a macro call's children and then refuses the call for any `*` or `**` parameter
+left without an element, before it reads any default, so a call holding only an `<xacro:include>` of
+a document that binds a property, only a property, or nothing at all refuses even when the macro
+never inserts the block. The same refusal is raised here, under `xacro_structural_error` at the
+call's own `file:line`, naming the first parameter left without an element. The `include_sole_block`
+agreement probe and the generated macro cases the reference refuses for a block parameter left
+without an element hold it, two of them over a default that would refuse if it were read.
 
 **A macro call binds in the reference's order, and refuses where the reference refuses.** The reference
 binds a call's attributes in document order, then takes the call's expanded children as its block
@@ -452,20 +452,20 @@ call's children is therefore not visible to the call's attributes, which refuse 
 on both sides, while a default reads it. A default reads a parameter the call supplied too, as the
 invocation's own scope holds it, so `b:=${a}` with both supplied renders, and one reading a parameter
 the call left out refuses. An attribute naming no declared parameter, a namespace declaration or a
-block parameter's name included, refuses with the reference's "Invalid parameter", and an element no
-block parameter takes refuses with "Unused block", naming the first left over; a child that expands to
-nothing, a property say, takes no block parameter. Where two of these refusals meet in one call, the
-one the reference raises first is raised here. Each is reported under `xacro_structural_error` at the
-call's own `file:line`, for a macro defined in another file as well; a parameter left unbound is
-refused under the same code in this side's own words. A default that refuses is reported at the call's
-own `file:line` too, under its own cause, whether or not the call supplied its parameter, for a macro
-defined in another file as well. Thirteen `macro_call_` agreement probes hold this against a fresh
-upstream render: an undeclared attribute, a namespace declaration and a block parameter's name written
-as attributes; one and two surplus elements; an undeclared attribute before a missing parameter, a
-refusing block child, an absent block and a refusing attribute, and a surplus element before a missing
-parameter; an attribute reading a child's property, a default reading one, and a child that is only a
-property. The `macro_default_reads_supplied_parameter` probe holds a default's reading of a supplied
-parameter, beside the `xacro_macro_defaults` cases, which pin the omitted one's refusal too. The
+block parameter's name included, refuses naming the attribute, and an element no block parameter
+takes refuses naming the first left over; a child that expands to nothing, a property say, takes no
+block parameter. Where two of these refusals meet in one call, the one the reference raises first is
+raised here. Each is reported under `xacro_structural_error` at the call's own `file:line`, for a
+macro defined in another file as well; a parameter left unbound is refused under the same code. A
+default that refuses is reported at the call's own `file:line` too, under its own cause, whether or
+not the call supplied its parameter, for a macro defined in another file as well. Thirteen
+`macro_call_` agreement probes hold this against a fresh upstream render: an undeclared attribute, a
+namespace declaration and a block parameter's name written as attributes; one and two surplus
+elements; an undeclared attribute before a missing parameter, a refusing block child, an absent
+block and a refusing attribute, and a surplus element before a missing parameter; an attribute
+reading a child's property, a default reading one, and a child that is only a property. The
+`macro_default_reads_supplied_parameter` probe holds a default's reading of a supplied parameter,
+beside the `xacro_macro_defaults` cases, which pin the omitted one's refusal too. The
 `xacro_macro_call` cases pin the location, the included macro among them, and `xacro_macro_call.a
 default that refuses while the call supplied its parameter is reported at the call, for a macro defined
 in another file` the supplied parameter's refusing default.
@@ -495,21 +495,20 @@ which [known limitations](known-limitations.md) records.
 **A run of dollars escapes or refuses as the reference's lexer has it.** A run of two or more `$`
 before `{` or `(` writes one `$` fewer and the opener, and lexing goes on after it: `$${x}` renders
 `${x}`, `$$(arg y)` renders `$(arg y)` and `$$$${x}` renders `$$${x}`. A `$$` before anything else, or
-ending the text, refuses with the reference's "invalid expression" under `expression_error`, at the
-run's own column and under every evaluation policy, inside an expression body as well, so `a$$x`, `a$$`
-and `${'$$'}` each refuse on both sides. In an argument's default it refuses at the declaration,
-whether or not the argument is read, unless a caller's argument leaves that default unread. The token
-straight after a span is lexed before the span is evaluated, because the reference's lexer reads one
-token ahead: `${nope}$$x` refuses with "invalid expression: $$x" on both sides rather than for the
-undefined name, and `${nope}${x` refuses as an unterminated span here and with "invalid expression:
-${x" there. Exactly one token is looked at, so `${nope}a$$x` refuses for the undefined name on both
-sides. A following `${` token ends at its first `}`, as the reference's pattern has it, so
-`${nope}${'a}'` and `${nope}${a{b}` refuse for the undefined name on both sides, while a span's own
-close stays quote-aware, the difference recorded below. An include filename is lexed the same way,
-so after a `$(find …)` in it, `$(find ${nope})$$x` refuses with "invalid expression" on both sides; the
-order its other refusals take is stated with the include filename below. A single `$` before anything
-but an opener stays text, as `$x` does on both sides. The
-`dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
+ending the text, refuses under `expression_error`, naming the run, at the run's own column and under
+every evaluation policy, inside an expression body as well, so `a$$x`, `a$$` and `${'$$'}` each
+refuse on both sides. In an argument's default it refuses at the declaration, whether or not the
+argument is read, unless a caller's argument leaves that default unread. The token straight after a
+span is lexed before the span is evaluated, because the reference's lexer reads one token ahead:
+`${nope}$$x` refuses for the dollar run on both sides rather than for the undefined name, and
+`${nope}${x` refuses as an unterminated span on both sides. Exactly one token is looked at, so
+`${nope}a$$x` refuses for the undefined name on both sides. A following `${` token ends at its first
+`}`, as the reference's pattern has it, so `${nope}${'a}'` and `${nope}${a{b}` refuse for the
+undefined name on both sides, while a span's own close stays quote-aware, the difference recorded
+below. An include filename is lexed the same way, so after a `$(find …)` in it, `$(find ${nope})$$x`
+refuses for the dollar run on both sides; the order its other refusals take is stated with the
+include filename below. A single `$` before anything but an opener stays text, as `$x` does on both
+sides. The `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
 `dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, with
 `dollar_run_in_argument_default`, `dollar_run_in_unused_argument_default` and
 `dollar_run_in_redeclared_argument_default` for an argument's default,
@@ -1079,13 +1078,13 @@ path refuses, a trailing separator among it, as do a missing package, an empty f
 words, a missing file and an undefined name in the path, and of the cases that hold a find in a
 property or an argument only one renders. In the macro family the one hundred and eighty-two refusals
 are thirty-eight calls holding fewer children than the block parameters declared, sixty undefined
-names, thirty invalid expressions, twenty-nine children no block parameter takes, twenty-one call
-attributes naming no parameter the reference reads as declared, nineteen of them the undeclared name,
-and four forwarded defaults with nothing to forward. Every case that declares `b` twice is among the
-refusals, so no case the reference renders reads `b` after a call that bound it twice. A
-render here where the reference refuses is a silent divergence, so agreement on a refusal is a real
-test, but these two families reach few verdicts on which file an include read or what a parameter
-bound. The span family is the one that compares renderings in number.
+names, thirty runs of `$` that escape no opener, twenty-nine children no block parameter takes,
+twenty-one call attributes naming no parameter the reference reads as declared, nineteen of them the
+undeclared name, and four forwarded defaults with nothing to forward. Every case that declares `b`
+twice is among the refusals, so no case the reference renders reads `b` after a call that bound it
+twice. A render here where the reference refuses is a silent divergence, so agreement on a refusal
+is a real test, but these two families reach few verdicts on which file an include read or what a
+parameter bound. The span family is the one that compares renderings in number.
 
 **What the generated set leaves out, and what carries it instead.** The grammar writes no glob
 character into an include filename; the `include_glob_filename` document probe carries one, under its
@@ -1384,16 +1383,17 @@ bare read reaches, as under the built-in evaluator, so `${n.pi}` reads the const
 calls the function. Those names are this backend's, so `${n.e}` renders `2.718281828459045` as the
 reference renders it, and `${n.abs(-2)}` renders here as the bare call does, where the reference's
 global table holds no `abs` and refuses it; a member no name answers
-raises `name 'w' is not defined`. A property's text evaluated at its first read under this backend is
-charged against the expression-depth ceiling as the built-in evaluator charges it, and a circular
-definition refuses the same way. Each read this backend makes carries a nesting of nine, for the
-interpreter's frames that stay on the stack beneath the evaluation the read starts, so each level is
-charged that beside the nineteen a deferred read costs: a chain of seven properties each reading the
-next inside arithmetic renders under it, where six do under the built-in evaluator, and one longer
-refuses with `expansion_budget_exceeded`.
-Measured on a 512 KiB thread with the ceiling lifted, the interpreter's own parser refuses such a chain
-of forty-nine properties, before the thread runs out. The `eval_python_scope` cases carry all of this,
-and run each namespace document under the built-in evaluator as well.
+raises `NameError: nothing in scope binds 'w'`, which suggests no argument command, as under the
+built-in evaluator. A property's text evaluated at its first read under this backend is charged
+against the expression-depth ceiling as the built-in evaluator charges it, and a circular definition
+refuses the same way. Each read this backend makes carries a nesting of nine, for the interpreter's
+frames that stay on the stack beneath the evaluation the read starts, so each level is charged that
+beside the nineteen a deferred read costs: a chain of seven properties each reading the next inside
+arithmetic renders under it, where six do under the built-in evaluator, and one longer refuses with
+`expansion_budget_exceeded`. Measured on a 512 KiB thread with the ceiling lifted, the interpreter's
+own parser refuses such a chain of forty-nine properties, before the thread runs out. The
+`eval_python_scope` cases carry all of this, and run each namespace document under the built-in
+evaluator as well.
 
 The unrestricted class is reachable only from C++. The command-line tool never constructs it and
 carries no flag for it, so arbitrary code execution is never one flag away from an ad-hoc invocation
