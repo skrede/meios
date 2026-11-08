@@ -166,7 +166,7 @@ value parse_dotted(parser &p, std::string_view head)
         return p.fail_reported(bound.failure);
     if(bound.bound)
         return member_of(p, *bound.bound, member);
-    if(p.scope.has_argument(head))
+    if(p.scope.arguments().contains(head))
         return p.fail(undefined_name(p.scope, head), diagnostic_code::undefined_property);
     return refuse_call_target(p, head, member);
 }

@@ -48,9 +48,9 @@ void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
         {
             pugi::xml_attribute name = child.attribute("name");
             pugi::xml_attribute fallback = child.attribute("default");
-            if(name && fallback && !ctx.scope.has_argument(name.value()) && !needs_lexing(fallback.value()))
+            if(name && fallback && !ctx.scope.arguments().contains(name.value()) && !needs_lexing(fallback.value()))
             {
-                ctx.scope.bind_argument(name.value(), value{strip_authored_markers(fallback.value())});
+                ctx.scope.arguments().set(name.value(), value{strip_authored_markers(fallback.value())});
                 ctx.seeded_args.emplace(name.value());
             }
         }
@@ -72,8 +72,8 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         return true;
     const bool lent = take_seeded(ctx, name);
     if(lent)
-        ctx.scope.unbind_argument(name);
-    else if(ctx.scope.has_argument(name))
+        ctx.scope.arguments().erase(name);
+    else if(ctx.scope.arguments().contains(name))
         return true;
     bool ok = true;
     const std::string authored = strip_authored_markers(fallback.value());
@@ -81,7 +81,7 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
         substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "default"));
     if(!ok)
         return false;
-    ctx.scope.bind_argument(name, resolved);
+    ctx.scope.arguments().set(name, resolved);
     return true;
 }
 

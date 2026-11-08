@@ -53,7 +53,7 @@ inline std::string argument_hint(bool unbound, std::string_view raised, const ev
     if(end == std::string_view::npos)
         return std::string{};
     const std::string name(raised.substr(at + opener.size(), end - at - opener.size()));
-    if(!scope.has_argument(name))
+    if(!scope.arguments().contains(name))
         return std::string{};
     return " — '" + name + "' is an argument; read it with $(arg " + name + ")";
 }

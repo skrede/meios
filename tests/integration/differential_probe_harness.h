@@ -81,9 +81,9 @@ inline meios::eval_scope document_scope(const document_probe &one)
 {
     meios::eval_scope scope;
     if(one.binds_directory && !std::string_view{MEIOS_XACRO_PROBE_DIR}.empty())
-        scope.bind_argument("probe_directory", meios::value{std::string(MEIOS_XACRO_PROBE_DIR)});
+        scope.arguments().set("probe_directory", meios::value{std::string(MEIOS_XACRO_PROBE_DIR)});
     for(const auto &[name, value] : one.args)
-        scope.bind_argument(name, meios::value{staged_value(value)});
+        scope.arguments().set(name, meios::value{staged_value(value)});
     if(!one.reads_documents)
         return scope;
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<probe_loader>() });

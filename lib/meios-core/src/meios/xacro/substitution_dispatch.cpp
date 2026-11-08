@@ -75,7 +75,7 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
     if(!parts.second.empty())
         return fail(ctx, diagnostic_code::unresolved_arg,
                     "$(arg) takes one argument name, but was given \"" + std::string(rest) + '"');
-    const std::optional<value> bound = ctx.scope.argument(parts.first);
+    const std::optional<value> bound = ctx.scope.arguments().lookup(parts.first);
     if(bound)
         return bound_arg(ctx, parts.first, *bound);
     return fail(ctx, diagnostic_code::unresolved_arg,

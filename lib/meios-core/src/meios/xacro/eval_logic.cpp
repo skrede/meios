@@ -94,7 +94,7 @@ std::string not_defined(std::string_view name)
 std::string undefined_name(const eval_scope &scope, std::string_view name)
 {
     std::string message = not_defined(name);
-    if(scope.has_argument(name))
+    if(scope.arguments().contains(name))
         message += " — '" + std::string(name) + "' is an argument; read it with $(arg " + std::string(name) + ")";
     return message;
 }

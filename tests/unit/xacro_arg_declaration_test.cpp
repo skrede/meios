@@ -31,7 +31,7 @@ expansion_result expand_with_caller(const std::string &body, const char *caller)
     recorder log;
     meios::source_stack sources;
     meios::eval_scope scope;
-    scope.bind_argument("a", meios::value{ std::string(caller) });
+    scope.arguments().set("a", meios::value{ std::string(caller) });
     meios::log_sink_f sink{ std::ref(log) };
     return meios::expand(document(body), scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
 }

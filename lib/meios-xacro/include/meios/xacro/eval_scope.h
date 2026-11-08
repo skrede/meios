@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_XACRO_EVAL_SCOPE_H
 
 #include "meios/xacro/value.h"
+#include "meios/xacro/argument_table.h"
 #include "meios/xacro/scope_namespace.h"
 #include "meios/xacro/eval_failure_kind.h"
 #include "meios/xacro/evaluator_limits.h"
@@ -16,13 +17,11 @@
 #include "meios/diagnostic/source_location.h"
 
 #include <memory>
-#include <string>
 #include <cstddef>
 #include <utility>
 #include <optional>
 #include <filesystem>
 #include <string_view>
-#include <unordered_map>
 
 namespace meios
 {
@@ -48,9 +47,9 @@ public:
     eval_scope()
             : m_load_text_cb()
             , m_parse_yaml_cb()
+            , m_arguments()
             , m_chain()
             , m_active_document()
-            , m_arguments()
     {
     }
 
@@ -113,27 +112,14 @@ public:
 
     // $(arg n) reads this table and an expression reads the other, so a property of an
     // argument's name is a second binding beside the argument, never a write to it.
-    void bind_argument(std::string_view name, value entry)
+    argument_table &arguments()
     {
-        m_arguments.insert_or_assign(std::string(name), std::move(entry));
+        return m_arguments;
     }
 
-    std::optional<value> argument(std::string_view name) const
+    const argument_table &arguments() const
     {
-        std::unordered_map<std::string, value>::const_iterator it = m_arguments.find(std::string(name));
-        if(it == m_arguments.end())
-            return std::nullopt;
-        return it->second;
-    }
-
-    bool has_argument(std::string_view name) const
-    {
-        return m_arguments.find(std::string(name)) != m_arguments.end();
-    }
-
-    void unbind_argument(std::string_view name)
-    {
-        m_arguments.erase(std::string(name));
+        return m_arguments;
     }
 
     void install_text_loader(text_resource_loader loader)
@@ -184,12 +170,12 @@ public:
 private:
     text_resource_loader m_load_text_cb;
     std::shared_ptr<const yaml_parser_handle> m_parse_yaml_cb;
+    argument_table m_arguments;
     // A scope is single-threaded: a read may evaluate a property's deferred text and cache the
     // answer in place. Once expand returns only plain values remain, so contains and lookup agree
     // on every name.
     mutable detail::table_chain m_chain;
     std::filesystem::path m_active_document;
-    std::unordered_map<std::string, value> m_arguments;
 };
 
 }

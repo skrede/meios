@@ -72,7 +72,7 @@ TEST_CASE("an expression span resolves its inner text before the expression is e
 
     SECTION("an argument command inside a span resolves its own spans before it reads a word")
     {
-        scope.bind_argument("mesh_pkg", meios::value{std::string("pkg")});
+        scope.arguments().set("mesh_pkg", meios::value{std::string("pkg")});
         const substitution_result out = meios::substitute("${'$(arg mesh_pkg ${absent_property})' + '/x.stl'}", scope, sources, document, log);
         REQUIRE_FALSE(out.has_value());
         REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);

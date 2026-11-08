@@ -46,7 +46,7 @@ inline meios::expected<meios::expansion, meios::expansion_error> expansion_of(co
         sources.push_back(meios::source_handle(meios::directory_source(root, silent)));
     meios::eval_scope scope;
     for(const std::pair<const std::string, std::string> &arg : doc.args)
-        scope.bind_argument(arg.first, meios::value{meios::detail::strip_authored_markers(arg.second)});
+        scope.arguments().set(arg.first, meios::value{meios::detail::strip_authored_markers(arg.second)});
     scope.install_text_loader(meios::detail::make_yaml_text_loader(sources, roots, silent));
 #ifdef MEIOS_TEST_HAS_YAML
     scope.install_yaml_parser(meios::make_yaml_parser());

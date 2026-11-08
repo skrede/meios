@@ -1311,18 +1311,18 @@ Expansion is a result, never a flag beside a document. `meios::expand` returns e
 carrying the expanded document beside a record of which constructs that one load exercised — a closed
 vocabulary of fifteen, six the auxiliary-document reader marks and nine the expression evaluator
 marks, each at the point the construct actually resolves rather than declared anywhere, and read
-through `exercised`. Caller arguments handed to `expand` directly are bound with
-`eval_scope::bind_argument`, where `$(arg n)` reads them; `set` binds a property, which an expression
-reads. A spelling outside the vocabulary resolves to nothing, and nothing is charged
+through `exercised`. Caller arguments handed to `expand` directly are bound with `arguments().set` on
+the `eval_scope`, where `$(arg n)` reads them, while the scope's own `set` binds a property, which an
+expression reads. A spelling outside the vocabulary resolves to nothing, and nothing is charged
 against the record: it is an observation, not a twelfth ceiling. The other arm is an
-`expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a
-refused system operation caused it — that operation's native cause. A terminal failure is reported
-exactly once through the sink you supplied and returned on the error arm, so you neither log it
-again nor risk seeing it twice. Warnings, the environment-read note and every other nonterminal
-diagnostic keep travelling that same sink, unaffected. A span the active policy declines to resolve
-is a **success** whose span is left verbatim;
-[what refuses, and by which rule](#what-refuses-and-by-which-rule) is what decides which failures
-are terminal at all. `meios::substitute` publishes the same two arms over the same record.
+`expansion_error` carrying the failing location, a `diagnostic_code`, a message and — where a refused
+system operation caused it — that operation's native cause. A terminal failure is reported exactly
+once through the sink you supplied and returned on the error arm, so you neither log it again nor
+risk seeing it twice. Warnings, the environment-read note and every other nonterminal diagnostic keep
+travelling that same sink, unaffected. A span the active policy declines to resolve is a **success**
+whose span is left verbatim; [what refuses, and by which rule](#what-refuses-and-by-which-rule) is
+what decides which failures are terminal at all. `meios::substitute` publishes the same two arms over
+the same record.
 
 <!-- meios:snippet name=expansion-result tu -->
 ```cpp

@@ -19,7 +19,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
     meios::source_stack sources{ std::move(on_disk), std::move(in_memory) };
 
     meios::eval_scope scope;
-    scope.bind_argument("width", *meios::value::make_real(0.3));
+    scope.arguments().set("width", *meios::value::make_real(0.3));
     std::filesystem::path document = root / "sub" / "robot.xacro";
 
     SECTION("$(find) resolves a package directory to a filesystem path")
@@ -95,7 +95,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
 
     SECTION("$(arg) refuses a second word before it looks up a bound name")
     {
-        scope.bind_argument("height", *meios::value::make_real(0.7));
+        scope.arguments().set("height", *meios::value::make_real(0.7));
         const substitution_result out =
             meios::substitute("$(arg height 0.5)", scope, sources, document, log);
         REQUIRE_FALSE(out.has_value());

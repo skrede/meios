@@ -45,7 +45,7 @@ std::optional<std::string> refuse(subst_ctx &ctx, const std::string &message)
 // Empty when the name is bound, or names no argument the command reads; otherwise why it is not.
 std::optional<std::string> bind_read(const eval_scope &scope, eval_scope &over, std::string_view name)
 {
-    const std::optional<value> bound = scope.argument(name);
+    const std::optional<value> bound = scope.arguments().lookup(name);
     if(!bound || listed(command_names, name) || listed(mathematics_names, name))
         return std::nullopt;
     const std::string quoted              = "the evaluation command reads the argument '" + std::string(name) + "'";

@@ -29,7 +29,7 @@ outcome under_python(std::string_view declarations, std::string_view inner)
 meios::text_outcome raising(const char *definition, std::string &reported)
 {
     meios::eval_scope scope;
-    scope.bind_argument("flag", meios::value{std::string("false")});
+    scope.arguments().set("flag", meios::value{std::string("false")});
     tally counts;
     meios::log_sink_f sink{std::ref(counts)};
     const auto raise = [definition](std::string_view, meios::detail::yaml_context &, const std::string &) -> meios::text_outcome
