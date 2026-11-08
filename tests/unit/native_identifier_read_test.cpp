@@ -162,5 +162,5 @@ TEST_CASE("a macro parameter is stored as written, so a decomposed one is not re
     const reading got = read_body("<xacro:macro name=\"m\" params=\"e\u0301\"><link name=\"l${\u00E9}\"/></xacro:macro><xacro:m e\u0301=\"3\"/>");
     REQUIRE_FALSE(got.document);
     REQUIRE(got.code == meios::diagnostic_code::undefined_property);
-    REQUIRE(got.message.find("name '\u00E9' is not defined") != std::string::npos);
+    REQUIRE(got.message.find("nothing in scope binds '\u00E9'") != std::string::npos);
 }

@@ -44,7 +44,7 @@ std::string_view scope_namespace_class()
            "        for names in object.__getattribute__(self, '__meios_fallback__'):\n"
            "            if item in names:\n"
            "                return names[item]\n"
-           "        raise NameError(\"name '\" + item + \"' is not defined\")\n"
+           "        raise NameError(\"nothing in scope binds '\" + item + \"'\")\n"
            "\n";
 }
 
@@ -101,8 +101,8 @@ std::string_view yaml_dict_class()
            "        try:\n"
            "            return _YamlList.wrap(dict.__getitem__(self, item))\n"
            "        except KeyError:\n"
-           "            raise AttributeError(\"the yaml mapping has no key '\" + str(item)\n"
-           "                                 + \"'; \" + _key_hint(self.keys())) from None\n"
+           "            raise AttributeError(\"key '\" + str(item) + \"' is not present; \"\n"
+           "                                 + _key_hint(self.keys())) from None\n"
            "\n"
            "    # The alias makes subscript and dotted access one operation, so provenance and the\n"
            "    # missing-key diagnostic reach both spellings.\n"

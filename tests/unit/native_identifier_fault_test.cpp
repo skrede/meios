@@ -74,7 +74,7 @@ bool evaluation_refuses_holding(std::string_view expression, std::string_view fr
 
 TEST_CASE("a name that normalizes to a keyword is a name, refused as undefined", "[xacro][identifier]")
 {
-    REQUIRE(refuses_holding(read_link("${ｉｆ}"), meios::diagnostic_code::undefined_property, "name 'if' is not defined"));
+    REQUIRE(refuses_holding(read_link("${ｉｆ}"), meios::diagnostic_code::undefined_property, "nothing in scope binds 'if'"));
 }
 
 TEST_CASE("a name that normalizes to one of Python's constants refuses as Python refuses it", "[xacro][identifier]")

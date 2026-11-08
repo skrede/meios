@@ -62,7 +62,7 @@ struct throwing_backend
         const std::optional<meios::value> read = scope.lookup(expr);
         if(read && read->text())
             return meios::text_outcome{ *read->text(), meios::eval_failure_kind::none };
-        log.log(meios::level::error, meios::diagnostic_code::undefined_property, meios::source_location{}, "name '" + std::string(expr) + "' is not defined");
+        log.log(meios::level::error, meios::diagnostic_code::undefined_property, meios::source_location{}, "nothing in scope binds '" + std::string(expr) + "'");
         return meios::text_outcome{ std::nullopt, meios::eval_failure_kind::error };
     }
 
@@ -116,9 +116,9 @@ TEST_CASE("a deferred read an exception abandons leaves the call's own table cur
     const std::string body     = property("p", "${throw now}") + macro("m", "<link name=\"${catch p}\"/>" + property("local", "one")) + "<xacro:m/><link name=\"${local}\"/>";
     const expansion_result out = expand_with(held, body, throwing_backend{}, heard);
     REQUIRE_FALSE(out.has_value());
-    CHECK(out.error().message.find("name 'local' is not defined") != std::string::npos);
+    CHECK(out.error().message.find("nothing in scope binds 'local'") != std::string::npos);
     REQUIRE(heard.errors.size() == 1);
-    CHECK(heard.errors.front().message.find("name 'local' is not defined") != std::string::npos);
+    CHECK(heard.errors.front().message.find("nothing in scope binds 'local'") != std::string::npos);
 }
 
 TEST_CASE("a deferred read an exception abandons leaves the including file's location in place", "[xacro][deferred]")

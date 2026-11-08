@@ -80,7 +80,7 @@ TEST_CASE("a property of a namespaced include is not visible by its bare name", 
     const include_tree::tree held;
     held.write("w.xacro", include_tree::robot(property("w", "7")));
     const expansion_result out = expand_top(held, include_as("w.xacro", "n") + "<link name=\"a${w}\"/>");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "name 'w' is not defined"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "nothing in scope binds 'w'"));
 }
 
 TEST_CASE("a name the namespace lacks is read through the table the include was read in", "[xacro][namespace]")
@@ -101,7 +101,7 @@ TEST_CASE("a member the namespace lacks refuses without the hint a bare argument
         {
             const std::string body     = "<xacro:arg name=\"x\" default=\"1\"/>" + include_as("w.xacro", "n");
             const expansion_result out = expand_top(held, body + "<link name=\"" + read + "\"/>");
-            REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "'x' is not defined"));
+            REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "nothing in scope binds 'x'"));
             CHECK(out.error().message.find("$(arg") == std::string::npos);
         }
     }
@@ -124,7 +124,7 @@ TEST_CASE("a second include binding the same namespace replaces the first", "[xa
     const std::string both = include_as("w.xacro", "n") + include_as("v.xacro", "n");
     REQUIRE(include_tree::renders_link(expand_top(held, both + "<link name=\"v${n.v}\"/>"), "v2"));
     const expansion_result out = expand_top(held, both + "<link name=\"w${n.w}\"/>");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "name 'w' is not defined"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "nothing in scope binds 'w'"));
 }
 
 TEST_CASE("an empty namespace reads the file into the including table", "[xacro][namespace]")

@@ -71,7 +71,7 @@ TEST_CASE("an undefined name in the argument refuses as any undefined name does"
     const reading got = evaluate("xacro.load_yaml(nowhere)");
 
     CHECK(got.failed);
-    CHECK(names(got, "name 'nowhere' is not defined"));
+    CHECK(names(got, "nothing in scope binds 'nowhere'"));
     CHECK(got.codes
           == std::vector<meios::diagnostic_code>{ meios::diagnostic_code::undefined_property });
     CHECK(got.loads.empty());

@@ -88,7 +88,7 @@ value parse_call(parser &p, std::string_view name)
 
 std::string not_defined(std::string_view name)
 {
-    return "name '" + std::string(name) + "' is not defined";
+    return "nothing in scope binds '" + std::string(name) + "'";
 }
 
 std::string undefined_name(const eval_scope &scope, std::string_view name)

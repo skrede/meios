@@ -74,7 +74,7 @@ chain_read read_through(const include_tree::tree &held, std::string_view ns, std
 
 bool refuses_undefined(const chain_read &got, std::string_view name)
 {
-    return !got.document && got.code == meios::diagnostic_code::undefined_property && got.message.find("name '" + std::string(name) + "' is not defined") != std::string::npos;
+    return !got.document && got.code == meios::diagnostic_code::undefined_property && got.message.find("nothing in scope binds '" + std::string(name) + "'") != std::string::npos;
 }
 
 chain_read read_chain(const include_tree::tree &held, std::size_t hops)

@@ -86,7 +86,7 @@ TEST_CASE("a token that lexes after a failing span leaves the span's own cause",
                             "${nope}${'a}'", "${nope}${a{b}" })
     {
         INFO("raw: " << raw);
-        require_refused(expand_name(raw), meios::diagnostic_code::undefined_property, "name 'nope' is not defined");
+        require_refused(expand_name(raw), meios::diagnostic_code::undefined_property, "nothing in scope binds 'nope'");
     }
 }
 

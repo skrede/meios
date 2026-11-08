@@ -165,5 +165,5 @@ TEST_CASE("a diagnostic raised after a nested scan reports the outer span's own 
     CHECK(out.error().code == meios::diagnostic_code::undefined_property);
     CHECK(out.error().loc.line == 3);
     CHECK(out.error().loc.column == 19);
-    CHECK(any_contains(records, "'missing' is not defined"));
+    CHECK(any_contains(records, "nothing in scope binds 'missing'"));
 }

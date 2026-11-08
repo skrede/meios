@@ -84,7 +84,7 @@ TEST_CASE("a token after the find that lexes leaves the package text's own cause
     for(const char *filename : { "$(find ${nope})/a.xacro", "$(find ${nope})a$$x", "$(find ${nope})$x", "$(find ${nope})$${x}" })
     {
         INFO("filename: " << filename);
-        require_refused(expand_including(filename), meios::diagnostic_code::undefined_property, "name 'nope' is not defined");
+        require_refused(expand_including(filename), meios::diagnostic_code::undefined_property, "nothing in scope binds 'nope'");
     }
 }
 
@@ -102,7 +102,7 @@ TEST_CASE("the package of a leading find is resolved before the rest of the file
         INFO("filename: " << filename);
         require_refused(expand_including(filename), meios::diagnostic_code::unresolved_find, "$(find nopkg) did not resolve");
     }
-    require_refused(expand_including("$(find p)/${nope}.xacro"), meios::diagnostic_code::undefined_property, "name 'nope' is not defined");
+    require_refused(expand_including("$(find p)/${nope}.xacro"), meios::diagnostic_code::undefined_property, "nothing in scope binds 'nope'");
     CHECK(include_tree::renders_link(expand_including("$(find p)/urdf/a.xacro"), "from_package"));
 }
 

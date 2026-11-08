@@ -85,7 +85,7 @@ TEST_CASE("a block argument naming an unbound property fails the load where the 
     const expansion_result out = expand_probe("discarded_block.xacro", silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
-    REQUIRE(out.error().message == "name 'undefined_name_nobody_bound' is not defined");
+    REQUIRE(out.error().message == "nothing in scope binds 'undefined_name_nobody_bound'");
 }
 
 TEST_CASE("a property written inside a block the macro never inserts takes effect at the call site",

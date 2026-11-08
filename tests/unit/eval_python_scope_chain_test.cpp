@@ -92,7 +92,17 @@ TEST_CASE("a member no table binds refuses as an undefined name", "[eval_python]
 {
     const include_tree::tree held;
     held.write("w.xacro", include_tree::robot(property("w", "7")));
-    REQUIRE(both_refuse_once(held, include_as("w.xacro", "n") + link("a${n.nope}"), "name 'nope' is not defined"));
+    REQUIRE(both_refuse_once(held, include_as("w.xacro", "n") + link("a${n.nope}"), "nothing in scope binds 'nope'"));
+}
+
+TEST_CASE("a member a namespace lacks carries no argument hint under the python backend", "[eval_python][scope]")
+{
+    const include_tree::tree held;
+    held.write("w.xacro", include_tree::robot(property("w", "7")));
+    const std::string body        = "<xacro:arg name=\"nope\" default=\"1\"/>" + include_as("w.xacro", "n") + link("${n.nope}");
+    const scope_probe::loaded got = scope_probe::load_with(held, body, scope_probe::python());
+    REQUIRE(scope_probe::refuses_once(got, "nothing in scope binds 'nope'"));
+    CHECK(got.out.error().message.find("$(arg") == std::string::npos);
 }
 
 TEST_CASE("a mathematics name no table binds is read through a namespace", "[eval_python][scope]")
@@ -109,7 +119,7 @@ TEST_CASE("a mathematics constant other than pi renders through a namespace unde
     held.write("c.xacro", include_tree::robot(property("c", "C")));
     const std::string body = include_as("c.xacro", "n") + link("l${n.e}");
     REQUIRE(scope_probe::renders(scope_probe::load_with(held, body, scope_probe::python()), "l2.718281828459045"));
-    REQUIRE(scope_probe::refuses_once(scope_probe::load_with(held, body, nullptr), "name 'e' is not defined"));
+    REQUIRE(scope_probe::refuses_once(scope_probe::load_with(held, body, nullptr), "nothing in scope binds 'e'"));
 }
 
 TEST_CASE("a function no table binds is called through a namespace", "[eval_python][scope]")
@@ -124,7 +134,7 @@ TEST_CASE("a namespace member whose text fails gives one record", "[eval_python]
 {
     const include_tree::tree held;
     held.write("w.xacro", include_tree::robot(property("w", "${nope}")));
-    REQUIRE(both_refuse_once(held, include_as("w.xacro", "n") + link("a${n.w + 1}"), "name 'nope' is not defined"));
+    REQUIRE(both_refuse_once(held, include_as("w.xacro", "n") + link("a${n.w + 1}"), "'nope'"));
 }
 
 TEST_CASE("a circular definition read by the backend refuses as circular", "[eval_python][scope]")

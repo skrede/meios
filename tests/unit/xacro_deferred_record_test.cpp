@@ -143,7 +143,7 @@ TEST_CASE("a second expansion over a scope whose deferred text refused reports t
     const recorded second = errors_in(scope, "<link name=\"${x}\"/>\n");
     REQUIRE_FALSE(second.out.has_value());
     CHECK(second.out.error().code == meios::diagnostic_code::undefined_property);
-    CHECK(second.out.error().message.find("name 'x' is not defined") != std::string::npos);
+    CHECK(second.out.error().message.find("nothing in scope binds 'x'") != std::string::npos);
     REQUIRE(second.errors.size() == 1);
     CHECK(second.errors.front().code == meios::diagnostic_code::undefined_property);
     CHECK_FALSE(second.errors.front().loc.file.empty());

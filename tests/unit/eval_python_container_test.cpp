@@ -155,7 +155,7 @@ TEST_CASE("a misspelled key under dotted access names the key and the keys that 
     REQUIRE_FALSE(resolved.expanded.has_value());
     REQUIRE(resolved.reported.find("robot.xacro:1:") != std::string::npos);
     REQUIRE(resolved.reported.find("(expression_error)") != std::string::npos);
-    REQUIRE(resolved.reported.find("has no key 'lowre'") != std::string::npos);
+    REQUIRE(resolved.reported.find("key 'lowre' is not present") != std::string::npos);
     REQUIRE(resolved.reported.find("keys are: lower, upper") != std::string::npos);
 }
 
@@ -169,7 +169,7 @@ TEST_CASE("a misspelled key under subscript fails exactly as it does under a dot
     const outcome resolved = run(document, meios::eval_policy::fail, handle,
                                  "shoulder:\n  lower: -1.5\n  upper: 1.5\n");
     REQUIRE_FALSE(resolved.expanded.has_value());
-    REQUIRE(resolved.reported.find("has no key 'lowre'") != std::string::npos);
+    REQUIRE(resolved.reported.find("key 'lowre' is not present") != std::string::npos);
     REQUIRE(resolved.reported.find("keys are: lower, upper") != std::string::npos);
 }
 

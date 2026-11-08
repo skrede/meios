@@ -65,7 +65,7 @@ struct reporting_backend
             return meios::text_outcome{ std::nullopt, failure };
         if(read && read->text())
             return meios::text_outcome{ *read->text(), meios::eval_failure_kind::none };
-        log.log(meios::level::error, meios::diagnostic_code::undefined_property, meios::source_location{}, "name '" + std::string(name) + "' is not defined");
+        log.log(meios::level::error, meios::diagnostic_code::undefined_property, meios::source_location{}, "nothing in scope binds '" + std::string(name) + "'");
         return meios::text_outcome{ std::nullopt, meios::eval_failure_kind::error };
     }
 
@@ -116,7 +116,7 @@ TEST_CASE("a custom evaluator passing on a refused deferred read leaves the refu
     const include_tree::tree held;
     error_sink_test::error_sink heard;
     const expansion_result out = expand_with(held, property("p", "${nope}") + "<link name=\"${(p)}\"/>", reporting_backend{}, heard);
-    one_record_naming(out, heard, "name 'nope' is not defined");
+    one_record_naming(out, heard, "nothing in scope binds 'nope'");
 }
 
 TEST_CASE("a custom evaluator passing on a refused namespace member read leaves the refusal's one record", "[xacro][namespace]")
@@ -125,7 +125,7 @@ TEST_CASE("a custom evaluator passing on a refused namespace member read leaves 
     held.write("w.xacro", include_tree::robot(property("w", "${nope}")));
     error_sink_test::error_sink heard;
     const expansion_result out = expand_with(held, include_as("w.xacro", "n") + "<link name=\"${n.w}\"/>", reporting_backend{}, heard);
-    one_record_naming(out, heard, "name 'nope' is not defined");
+    one_record_naming(out, heard, "nothing in scope binds 'nope'");
 }
 
 TEST_CASE("a namespace handle kept past its call reads nothing, not the namespace a later call opens", "[xacro][namespace]")

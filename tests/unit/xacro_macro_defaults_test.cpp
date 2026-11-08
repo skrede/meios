@@ -115,13 +115,13 @@ TEST_CASE("a parameter carrying no default still binds a supplied attribute",
     REQUIRE(out->document.find(R"(name="given")") != std::string::npos);
 }
 
-TEST_CASE("the minimized overridden-default document refuses in the reference's own words",
+TEST_CASE("the minimized overridden-default document refuses naming the name nothing binds",
           "[xacro][structural][macro]")
 {
     meios::log_sink silent;
     const expansion_result out = expand_probe("overridden_default.xacro", silent);
     REQUIRE_FALSE(out.has_value());
-    REQUIRE(out.error().message == "name 'nobody_bound_here' is not defined");
+    REQUIRE(out.error().message == "nothing in scope binds 'nobody_bound_here'");
 }
 
 TEST_CASE("a default reads a parameter the call supplied, as the invocation's own scope holds it",

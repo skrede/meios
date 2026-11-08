@@ -35,8 +35,8 @@
 # A key written with no value.
 -	config['empty']	accept	None	A yaml key with nothing after it parses to a null, which serializes as the text None and warns at its position.
 # A key that is not there at all.
--	config.nope	refuse	has no key 'nope'; keys are: empty, items, joints, limits	A missing key names itself and the keys that do exist, which is the whole question a bare lookup failure leaves unanswered.
--	config['nope']	refuse	has no key 'nope'; keys are: empty, items, joints, limits	Subscript and dot are one operation, so the same diagnostic reaches both spellings.
+-	config.nope	refuse	key 'nope' is not present; keys are: empty, items, joints, limits	A missing key names itself and the keys that do exist, which is the whole question a bare lookup failure leaves unanswered.
+-	config['nope']	refuse	key 'nope' is not present; keys are: empty, items, joints, limits	Subscript and dot are one operation, so the same diagnostic reaches both spellings.
 # What does not gain dotted access, which is the fork this table exists to hold.
 {'a': 1}	subject.a	refuse	'str' object has no attribute 'a'	An author writing a mapping literal gets a string; accepting it would run a description that the compatibility target rejects.
 ${dict(a=1)}	subject.a	refuse	'dict' object has no attribute 'a'	A container the evaluator minted crosses the boundary and is still a container, but only a yaml load grants dotted access.
