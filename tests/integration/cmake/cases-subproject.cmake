@@ -37,9 +37,11 @@ meios_cmake_case(cmake_subproject_tools
 # The test tree included the corpus module through the top of the build, so this case refused at
 # configure with the module not found. The sub-configure runs meios's own test tree and so needs a
 # Catch2; handing it the one this build discovered saves it cloning its own, and where this build
-# fetched instead there is nothing to hand over and the sub-configure fetches.
+# fetched instead there is nothing to hand over and the sub-configure fetches. A fetch can still
+# leave Catch2_DIR naming this build's FetchContent redirect, which holds no extras/ for the
+# sub-configure's include(Catch), so that one is not handed over either.
 set(_meios_catch2 "")
-if(Catch2_DIR)
+if(Catch2_DIR AND NOT Catch2_DIR MATCHES "/CMakeFiles/pkgRedirects$")
     set(_meios_catch2 "-DCatch2_DIR=${Catch2_DIR}")
 endif()
 meios_cmake_case(cmake_subproject_tests
