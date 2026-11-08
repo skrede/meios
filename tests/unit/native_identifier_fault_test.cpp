@@ -82,28 +82,30 @@ TEST_CASE("a name that normalizes to one of Python's constants refuses as Python
     const std::pair<std::string_view, std::string_view> constants[] = {{"Ｔrue", "True"}, {"Ｆalse", "False"}, {"Ｎone", "None"}};
     for(const auto &[written, constant] : constants)
     {
-        const std::string message = "identifier field can't represent '" + std::string(constant) + "' constant";
+        const std::string message = "the constant '" + std::string(constant) + "' cannot be spelled outside ASCII";
         REQUIRE(refuses_holding(read_link("${" + std::string(written) + "}"), meios::diagnostic_code::expression_error, message));
     }
     const refusal shadowed = read_body(R"(<xacro:macro name="m" params="True"><link name="l${Ｔrue}"/></xacro:macro><xacro:m True="1"/>)");
-    REQUIRE(refuses_holding(shadowed, meios::diagnostic_code::expression_error, "identifier field can't represent 'True' constant"));
+    REQUIRE(refuses_holding(shadowed, meios::diagnostic_code::expression_error, "the constant 'True' cannot be spelled outside ASCII"));
 }
 
 TEST_CASE("a constant spelling is reported ahead of a syntax error that comes before it", "[xacro][identifier]")
 {
     for(std::string_view expression : {"${1 2 Ｔrue}", "${1 2 + Ｔrue}"})
-        REQUIRE(refuses_holding(read_link(expression), meios::diagnostic_code::expression_error, "identifier field can't represent 'True' constant"));
+        REQUIRE(refuses_holding(read_link(expression), meios::diagnostic_code::expression_error, "the constant 'True' cannot be spelled outside ASCII"));
 }
 
-TEST_CASE("a character no identifier admits refuses with Python's lexical message", "[xacro][identifier]")
+TEST_CASE("a character no identifier admits refuses naming its code point", "[xacro][identifier]")
 {
-    const std::pair<std::string_view, std::string_view> faults[] = {{"${1 € 2}", "invalid character '€' (U+20AC)"},
-                                                                    {"${1\u00A0+ 2}", "invalid non-printable character U+00A0"},
-                                                                    {"${１}", "invalid character '１' (U+FF11)"},
-                                                                    {"${a€b}", "invalid character '€' (U+20AC)"},
-                                                                    {"${(1 + ) €}", "invalid character '€' (U+20AC)"}};
-    for(const auto &[expression, message] : faults)
-        REQUIRE(refuses_holding(read_link(expression), meios::diagnostic_code::expression_error, message));
+    const std::pair<std::string_view, std::string_view> faults[] = {
+            {"${1 € 2}", "U+20AC"}, {"${1\u00A0+ 2}", "U+00A0"}, {"${１}", "U+FF11"}, {"${a€b}", "U+20AC"}, {"${(1 + ) €}", "U+20AC"}};
+    for(const auto &[expression, point] : faults)
+    {
+        const refusal refused = read_link(expression);
+        REQUIRE(refuses_holding(refused, meios::diagnostic_code::expression_error, "the character " + std::string(point) + " cannot stand at its position in a name"));
+        for(std::string_view character : {"€", "１", "\u00A0"})
+            CHECK(refused.message.find(character) == std::string::npos);
+    }
 }
 
 TEST_CASE("malformed UTF-8 in an expression refuses naming the byte, never a split character", "[xacro][identifier]")
@@ -120,6 +122,7 @@ TEST_CASE("a lexical refusal the reader already gave keeps its code and message"
     REQUIRE(quoted.code == meios::diagnostic_code::unterminated_substitution);
     REQUIRE(quoted.message == "unterminated ${ substitution span at offset 1");
     REQUIRE(evaluation_refuses_holding("1 'x", "unexpected trailing tokens in expression"));
+    REQUIRE(evaluation_refuses_holding("'x", "unterminated string in expression: 'x"));
     REQUIRE(evaluation_refuses_holding("1e + €", "unrecognized character in expression: '1e'"));
 }
 

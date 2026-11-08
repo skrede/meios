@@ -60,7 +60,7 @@ value load_yaml_value(parser &p, const value &argument)
 {
     const std::optional<std::string> spec = argument.text();
     if(!spec)
-        return p.fail("an auxiliary document is named by text, not by a " + std::string(kind_name(argument.kind())));
+        return p.fail("an auxiliary document is named by text, not by " + with_article(kind_name(argument.kind())));
     const text_resource_result bytes = p.scope.load_text(*spec);
     if(!bytes)
         return refuse_unread(p, *spec, bytes.error());

@@ -27,9 +27,9 @@ std::size_t identifier_run(std::string_view source, std::size_t at);
 // including a run that normalizes to one of its constants.
 std::optional<std::string> read_spelling(std::string_view run);
 
-// CPython's lexical message for a run it refuses to read, or nothing for a run it reads and for text
-// that opens no run. Malformed UTF-8, which the reference's XML parser never hands it, is named by
-// its first bad byte.
+// The refusal of a run an expression cannot read, naming the code point that ends the name, or
+// nothing for a run it reads and for text that opens no run. Malformed UTF-8, which the reference's
+// XML parser never hands it, is named by its first bad byte.
 std::optional<std::string> identifier_fault(std::string_view run);
 
 }

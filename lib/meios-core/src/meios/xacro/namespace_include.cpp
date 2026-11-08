@@ -31,8 +31,7 @@ std::optional<std::string> namespace_name(expand_ctx &ctx, pugi::xml_node in, co
     std::optional<std::string> name = render_scalar(evaluated);
     if(!name)
         ok = fail(ctx, in, diagnostic_code::xacro_structural_error,
-                  "xacro:include ns=\"" + authored + "\" evaluates to a " + std::string(kind_name(evaluated.kind()))
-                      + ", and a namespace must be named by text");
+                  "xacro:include ns=\"" + authored + "\" evaluates to " + with_article(kind_name(evaluated.kind())) + ", and a namespace must be named by text");
     return name;
 }
 

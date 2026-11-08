@@ -51,7 +51,7 @@ std::optional<std::string> bind_read(const eval_scope &scope, eval_scope &over, 
     const std::string quoted              = "the evaluation command reads the argument '" + std::string(name) + "'";
     const std::optional<std::string> text = render_scalar(*bound);
     if(!text)
-        return quoted + ", which holds a " + std::string(kind_name(bound->kind())) + " and has no text form to convert";
+        return quoted + ", which holds " + with_article(kind_name(bound->kind())) + " and has no text form to convert";
     const std::optional<value> read = converted_argument(*text);
     if(!read)
         return quoted + ", whose number " + *text + " is outside the range this evaluator carries";

@@ -38,21 +38,19 @@ TEST_CASE("the loading call reads a document named by a bare name, a literal or 
 TEST_CASE("an argument that does not yield text refuses naming the kind it produced",
           "[native][yaml][load_yaml]")
 {
-    const std::pair<std::string_view, std::string_view> rows[] = {
-        { "xacro.load_yaml(1)", "integer" },
-        { "xacro.load_yaml(1.5)", "real" },
-        { "xacro.load_yaml(True)", "boolean" },
-        { "xacro.load_yaml(xacro.load_yaml(catalogue_file)['empty'])", "null" },
-        { "xacro.load_yaml(xacro.load_yaml(catalogue_file)['items'])", "sequence" },
-        { "xacro.load_yaml(xacro.load_yaml(catalogue_file))", "mapping" }
-    };
+    const std::pair<std::string_view, std::string_view> rows[] = {{"xacro.load_yaml(1)", "an integer"},
+                                                                  {"xacro.load_yaml(1.5)", "a real"},
+                                                                  {"xacro.load_yaml(True)", "a boolean"},
+                                                                  {"xacro.load_yaml(xacro.load_yaml(catalogue_file)['empty'])", "a null"},
+                                                                  {"xacro.load_yaml(xacro.load_yaml(catalogue_file)['items'])", "a sequence"},
+                                                                  {"xacro.load_yaml(xacro.load_yaml(catalogue_file))", "a mapping"}};
 
     for(const std::pair<std::string_view, std::string_view> &row : rows)
     {
         INFO(row.first << " => " << row.second);
         const reading got = evaluate(row.first);
         CHECK(got.failed);
-        CHECK(names(got, std::string("named by text, not by a ") + std::string(row.second)));
+        CHECK(names(got, std::string("named by text, not by ") + std::string(row.second)));
     }
 }
 

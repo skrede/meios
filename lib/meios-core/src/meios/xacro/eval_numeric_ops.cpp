@@ -24,8 +24,7 @@ namespace
 // kind reaching here has no meaning upstream either, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
-    const std::string message =
-        "a " + std::string(kind_name(v.kind())) + " operand has no arithmetic meaning here";
+    const std::string message = with_article(kind_name(v.kind())) + " operand has no arithmetic meaning here";
     if(v.kind() == value_kind::string)
         return p.fail_unsupported(message + " — use eval-python");
     return p.fail(message);
@@ -42,9 +41,7 @@ value concatenate(parser &p, const value &a, const value &b)
         p.exercised(evaluator_construct::string_concatenation);
         return text_result(p, *left + *right);
     }
-    return p.fail_unsupported("a string concatenates only with another string operand, not with a "
-                              + std::string(kind_name(left ? b.kind() : a.kind()))
-                              + " — use eval-python");
+    return p.fail_unsupported("a string concatenates only with another string operand, not with " + with_article(kind_name(left ? b.kind() : a.kind())) + " — use eval-python");
 }
 
 }
@@ -145,7 +142,8 @@ value add_sub_mul(parser &p, const value &a, const value &b, token_kind op)
 value divide(parser &p, const value &a, const value &b)
 {
     double y = need_double(p, b);
-    if(y == 0.0) return p.fail("division by zero");
+    if(y == 0.0)
+        return p.fail("the divisor of '/' is zero");
     return real_result(p, need_double(p, a) / y);
 }
 
@@ -153,11 +151,13 @@ value floor_divide(parser &p, const value &a, const value &b)
 {
     if(is_int(a) && is_int(b))
     {
-        if(need_int(p, b) == 0) return p.fail("integer division by zero");
+        if(need_int(p, b) == 0)
+            return p.fail("the divisor of '//' is zero");
         return int_result(p, checked_floordiv(need_int(p, a), need_int(p, b)), "floor division");
     }
     double y = need_double(p, b);
-    if(y == 0.0) return p.fail("float floor division by zero");
+    if(y == 0.0)
+        return p.fail("the divisor of '//' is zero");
     return real_result(p, std::floor(need_double(p, a) / y));
 }
 
@@ -165,11 +165,13 @@ value modulo(parser &p, const value &a, const value &b)
 {
     if(is_int(a) && is_int(b))
     {
-        if(need_int(p, b) == 0) return p.fail("integer modulo by zero");
+        if(need_int(p, b) == 0)
+            return p.fail("the divisor of '%' is zero");
         return int_result(p, checked_mod(need_int(p, a), need_int(p, b)), "remainder");
     }
     double y = need_double(p, b);
-    if(y == 0.0) return p.fail("float modulo by zero");
+    if(y == 0.0)
+        return p.fail("the divisor of '%' is zero");
     double r = std::fmod(need_double(p, a), y);
     if(r != 0.0 && ((r < 0.0) != (y < 0.0))) r += y;
     return real_result(p, r);

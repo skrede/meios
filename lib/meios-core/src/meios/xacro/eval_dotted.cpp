@@ -82,8 +82,7 @@ value parse_split(parser &p, const std::string &text)
         return p.fail_unsupported("split takes one separator here — use eval-python");
     const std::optional<std::string> separator = argument.text();
     if(!separator)
-        return p.fail("the separator must be text, not a "
-                      + std::string(kind_name(argument.kind())));
+        return p.fail("the separator must be text, not " + with_article(kind_name(argument.kind())));
     if(separator->empty())
         return p.fail("an empty separator does not split a string");
     return split_text(p, text, *separator);
@@ -124,8 +123,7 @@ value member_of(parser &p, const value &base, std::string_view member)
                                   + "' on a value that is not an auxiliary document"
                                     " — use eval-python");
     if(base.kind() != value_kind::mapping)
-        return p.fail("a " + std::string(kind_name(base.kind())) + " has no member '"
-                      + std::string(member) + '\'');
+        return p.fail(with_article(kind_name(base.kind())) + " has no member '" + std::string(member) + '\'');
     if(member.starts_with("__"))
         return p.fail_unsupported("a member written with a leading '__' reaches the object "
                                   "protocol rather than the document — use eval-python");

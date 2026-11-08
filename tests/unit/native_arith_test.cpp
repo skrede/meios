@@ -6,6 +6,8 @@
 
 #include <limits>
 #include <string>
+#include <utility>
+#include <string_view>
 
 namespace
 {
@@ -131,6 +133,33 @@ TEST_CASE("two strings add where every other operator on a string still refuses"
     CHECK(arith::evaluate("'x' * 2").failed);
     CHECK(arith::evaluate("'x' - 'y'").failed);
     CHECK(arith::evaluate("-'x'").failed);
+}
+
+TEST_CASE("a zero divisor refuses naming its operator", "[native][arith]")
+{
+    const std::pair<std::string_view, std::string_view> divisions[] = {{"1 / 0", "/"}, {"1.0 / 0", "/"}, {"7 // 0", "//"}, {"7.0 // 0", "//"}, {"7 % 0", "%"}, {"7.0 % 0.0", "%"}};
+    for(const auto &[expression, op] : divisions)
+    {
+        INFO(expression);
+        const arith::outcome ran = arith::evaluate(expression);
+        CHECK(ran.failed);
+        REQUIRE(ran.messages.size() == 1);
+        CHECK(ran.messages.front().find("the divisor of '" + std::string(op) + "' is zero") != std::string::npos);
+    }
+}
+
+TEST_CASE("a refusal naming an operand's kind gives the kind its article", "[native][arith]")
+{
+    const std::pair<std::string_view, std::string_view> refused[] = {
+            {"'x' + 1", "not with an integer"}, {"1 in 'abc'", "not an integer"}, {"'a,b'.split(1)", "not an integer"}, {"1[0]", "an integer cannot be subscripted here"}};
+    for(const auto &[expression, fragment] : refused)
+    {
+        INFO(expression);
+        const arith::outcome ran = arith::evaluate(expression);
+        CHECK(ran.failed);
+        REQUIRE(ran.messages.size() == 1);
+        CHECK(ran.messages.front().find(fragment) != std::string::npos);
+    }
 }
 
 TEST_CASE("the exported printer spells every double a consumer can hand it", "[native][arith]")

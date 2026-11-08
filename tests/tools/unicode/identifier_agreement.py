@@ -1,6 +1,7 @@
 """Holds the core's identifier rules to the interpreter: every string of the definition,
 normalization and fault domains goes through the identifier probe, and each answer is compared
 with CPython's own."""
+import re
 import ast
 import keyword
 import itertools
@@ -28,16 +29,24 @@ def stored_form(text):
     return unicodedata.normalize("NFKC", text) if text.isidentifier() else None
 
 
-# What the reader refuses an expression with is what compile() refuses it with: the lexer's
-# message, or the parser's refusal of a name that normalizes to a constant.
-def lexical_verdict(text):
+# The reader must refuse exactly the runs compile() refuses, at the same code point; a name that
+# normalizes to a constant is refused with none. Neither side's wording is compared.
+def refusal_verdict(text):
     try:
         compile(text, "<expression>", "eval")
     except SyntaxError as error:
-        return error.msg
-    except ValueError as error:
-        return str(error)
+        at = error.offset - 1 if error.offset else -1
+        return "U+%04X" % ord(text[at]) if 0 <= at < len(text) else "constant"
+    except ValueError:
+        return "constant"
     return "-"
+
+
+def probe_verdict(field):
+    if field == "-":
+        return field
+    point = re.search(r"U\+[0-9A-F]{4,6}", field)
+    return point.group(0) if point else "constant"
 
 
 def definition_domain():
@@ -129,7 +138,7 @@ def compare(probe, domain, field, counts):
             if field == "definition":
                 counts.record("definition", text, valid, "1" if upstream_valid(text) else "0")
             if field == "fault":
-                counts.record("fault", text, fault, lexical_verdict(text))
+                counts.record("fault", text, probe_verdict(fault), refusal_verdict(text))
 
 
 def check(probe):

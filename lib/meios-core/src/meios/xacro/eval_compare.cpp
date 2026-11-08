@@ -62,8 +62,7 @@ value substring_of(parser &p, const value &needle, const std::string &haystack)
 {
     const std::optional<std::string> text = needle.text();
     if(!text)
-        return p.fail("only a string is contained in a string, not a "
-                      + std::string(kind_name(needle.kind())));
+        return p.fail("only a string is contained in a string, not " + with_article(kind_name(needle.kind())));
     p.exercised(evaluator_construct::string_membership);
     return value{ haystack.find(*text) != std::string::npos };
 }
@@ -78,12 +77,10 @@ value contained_in(parser &p, const value &needle, const value &haystack)
     if(haystack.kind() == value_kind::string)
         return substring_of(p, needle, *haystack.text());
     if(haystack.kind() != value_kind::mapping)
-        return p.fail_unsupported("membership against a "
-                                  + std::string(kind_name(haystack.kind()))
-                                  + " — use eval-python");
+        return p.fail_unsupported("membership against " + with_article(kind_name(haystack.kind())) + " — use eval-python");
     const std::optional<std::string> name = needle.text();
     if(!name)
-        return p.fail("a " + std::string(kind_name(needle.kind())) + " is not a key here");
+        return p.fail(with_article(kind_name(needle.kind())) + " is not a key here");
     return value{ haystack.at(*name).has_value() };
 }
 

@@ -37,12 +37,6 @@ std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t cur
     return target;
 }
 
-std::string with_article(std::string_view noun)
-{
-    const bool vowel = !noun.empty() && std::string_view("aeiou").find(noun.front()) != std::string_view::npos;
-    return (vowel ? "an " : "a ") + std::string(noun);
-}
-
 bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
 {
     if(!valid_python_name(name))

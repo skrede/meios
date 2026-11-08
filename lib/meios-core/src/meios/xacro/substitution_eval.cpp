@@ -41,8 +41,7 @@ text_outcome core_text_evaluator::eval_to_text(std::string_view expr, const eval
     if(rendered)
         return text_outcome{ std::move(rendered), eval_failure_kind::none };
     log.log(level::error, diagnostic_code::expression_error, at,
-            "the expression \"" + std::string(expr) + "\" is a "
-                + std::string(kind_name(result.kind())) + ", which has no text form");
+            "the expression \"" + std::string(expr) + "\" is " + with_article(kind_name(result.kind())) + ", which has no text form");
     return text_outcome{ std::nullopt, eval_failure_kind::error };
 }
 

@@ -21,7 +21,7 @@ value key_into(parser &p, const value &container, const value &key)
 {
     const std::optional<std::string> name = key.text();
     if(!name)
-        return p.fail("a " + std::string(kind_name(key.kind())) + " is not a subscript key here");
+        return p.fail(with_article(kind_name(key.kind())) + " is not a subscript key here");
     const std::optional<value> found = container.at(*name);
     if(!found)
         return p.fail("key '" + *name + "' is not present", diagnostic_code::undefined_property);
@@ -34,8 +34,7 @@ value key_into(parser &p, const value &container, const value &key)
 value position_into(parser &p, const value &container, const value &key)
 {
     if(!is_int(key))
-        return p.fail("a sequence index must be an integer, not a "
-                      + std::string(kind_name(key.kind())));
+        return p.fail("a sequence index must be an integer, not " + with_article(kind_name(key.kind())));
     const std::int64_t asked = *as_int(key);
     const std::int64_t extent = static_cast<std::int64_t>(container.size());
     const std::int64_t at = asked < 0 ? asked + extent : asked;
@@ -56,8 +55,7 @@ value index_into(parser &p, const value &container, const value &key)
         return key_into(p, container, key);
     if(container.kind() == value_kind::sequence)
         return position_into(p, container, key);
-    return p.fail("a " + std::string(kind_name(container.kind()))
-                  + " cannot be subscripted here");
+    return p.fail(with_article(kind_name(container.kind())) + " cannot be subscripted here");
 }
 
 }

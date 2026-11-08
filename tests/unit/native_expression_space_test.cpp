@@ -87,7 +87,7 @@ TEST_CASE("an expression is stripped after its own substitutions, wherever the e
 
 TEST_CASE("whitespace inside an expression refuses, and an expression of only whitespace refuses as the empty one", "[xacro][expression]")
 {
-    REQUIRE(refuses_holding(read_link("l${1\u00A0+ 2}"), meios::diagnostic_code::expression_error, "invalid non-printable character U+00A0"));
+    REQUIRE(refuses_holding(read_link("l${1\u00A0+ 2}"), meios::diagnostic_code::expression_error, "the character U+00A0 cannot stand at its position in a name"));
     const reading spaced = read_link("l${\u00A0}");
     const reading blank  = read_link("l${ }");
     REQUIRE(spaced.refused);
@@ -99,7 +99,7 @@ TEST_CASE("whitespace inside an expression refuses, and an expression of only wh
 TEST_CASE("the evaluation command's body is read as written, so whitespace at either end refuses", "[xacro][expression]")
 {
     for(const std::string_view read : {"l$(eval \u00A01)", "l$(eval 1\u00A0)"})
-        REQUIRE(refuses_holding(read_link(read), meios::diagnostic_code::expression_error, "invalid non-printable character U+00A0"));
+        REQUIRE(refuses_holding(read_link(read), meios::diagnostic_code::expression_error, "the character U+00A0 cannot stand at its position in a name"));
 }
 
 TEST_CASE("a lenient policy renders an expression with whitespace at its edge and still fails one with whitespace inside", "[xacro][expression]")

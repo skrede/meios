@@ -62,9 +62,7 @@ std::optional<std::string> bound_arg(subst_ctx &ctx, std::string_view name, cons
     std::optional<std::string> text = render_scalar(bound);
     if(text)
         return text;
-    return fail(ctx, diagnostic_code::unresolved_arg,
-                "$(arg " + std::string(name) + ") holds a " + std::string(kind_name(bound.kind()))
-                    + ", which has no text form");
+    return fail(ctx, diagnostic_code::unresolved_arg, "$(arg " + std::string(name) + ") holds " + with_article(kind_name(bound.kind())) + ", which has no text form");
 }
 
 std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)

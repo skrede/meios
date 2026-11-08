@@ -291,7 +291,7 @@ TEST_CASE("no address-carrying result reaches a flattened document", "[eval_pyth
 
     const outcome counted = expand_span("${enumerate([1, 2])}");
     REQUIRE_FALSE(counted.expanded.has_value());
-    CHECK(counted.reported.find("a enumerate is not a serializable expression result") != std::string::npos);
+    CHECK(counted.reported.find("an enumerate is not a serializable expression result") != std::string::npos);
 
     const outcome method = expand_over_yaml("${config.items}", "shoulder:\n  max: 42\n");
     REQUIRE_FALSE(method.expanded.has_value());

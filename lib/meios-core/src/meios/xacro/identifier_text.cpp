@@ -89,20 +89,9 @@ std::string hex_digits(std::uint32_t value, std::size_t width)
     return std::string(width > out.size() ? width - out.size() : 0, '0') + out;
 }
 
-bool printable(char32_t point)
-{
-    return point < 0x80 ? point >= 0x20 && point < 0x7F : within(printable_ranges(), point);
-}
-
-// Parser/lexer/lexer.c verify_identifier: the character is quoted only when it is printable.
 std::string character_message(char32_t point)
 {
-    const std::string code = "U+" + hex_digits(point, 4);
-    if(!printable(point))
-        return "invalid non-printable character " + code;
-    std::string message = "invalid character '";
-    append_utf8(message, point);
-    return message + "' (" + code + ")";
+    return "the character U+" + hex_digits(point, 4) + " cannot stand at its position in a name";
 }
 
 }
@@ -156,7 +145,7 @@ std::optional<std::string> identifier_fault(std::string_view run)
             return character_message(one.value);
         at += one.length;
     }
-    return "identifier field can't represent '" + python_name(run).value_or(std::string()) + "' constant";
+    return "the constant '" + python_name(run).value_or(std::string()) + "' cannot be spelled outside ASCII";
 }
 
 }

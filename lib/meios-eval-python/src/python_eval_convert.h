@@ -114,8 +114,7 @@ inline std::string format_result(const pybind11::dict &priv, log_sink &log, cons
         return plain_container_marker + pybind11::str(result).cast<std::string>() + plain_container_marker;
     if(pybind11::isinstance<pybind11::int_>(result))
         return pybind11::str(result).cast<std::string>();
-    throw std::runtime_error("a " + pybind11::type::handle_of(result).attr("__name__").cast<std::string>()
-        + " is not a serializable expression result");
+    throw std::runtime_error(with_article(pybind11::type::handle_of(result).attr("__name__").cast<std::string>()) + " is not a serializable expression result");
 }
 
 }

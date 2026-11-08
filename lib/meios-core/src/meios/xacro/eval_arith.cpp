@@ -64,7 +64,7 @@ std::string lexical_message(std::string_view text)
     if(const std::optional<std::string> fault = identifier_fault(text))
         return *fault;
     if(!text.empty() && text.front() == '\'')
-        return "unterminated string literal in expression: " + std::string(text);
+        return "unterminated string in expression: " + std::string(text);
     return "unrecognized character in expression: '" + std::string(text) + "'";
 }
 
