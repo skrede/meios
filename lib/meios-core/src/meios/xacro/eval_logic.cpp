@@ -86,12 +86,16 @@ value parse_call(parser &p, std::string_view name)
 
 }
 
+std::string not_defined(std::string_view name)
+{
+    return "name '" + std::string(name) + "' is not defined";
+}
+
 std::string undefined_name(const eval_scope &scope, std::string_view name)
 {
-    const std::string quoted = "'" + std::string(name) + "'";
-    std::string message      = "name " + quoted + " is not defined";
+    std::string message = not_defined(name);
     if(scope.has_argument(name))
-        message += " — " + quoted + " is an argument; read it with $(arg " + std::string(name) + ")";
+        message += " — '" + std::string(name) + "' is an argument; read it with $(arg " + std::string(name) + ")";
     return message;
 }
 
@@ -117,6 +121,13 @@ value unbound_name(parser &p, std::string_view name)
 {
     if(name == "pi") return real_result(p, 3.141592653589793);
     return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
+}
+
+value unbound_member(parser &p, std::string_view name)
+{
+    if(name == "pi")
+        return unbound_name(p, name);
+    return p.fail(not_defined(name), diagnostic_code::undefined_property);
 }
 
 value parse_name(parser &p)

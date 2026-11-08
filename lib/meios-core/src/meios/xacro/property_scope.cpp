@@ -37,6 +37,12 @@ std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t cur
     return target;
 }
 
+std::string with_article(std::string_view noun)
+{
+    const bool vowel = !noun.empty() && std::string_view("aeiou").find(noun.front()) != std::string_view::npos;
+    return (vowel ? "an " : "a ") + std::string(noun);
+}
+
 bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
 {
     if(!valid_python_name(name))
@@ -66,7 +72,7 @@ std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, con
     const std::optional<std::string> name = evaluated.text();
     if(!name)
         fail(ctx, in, diagnostic_code::xacro_structural_error,
-             "xacro:property name=\"" + authored + "\" evaluates to a " + std::string(kind_name(evaluated.kind())) + ", and a property must be named by text");
+             "xacro:property name=\"" + authored + "\" evaluates to " + with_article(kind_name(evaluated.kind())) + ", and a property must be named by text");
     if(!name || !valid_property_name(ctx, in, *name))
         return std::nullopt;
     return name;

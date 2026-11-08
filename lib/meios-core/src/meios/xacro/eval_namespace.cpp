@@ -74,10 +74,10 @@ value member_value(parser &p, const name_read &read, std::string_view name)
     if(read.bound)
         return *read.bound;
     if(!p.at(token_kind::lparen))
-        return unbound_name(p, name);
+        return unbound_member(p, name);
     if(listed(root_symbols, name))
         return call_name(p, name);
-    return p.fail(undefined_name(p.scope, name), diagnostic_code::undefined_property);
+    return p.fail(not_defined(name), diagnostic_code::undefined_property);
 }
 
 // The members after the first sit at every second token from the walk's start, each behind its dot.

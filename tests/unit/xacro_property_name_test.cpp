@@ -9,6 +9,7 @@
 
 #include <string>
 #include <fstream>
+#include <utility>
 #include <iterator>
 #include <filesystem>
 #include <string_view>
@@ -66,6 +67,21 @@ TEST_CASE("a property whose name evaluates to something other than text refuses"
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
     REQUIRE(out.error().message.find("must be named by text") != std::string::npos);
+}
+
+TEST_CASE("a property name that is not text is refused naming its kind with the right article", "[xacro][scope][property]")
+{
+    for(const auto &[name, kind] : {std::pair{"${1}", "evaluates to an integer"}, std::pair{"${True}", "evaluates to a boolean"}})
+    {
+        DYNAMIC_SECTION(name)
+        {
+            const expansion_result out = expand_body(std::string(R"(<xacro:property name=")") + name + R"(" value="1"/><link name="l"/>)");
+            REQUIRE_FALSE(out.has_value());
+            REQUIRE(out.error().code == meios::diagnostic_code::xacro_structural_error);
+            CHECK(out.error().message.find(kind) != std::string::npos);
+            CHECK(out.error().message.find("a property must be named by text") != std::string::npos);
+        }
+    }
 }
 
 TEST_CASE("a property name that is not a python identifier refuses as the reference does", "[xacro][scope][property]")

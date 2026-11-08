@@ -91,6 +91,22 @@ TEST_CASE("a name the namespace lacks is read through the table the include was 
     REQUIRE(include_tree::renders_link(out, "px"));
 }
 
+TEST_CASE("a member the namespace lacks refuses without the hint a bare argument name carries", "[xacro][namespace]")
+{
+    const include_tree::tree held;
+    held.write("w.xacro", include_tree::robot(property("w", "7")));
+    for(const char *read : {"${n.x}", "${n.x(1)}"})
+    {
+        DYNAMIC_SECTION(read)
+        {
+            const std::string body     = "<xacro:arg name=\"x\" default=\"1\"/>" + include_as("w.xacro", "n");
+            const expansion_result out = expand_top(held, body + "<link name=\"" + read + "\"/>");
+            REQUIRE(refuses_with(out, meios::diagnostic_code::undefined_property, "'x' is not defined"));
+            CHECK(out.error().message.find("$(arg") == std::string::npos);
+        }
+    }
+}
+
 TEST_CASE("a namespaced property is evaluated in its namespace and sees a global written after the include",
           "[xacro][namespace]")
 {
