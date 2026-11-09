@@ -97,10 +97,10 @@ std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> 
     return j;
 }
 
-// Only the single-quoted spelling is measured upstream, so the double-quoted one and a
-// backslash escape refuse as unsupported rather than being given an unmeasured meaning; an
-// unterminated literal is a lexical fault and refuses as an error. Every refusal consumes
-// the rest of the source, because there is no resynchronization point after one.
+// Only the single-quoted spelling is measured against the pinned xacro, so the double-quoted
+// one and a backslash escape refuse as unsupported rather than being given an unmeasured
+// meaning; an unterminated literal is a lexical fault and refuses as an error. Every refusal
+// consumes the rest of the source, because there is no resynchronization point after one.
 std::size_t push_string(std::string_view src, std::size_t i, std::vector<token> &out)
 {
     if(src[i] == '"')

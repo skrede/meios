@@ -20,7 +20,7 @@ namespace meios::detail
 namespace
 {
 
-// Upstream's math and python namespaces exist under neither evaluator, which bind those names bare.
+// Neither evaluator binds xacro's math and python namespaces; both bind those names bare.
 std::string unbound_head(std::string_view head)
 {
     if(head == "math")
@@ -65,7 +65,7 @@ private:
     std::size_t m_held;
 };
 
-// A member no table binds is answered by upstream's global names, as a bare name is, so a call
+// A member no table binds is answered by the built-in names, as a bare name is, so a call
 // reaches only the functions that table lists and any other name refuses as the bare read does.
 value member_value(parser &p, const name_read &read, std::string_view name)
 {
@@ -104,9 +104,9 @@ value refuse_call_target(parser &p, std::string_view head, std::string_view memb
     return p.fail_unsupported(message);
 }
 
-// The reference's namespace forwards a dot to its own lookup, which falls through to the table the
-// include was read in and evaluates a deferred member in the table that holds it. A namespace inside
-// another is read through in turn, and one an expression stops at has no value, as a bare one has none.
+// A namespace forwards a dot to its own lookup, which falls through to the table the include was
+// read in and evaluates a deferred member in the table that holds it. A namespace inside another is
+// read through in turn, and one an expression stops at has no value, as a bare one has none.
 value namespace_member(parser &p, const scope_namespace &space, std::string_view spelling, std::string_view member)
 {
     hop_levels levels(p);

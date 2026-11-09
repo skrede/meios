@@ -28,9 +28,9 @@ namespace meios::detail
 namespace
 {
 
-// The reference reads remove and lazy_eval from what its text evaluation returns, so an attribute
-// that is one exact expression is read by its type and any other by its text; an empty one reads
-// as the attribute's own fallback.
+// remove and lazy_eval are read from what evaluating their text returns, so an attribute that is
+// one exact expression is read by its type and any other by its text; an empty one reads as the
+// attribute's own fallback.
 std::optional<bool> flag_attribute(expand_ctx &ctx, pugi::xml_node in, const char *attribute, bool fallback,
                                    const std::filesystem::path &document)
 {
@@ -71,8 +71,8 @@ bool define_eager(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
     return true;
 }
 
-// The reference stores the property element itself under the block key `**name`, which no read and
-// no built-in shares, and inserts its children wherever insert_block names it.
+// The property element itself is stored under the block key `**name`, which no read and no
+// built-in shares, and its children are inserted wherever insert_block names it.
 bool define_block_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document,
                            std::string_view name)
 {
@@ -85,17 +85,16 @@ bool define_block_property(expand_ctx &ctx, pugi::xml_node in, const std::filesy
     return true;
 }
 
-// The reference evaluates a property it stores in another table than the current one where it is
-// written, whatever lazy_eval says.
+// A property stored in another table than the current one is evaluated where it is written,
+// whatever lazy_eval says.
 bool deferrable(pugi::xml_node in)
 {
     const std::string_view scope = in.attribute("scope").value();
     return scope != "global" && scope != "parent";
 }
 
-// The reference converts a lazy text to a number or a boolean when it reads as one and defers only
-// what stays a string. A string with no '$' is stored as written, which is what evaluating it
-// would give.
+// A lazy text becomes a number or a boolean when it reads as one, and only what stays a string is
+// deferred. A string with no '$' is stored as written, which is what evaluating it would give.
 void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
                  const std::filesystem::path &document, std::string_view name)
 {
@@ -128,11 +127,11 @@ bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std:
 
 }
 
-// The reference's grab_property, in its order: the name is evaluated and checked first, remove is
-// read before the three attributes are held exclusive, a removal acts only on a defined name, and a
-// fallback binds only where the name is not defined, a built-in counting as defined and an argument
-// of the same name not counting. A property carrying neither value nor default is a block, a removal
-// of a name no table holds included.
+// In this order: the name is evaluated and checked first, remove is read before the three
+// attributes are held exclusive, a removal acts only on a defined name, and a fallback binds only
+// where the name is not defined, a built-in counting as defined and an argument of the same name not
+// counting. A property carrying neither value nor default is a block, a removal of a name no table
+// holds included.
 bool define_property(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     const std::optional<std::string> name = property_name(ctx, in, document);

@@ -14,8 +14,8 @@ namespace meios::detail
 // raises. Python also reads Unicode digits and Unicode whitespace there; only ASCII is read here.
 std::optional<std::string> python_int(std::string_view text);
 
-// The reference's get_boolean_value (xacro 2.1.1): a string reads true, True, false and False by
-// spelling and any other text through int(), and a typed value by its Python truth.
+// From xacro 2.1.1's get_boolean_value: a string reads true, True, false and False by spelling and
+// any other text through int(), and a typed value by its Python truth.
 std::optional<bool> get_boolean_value(const value &v);
 
 }

@@ -17,7 +17,7 @@ namespace meios::detail
 
 // The sink one deferred property's evaluation logs to. Every record but an error passes straight
 // to the reader, and the first error is held back so the level can append where it was defined
-// and read before handing it on, which is how upstream chains "when evaluating" once per level.
+// and read before handing it on, so the message gains one "when evaluating" clause per level.
 class deferred_level_sink final : public log_sink
 {
     struct held

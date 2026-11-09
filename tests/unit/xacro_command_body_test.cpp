@@ -89,26 +89,26 @@ void require_link_renders(std::string_view link, std::string_view name)
 
 }
 
-TEST_CASE("a command written inside a command refuses, as the reference's pattern ends the outer one at its first closing parenthesis", "[xacro][subst][cmd]")
+TEST_CASE("a command written inside a command refuses, the outer one ending at its first closing parenthesis", "[xacro][subst][cmd]")
 {
     require_unterminated("command_nested_in_default");
     require_unterminated("command_nested_beside_bound_argument");
     require_unterminated("command_nested_in_find");
 }
 
-TEST_CASE("a parenthesis or a dollar sign left in a command's text refuses, as the reference's command scanner refuses it", "[xacro][subst][cmd]")
+TEST_CASE("a parenthesis or a dollar sign left in a command's text refuses as unterminated", "[xacro][subst][cmd]")
 {
     require_unterminated("command_parenthesis_in_body");
     require_unterminated("command_dollar_in_body");
     require_unterminated("command_expanded_parenthesis");
 }
 
-TEST_CASE("an argument named through an expression span resolves as the reference resolves it", "[xacro][subst][cmd]")
+TEST_CASE("an argument named through an expression span resolves to the argument the span names", "[xacro][subst][cmd]")
 {
     REQUIRE(flattened(probe("command_expanded_argument_name")) == meios::canonical_xml(R"XML(<robot name="probe"><link name="A"/></robot>)XML"));
 }
 
-TEST_CASE("a command's words are separated by a space alone, so a tab stays inside a word, as the reference separates them", "[xacro][subst][cmd]")
+TEST_CASE("a command's words are separated by a space alone, so a tab stays inside a word", "[xacro][subst][cmd]")
 {
     for(const char *link : { "$(arg&#9;y)", "$(&#9;arg y)", "$(eval&#9;1)", "l$(env&#9;HOME)" })
         require_link_refused(link, meios::diagnostic_code::unknown_substitution);

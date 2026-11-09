@@ -24,8 +24,8 @@
 namespace meios::detail
 {
 
-// Upstream joins a relative filename onto the directory of the file being processed; a spelling
-// that is package-qualified or absolute is not looked for there, nor one in an unnamed document.
+// A relative filename is joined onto the directory of the file being processed; a spelling that is
+// package-qualified or absolute is not looked for there, nor one in an unnamed document.
 std::filesystem::path beside_anchor(const expand_ctx &ctx, const std::string &package, const std::string &relative)
 {
     if(!package.empty() || std::filesystem::path(relative).has_root_path())
@@ -37,8 +37,8 @@ std::filesystem::path beside_anchor(const expand_ctx &ctx, const std::string &pa
 namespace
 {
 
-// A served document anchors its relative reads where its lookup joined it, as upstream does, while
-// the canonical path stays its identity; a layer that joined no path anchors at the one it located.
+// A served document anchors its relative reads where its lookup joined it, while the canonical path
+// stays its identity; a layer that joined no path anchors at the one it located.
 std::filesystem::path served_name(const resolved_asset &hit)
 {
     return hit.named().value_or(hit.path());
@@ -154,8 +154,8 @@ bool include_beside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::p
     return include_sibling(ctx, in, sibling, true, normalized, written, out);
 }
 
-// Upstream opens the spelling joined as written, so `..` resolves against the real directories it
-// passes through, and a miss is looked for nowhere else.
+// The spelling is opened joined as written, so `..` resolves against the real directories it passes
+// through, and a miss is looked for nowhere else.
 bool include_climbing(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &anchor, const std::string &written, pugi::xml_node out)
 {
     if(ctx.served && serves_bytes(ctx.sources, *ctx.served))

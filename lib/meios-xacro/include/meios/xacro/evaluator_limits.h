@@ -22,22 +22,22 @@ inline constexpr std::size_t default_step_ceiling = 10'000'000;
 // deepest measured expression of twenty-six entries, and leaves the deepest of every nested
 // shape ninefold stack headroom on a 512 KiB thread in unoptimized gcc and clang builds.
 inline constexpr std::size_t default_expression_depth_ceiling = 188;
-// An alias denotes a whole anchored subtree, and nesting anchors multiplies that: measured
-// with the reference loader at a fan-out of nine and one anchor per level, five levels fit in
-// 258 input bytes and denote 2 790 063 expanded characters, six fit in 304 and denote
-// 25 110 585. Charging denoted nodes, five levels cost 672 588 and six cost 6 053 427, so this
-// admits five and refuses six. The auxiliary-node ceiling charges events, of which those two
-// documents raise 45 and 54, and is therefore blind to the growth this bounds.
+// An alias denotes a whole anchored subtree, and nesting anchors multiplies that: measured with
+// PyYAML at a fan-out of nine and one anchor per level, five levels fit in 258 input bytes and
+// denote 2 790 063 expanded characters, six fit in 304 and denote 25 110 585. Charging denoted
+// nodes, five levels cost 672 588 and six cost 6 053 427, so this admits five and refuses six.
+// The auxiliary-node ceiling charges events, of which those two documents raise 45 and 54, and
+// is therefore blind to the growth this bounds.
 inline constexpr std::size_t default_alias_expansion_ceiling = 1'000'000;
 // Bounds an exponentiation's base magnitude and its exponent before the work rather than its
 // result after it. Defensive rather than remedial: exponentiation here is binary over checked
 // fixed-width integers and refuses on the first squaring that overflows, so the spelling that
-// grows without bound against arbitrary-precision integers upstream already terminates in a few
-// dozen iterations here and no unbounded numeric growth exists in the current surface. Because
-// it is defensive, the number is set where it refuses nothing the arithmetic beneath it accepts
+// grows without bound against Python's arbitrary-precision integers already terminates in a few
+// dozen iterations here and no unbounded numeric growth exists in the current surface. Because it
+// is defensive, the number is set where it refuses nothing the arithmetic beneath it accepts
 // today: it is chosen rather than measured, at ten times the 99 999 999 999 that is the largest
 // magnitude any recorded expression drives through exponentiation. A magnitude past it is a
-// refusal where upstream would answer, which is why it sits so far above the surface.
+// refusal where xacro would answer, which is why it sits so far above the surface.
 inline constexpr std::size_t default_numeric_magnitude_ceiling = 1'000'000'000'000;
 // The per-expression token count, which is the axis a tree-shaped evaluator would size by its
 // tree. This evaluator builds no tree -- every precedence level computes its result immediately --

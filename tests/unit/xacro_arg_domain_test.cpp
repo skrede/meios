@@ -70,9 +70,9 @@ TEST_CASE("an argument's numeric spelling renders its trailing zero rather than 
                        R"XML(<robot name="probe"><link name="l" r="0.10"/></robot>)XML"));
 }
 
-// The forward scan is an acceptance of this implementation's own: a use standing above its own
-// declaration resolves here, where the reference refuses the whole document with an
-// undefined-argument diagnostic. What is asserted is this project's render, not an agreement.
+// A use standing above its own declaration resolves: the forward scan is an acceptance of meios's
+// own, where xacro refuses the whole document for an undefined argument. What is asserted is
+// meios's render, not an agreement.
 TEST_CASE("a use above its own declaration renders the same spelling the declaration seeds",
           "[xacro][arg][domain]")
 {
@@ -99,8 +99,8 @@ TEST_CASE("a conditional testing an argument through the substitution command ta
                        R"XML(<robot name="probe"><link name="unless_fired"/></robot>)XML"));
 }
 
-// An expression reads properties alone, as the reference's does: an argument is reached only
-// through the substitution commands, and an expression naming one refuses with that spelling.
+// An expression reads properties alone: an argument is reached only through the substitution
+// commands, and an expression naming one refuses with that spelling.
 TEST_CASE("a conditional testing an argument by its bare name refuses and names the argument command", "[xacro][arg][domain]")
 {
     require_names_argument_command("flag", R"XML(  <xacro:arg name="flag" default="false"/>
@@ -125,7 +125,7 @@ TEST_CASE("a dotted read whose head is an argument refuses and names the argumen
   <link name="dot_${flag.x}"/>)XML");
 }
 
-TEST_CASE("the reference's argument helper refuses and names the one helper either evaluator exposes", "[xacro][arg][domain]")
+TEST_CASE("the xacro.arg helper refuses and names the one helper either evaluator exposes", "[xacro][arg][domain]")
 {
     const expansion_result out = refused(R"XML(  <xacro:arg name="p" default="A"/>
   <link name="${xacro.arg('p')}arm"/>)XML");

@@ -366,7 +366,7 @@ TEST_CASE("an in-memory source layer serves a working configuration", "[urdf][ya
     expect_shoulder(flatten_over(fixture("yaml_pkg/bytes.urdf.xacro"), sources), 0.5, 3.0);
 }
 
-TEST_CASE("the real UR description clears the yaml parity layer", "[urdf][yaml][flatten][smoke]")
+TEST_CASE("the real UR description flattens its yaml under the python evaluator", "[urdf][yaml][flatten][smoke]")
 {
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
     const std::filesystem::path root = corpus_root();

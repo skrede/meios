@@ -22,8 +22,8 @@ namespace meios::detail
 namespace
 {
 
-// The reference keys both tables by whatever the evaluation returns and refuses a collection,
-// which cannot key them; a scalar keys them by its rendered text here.
+// A collection cannot key the two tables and refuses; a scalar keys them by its rendered text,
+// where xacro keys them by the evaluated value itself.
 std::optional<std::string> namespace_name(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, bool &ok)
 {
     const std::string authored = strip_authored_markers(in.attribute("ns").value());
@@ -39,8 +39,8 @@ std::optional<std::string> namespace_name(expand_ctx &ctx, pugi::xml_node in, co
 
 }
 
-// The reference tests the attribute as written, so an empty one reads the file into the including
-// tables, and it evaluates a namespace in the including table before it reads the filename.
+// The attribute is tested as written, so an empty one reads the file into the including tables,
+// and a namespace is evaluated in the including table before the filename is read.
 include_scope include_table(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, bool &ok)
 {
     const include_scope including{ chain_access::cursor(ctx.scope), ctx.macros.cursor() };

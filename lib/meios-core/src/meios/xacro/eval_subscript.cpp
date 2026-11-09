@@ -31,8 +31,8 @@ value key_into(parser &p, const value &container, const value &key)
 }
 
 // A negative index counts back from the end, so -1 is the last element. A real is refused rather
-// than truncated to a position: upstream reads it as a type error and an index this evaluator
-// invented would mean something there that it does not mean here.
+// than truncated to a position: xacro reads it as a type error, and an index this evaluator invented
+// would give the spelling a meaning xacro does not.
 value position_into(parser &p, const value &container, const value &key)
 {
     if(!is_int(key))

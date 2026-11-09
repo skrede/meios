@@ -38,8 +38,8 @@ expansion_result expand_body(const std::string &body, meios::log_sink &log)
     return meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
 }
 
-// The minimized document a behavior was measured on against the reference, read from where the
-// differential left it once the two sides agreed and it named no divergence.
+// The minimized document a behavior was measured on against the pinned xacro, read from where the
+// differential left it once meios and xacro agreed and it named no divergence.
 expansion_result expand_probe(const char *name, meios::log_sink &log)
 {
     std::ifstream in(std::filesystem::path{ MEIOS_XACRO_PROBE_DIR } / name, std::ios::binary);
@@ -71,9 +71,9 @@ TEST_CASE("an overridden default is discarded and the caller's value is what bin
     REQUIRE(out->document.find("from_default") == std::string::npos);
 }
 
-// The reference substitutes the parameter spelling as text, so neither inheritance arm is
-// interpreted there and neither refuses; a bare caret carrying nothing to inherit renders on
-// both sides, measured against the pinned reference.
+// An overridden default is substituted as its authored text, so neither inheritance arm is
+// interpreted and neither refuses: a bare caret carrying nothing to inherit renders, because the
+// pinned xacro renders that document.
 TEST_CASE("an overridden inheriting default is no error merely because it is evaluated",
           "[xacro][structural][macro]")
 {

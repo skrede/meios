@@ -17,9 +17,9 @@ namespace meios
 namespace detail
 {
 
-// One of the reference's symbol tables: the names a document, one macro call, or one include
-// namespace bound itself, and the table a read falls through to when a name is not among them.
-// The parent is an index into the owning chain, absent only for the document table.
+// A symbol table: the names a document, one macro call, or one include namespace bound itself, and
+// the table a read falls through to when a name is not among them. The parent is an index into the
+// owning chain, absent only for the document table.
 class name_table
 {
 public:

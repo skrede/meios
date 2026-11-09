@@ -85,7 +85,7 @@ TEST_CASE("a layer's type alone says whether it names paths", "[urdf][load][incl
     CHECK(records.empty());
 }
 
-TEST_CASE("a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote", "[urdf][load][include][link]")
+TEST_CASE("a beside link into a second configured root climbs from its named path, with no record naming a path the description never wrote", "[urdf][load][include][link]")
 {
     const include_tree::tree held;
     held.write("R1/p/urdf/a.xacro", include_tree::robot(include_tree::include("common.xacro")));
@@ -140,8 +140,7 @@ TEST_CASE("a beside hit a configured root admitted through a linked directory ca
         refuses_unresolved(loaded, "c.xacro");
 }
 
-TEST_CASE("a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, "
-          "and is read lexically on Windows",
+TEST_CASE("a sibling spelled back through a linked directory carries no served record, so its miss refuses on POSIX, and is read lexically on Windows",
           "[urdf][load][include][link]")
 {
     const include_tree::tree held;

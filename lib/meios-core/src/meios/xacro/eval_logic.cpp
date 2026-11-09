@@ -99,8 +99,8 @@ std::string undefined_name(const eval_scope &scope, std::string_view name)
     return message;
 }
 
-// The reference renders a namespace read as a value by printing its tables, built-in functions and
-// their addresses included, which differs from run to run, so the read refuses here instead.
+// A namespace read as a value refuses, because xacro renders it by printing its tables, built-in
+// functions and their addresses included, which differs from run to run.
 value refuse_namespace_read(parser &p, std::string_view spelling)
 {
     const std::string named(spelling);

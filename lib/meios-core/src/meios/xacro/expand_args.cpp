@@ -58,9 +58,9 @@ void seed_declared_args(expand_ctx &ctx, pugi::xml_node node)
     }
 }
 
-// The first declaration the walk reaches binds, as the reference's does, so a caller override or
-// an earlier reached declaration wins; a value the pre-pass lent does not count as a binding, and
-// is unbound first so the default reads the table the reference holds, which lacks the name.
+// The first declaration the walk reaches binds, so a caller override or an earlier reached
+// declaration wins; a value the pre-pass lent does not count as a binding, and is unbound first so
+// the default reads a table that lacks the name.
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     std::string_view name = in.attribute("name").value();

@@ -36,8 +36,8 @@ inline value value::make_sequence(std::vector<value> items)
     return value(std::make_shared<const detail::sequence_node>(std::move(items)));
 }
 
-// A repeated key keeps its first position and its last value, the way an authored
-// mapping resolves upstream.
+// A repeated key keeps its first position and its last value, which is what a Python
+// dict holds for the same authored mapping.
 inline value value::make_mapping(std::vector<entry> entries)
 {
     std::vector<detail::scalar_key> keys;

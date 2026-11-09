@@ -72,7 +72,7 @@ void value_builder::share(const anchored &source, const YAML::Mark &mark)
 }
 
 // A merge source that is a sequence contributes its elements in reverse, so an earlier element
-// wins a conflict; that is what the reference loader's own flattening does.
+// wins a conflict, which is the value PyYAML gives the key.
 void value_builder::merge_into(frame &top, const value &source, const YAML::Mark &mark)
 {
     top.merging = false;

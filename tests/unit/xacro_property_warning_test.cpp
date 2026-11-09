@@ -70,8 +70,8 @@ std::size_t warnings(const std::vector<record> &records)
     return static_cast<std::size_t>(std::ranges::count(records, meios::level::warn, &record::lvl));
 }
 
-// The reference's warning, located at the element and carrying no code, so that it does not
-// retract a completeness claim.
+// A warning is located at the element and carries no code, so that it does not retract a
+// completeness claim.
 bool warned_once(const std::vector<record> &records, const std::string &message)
 {
     const auto found = std::ranges::find(records, message, &record::message);
@@ -85,7 +85,8 @@ bool refuses(const expansion_result &out, meios::diagnostic_code code)
 
 }
 
-// Upstream warns "unknown attribute(s)" for an attribute a property does not declare.
+// meios ignores an attribute a property does not declare without a warning, where xacro warns
+// about it.
 TEST_CASE("an attribute outside a property's attribute list raises no warning here", "[xacro][property][warning]")
 {
     std::vector<record> heard;
@@ -144,7 +145,8 @@ TEST_CASE("an include namespace named after a built-in warns that it redefines a
     REQUIRE(warned_once(heard, "'math' shadows the built-in of that name"));
 }
 
-// Upstream warns "default property value can only be defined on local scope" and binds the default too.
+// A default written beside a scope binds, and meios does not warn about the scope, where xacro
+// does.
 TEST_CASE("a default beside a scope binds and raises no warning here", "[xacro][property][warning]")
 {
     std::vector<record> heard;
@@ -153,8 +155,9 @@ TEST_CASE("a default beside a scope binds and raises no warning here", "[xacro][
     REQUIRE(warnings(heard) == 0);
 }
 
-// The reference stores a document-level parent-scope property into its table of built-ins, which
-// cannot store, after it has evaluated the value; its "no parent scope" warning is never reached.
+// A parent-scope property's value is evaluated before its target table is looked up, so at
+// document level a value that cannot evaluate refuses with its own cause, ahead of the missing
+// parent table.
 TEST_CASE("a parent-scope property at document level refuses with its value's own cause first", "[xacro][property][warning]")
 {
     std::vector<record> heard;

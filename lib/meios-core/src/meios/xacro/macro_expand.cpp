@@ -23,14 +23,14 @@ namespace meios::detail
 namespace
 {
 
-// The reference clones the definition element and evaluates the clone before discarding the
-// wrapper, so every parameter default is evaluated once per instantiation, in the invocation's
-// own scope, whether or not the caller supplied that parameter, and the result is thrown away.
-// A default naming an unbound property therefore refuses there even where the call supplied the
-// parameter -- measured against xacro 2.1.1, which renders `^` and `^|text` unchanged in the same
-// position, so what runs here is the substitution of the authored text and not a second reading
-// of the inheritance arms. It runs before the definition's origin is pushed, so a refusal is
-// located at the call.
+// The definition element is cloned and the clone evaluated before the wrapper is discarded, so
+// every parameter default is evaluated once per instantiation, in the invocation's own scope,
+// whether or not the caller supplied that parameter, and the result is thrown away. A default
+// naming an unbound property therefore refuses there even where the call supplied the parameter --
+// measured against xacro 2.1.1, which renders `^` and `^|text` unchanged in the same position, so
+// what runs here is the substitution of the authored text and not a second reading of the
+// inheritance arms. It runs before the definition's origin is pushed, so a refusal is located at
+// the call.
 bool substitute_defaults(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                          const std::filesystem::path &document)
 {
@@ -52,7 +52,7 @@ bool define_macro(expand_ctx &ctx, pugi::xml_node in)
 {
     macro_def def;
     const std::string name = in.attribute("name").value();
-    // The reference refuses such a list when it reads the definition, called or not.
+    // Such a list refuses when the definition is read, called or not.
     if(!parse_params(in.attribute("params").value(), def))
         return fail(ctx, in, diagnostic_code::xacro_structural_error, "macro '" + name + "' has a params attribute that holds only whitespace");
     def.body = in;

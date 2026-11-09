@@ -28,8 +28,8 @@ namespace detail
 namespace
 {
 
-// Upstream separates a command's words with split(' ') and drops the empty fields, so a tab is part
-// of a word.
+// A command's words are separated with split(' ') and the empty fields dropped, so a tab is part of
+// a word.
 std::string_view strip_spaces(std::string_view text)
 {
     const std::size_t begin = text.find_first_not_of(' ');

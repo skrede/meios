@@ -13,8 +13,7 @@ namespace meios::detail
 // is not an identifier.
 std::optional<std::string> python_name(std::string_view spelling);
 
-// The reference's is_valid_name: the name is a Python identifier, its own NFKC form, and no hard
-// keyword.
+// A Python identifier that is its own NFKC form and no hard keyword.
 bool valid_python_name(std::string_view name);
 
 // CPython's potential identifier: an ASCII letter or underscore, or any byte outside ASCII, opens one
@@ -28,8 +27,8 @@ std::size_t identifier_run(std::string_view source, std::size_t at);
 std::optional<std::string> read_spelling(std::string_view run);
 
 // The refusal of a run an expression cannot read, naming the code point that ends the name, or
-// nothing for a run it reads and for text that opens no run. Malformed UTF-8, which the reference's
-// XML parser never hands it, is named by its first bad byte.
+// nothing for a run it reads and for text that opens no run. Malformed UTF-8, which never gets past
+// xacro's XML parser, is named by its first bad byte.
 std::optional<std::string> identifier_fault(std::string_view run);
 
 }

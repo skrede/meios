@@ -87,7 +87,7 @@ TEST_CASE("an uncontained yaml spec refuses through expand and leaks no file con
     REQUIRE(refused.expanded.error().message.find("${load_yaml") == std::string::npos);
 }
 
-TEST_CASE("every unit tag the reference implementation registers constructs", "[eval_python]")
+TEST_CASE("each of the six unit tags constructs its converted value", "[eval_python]")
 {
     const meios::eval_scope scope                        = serving("a: !radians 1.5\n"
                                                                    "b: !degrees 180\n"

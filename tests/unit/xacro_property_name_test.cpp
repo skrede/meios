@@ -84,7 +84,7 @@ TEST_CASE("a property name that is not text is refused naming its kind with the 
     }
 }
 
-TEST_CASE("a property name that is not a python identifier refuses as the reference does", "[xacro][scope][property]")
+TEST_CASE("a property name that is not a python identifier refuses", "[xacro][scope][property]")
 {
     for(const char *name : {"1", "for", "True", "a b"})
     {
@@ -110,7 +110,7 @@ TEST_CASE("a property name opening with a double underscore refuses before remov
     REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "xacro:property name '__π' opens with a double underscore, which a property name may not"));
 }
 
-TEST_CASE("a non-ASCII, underscored or soft-keyword property name the reference admits binds", "[xacro][scope][property]")
+TEST_CASE("a non-ASCII, underscored or soft-keyword property name binds", "[xacro][scope][property]")
 {
     const expansion_result out = expand_body(R"(<xacro:property name="π" value="1"/><xacro:property name="a·" value="4"/>)"
                                              R"(<xacro:property name="Ω" value="5"/><xacro:property name="x́" value="6"/><xacro:property name="é" value="7"/>)"
@@ -118,7 +118,7 @@ TEST_CASE("a non-ASCII, underscored or soft-keyword property name the reference 
     REQUIRE(renders(out, R"(<link name="l23"/>)"));
 }
 
-TEST_CASE("a property name that is not a python identifier outside ASCII refuses as the reference does", "[xacro][scope][property]")
+TEST_CASE("a property name outside ASCII that is not an NFKC-normal python identifier refuses", "[xacro][scope][property]")
 {
     for(const char *name : {"a€", "＿x", "·a", "ﬁ", "ａ", "é", "Ω", "_＿x"})
     {

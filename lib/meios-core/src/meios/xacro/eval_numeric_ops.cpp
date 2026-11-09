@@ -20,10 +20,10 @@ namespace meios::detail
 namespace
 {
 
-// Concatenation is the one arithmetic meaning a string carries here; repetition by an integer
-// is the meaning that stays outside the measured surface, so a string reaching any other
-// operator refuses as unsupported and a lenient policy may still retain the span. Every other
-// kind reaching here has no meaning upstream either, which makes it a genuine fault.
+// Concatenation is the one arithmetic meaning a string carries here; repetition by an integer is
+// the meaning that stays outside the measured surface, so a string reaching any other operator
+// refuses as unsupported and a lenient policy may still retain the span. Every other kind reaching
+// here has no arithmetic meaning in Python, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
     const std::string message = with_article(kind_name(v.kind())) + " operand has no arithmetic meaning here";
@@ -32,8 +32,8 @@ value refuse_kind(parser &p, const value &v)
     return p.fail(message);
 }
 
-// Upstream adds two strings and refuses a string beside any other kind with a type error; this
-// names the same mismatch, and reports the kind that is not the string.
+// Two strings concatenate; a string beside any other kind is a type mismatch, reported by the kind
+// that is not the string.
 value concatenate(parser &p, const value &a, const value &b)
 {
     const std::optional<std::string> left = a.text();

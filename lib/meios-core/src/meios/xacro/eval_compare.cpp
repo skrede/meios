@@ -58,7 +58,7 @@ bool compare_pair(parser &p, token_kind op, const value &a, const value &b)
     return compare_numbers(p, op, a, b);
 }
 
-// Containment is by bytes where upstream counts code points; the two agree over the ASCII text
+// Containment is by bytes, where xacro counts code points; the two agree over the ASCII text
 // every measured description carries, and the empty needle is contained in every string.
 value substring_of(parser &p, const value &needle, const std::string &haystack)
 {

@@ -28,12 +28,11 @@ std::int32_t fixed_fraction(std::int32_t significant, std::int32_t exponent)
 
 }
 
-// Upstream renders a double with CPython's float repr, which picks notation from the
-// decimal exponent alone rather than from whichever spelling is shorter: fixed while the
-// exponent stays inside the window below, scientific outside it. The window is the one
-// the recorded upstream renderings show -- 1e-4 and 1e15 print fixed, 1e-5 and 1e16 print
-// scientific -- and a shorter-wins rule would emit "-5e-04" where upstream emits
-// "-0.0005".
+// Notation is picked from the decimal exponent alone rather than from whichever spelling is
+// shorter, the rule of Python's float repr, so a document renders the text xacro renders: fixed
+// while the exponent stays inside the window below, scientific outside it. The window is the
+// one the recorded xacro renderings show -- 1e-4 and 1e15 print fixed, 1e-5 and 1e16 print
+// scientific -- and a shorter-wins rule would emit "-5e-04" where xacro emits "-0.0005".
 notation choose_notation(std::int32_t exponent)
 {
     constexpr std::int32_t smallest_fixed = -4;
@@ -154,7 +153,7 @@ std::string print_finite_shortest(double number)
 // arrives with one; print_double is re-exported through the umbrella header and a consumer
 // can hand one in directly, so the entry point has to be total on its own. Both spellings
 // below assume a decimal exponent is present, which is why the guard sits above them rather
-// than inside either. The texts are upstream's, and what the fallback already produced.
+// than inside either. The texts are the ones xacro renders, and what the fallback produced.
 std::string print_double_shortest(double number)
 {
     if(std::isfinite(number))

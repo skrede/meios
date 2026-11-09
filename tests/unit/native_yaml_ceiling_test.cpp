@@ -58,7 +58,7 @@ TEST_CASE("each auxiliary ceiling is charged before the work it bounds", "[nativ
     CHECK(over_bytes.counters.bytes == 0);
 }
 
-// The reference reaches a scalar leaf, so the same document renders under roomy ceilings and
+// The expression reads down to a scalar leaf, so the same document renders under roomy ceilings and
 // the only thing a tight ceiling can be refusing is the ceiling itself.
 TEST_CASE("a crossed auxiliary ceiling is terminal under every evaluation policy", "[native][yaml]")
 {
@@ -85,9 +85,9 @@ TEST_CASE("a crossed auxiliary ceiling is terminal under every evaluation policy
 
 // The one distinction leniency turns on: a construct a fuller backend would read is
 // unsupported syntax and a lenient policy may retain the span, while a malformed document is
-// invalid input and terminates whatever the policy says. The reference backend evaluates a
-// tagged value as an expression, so a tagged spelling this evaluator cannot read is the
-// unsupported half.
+// invalid input and terminates whatever the policy says. A fuller backend evaluates a tagged
+// value as an expression, so a tagged spelling this evaluator cannot read is the unsupported
+// half.
 TEST_CASE("a malformed document terminates where an unread construct may be retained", "[native][yaml]")
 {
     const meios::evaluator_limits roomy;
@@ -100,9 +100,9 @@ TEST_CASE("a malformed document terminates where an unread construct may be reta
     CHECK_FALSE(substitute("a: !degrees pi/2\n", roomy, meios::eval_policy::fail).survived);
 }
 
-// The other half of the same rule: a construct the reference backend refuses too is terminal,
+// The other half of the same rule: a construct no fuller backend reads is terminal,
 // so no leniency setting can leave partial output standing where it appeared.
-TEST_CASE("a construct the reference backend also refuses stays terminal", "[native][yaml]")
+TEST_CASE("a recursive alias, an unknown tag or a sequence key stays terminal under warn and skip", "[native][yaml]")
 {
     const meios::evaluator_limits roomy;
     const std::string_view terminal[] = {"a: &a [1, *a]\n", "a: !grams 1\n", "? [1]\n: 3\n"};

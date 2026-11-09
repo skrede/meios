@@ -177,7 +177,7 @@ TEST_CASE("a call to a function the global table does not list refuses through a
     CHECK(refuses_undefined(read_through(held, "n", "${n.abs(-2)}"), "abs"));
 }
 
-TEST_CASE("a global name other than pi refuses through an include namespace under the built-in evaluator, each constant as it refuses bare, where the reference renders it",
+TEST_CASE("a global name other than pi refuses through an include namespace under the built-in evaluator, each constant as it refuses bare",
           "[xacro][namespace]")
 {
     const include_tree::tree held;

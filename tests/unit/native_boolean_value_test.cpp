@@ -21,7 +21,7 @@ std::optional<bool> spelled(const char *text)
 
 }
 
-TEST_CASE("a spelling the reference reads as true reads true", "[xacro][boolean]")
+TEST_CASE("true, True or a nonzero integer spelling reads true", "[xacro][boolean]")
 {
     for(const char *text : {"true", "True", "1", " 1", "+1", "1_0"})
     {
@@ -32,7 +32,7 @@ TEST_CASE("a spelling the reference reads as true reads true", "[xacro][boolean]
     }
 }
 
-TEST_CASE("a spelling the reference reads as false reads false", "[xacro][boolean]")
+TEST_CASE("false, False or a zero integer spelling reads false", "[xacro][boolean]")
 {
     for(const char *text : {"false", "False", "0", "-0"})
     {
@@ -43,7 +43,7 @@ TEST_CASE("a spelling the reference reads as false reads false", "[xacro][boolea
     }
 }
 
-TEST_CASE("a spelling the reference refuses answers no boolean", "[xacro][boolean]")
+TEST_CASE("a spelling other than true, True, false, False or an integer answers no boolean", "[xacro][boolean]")
 {
     for(const char *text : {"1.0", "yes", "TRUE", "", "1__0"})
     {

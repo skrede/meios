@@ -44,8 +44,8 @@ std::size_t past_digits(std::string_view text, std::size_t at)
     return at;
 }
 
-// A digit run in which an underscore may appear anywhere, matching the character classes of
-// the upstream patterns rather than what the conversion beneath them will accept.
+// A digit run in which an underscore may appear anywhere: the character classes of PyYAML's
+// resolver patterns, rather than what the conversion beneath them will accept.
 template <typename Member>
 bool run_of(std::string_view text, std::size_t at, Member member)
 {
@@ -57,8 +57,8 @@ bool run_of(std::string_view text, std::size_t at, Member member)
     return true;
 }
 
-// The exponent the upstream float pattern admits carries a mandatory sign, which is the whole
-// reason a plain 1e5 resolves as text rather than as a number.
+// A float's exponent carries a mandatory sign, so a plain 1e5 resolves as text rather than as a
+// number, the type PyYAML gives it.
 bool exponent_or_end(std::string_view text, std::size_t at)
 {
     if(at == text.size())
@@ -119,7 +119,7 @@ bool float_shape(std::string_view text)
             return false;
         return exponent_or_end(text, past_digits(text, at + 1));
     }
-    // The leading-dot spelling admits no sign upstream, so a signed one is not a float.
+    // The leading-dot spelling admits no sign, so a signed one is not a float.
     if(at != 0 || at + 1 >= text.size() || text[at] != '.' || !decimal(text[at + 1]))
         return false;
     return exponent_or_end(text, past_digits(text, at + 2));

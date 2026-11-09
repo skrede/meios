@@ -27,9 +27,9 @@ namespace meios::detail
 namespace
 {
 
-// The reference skips namespaces only when the current table is not one, which is a macro call's,
-// so a macro a namespace holds writes into its caller's table, while a namespaced file's own
-// top level writes into the including table.
+// Namespaces are skipped only when the current table is not one, which is a macro call's, so a
+// macro a namespace holds writes into its caller's table, while a namespaced file's own top level
+// writes into the including table.
 std::optional<std::size_t> parent_table(const eval_scope &scope, std::size_t current)
 {
     std::optional<std::size_t> target = chain_access::parent(scope, current);
@@ -50,9 +50,8 @@ bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &
 
 }
 
-// The reference requires the name and evaluates it as text before it reads anything else about the
-// property, so a single expression keeps its type and a name that is not text cannot key a table;
-// the text is then checked as a Python name, and for a leading double underscore.
+// The name is required and evaluated before anything else about the property is read, so a single
+// expression keeps its type and a name that is not text cannot key a table.
 std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     if(!in.attribute("name"))
@@ -74,10 +73,10 @@ std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, con
     return name;
 }
 
-// The reference picks the table a property is stored in by the scope attribute alone: the
-// document's for "global", the caller's for "parent", and the current one for any other value, an
-// unknown one included. The document table's parent is the reference's table of built-ins, which
-// cannot store a name, so a document-level "parent" has no table.
+// The scope attribute alone picks the table a property is stored in: the document's for "global",
+// the caller's for "parent", and the current one for any other value, an unknown one included. The
+// document table's parent is the table of built-ins, which cannot store a name, so a document-level
+// "parent" has no table.
 std::optional<std::size_t> property_target(const expand_ctx &ctx, std::string_view scope_attr)
 {
     const std::size_t current = chain_access::cursor(ctx.scope);
@@ -88,14 +87,12 @@ std::optional<std::size_t> property_target(const expand_ctx &ctx, std::string_vi
     return current;
 }
 
-// The reference's table of built-ins sits beneath every table, so each of its names is defined.
+// The table of built-ins sits beneath every table, so each of its names is defined.
 bool property_defined(const expand_ctx &ctx, std::string_view name)
 {
     return ctx.scope.contains(name) || listed(root_symbols, name);
 }
 
-// A built-in's bindings are erased from the tables and the built-in itself stays, as in the
-// reference.
 bool remove_property(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
 {
     if(!property_defined(ctx, name))
@@ -106,9 +103,9 @@ bool remove_property(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
     return true;
 }
 
-// The reference warns on every store of a name its table of built-ins holds, into whichever table,
-// and the stored name then shadows the built-in. A warning stays uncoded, so it does not retract a
-// completeness claim the load still earns.
+// Every store of a built-in's name warns, into whichever table, and the stored name then shadows
+// the built-in. A warning stays uncoded, so it does not retract a completeness claim the load still
+// earns.
 void warn_global_symbol(expand_ctx &ctx, pugi::xml_node in, std::string_view name)
 {
     if(listed(root_symbols, name))

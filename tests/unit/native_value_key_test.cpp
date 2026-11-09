@@ -42,7 +42,7 @@ TEST_CASE("an integer key compares against a real without losing precision", "[n
     CHECK_FALSE(key{std::int64_t{1}} == key{1.5});
 }
 
-TEST_CASE("a key written in a second scalar kind resolves the way upstream resolves it", "[native][value]")
+TEST_CASE("a key equal to an earlier one in another scalar kind keeps the earlier key and takes the later value", "[native][value]")
 {
     struct collision
     {

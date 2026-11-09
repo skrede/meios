@@ -112,7 +112,7 @@ TEST_CASE("cli_package_path: an include linking out of its package but inside th
         }
 }
 
-TEST_CASE("cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows")
+TEST_CASE("cli_package_path: a sibling spelled back through a linked directory refuses on POSIX and is read lexically on Windows")
 {
     const include_tree::tree held;
     held.write("R/p/urdf/top.xacro", include_tree::robot(include_tree::include("sub/../b.xacro")));

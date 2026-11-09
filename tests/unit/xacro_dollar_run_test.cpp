@@ -94,7 +94,7 @@ TEST_CASE("a single dollar before anything but an opener stays literal", "[xacro
     }
 }
 
-TEST_CASE("a double dollar inside an expression body refuses as the reference lexes the body",
+TEST_CASE("a double dollar inside an expression body refuses, even within a string literal",
           "[xacro][dollar_run]")
 {
     const expansion_result out = expand_name("${'$$'}");

@@ -10,11 +10,11 @@
 namespace meios::detail
 {
 
-// The number kinds are tried before the boolean spellings, which is what leaves "1" an
-// integer rather than a true; the reference orders its own literal conversion the same way,
-// and only these four spellings ever reach the boolean arm. A description passing
-// no_prefix="false" into a macro and testing it for truth means the opposite of what a
-// non-empty string would mean, so the conversion is what keeps the two readings the same.
+// The number kinds are tried before the boolean spellings, so "1" stays an integer rather
+// than a true, the order xacro's literal conversion uses; only these four spellings ever
+// reach the boolean arm. A description passing no_prefix="false" into a macro and testing it
+// for truth means the opposite of what a non-empty string would mean, so the conversion is
+// what keeps the two readings the same.
 value classify(std::string_view text)
 {
     bool ok = false;

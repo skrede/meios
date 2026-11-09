@@ -33,8 +33,8 @@ bool refuse_held(subst_ctx &ctx, std::string_view held)
     return true;
 }
 
-// Upstream's command scanner refuses a '$' or a '(' left in a command's resolved text, so a span
-// nested in a command and a parenthesis among its words refuse alike.
+// A '$' or a '(' left in a command's resolved text refuses, so a span nested in a command and a
+// parenthesis among its words refuse alike.
 bool refuse_command_text(subst_ctx &ctx, std::string_view text, std::string_view refused)
 {
     const std::size_t at = text.find_first_of(refused);
@@ -76,17 +76,17 @@ bool scan_nested(subst_ctx &ctx, std::string_view inner, std::string &out, std::
     return level.admitted() && scan(ctx, inner, out, base);
 }
 
-// Upstream resolves a substitution as safe_eval(eval_text(body)): a span's inner text is
+// A substitution resolves as the evaluation of its expanded body: a span's inner text is
 // expanded first and the string that produces is what is then evaluated or dispatched, so a
-// package-locating command written inside a quoted literal has already become a path by the
-// time the expression runs, and an argument command counts the words its spans produced. Both
-// openers therefore take the same inner scan. The evaluation command's body is handed to an
-// evaluator rather than to upstream's command scanner, so it alone may hold a '$' or a '('. A
-// failed inner scan yields nullopt so the caller's verbatim/leniency handling governs the
-// outcome rather than a mis-dispatch. `span_offset` is the failing span's `$` byte as an offset
-// into the whole decoded attribute value; nested scans accumulate it so a token in `$(find ${x})`
-// still maps back to the real column. After a nested scan clobbers ctx.at, the outer span is
-// re-anchored to its own offset before it can emit.
+// package-locating command written inside a quoted literal has already become a path by the time
+// the expression runs, and an argument command counts the words its spans produced. Both openers
+// therefore take the same inner scan. The evaluation command's body is handed to an evaluator
+// rather than to the command scanner, so it alone may hold a '$' or a '('. A failed inner scan
+// yields nullopt so the caller's verbatim/leniency handling governs the outcome rather than a
+// mis-dispatch. `span_offset` is the failing span's `$` byte as an offset into the whole decoded
+// attribute value; nested scans accumulate it so a token in `$(find ${x})` still maps back to
+// the real column. After a nested scan clobbers ctx.at, the outer span is re-anchored to its own
+// offset before it can emit.
 std::optional<std::string> resolve_span(subst_ctx &ctx, char opener, std::string_view inner,
                                         std::size_t span_offset)
 {

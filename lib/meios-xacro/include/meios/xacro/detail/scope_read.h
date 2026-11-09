@@ -23,7 +23,7 @@ inline name_read read_name(const eval_scope &scope, std::string_view name, std::
 }
 
 // A member the namespace lacks is read from the tables it falls through to, and a deferred one
-// evaluates in the table that holds it, as the reference's namespace forwards a dot to its lookup.
+// evaluates in the table that holds it.
 inline name_read read_member(const eval_scope &scope, const scope_namespace &space, std::string_view name,
                              std::size_t carried)
 {

@@ -547,22 +547,21 @@ package whose name ends in a tab and refuses under `unresolved_find`. The
 and `arg_command_tab_before_name` agreement probes hold these against a fresh xacro render, beside
 `xacro_include_spelling.a tab beside a find's package is part of a word, so the find does not reach its
 package` and `xacro_command_body.a command's words are separated by a space alone, so a tab stays
-inside a word, as the reference separates them`; the literal tab read as a space was measured against
-the pinned xacro. A path that climbs out of the find's package, `$(find p)/../q/a.xacro`, refuses here
-as escaping the source root, the containment every package-qualified include keeps; xacro reads the
-sibling package's file. That is the `include_find_climbs_out_of_package` row, a reviewed divergence, so
-the comparison fails if it stops reproducing exactly as much as it fails if a new one appears. A
-`package://` filename is split instead, its package text taken as written, so `package://${pk}/…`
-refuses here; xacro refuses every `package://` filename. The `include_find_padded_package`,
-`include_find_in_literal`, `include_find_composed`, `include_find_two_words`,
-`find_command_second_word` and `include_escaped_find` agreement probes hold the padded, produced,
-composed, two-word and escaped spellings against a fresh xacro render. The `xacro_include_spelling`
-cases pin the padded, produced, composed, two-word and climbing spellings over a directory layer,
-`xacro_include_find.a find package read from a bound property renders its package's
-file` the bound one, and the `xacro_dollar_run` include cases the substituted package text and the
-`package://` text taken as written; the composition onto an existing `purdf` was measured against the
-pinned xacro, and no case pins it. The generated include family below varies the find's spelling, its
-separator and the path after it.
+inside a word`; the literal tab read as a space was measured against the pinned xacro. A path that
+climbs out of the find's package, `$(find p)/../q/a.xacro`, refuses here as escaping the source root,
+the containment every package-qualified include keeps; xacro reads the sibling package's file. That is
+the `include_find_climbs_out_of_package` row, a reviewed divergence, so the comparison fails if it
+stops reproducing exactly as much as it fails if a new one appears. A `package://` filename is split
+instead, its package text taken as written, so `package://${pk}/…` refuses here; xacro refuses every
+`package://` filename. The `include_find_padded_package`, `include_find_in_literal`,
+`include_find_composed`, `include_find_two_words`, `find_command_second_word` and
+`include_escaped_find` agreement probes hold the padded, produced, composed, two-word and escaped
+spellings against a fresh xacro render. The `xacro_include_spelling` cases pin the padded, produced,
+composed, two-word and climbing spellings over a directory layer, `xacro_include_find.a find package
+read from a bound property renders its package's file` the bound one, and the `xacro_dollar_run`
+include cases the substituted package text and the `package://` text taken as written; the composition
+onto an existing `purdf` was measured against the pinned xacro, and no case pins it. The generated
+include family below varies the find's spelling, its separator and the path after it.
 
 **A find whose package only a layer that serves bytes holds routes to that layer as the filename's
 first token alone.** A memory source names no paths, so such a find has no directory to write. As the
@@ -794,22 +793,21 @@ meios's renders. The other constants and the `math` head differ. Under the built
 as the undefined name `math`, while the bare `${math.pi}` refuses as an unsupported call target whose
 message advises the bare name, so the `math` head's two spellings refuse differently here, not alike;
 xacro renders both. The `xacro_namespace.a global name other than pi refuses through an include
-namespace under the built-in evaluator, each constant as it refuses bare, where the reference renders
-it` case pins each of those namespaced spellings and the bare constants, and the `native_expression`
-case "a construct outside the measured surface refuses by name" and the `native_member` case "a call
-target's refusal advises the python evaluator only for a head that evaluator binds" pin the bare
-`${math.pi}`. xacro's render of each spelling neither that probe nor that row holds was measured when
-this was written, and nothing carries it. Under the python evaluator `${n.e}` renders
-`2.718281828459045`, which the `eval_python_scope` case "a mathematics constant other than pi renders
-through a namespace under the python backend alone" pins. xacro's argument, tokenizing and message
-helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning` / `error` / `fatal`) are not
-exposed at all: a call to any `xacro.` helper but `xacro.load_yaml` refuses under either evaluator, and
-the refusal names `xacro.load_yaml` as the only helper either exposes. The argument helper is a
-reviewed divergence, since it renders under xacro; a refusal of it also names the `$(arg)` command.
-`map` and `filter` are not among the functions above, and `${list(map(...))}` does appear in real
-descriptions, which makes it the omission most likely to be met in practice. Every one of these is a
-loud refusal naming what it met, so it is a decision rather than a silent difference in what a document
-means.
+namespace under the built-in evaluator, each constant as it refuses bare` case pins each of those
+namespaced spellings and the bare constants, and the `native_expression` case "a construct outside the
+measured surface refuses by name" and the `native_member` case "a call target's refusal advises the
+python evaluator only for a head that evaluator binds" pin the bare `${math.pi}`. xacro's render of
+each spelling neither that probe nor that row holds was measured when this was written, and nothing
+carries it. Under the python evaluator `${n.e}` renders `2.718281828459045`, which the
+`eval_python_scope` case "a mathematics constant other than pi renders through a namespace under the
+python backend alone" pins. xacro's argument, tokenizing and message helpers (`xacro.arg`,
+`xacro.tokenize`, `xacro.message` / `warning` / `error` / `fatal`) are not exposed at all: a call to
+any `xacro.` helper but `xacro.load_yaml` refuses under either evaluator, and the refusal names
+`xacro.load_yaml` as the only helper either exposes. The argument helper is a reviewed divergence,
+since it renders under xacro; a refusal of it also names the `$(arg)` command. `map` and `filter` are
+not among the functions above, and `${list(map(...))}` does appear in real descriptions, which makes it
+the omission most likely to be met in practice. Every one of these is a loud refusal naming what it
+met, so it is a decision rather than a silent difference in what a document means.
 
 ## What this evidence covers
 

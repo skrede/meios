@@ -88,8 +88,8 @@ bool splice(expand_ctx &ctx, pugi::xml_node in, located_include &found, const st
     return descend(ctx, doc, parked, key, found, out);
 }
 
-// Upstream joins a package:// filename as a relative path, and here it resolves through the sources as
-// the recorded divergence states, so substituting its package text would widen that divergence.
+// A package:// filename resolves through the sources, where xacro joins it as a relative path, as the
+// recorded divergence states, so substituting its package text would widen that divergence.
 std::optional<include_target> package_target(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document, std::string_view raw)
 {
     include_target target = split_target(raw);

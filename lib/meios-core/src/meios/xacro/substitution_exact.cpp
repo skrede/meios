@@ -73,9 +73,9 @@ bool scan_inner(subst_ctx &ctx, std::string_view expr, std::string &out)
 
 // Every text that crosses this boundary is reclassified, whether it came from a bound name or
 // from an expression, so an exact span and mixed text agree on what a numeric-looking or
-// boolean-looking text means; a collection crosses intact, having no text to reclassify. The
-// reference does the same to whatever a bound value evaluates to. An injected backend keeps the
-// text path it has always had, which is what leaves its container transport untouched.
+// boolean-looking text means; a collection crosses intact, having no text to reclassify. An
+// injected backend keeps the text path it has always had, which is what leaves its container
+// transport untouched.
 value reclassified(const value &read)
 {
     return read.kind() == value_kind::string ? classify(*read.text()) : read;

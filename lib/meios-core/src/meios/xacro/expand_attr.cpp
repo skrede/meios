@@ -97,10 +97,10 @@ value substitute_attr_value(expand_ctx &ctx, pugi::xml_node in, std::string_view
 }
 
 // An argument is bound in the substitution domain, where a written literal stays the characters
-// that were written: the reference stores what its own text evaluation returns, which is the
-// typed result only when the whole attribute is one expression and the text itself otherwise.
-// Classifying that text here instead would make $(arg) of a boolean spelling render the Python
-// casing into the document, where the reference renders the spelling back.
+// that were written: what is stored is what text evaluation returns, which is the typed result
+// only when the whole attribute is one expression and the text itself otherwise. Classifying that
+// text here instead would make $(arg) of a boolean spelling render the Python casing into the
+// document, where xacro renders the spelling back.
 value substitute_arg_value(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                            const std::filesystem::path &document, bool &ok,
                            std::optional<std::size_t> attr_index)

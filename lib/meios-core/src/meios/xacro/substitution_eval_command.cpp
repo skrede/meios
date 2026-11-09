@@ -23,9 +23,9 @@ namespace meios::detail
 namespace
 {
 
-// What upstream's command resolves before an argument beside the mathematics names (xacro 2.1.1,
-// substitution_args._eval): its own helpers and four boolean spellings, so an argument named like
-// one of these is shadowed there.
+// Resolved before an argument, beside the mathematics names (from xacro 2.1.1's
+// substitution_args._eval): the command's own helpers and four boolean spellings, so an argument
+// named like one of these is shadowed there.
 constexpr std::string_view command_names[] = {"arg", "dirname", "env", "optenv", "find", "true", "false", "True", "False"};
 
 void bind_reference_names(eval_scope &over)
@@ -63,8 +63,8 @@ std::optional<std::string> bind_read(const eval_scope &scope, eval_scope &over, 
 
 }
 
-// Upstream refuses a double underscore anywhere in the body before it evaluates anything, and
-// evaluates the rest over its argument table, with no property visible.
+// A double underscore anywhere in the body refuses before anything is evaluated, and the rest is
+// evaluated over the argument table, with no property visible.
 std::optional<std::string> eval_command(subst_ctx &ctx, std::string_view body)
 {
     if(body.find("__") != std::string_view::npos)

@@ -32,8 +32,8 @@ scalar_result real_from(std::string_view text)
     const std::string cleaned = without_separators(text);
     bool ok = false;
     const double number = parse_double(cleaned, ok);
-    // The spelling has already matched upstream's float pattern, so a conversion that refuses it
-    // here refused a magnitude and not a syntax: what is left is a value outside double's range.
+    // The spelling has already matched the float pattern, so a conversion that refuses it here
+    // refused a magnitude and not a syntax: what is left is a value outside double's range.
     if(!ok)
         return declines("a number outside the range this evaluator reads");
     const std::optional<value> made = value::make_real(number);
@@ -81,7 +81,7 @@ scalar_result resolve_plain(std::string_view text)
 
 scalar_result resolve_scalar(std::string_view text, std::string_view tag)
 {
-    // Upstream never implicitly resolves a quoted, literal or folded scalar, and the
+    // A quoted, literal or folded scalar never resolves implicitly, and the
     // non-specific tag is the only place that distinction survives into the node stream.
     if(tag == "!")
         return yields(value{ std::string(text) });

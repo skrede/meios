@@ -20,10 +20,10 @@ document_probe::outcome merged(std::string_view document)
 
 }
 
-// Each shape and its entry set in key order, as the reference loader resolves them. Merged
+// Each shape and its entry set in key order, the order PyYAML gives a merged mapping. Merged
 // entries lead whatever the document wrote first, and an explicit entry keeps the merged key's
 // position while replacing its value.
-TEST_CASE("a merge key flattens to the entries the reference loader produces", "[native][yaml]")
+TEST_CASE("a merge key places its entries first, and an explicit entry replaces a merged value in place", "[native][yaml]")
 {
     const std::pair<std::string_view, std::string_view> shapes[] = {
         { "d: {<<: *b, y: 9, z: 3}\n", "x=1,y=9,z=3" },

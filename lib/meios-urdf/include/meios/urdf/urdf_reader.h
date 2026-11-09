@@ -47,8 +47,8 @@ struct sink_adapter final : erased_sink
     void on_joint(const joint<double> &edge) override { m_sink.on_joint(edge); }
     void finish() override { m_sink.finish(); }
 
-    // Borrowed, never owned: the adapter is stack-constructed inside parse and the
-    // referenced sink provably outlives the one parse_erased call it is passed to.
+    // Borrowed, never owned: the adapter is stack-constructed inside parse and the sink
+    // it refers to provably outlives the one parse_erased call it is passed to.
     Sink &m_sink;
 };
 

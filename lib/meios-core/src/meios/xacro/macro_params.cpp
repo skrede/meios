@@ -77,9 +77,9 @@ std::optional<std::size_t> retry(std::string_view spec, std::vector<std::pair<st
     return std::nullopt;
 }
 
-// A run of quoted strings and bare characters ending at whitespace or the end, backtracked as the
-// reference's regular expression backtracks it: a quoted string may close at any later matching
-// quote on its line, the nearest tried first.
+// A run of quoted strings and bare characters ending at whitespace or the end, backtracked as a
+// regular expression would backtrack it: a quoted string may close at any later matching quote on
+// its line, the nearest tried first.
 std::optional<std::size_t> run_end(std::string_view spec, std::size_t at)
 {
     std::vector<std::pair<std::size_t, std::size_t>> quoted;
@@ -123,7 +123,7 @@ std::optional<std::string> written_default(std::string_view forward, std::string
     return text.empty() ? std::string("^") : "^|" + std::string(unquote(text));
 }
 
-// The reference's pattern ends in `(.*)`, which stops at a newline, so what follows a matched spec's first newline is dropped.
+// After a spec that matched a default, the rest of the list ends at its next newline, and what follows is dropped.
 std::size_t rest_limit(std::string_view spec, std::size_t rest)
 {
     return std::min(spec.find('\n', skip_space(spec, rest)), spec.size());

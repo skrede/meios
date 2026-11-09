@@ -52,7 +52,7 @@ TEST_CASE("the evaluation command reads the argument table under the python eval
     REQUIRE(leaves(out, "<l>Aarm_4</l>"));
 }
 
-TEST_CASE("the evaluation command types an argument and resolves the reference's own names first under the python evaluator", "[eval_python]")
+TEST_CASE("the evaluation command types an argument and resolves the built-in names first under the python evaluator", "[eval_python]")
 {
     const outcome out = under_python(R"XML(<xacro:arg name="real" default="1.50"/><xacro:arg name="e" default="X"/><xacro:arg name="len" default="L"/>)XML",
                                      "$(eval real)_$(eval e)_$(eval true)_$(eval len)");

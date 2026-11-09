@@ -27,8 +27,8 @@ expansion_result expand_body(const std::string &body, meios::log_sink &log)
     return meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, log);
 }
 
-// The minimized document a behavior was measured on against the reference, read from where the
-// differential left it once the two sides agreed and it named no divergence.
+// The minimized document a behavior was measured on against the pinned xacro, read from where the
+// differential left it once meios and xacro agreed and it named no divergence.
 expansion_result expand_probe(const char *name, meios::log_sink &log)
 {
     std::ifstream in(std::filesystem::path{ MEIOS_XACRO_PROBE_DIR } / name, std::ios::binary);
@@ -104,7 +104,7 @@ TEST_CASE("the minimized fallback-attribute document renders the argument's text
 }
 
 // Each expected render was measured on the same document against xacro 2.1.1.
-TEST_CASE("the minimized binding documents render as the reference renders them", "[xacro][scope][property]")
+TEST_CASE("the minimized binding documents render each name by its property, argument and parameter precedence", "[xacro][scope][property]")
 {
     const std::pair<const char *, const char *> rows[] = {
             {"property_default_over_argument.xacro", "Bbase_Aarm"}, {"property_value_over_argument.xacro", "B_A"},      {"property_before_argument.xacro", "B_A"},
@@ -165,7 +165,7 @@ TEST_CASE("an eager lazy_eval spelling evaluates at the definition and a lazy on
         }
 }
 
-TEST_CASE("a property's lazy_eval outside the boolean rule refuses as the reference does", "[xacro][scope][property]")
+TEST_CASE("a property's lazy_eval outside the boolean rule refuses as no boolean", "[xacro][scope][property]")
 {
     for(const char *spelling : {"yes", "1.0"})
     {

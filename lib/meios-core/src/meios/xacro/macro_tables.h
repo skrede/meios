@@ -46,7 +46,7 @@ struct macro_namespace
     std::size_t table;
 };
 
-// The reference keeps a macro and an include namespace under one name in a single table.
+// A macro and an include namespace are kept under one name in a single table.
 using macro_entry = std::variant<macro_def, macro_namespace>;
 
 struct macro_table
@@ -55,10 +55,9 @@ struct macro_table
     std::map<std::string, macro_entry, std::less<>> macros;
 };
 
-// A copy of the definition, held by the call for its duration: the reference clones it before the
-// call's own children run, so a redefinition of the running macro does not reach the call. The two
-// tables are the parents of the call's own, the caller's for a plain name and the namespace's for
-// a dotted one.
+// A copy of the definition, held by the call for its duration: it is cloned before the call's own
+// children run, so a redefinition of the running macro does not reach the call. The two tables are
+// the parents of the call's own, the caller's for a plain name and the namespace's for a dotted one.
 struct resolved_macro
 {
     macro_def def;
@@ -66,9 +65,9 @@ struct resolved_macro
     std::size_t symbols;
 };
 
-// The reference's macro tables chain the way its symbol tables do: a macro call opens one whose
-// parent is the caller's, so a macro its body defines is dropped with the call while every macro
-// the caller could name stays reachable. Index 0 is the document table and is never dropped.
+// Macro tables chain the way symbol tables do: a macro call opens one whose parent is the caller's,
+// so a macro its body defines is dropped with the call while every macro the caller could name
+// stays reachable. Index 0 is the document table and is never dropped.
 class macro_chain
 {
 public:
@@ -92,9 +91,9 @@ private:
     std::vector<std::unique_ptr<macro_table>> m_tables;
 };
 
-// The reference tries the name as written first and only then splits it at its dots, walking each
-// namespace through the macro chain and the symbol chain together; a head bound as a namespace in
-// only one of them names no macro.
+// The name is tried as written first and only then split at its dots, walking each namespace
+// through the macro chain and the symbol chain together; a head bound as a namespace in only one of
+// them names no macro.
 std::optional<resolved_macro> resolve_macro(const macro_chain &macros, const eval_scope &scope, std::string_view name);
 
 }

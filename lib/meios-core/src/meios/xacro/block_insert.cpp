@@ -20,8 +20,8 @@ namespace meios::detail
 namespace
 {
 
-// The reference evaluates a cloned block's own attributes before its children even where only the
-// children are inserted, so a wrapper attribute that no longer evaluates refuses the insertion.
+// A cloned block's own attributes are evaluated before its children even where only the children
+// are inserted, so a wrapper attribute that no longer evaluates refuses the insertion.
 bool evaluate_wrapper(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     std::size_t attr_index = 0;
@@ -47,9 +47,9 @@ bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
 
 }
 
-// The reference clones the block and evaluates the clone with the inserting tables, so the text
-// the call's walk left, an escaped span among it, is evaluated again at each insertion. The record
-// is copied because a call the walk reaches may bind blocks of its own and grow the list.
+// A cloned block is evaluated with the inserting tables, so the text the call's walk left, an
+// escaped span among it, is evaluated again at each insertion. The record is copied because a call
+// the walk reaches may bind blocks of its own and grow the list.
 bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document)
 {

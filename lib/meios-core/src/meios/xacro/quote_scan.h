@@ -38,14 +38,14 @@ inline std::size_t find_expr_close(std::string_view raw, std::size_t opener)
     return std::string_view::npos;
 }
 
-// Upstream's command pattern is ^\$\([^\)]*\): a command ends at its first closing parenthesis
+// The command token is ^\$\([^\)]*\): a command ends at its first closing parenthesis
 // whatever it holds, quotes included, so a call or a span written inside one truncates it there.
 inline std::size_t find_cmd_close(std::string_view raw, std::size_t opener)
 {
     return raw.find(')', opener + 1);
 }
 
-// Upstream's tokens, tried in order: ^\$\$+(\{|\(), ^\$\{[^\}]*\}, ^\$\([^\)]*\), [^$]+|\$[^{($]+|\$$.
+// The tokens, tried in order: ^\$\$+(\{|\(), ^\$\{[^\}]*\}, ^\$\([^\)]*\), [^$]+|\$[^{($]+|\$$.
 // Only this lookahead token ends at its first brace; a span's own close is still found quote-aware.
 inline bool lexes_at(std::string_view raw, std::size_t at)
 {

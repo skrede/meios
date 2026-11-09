@@ -60,8 +60,8 @@ TEST_CASE("the split refuses every argument form but the one separator", "[nativ
 }
 
 // A base that is not a string never reaches the named operation, and each refuses by the gate it
-// was already standing at: a loaded sequence by its kind, a loaded mapping by the absent key --
-// which is what upstream's own wrapper answers there -- and everything else at the origin gate.
+// was already standing at: a loaded sequence by its kind, a loaded mapping by the absent key, and
+// everything else at the origin gate.
 TEST_CASE("the named operation reaches no base but a string", "[native][string]")
 {
     const std::pair<std::string_view, std::string_view> refused[] = {

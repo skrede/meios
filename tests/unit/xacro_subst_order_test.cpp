@@ -110,10 +110,10 @@ TEST_CASE("a span whose inner text holds no opener is evaluated exactly as it wa
     }
 }
 
-// Measured against xacro 2.1.1: upstream truncates each of these at the first `}` and then
-// refuses the fragment, where the quote- and depth-aware close finder here hands the evaluator
-// the whole body and the grammar refuses it. Two refusals for different reasons, one verdict.
-TEST_CASE("a brace-literal container and a format literal refuse where upstream refuses",
+// The quote- and depth-aware close finder hands the evaluator the whole body, and the grammar
+// refuses it. xacro 2.1.1 truncates each of these at the first `}` and refuses the fragment
+// instead: two refusals for different reasons, one verdict.
+TEST_CASE("a brace-literal container and a format literal both refuse",
           "[xacro][subst][order]")
 {
     std::vector<std::pair<meios::level, std::string>> records;

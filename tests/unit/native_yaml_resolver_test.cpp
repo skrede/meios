@@ -101,7 +101,7 @@ TEST_CASE("a tagged value that is not a numeric literal refuses naming its own t
 
 // A tag outside the closed vocabulary is terminal rather than softenable: the fuller backend
 // does not read it either, so retaining the span under a lenient policy would keep a document
-// the reference loader rejects outright.
+// no backend loads.
 TEST_CASE("every other tag refuses by name", "[native][yaml]")
 {
     for(std::string_view tag : { "!grams", "!kilograms", "!feet", "!inch", "!Degrees", "!!int" })

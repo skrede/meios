@@ -92,7 +92,7 @@ TEST_CASE("two strings concatenate where a string beside another kind still loud
 }
 
 // The mapping constructor is the one Python constructor an expression here builds a value from,
-// and only in its keyword-argument spelling: that spelling is measured against the reference and
+// and only in its keyword-argument spelling: that spelling is measured against the pinned xacro and
 // recorded, while every other argument shape and every other constructor name is refused rather
 // than given a meaning nothing measured.
 TEST_CASE("a keyword-argument mapping constructor builds a value the evaluator can subscript",

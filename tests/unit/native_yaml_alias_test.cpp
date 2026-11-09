@@ -12,9 +12,9 @@
 namespace
 {
 
-// The shape the reference loader's amplification was measured on: one anchored sequence of nine
-// leaves, then one anchored level per line, each aliasing the level below nine times. A level
-// costs 46 bytes and nine alias events, and denotes nine times what the level below it does.
+// The alias-amplification shape measured on PyYAML: one anchored sequence of nine leaves, then
+// one anchored level per line, each aliasing the level below nine times. A level costs 46 bytes
+// and nine alias events, and denotes nine times what the level below it does.
 std::string amplified(std::size_t levels)
 {
     std::string out = "l0: &l0 [x,x,x,x,x,x,x,x,x]\n";
@@ -84,9 +84,9 @@ TEST_CASE("the alias ceiling admits the level below the one it refuses", "[nativ
     CHECK(document_probe::read(amplified(5)).parsed.has_value());
 }
 
-// A self-referential graph loads upstream as a value that contains itself. An immutable value
-// with shared collection storage cannot denote one, so the alias arrives while its anchor is
-// still being built and is refused there.
+// An immutable value with shared collection storage cannot contain itself, so an alias arriving
+// while its anchor is still being built is refused there. PyYAML loads such a graph as a value
+// that contains itself.
 TEST_CASE("an alias to an anchor that is not yet complete refuses by name", "[native][yaml]")
 {
     for(std::string_view document : { "a: &a [1, *a]\n", "a: &a {k: *a}\n", "&a [*a]\n" })

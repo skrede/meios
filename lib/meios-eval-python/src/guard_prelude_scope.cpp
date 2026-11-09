@@ -16,7 +16,7 @@ std::string_view scope_reads()
            "class _ScopeReadFailed(Exception):\n"
            "    pass\n"
            "\n"
-           "# The reference evaluates over its table as globals, so every name read at any depth of\n"
+           "# An expression is evaluated over its table as globals, so every name read at any depth of\n"
            "# the expression, a lambda or a generator body included, is looked up here, the scope\n"
            "# before the mathematics names and helpers and both before the builtins.\n"
            "class _ScopeGlobals(dict):\n"

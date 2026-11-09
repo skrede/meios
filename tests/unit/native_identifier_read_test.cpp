@@ -116,7 +116,7 @@ TEST_CASE("a property bound under a name outside ASCII reads under the built-in 
     REQUIRE(renders(read_body(R"(<link name="l${'π'}"/>)"), "lπ"));
 }
 
-TEST_CASE("an expression reads a name under its NFKC form, as Python reads it", "[xacro][identifier]")
+TEST_CASE("an expression reads a name under its NFKC form", "[xacro][identifier]")
 {
     const spelling_case cases[] = {
             {R"(<xacro:property name="fi" value="7"/><link name="l${@}"/>)", U"ﬁ", U"fi", "l7"},

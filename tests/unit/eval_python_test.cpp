@@ -78,7 +78,7 @@ TEST_CASE("a string-producing expression returns its python str", "[eval_python]
     REQUIRE(*got == "link_arm");
 }
 
-TEST_CASE("a comprehension evaluates with full python parity", "[eval_python]")
+TEST_CASE("a list comprehension evaluates to its list", "[eval_python]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const outcome resolved = run(span_document("${[i*i for i in range(4)]}"),

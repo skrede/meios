@@ -77,7 +77,7 @@ TEST_CASE("a name that normalizes to a keyword is a name, refused as undefined",
     REQUIRE(refuses_holding(read_link("${ｉｆ}"), meios::diagnostic_code::undefined_property, "nothing in scope binds 'if'"));
 }
 
-TEST_CASE("a name that normalizes to one of Python's constants refuses as Python refuses it", "[xacro][identifier]")
+TEST_CASE("a name that normalizes to True, False or None refuses as a constant spelled outside ASCII", "[xacro][identifier]")
 {
     const std::pair<std::string_view, std::string_view> constants[] = {{"Ｔrue", "True"}, {"Ｆalse", "False"}, {"Ｎone", "None"}};
     for(const auto &[written, constant] : constants)

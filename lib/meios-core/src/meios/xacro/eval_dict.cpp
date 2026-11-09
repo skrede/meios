@@ -29,9 +29,9 @@ bool at_keyword(const parser &p)
     return p.at(token_kind::name) && p.tokens[p.pos + 1].kind == token_kind::assign;
 }
 
-// Upstream refuses a repeated keyword before it constructs anything, so resolving one here would
-// render where upstream raises. The repetition is read off the built mapping's own extent rather
-// than searched for, so the first-position last-value rule stays the mapping's alone.
+// A repeated keyword refuses, because resolving it would render a document xacro refuses to load.
+// The repetition is read off the built mapping's own extent rather than searched for, so the
+// first-position last-value rule stays the mapping's alone.
 value built_or_repeated(parser &p, std::vector<value::entry> entries)
 {
     const std::size_t named = entries.size();

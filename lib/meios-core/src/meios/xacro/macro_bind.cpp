@@ -74,9 +74,9 @@ std::string block_spelling(const macro_def &def, std::size_t i)
     return (def.block_children[i] ? "**" : "*") + def.block_params[i];
 }
 
-// Every attribute is checked and evaluated in document order, as the reference does, so the first
-// refusal reported is the first one written. An attribute spelled like a block parameter, or a
-// namespace declaration, names no parameter the reference accepts either.
+// Every attribute is checked and evaluated in document order, so the first refusal reported is the
+// first one written. An attribute spelled like a block parameter, or a namespace declaration, names
+// no parameter an attribute can set.
 bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document,
                      call_binding &bound, std::vector<bool> &supplied)
 {
@@ -93,11 +93,11 @@ bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     return true;
 }
 
-// The reference evaluates the whole call node in the caller's own macros and symbols before it
-// captures a single block, so a block argument is evaluated whether or not the receiving macro
-// ever inserts it, and an insert the caller wrote resolves against the caller's blocks. The
-// callee's table binds what that walk produced once binding succeeded. A block parameter left
-// without an element refuses here, before any default is read.
+// The whole call node is evaluated in the caller's own macros and symbols before a single block is
+// captured, so a block argument is evaluated whether or not the receiving macro ever inserts it,
+// and an insert the caller wrote resolves against the caller's blocks. The callee's table binds
+// what that walk produced once binding succeeded. A block parameter left without an element refuses
+// here, before any default is read.
 bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
                  const std::filesystem::path &document, std::vector<bound_block> &blocks)
 {
@@ -118,8 +118,8 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
     return true;
 }
 
-// The reference keeps one default per parameter name: the last declaration of the name written with
-// one sets it, an empty one clearing it, and a declaration written without one leaves it alone.
+// One default is kept per parameter name: the last declaration of the name written with one sets
+// it, an empty one clearing it, and a declaration written without one leaves it alone.
 std::optional<std::string> named_default(const macro_def &def, const std::string &name)
 {
     std::optional<std::string> last;
@@ -157,11 +157,10 @@ bool require_supplied(expand_ctx &ctx, const macro_def &def, pugi::xml_node call
 
 }
 
-// Every argument is evaluated before any of them is bound, because the reference evaluates a
-// call's arguments in the caller's own symbol table and writes them into a table the body
-// alone reads. Binding as it went would let one argument read a sibling's new value -- which
-// a description does write, passing both `ee_id="${ee_id}_${ee_color}"` and a second argument
-// naming `ee_id`, where the two spellings mean different things.
+// Every argument is evaluated in the caller's own symbol table before any of them is bound into the
+// table the body alone reads. Binding as it went would let one argument read a sibling's new
+// value -- which a description does write, passing both `ee_id="${ee_id}_${ee_color}"` and a
+// second argument naming `ee_id`, where the two spellings mean different things.
 bool bind_call(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document, call_binding &bound)
 {
     std::vector<bool> supplied(def.params.size(), false);

@@ -74,7 +74,7 @@ TEST_CASE("a malformed UTF-8 sequence never forms a name", "[xacro][identifier]"
         REQUIRE_FALSE(python_name(bytes));
 }
 
-TEST_CASE("a name is valid exactly as the reference's is_valid_name admits it", "[xacro][identifier]")
+TEST_CASE("a name is valid exactly when it is an NFKC-normal python identifier that is not a keyword", "[xacro][identifier]")
 {
     for(std::u32string_view name : {U"π", U"é", U"match", U"_", U"fi"})
         REQUIRE(valid_python_name(spelled(name)));

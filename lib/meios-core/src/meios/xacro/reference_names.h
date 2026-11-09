@@ -8,16 +8,16 @@
 namespace meios::detail
 {
 
-// Every public name of Python's mathematics module, taken from Python 3.14. Upstream's evaluation
-// command resolves each before an argument, and the python evaluator binds each bare.
+// Every public name of Python's mathematics module, taken from Python 3.14. The evaluation command
+// resolves each before an argument, and the python evaluator binds each bare.
 inline constexpr std::string_view mathematics_names[] = {
         "acos",    "acosh",    "asin",  "asinh",   "atan",      "atan2", "atanh",     "cbrt",   "ceil",    "comb",  "copysign", "cos",  "cosh",  "degrees", "dist",      "e",
         "erf",     "erfc",     "exp",   "exp2",    "expm1",     "fabs",  "factorial", "floor",  "fma",     "fmod",  "frexp",    "fsum", "gamma", "gcd",     "hypot",     "inf",
         "isclose", "isfinite", "isinf", "isnan",   "isqrt",     "lcm",   "ldexp",     "lgamma", "log",     "log10", "log1p",    "log2", "modf",  "nan",     "nextafter", "perm",
         "pi",      "pow",      "prod",  "radians", "remainder", "sin",   "sinh",      "sqrt",   "sumprod", "tan",   "tanh",     "tau",  "trunc", "ulp"};
 
-// The names upstream's table of built-ins holds beneath every property, as its create_global_symbols
-// builds them under the pinned interpreter; tests/golden/oracle/global_symbols.cases records them.
+// The table of built-ins beneath every property, from xacro's create_global_symbols under the
+// pinned interpreter; tests/golden/oracle/global_symbols.cases records them.
 inline constexpr std::string_view root_symbols[] = {"False",  "True",      "abs_filename", "acos", "acosh",     "asin",     "asinh",  "atan",    "atan2",  "atanh",     "bool",  "cbrt",
                                                     "ceil",   "comb",      "copysign",     "cos",  "cosh",      "degrees",  "dict",   "dist",    "dotify", "e",         "erf",   "erfc",
                                                     "exp",    "exp2",      "expm1",        "fabs", "factorial", "float",    "floor",  "fma",     "fmod",   "frexp",     "fsum",  "gamma",

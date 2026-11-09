@@ -92,9 +92,9 @@ std::string_view builtin_walk()
 
 std::string_view expression_check()
 {
-    return "# ast.walk descends into a lambda or comprehension body, where the reference\n"
-           "# implementation's co_names check cannot reach: those bodies are nested code\n"
-           "# objects whose names never appear in the top-level co_names tuple.\n"
+    return "# ast.walk descends into a lambda or comprehension body, where a co_names\n"
+           "# check cannot reach: those bodies are nested code objects whose names never\n"
+           "# appear in the top-level co_names tuple.\n"
            "def check_expression(expr, bound):\n"
            "    try:\n"
            "        tree = ast.parse(expr, mode='eval')\n"

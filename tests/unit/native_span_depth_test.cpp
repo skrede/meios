@@ -15,8 +15,8 @@ using ceiling::resolve;
 using ceiling::admitted;
 using ceiling::refused_on_depth;
 
-// A command ends at its first closing parenthesis, as the reference's pattern ends it, so however
-// deep the input the outermost level refuses on the command left open inside it.
+// A command ends at its first closing parenthesis, so however deep the input the outermost level
+// refuses on the command left open inside it.
 TEST_CASE("an argument command written inside another refuses at its first level", "[native][depth]")
 {
     const ceiling::resolved deep = resolve(ceiling::nested_arguments(20'000));

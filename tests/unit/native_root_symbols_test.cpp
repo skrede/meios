@@ -21,7 +21,7 @@ TEST_CASE("the built-in names are the ones the reference's table holds, in its o
     }
 }
 
-TEST_CASE("every mathematics name the evaluator answers is a built-in name of the reference", "[xacro][root_symbols]")
+TEST_CASE("every mathematics name the evaluator answers is a built-in name", "[xacro][root_symbols]")
 {
     for(std::string_view name : meios::detail::mathematics_names)
     {

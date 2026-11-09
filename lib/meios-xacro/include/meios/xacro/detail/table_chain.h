@@ -157,9 +157,8 @@ private:
     deferred_resolver m_resolver;
     std::vector<std::unique_ptr<name_table>> m_tables;
 
-    // The text is evaluated with its own table current, as the reference evaluates it against the
-    // table holding the key, and the answer replaces the text there whether it is a value or a
-    // refusal.
+    // The text is evaluated with its own table current, the table holding the key, and the answer
+    // replaces the text there whether it is a value or a refusal.
     name_read resolve(std::size_t table, std::string_view name, deferred_text deferred, std::size_t carried)
     {
         if(!m_resolver.attached())

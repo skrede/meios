@@ -13,9 +13,9 @@ namespace meios::detail
 {
 
 // Opens a macro call's own symbol and macro tables over the ones it resolved in and drops them, with
-// every table opened beneath them, on whichever path the call returns, as the reference binds each
-// call in a fresh pair of Tables that die with the call. A plain name resolves in the caller's
-// tables, which is the reference's dynamic scoping; a dotted one in its namespace's.
+// every table opened beneath them, on whichever path the call returns, so each call binds in a
+// fresh pair of tables that die with it. A plain name resolves in the caller's tables, which is
+// dynamic scoping; a dotted one in its namespace's.
 class invocation_frame
 {
 public:

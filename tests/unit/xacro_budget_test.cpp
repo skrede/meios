@@ -170,8 +170,8 @@ TEST_CASE("span nesting past the expression-depth ceiling refuses rather than de
     CHECK(xacro_probe::coded(records, meios::diagnostic_code::expansion_budget_exceeded) == 1);
 }
 
-// A command ends at its first closing parenthesis, as the reference's pattern ends it, so the same
-// depth written with command openers never descends: the outermost command is left holding the rest.
+// A command ends at its first closing parenthesis, so the same depth written with command openers
+// never descends: the outermost command is left holding the rest.
 TEST_CASE("command nesting refuses at its first level rather than descending", "[xacro][budget]")
 {
     meios::source_stack sources;

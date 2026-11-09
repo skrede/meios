@@ -16,10 +16,10 @@ bool refuse_terminal(subst_ctx &ctx, diagnostic_code code, const std::string &me
 
 bool fail_unterminated(subst_ctx &ctx, char opener, std::size_t at);
 
-// The reference's lexer reads one token ahead, so a token after a span that does not lex refuses before the span is evaluated.
+// The lexer reads one token ahead, so a token after a span that does not lex refuses before the span is evaluated.
 bool refuse_follower(subst_ctx &ctx, std::string_view raw, std::size_t at, std::size_t base);
 
-// Upstream's lexer token ^\$\$+(\{|\() escapes the opener; a run before anything else is no token.
+// The token ^\$\$+(\{|\() escapes the opener; a run before anything else is no token.
 bool expand_dollar_run(subst_ctx &ctx, std::string_view raw, std::size_t dollar, std::string &out,
                        std::size_t &cursor, std::size_t base);
 

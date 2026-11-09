@@ -113,8 +113,8 @@ TEST_CASE("substitution scanner concatenates literal, expression and command spa
         REQUIRE(out->text == "a{b");
     }
 
-    // Upstream refuses this spelling as an unterminated string literal; meios renders it,
-    // a deliberate divergence rather than an accident of the scan.
+    // meios renders this spelling, where xacro refuses it as an unterminated string literal: a
+    // deliberate difference rather than an accident of the scan.
     SECTION("a closing brace inside a string literal does not end the span")
     {
         const substitution_result out =

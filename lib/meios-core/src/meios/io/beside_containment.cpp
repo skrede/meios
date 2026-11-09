@@ -47,7 +47,7 @@ std::optional<contained_read> admit_real(const std::filesystem::path &document, 
     return std::nullopt;
 }
 
-// The reference opens the spelling as written, so an element that is not a directory refuses it where weakly_canonical would stop and reduce the rest [fs.op.weakly.canonical].
+// The spelling is opened as written, so an element that is not a directory refuses it where weakly_canonical would stop and reduce the rest [fs.op.weakly.canonical].
 // The walk asks each element rather than reading ENOTDIR, which only POSIX reports; an element a `..` follows is left to the path API, which reduces the pair first on Windows.
 std::optional<operation_failure> refuse_non_directory(const std::filesystem::path &joined)
 {

@@ -96,8 +96,8 @@ std::filesystem::recursive_directory_iterator crawl_iterator(
     return std::filesystem::recursive_directory_iterator(root, options, ec);
 }
 
-// A package is registered at the spelling it was crawled at, as the reference's package lookup
-// reports it, while the visited set stays canonical so a link cycle still terminates.
+// A package is registered at the spelling it was crawled at, the path a ROS package lookup
+// reports, while the visited set stays canonical so a link cycle still terminates.
 void crawl_ros1_root(const std::filesystem::path &root,
                      std::map<std::string, std::filesystem::path> &out, log_sink &log)
 {

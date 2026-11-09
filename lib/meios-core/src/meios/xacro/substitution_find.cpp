@@ -78,7 +78,7 @@ std::string names_no_directory(std::string_view package)
            + "\", and a layer that serves only bytes is asked for a file only through a leading " + find + " followed by a separator";
 }
 
-// Upstream splits a command on spaces and refuses a find unless exactly one argument remains.
+// A command is split on spaces, and a find refuses unless exactly one argument remains.
 std::optional<std::string> cmd_find(subst_ctx &ctx, std::string_view rest)
 {
     const std::string_view package = rest.substr(0, rest.find(' '));

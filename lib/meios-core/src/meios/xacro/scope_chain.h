@@ -74,8 +74,6 @@ struct chain_access
         scope.m_chain.table(table).set(name, std::move(entry));
     }
 
-    // The reference's removal pops the name from the current table and from every table a read
-    // falls through to, the document table included.
     static void remove(eval_scope &scope, std::string_view name)
     {
         for(std::optional<std::size_t> at = scope.m_chain.cursor(); at; at = scope.m_chain.table(*at).parent())
@@ -93,8 +91,8 @@ struct chain_access
         scope.m_chain.table(table).set(key, block_entry{ block });
     }
 
-    // The reference looks a name up as a content-only block across the whole chain before it looks
-    // it up as a single one, so a nearer `*name` does not hide a farther `**name`.
+    // A name is looked up as a content-only block across the whole chain before it is looked up as
+    // a single one, so a nearer `*name` does not hide a farther `**name`.
     static std::optional<std::size_t> find_block(const eval_scope &scope, std::string_view name)
     {
         if(const std::optional<std::size_t> content = block_under(scope, "**" + std::string(name)))

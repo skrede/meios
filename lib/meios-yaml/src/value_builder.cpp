@@ -106,7 +106,7 @@ bool wrote_one_key_twice(const std::vector<value::entry> &entries)
 
 // Merged entries lead and the entries the document wrote follow, which is all the precedence
 // this builder states: the mapping constructor's first-position, last-value rule turns that
-// order into the resolution upstream produces.
+// order into the resolution PyYAML produces.
 void value_builder::OnMapEnd()
 {
     frame done = std::move(m_frames.back());

@@ -30,10 +30,9 @@ value refuse_dotted(parser &p)
     return p.fail_unsupported("dotted access in an expression — use eval-python");
 }
 
-// Measured into tests/golden/oracle/collisions.cases, and checked against it rather than
-// asserted: upstream's mapping wrapper tries ordinary attribute lookup before falling through
-// to the document, so each of these names answers with the wrapper's own operation and the key
-// beneath it is never reached.
+// These names refuse rather than reading the key beneath them, because in xacro each answers with
+// the mapping wrapper's own operation. Measured into tests/golden/oracle/collisions.cases, and
+// checked against it rather than asserted.
 constexpr std::string_view colliding[] = { "clear",      "copy",   "fromkeys", "get",
                                            "items",      "keys",   "pop",      "popitem",
                                            "setdefault", "update", "values" };
@@ -90,9 +89,9 @@ value parse_split(parser &p, const std::string &text)
     return split_text(p, text, *separator);
 }
 
-// Text, not privilege: the origin mark does not gate this, because upstream reads the same
-// operation off a string whether a document produced it or an author wrote it. One operation is
-// admitted by name, and no other member spelling on a string yields anything at all.
+// Text, not privilege: the origin mark does not gate this, because a string carries the same
+// operation whether a document produced it or an author wrote it. One operation is admitted by
+// name, and no other member spelling on a string yields anything at all.
 value string_member(parser &p, const std::string &text, std::string_view member)
 {
     if(member == "split" && p.at(token_kind::lparen))
@@ -109,10 +108,10 @@ std::span<const std::string_view> colliding_members()
 }
 
 // The origin mark is the whole gate: a mapping an author wrote never gains the member path a
-// loaded one has, by whatever route it arrived. Above the gate sit the two spellings upstream
-// answers itself — a name the wrapper carries, and any name written with a leading double
-// underscore — which refuse rather than returning the key beneath them, because returning it
-// would mean something here that it does not mean upstream on exactly the spelling written.
+// loaded one has, by whatever route it arrived. Above the gate sit two spellings — a name the
+// mapping wrapper carries, and any name written with a leading double underscore — which refuse
+// rather than returning the key beneath them, because xacro answers both from the wrapper itself
+// and the key would give the same spelling a second meaning.
 value member_of(parser &p, const value &base, std::string_view member)
 {
     const level_guard level(p);
@@ -146,11 +145,11 @@ value parse_member(parser &p, const value &base)
     return member_of(p, base, member);
 }
 
-// An include namespace is looked up first, so one named xacro shadows the load_yaml helper, as a
-// symbol of that name does upstream. A head naming an argument refuses as a bare read of it does; a
-// head naming nothing in scope refuses by name, because a description that means something else
-// here than it does upstream is worse than one that will not load; a head naming a value reaches
-// the same gate a dot after a subexpression reaches.
+// An include namespace is looked up first, so one named xacro shadows the load_yaml helper. A head
+// naming an argument refuses as a bare read of it does; a head naming nothing in scope refuses by
+// name, because a description that means something else here than it does in xacro is worse than
+// one that will not load; a head naming a value reaches the same gate a dot after a subexpression
+// reaches.
 value parse_dotted(parser &p, std::string_view head)
 {
     if(!p.at(token_kind::name))

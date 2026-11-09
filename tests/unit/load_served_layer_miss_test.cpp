@@ -51,8 +51,7 @@ std::string unresolved(const load_outcome &loaded)
 
 }
 
-TEST_CASE("a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, "
-          "and is read lexically on Windows",
+TEST_CASE("a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses on POSIX, and is read lexically on Windows",
           "[urdf][load][include][link]")
 {
     const include_tree::tree held;

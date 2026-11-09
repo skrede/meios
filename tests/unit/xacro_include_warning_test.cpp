@@ -39,7 +39,7 @@ std::size_t warnings(const std::vector<xacro_probe::captured> &records)
 
 }
 
-// Upstream warns "Child elements of a <xacro:include> tag are ignored" and drops them as well.
+// meios drops an include's child elements without a warning, where xacro warns about them.
 TEST_CASE("an include's child elements are ignored with no warning here", "[xacro][include][warning]")
 {
     std::vector<xacro_probe::captured> heard;
@@ -50,7 +50,8 @@ TEST_CASE("an include's child elements are ignored with no warning here", "[xacr
     REQUIRE(warnings(heard) == 0);
 }
 
-// Upstream warns "inconsistent namespace redefinitions for xmlns:foo" and keeps the outer declaration too.
+// The outer declaration of a redeclared prefix is kept, and meios does not warn about the
+// redeclaration, where xacro does.
 TEST_CASE("an include redeclaring a namespace prefix raises no warning here", "[xacro][include][warning]")
 {
     std::vector<xacro_probe::captured> heard;

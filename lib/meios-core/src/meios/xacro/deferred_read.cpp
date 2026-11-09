@@ -98,8 +98,7 @@ std::optional<value> substitute_level(expand_ctx &ctx, const deferred_origin &fr
 }
 
 // A refusal is located inside the definition's own text, but the active document stays the file
-// being processed: the reference resolves a relative path when the property is read, not where it
-// was written.
+// being processed: a relative path resolves when the property is read, not where it was written.
 name_read evaluate_level(expand_ctx &ctx, const deferred_text &deferred, std::size_t carried, log_sink &log)
 {
     const resolution_level level(ctx, carried + deferred_read_cost, definition_at(ctx, deferred.origin), log);
