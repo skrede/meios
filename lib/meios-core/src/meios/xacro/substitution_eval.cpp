@@ -13,6 +13,8 @@
 #include "meios/xacro/detail/scope_read.h"
 #include "meios/xacro/detail/scope_entry.h"
 
+#include "meios/detail/article.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"

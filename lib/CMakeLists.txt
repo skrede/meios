@@ -125,6 +125,12 @@ if(MEIOS_EVAL_PYTHON_SUPPORT)
             LINK_PRIVATE pybind11::embed
             NOT_EXPORTABLE
                 "its embedded-interpreter link edge cannot be re-resolved from an installed tree")
+        # The evaluator words its refusals with the core's own private text helpers, which are not
+        # installed API, so it reads them through the core's source root the way the CLI does.
+        if(TARGET meios_eval-python)
+            target_include_directories(meios_eval-python PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/meios-core/src)
+        endif()
     else()
         message(STATUS
             "meios: Python3 Development.Embed not found; skipping meios::eval-python.")

@@ -5,6 +5,8 @@
 #include "meios/xacro/structural.h"
 #include "meios/xacro/value_render.h"
 
+#include "meios/detail/article.h"
+
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>

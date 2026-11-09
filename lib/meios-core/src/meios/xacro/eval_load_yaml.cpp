@@ -8,6 +8,8 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/text_resource_loader.h"
 
+#include "meios/detail/article.h"
+
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 

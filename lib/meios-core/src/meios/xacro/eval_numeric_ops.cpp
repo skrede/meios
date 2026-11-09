@@ -6,6 +6,8 @@
 #include "meios/xacro/value_render.h"
 #include "meios/xacro/detail/numeric.h"
 
+#include "meios/detail/article.h"
+
 #include <cmath>
 #include <string>
 #include <cstdint>

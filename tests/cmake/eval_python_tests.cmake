@@ -145,7 +145,8 @@ if(TARGET meios_eval-python)
         # Two cases raise an error the interpreter could not raise itself, which reaches the
         # evaluator's own failure handling directly.
         target_include_directories(eval_python_argument_test PRIVATE
-            ${meios_SOURCE_DIR}/lib/meios-eval-python/src)
+            ${meios_SOURCE_DIR}/lib/meios-eval-python/src
+            ${meios_SOURCE_DIR}/lib/meios-core/src)
         meios_enable_coverage(eval_python_argument_test)
         meios_warnings(eval_python_argument_test)
         catch_discover_tests(eval_python_argument_test TEST_PREFIX "eval_python_argument.")

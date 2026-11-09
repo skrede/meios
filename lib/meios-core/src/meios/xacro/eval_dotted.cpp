@@ -9,6 +9,8 @@
 
 #include "meios/xacro/detail/scope_read.h"
 
+#include "meios/detail/article.h"
+
 #include <span>
 #include <string>
 #include <vector>

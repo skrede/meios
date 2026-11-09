@@ -6,6 +6,8 @@
 #include "meios/xacro/value_render.h"
 #include "meios/xacro/container_marker.h"
 
+#include "meios/detail/article.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 

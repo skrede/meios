@@ -3,6 +3,8 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/value_render.h"
 
+#include "meios/detail/article.h"
+
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <string>
