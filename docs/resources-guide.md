@@ -235,7 +235,7 @@ meios_target_deploy_resources(app RESOURCES kuka universal_robots SUBDIR urdf)
 
 ### Shipping part of a monorepo
 
-Many upstream description repositories hold a dozen packages and you need two of them. `PACKAGES`
+Many vendors' description repositories hold a dozen packages and you need two of them. `PACKAGES`
 copies only the named top-level entries, each keeping its own directory name:
 
 ```cmake

@@ -30,17 +30,16 @@ Measured on both shapes with that root, a `package://` mesh refuses under `uncon
 `package://` or `$(find)` include and a `package://` auxiliary document each raise an
 `uncontained_asset` record before the load refuses, the include under `unresolved_include` and the
 auxiliary document as unreachable; a `$(find)` auxiliary document refuses there as well. The pinned
-reference reads the `$(find)` include and the `$(find)` auxiliary document through `install/share` on
-both shapes, because it opens a path wherever its links lead. The remedy is to configure the source
-tree as the root, which lets a description read every file under it: on both shapes each of those
-references resolves once `src` is the root. A root that is itself a link is read through the directory
-it leads to, so a root given as a link to the source tree serves them too. The ROS layer registers a
-package whose directory is a link under the directory the link leads to. Through `ROS_PACKAGE_PATH`, a
-package file that is a link staying inside its package reads as it does through a configured root, a
-package under an entry that is itself a link reads, and a package file whose link leads out of its
-package refuses, with an `uncontained_asset` record naming the package and the path within it. Nothing
-builds a real `--symlink-install` workspace, so what a real build lays down beyond these shapes is not
-covered.
+xacro reads the `$(find)` include and the `$(find)` auxiliary document through `install/share` on both
+shapes, because it opens a path wherever its links lead. The remedy is to configure the source tree as
+the root, which lets a description read every file under it: on both shapes each of those references
+resolves once `src` is the root. A root that is itself a link is read through the directory it leads
+to, so a root given as a link to the source tree serves them too. The ROS layer registers a package
+whose directory is a link under the directory the link leads to. Through `ROS_PACKAGE_PATH`, a package
+file that is a link staying inside its package reads as it does through a configured root, a package
+under an entry that is itself a link reads, and a package file whose link leads out of its package
+refuses, with an `uncontained_asset` record naming the package and the path within it. Nothing builds a
+real `--symlink-install` workspace, so what a real build lays down beyond these shapes is not covered.
 
 **A relative asset path anchors to the top-level input document, not to the file it was written in.**
 After include and macro expansion a description is commonly assembled from many files, and a
@@ -50,101 +49,94 @@ not resolve. Anchoring to the writing file needs a map from an expanded node bac
 produced it, and none is built. The `package://` form is unaffected, and it is what real descriptions
 overwhelmingly use. The full rule is in [asset resolution](asset-resolution.md).
 
-**A relative include resolves beside the document that writes it, as the reference resolves it, and
-refuses to climb above that directory unless the caller admits the climb.** The reference joins
+**A relative include resolves beside the document that writes it, and refuses to climb above that
+directory unless the caller admits the climb.** This evaluator joins
 `<xacro:include filename="arm.xacro"/>` onto the directory of the file that writes it, at the path that
-file was named by, and so does this evaluator: inside a macro body the anchor is the document that
-calls the macro, a nested include reads the file beside the include that names it, and a document
-opened through a link anchors at the link rather than at the file the link points to. A document a
-package lookup served, `package://` or `$(find)` through a directory, bundle or ROS layer, anchors the
-same way, at the path the lookup named it by, `root/package/relative`, even where that path is a link;
-the file the link leads to stays its identity, the file its cycle check keys and its read opens.
-Measured on a package file that is a link into another directory, each of the two directories holding a
-same-named sibling, its nested include and its auxiliary document read the sibling beside the named
-path, which is the file the reference reads through `$(find)`. A relative include in a document a
-memory source served, a layer that serves bytes, is asked of that layer under the document's package
-and directory, with or without a `..` element, since a document the layer materialized holds no links.
-Nothing beside the file the layer materialized decides it, so the include resolves the same whatever
-an earlier include made the layer write, the file it answers carries the layer's record, and only what
-the layer lacks goes to the configured sources: with `c.xacro` included before
-`sub/../c.xacro`, whose own include of `d.xacro` the layer holds, the layer's `d.xacro` renders, over
-the memory layer alone and over one stacked on a directory layer holding a `d.xacro` of its own. Where
-nothing is beside a document a directory, bundle or ROS layer served, its sibling is asked of the layer
-that served it, under that document's package and directory, except where the spelling holds a `..`
-element. Such a miss beside a document a directory,
-bundle or ROS layer served is not asked of that layer and goes to the configured sources alone, because
-the spelling's lexical reduction need not name the directory the operating system read: measured on
-Linux, where POSIX follows the link, with the document including `sub/../c.xacro`, `sub` a link to
-`a/b`, nothing at `a/c.xacro` and a `c.xacro` beside the document, the load refuses through `$(find)`
-and `package://` alike, at the command line as well, as the reference refuses it through `$(find)`. On
-Windows the path interfaces reduce `sub/..` before any link is consulted, so the spelling names the
-`c.xacro` beside the named path: measured there, the load succeeds instead of refusing, through
-`$(find)` and `package://` alike, and that it reads that `c.xacro` is what `load_served_layer.a sibling
-miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the
-reference refuses it on POSIX, and is read lexically on Windows` asserts. A file found beside a
-document a path-naming layer served carries that layer's
+file was named by: inside a macro body the anchor is the document that calls the macro, a nested
+include reads the file beside the include that names it, and a document opened through a link anchors
+at the link rather than at the file the link points to. A document a package lookup served,
+`package://` or `$(find)` through a directory, bundle or ROS layer, anchors the same way, at the path
+the lookup named it by, `root/package/relative`, even where that path is a link; the file the link
+leads to stays its identity, the file its cycle check keys and its read opens. Measured on a package
+file that is a link into another directory, each of the two directories holding a same-named sibling,
+its nested include and its auxiliary document read the sibling beside the named path. A relative
+include in a document a memory source served, a layer that serves bytes, is asked of that layer under
+the document's package and directory, with or without a `..` element, since a document the layer
+materialized holds no links. Nothing beside the file the layer materialized decides it, so the include
+resolves the same whatever an earlier include made the layer write, the file it answers carries the
+layer's record, and only what the layer lacks goes to the configured sources: with `c.xacro` included
+before `sub/../c.xacro`, whose own include of `d.xacro` the layer holds, the layer's `d.xacro` renders,
+over the memory layer alone and over one stacked on a directory layer holding a `d.xacro` of its own.
+Where nothing is beside a document a directory, bundle or ROS layer served, its sibling is asked of the
+layer that served it, under that document's package and directory, except where the spelling holds a
+`..` element. Such a miss beside a document a directory, bundle or ROS layer served is not asked of
+that layer and goes to the configured sources alone, because the spelling's lexical reduction need not
+name the directory the operating system read: measured on Linux, where POSIX follows the link, with the
+document including `sub/../c.xacro`, `sub` a link to `a/b`, nothing at `a/c.xacro` and a `c.xacro`
+beside the document, the load refuses through `$(find)` and `package://` alike, at the command line as
+well. On Windows the path interfaces reduce `sub/..` before any link is consulted, so the spelling
+names the `c.xacro` beside the named path: measured there, the load succeeds instead of refusing,
+through `$(find)` and `package://` alike, and that it reads that `c.xacro` is what
+`load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving
+layer, so it refuses as the reference refuses it on POSIX, and is read lexically on
+Windows` asserts. A file found beside a document a path-naming layer served carries that layer's
 record, so that its own misses are asked of the layer too, only where its spelling holds no `..`
 element and the directory the document was named in admitted it. A file beside the document that
 another directory admitted, a configured root reached through a link say, carries no record of that
 layer, so a miss beside that file is not answered from the layer: measured on Linux with the serving
-layer's directory holding the missed name, the load refuses, as the reference does. On Windows a file
-spelled back through the link to reach that directory is not reached, since the spelling names a file
-beside the named path; measured there with none beside it, the load refuses for want of the spelling
-itself. Nor does a file spelled
-through `..`, because the spelling and the file the operating system reads can then name different
-directories: measured on Linux with `sub` a link to `a/b`, a served document including
+layer's directory holding the missed name, the load refuses. On Windows a file spelled back through the
+link to reach that directory is not reached, since the spelling names a file beside the named path;
+measured there with none beside it, the load refuses for want of the spelling itself. Nor does a file
+spelled through `..`, because the spelling and the file the operating system reads can then name
+different directories: measured on Linux with `sub` a link to `a/b`, a served document including
 `sub/../b.xacro` reads `a/b.xacro`, and that file's include of `c.xacro`, absent from `a`, refuses,
 though the layer holds a `c.xacro` beside the spelling's lexical reduction, through `$(find)` and
-`package://` alike and at the command line as well; the reference refuses it through `$(find)` for want
-of `sub/../c.xacro`, and refuses the `package://` spelling at its first include, as the `package://`
-entry below states. On Windows that spelling names the `b.xacro` beside the named path instead:
-measured there through `$(find)`, the load succeeds instead of refusing, and at the command line the
-flatten exits successfully without reporting the include unresolved. That it reads that `b.xacro`,
-through `package://` as well, is what `load_served_layer.a sibling spelled back through a linked
-directory carries no served record, so its miss refuses as the reference refuses it on POSIX, and is
-read lexically on Windows` and `cli_package_path: a sibling spelled back through a linked directory
-refuses as the reference refuses it on POSIX and is read lexically on Windows` assert. A
-filename that climbs out of the document's directory refuses here as climbing above the directory of
-the document that writes it: measured on a document whose included file includes
-`../include_parent_directory.leaf.xacro`, upstream renders the property that file binds and here the
-load refuses under `xacro_structural_error`, which is the `include_parent_directory` row the manifest
-carries. An auxiliary document's leading `..` is not held by that gate: it is admitted wherever it
-lands under one of the directories the outside-link entry below lists, so it loads under a configured
-root holding the file, as the reference loads it, and with no configured root refuses as unreachable
-where the reference reads it. A caller that sets `include_options::climb_above_document`, on
-`load_options::includes` or as the trailing argument of `meios::expand`, admits the climb as the
-reference reads it: a spelling that leaves the document's directory is joined as written onto it and
-read where the operating system resolves it, and a climb that names nothing refuses without consulting
-a configured source. That same document then renders as upstream renders it, which is the
-`include_parent_directory_climbed` verdict. Where a served document's admitted climb is answered is
-decided by the type of the layer that served it, and the layer is asked nothing to decide it. A layer
-whose type names no paths, a memory source, holds what it served only as the bytes it materialized, so
-the climb in such a document is answered by that layer alone, inside the document's package, and loads
-or refuses the same whatever was included before it; a climb out of the package has an entry of its own
-below. A directory, bundle or ROS layer names paths, and an admitted climb in a document one of them
-served is read where the operating system resolves it, as a document opened from disk is: measured
-through the ROS layer alone, a climb inside the package and one out of it each read the file the
-reference reads. That holds through a beside link into another configured root: measured on a package
-file whose sibling is a link into a second configured root and climbs from there, the load reads the
-file the climb names from the link's own directory with no error record, and the reference reads the
-same file. A `..` that stays inside the directory has an entry of its own below too. Admitting the
-climb is a security choice, not a parity one. A description can then name any file the process can
-open, short of the package bound a byte-served document keeps, so set it only for descriptions you
-trust as much as the process itself.
+`package://` alike and at the command line as well. On Windows that spelling names the `b.xacro` beside
+the named path instead: measured there through `$(find)`, the load succeeds instead of refusing, and at
+the command line the flatten exits successfully without reporting the include unresolved. That it reads
+that `b.xacro`, through `package://` as well, is what `load_served_layer.a sibling spelled back through
+a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX,
+and is read lexically on Windows` and `cli_package_path: a sibling spelled back through a linked
+directory refuses as the reference refuses it on POSIX and is read lexically on
+Windows` assert. A filename that climbs out of the document's directory refuses here as climbing above
+the directory of the document that writes it: measured on a document whose included file includes
+`../include_parent_directory.leaf.xacro`, the load refuses under `xacro_structural_error` and xacro
+renders the property that file binds; that is the `include_parent_directory` row the manifest carries.
+An auxiliary document's leading `..` is not held by that gate: it is admitted wherever it lands under
+one of the directories the outside-link entry below lists, so it loads under a configured root holding
+the file, and with no configured root refuses as unreachable, where xacro reads it. A caller that sets
+`include_options::climb_above_document`, on `load_options::includes` or as the trailing argument of
+`meios::expand`, admits the climb: a spelling that leaves the document's directory is joined as written
+onto it and read where the operating system resolves it, and a climb that names nothing refuses without
+consulting a configured source. That same document then renders the property the climbed file binds,
+which is the `include_parent_directory_climbed` verdict. Where a served document's admitted climb is
+answered is decided by the type of the layer that served it, and the layer is asked nothing to decide
+it. A layer whose type names no paths, a memory source, holds what it served only as the bytes it
+materialized, so the climb in such a document is answered by that layer alone, inside the document's
+package, and loads or refuses the same whatever was included before it; a climb out of the package has
+an entry of its own below. A directory, bundle or ROS layer names paths, and an admitted climb in a
+document one of them served is read where the operating system resolves it, as a document opened from
+disk is: measured through the ROS layer alone, a climb inside the package and one out of it each read
+the file the operating system resolves the climb to. That holds through a beside link into another
+configured root: measured on a package file whose sibling is a link into a second configured root and
+climbs from there, the load reads the file the climb names from the link's own directory with no error
+record. A `..` that stays inside the directory has an entry of its own below too. Admitting the climb
+is a security choice, not a parity one. A description can then name any file the process can open,
+short of the package bound a byte-served document keeps, so set it only for descriptions you trust as
+much as the process itself.
 
 **A `..` that climbs back inside the document's directory is read where the operating system resolves
 it, and refused through a path element that is not a directory wherever the operating system reports
-one, as the reference refuses it; two shapes still differ.** A filename such as `sub/../x.xacro` does
-not leave the document's directory as written. An include, an auxiliary document and a mesh each join
-it onto that directory as written, as the reference joins an include or an auxiliary document, and
-judge it where the operating system resolves it, by the rule the outside-link entry below states, with
-`climb_above_document` set or unset. On POSIX, with `sub` a link to a directory under a configured
-package root, each of the three reads the file the link leads to, and a file the include reads anchors
-its own relative includes at the spelling as written. With `sub` a link to a directory under nothing
-that admits it, each refuses there unless the caller follows outside links, and then reads where the
-link leads. Measured on Linux against the pinned reference with `sub` a link to a directory elsewhere,
-an `x.xacro` beside the document and another one level above where the link leads, the reference
-renders the property the second binds, and so does this side with outside links followed. On Windows
+one; two shapes still differ.** A filename such as `sub/../x.xacro` does not leave the document's
+directory as written. An include, an auxiliary document and a mesh each join it onto that directory as
+written and judge it where the operating system resolves it, by the rule the outside-link entry below
+states, with `climb_above_document` set or unset. On POSIX, with `sub` a link to a directory under a
+configured package root, each of the three reads the file the link leads to, and a file the include
+reads anchors its own relative includes at the spelling as written. With `sub` a link to a directory
+under nothing that admits it, each refuses there unless the caller follows outside links, and then
+reads where the link leads. Measured on Linux against the pinned xacro with `sub` a link to a directory
+elsewhere, an `x.xacro` beside the document and another one level above where the link leads, this
+evaluator with outside links followed renders the property the second binds, as xacro does. On Windows
 the path interfaces reduce `sub/..` before any link is consulted, so the spelling names the file beside
 the document whatever `sub` links to, and no link is followed. Measured on Windows, an include of
 `sub/../x.xacro` with an `x.xacro` beside the document loads with the options unset, where POSIX
@@ -152,37 +144,35 @@ refuses it; with `sub` a link into a configured root and no `x.xacro` beside the
 refuses for want of it; and a mesh and an auxiliary document spelled so, through a link leading under
 no configured root, refuse as unresolved, the auxiliary document with no `uncontained_asset` record.
 The cases that assert the POSIX reading assert this one on Windows, including which file each load
-reads. Where a path element exists but is not
-a directory, `f.txt` a regular file, the two spellings part by platform. Without `..`, `f.txt/x.xacro`
-refuses on every operating system: each element before the last is checked, and one that exists and is
-not a directory refuses for that reason. With `..`, `f.txt/../x.xacro` refuses where the operating
-system reports that `f.txt` is not a directory, as a POSIX system reports it. On Windows the path
-interfaces reduce `f.txt/..` before any element is looked at, so the file beside the document is read,
-as the reference would read it there through the same interfaces. Measured on Windows by the
-`xacro_include_read`, `yaml_resource` and `load_linked_mesh` cases that assert the refusal on POSIX,
-an include and an auxiliary document of it read the file beside the document with no configured root's
-copy standing in, an auxiliary document's genuine miss still reads from the root, and a mesh resolves
-beside the document. Measured on Linux, an include and an auxiliary document refuse in both spellings, as
-the reference refuses all four with `[Errno 20] Not a directory`, and a mesh spelled either way does
-not resolve, its record carrying the same reason. No configured root's copy stands in for such a
-spelling, as the fallback entry below states. At the command line an auxiliary document refused so
-prints only that it cannot be reached; the reason is in the load's diagnostics, which the command line
-does not print. Two shapes still differ. Where `sub` does not exist, the standard library canonicalizes
-the missing tail by its spelling ([fs.op.weakly.canonical]), so `sub/..` cancels and the file beside
-the document is read here, by all three readers; measured the same way, the reference refuses an
-include or an auxiliary document of it for want of `doc/sub/../x.xacro`. And where `sub` is a link and
-nothing is at the spelling as the operating system reads it, that miss takes the lookups the fallback
-entry below describes, and they look for the spelling's lexical reduction, `x.xacro`: measured on Linux
-with `sub` a link to `a/b`, nothing at `a/x.xacro` and a configured root holding `x.xacro`, an include
-and an auxiliary document of `sub/../x.xacro` render the root's copy here, whether or not an `x.xacro`
-stands beside the document, which holds only where the link is followed, and refuse with no configured
-root, while the reference refuses each for want of `doc/sub/../x.xacro`. In a document a directory,
-bundle or ROS layer served, the copy beside the path it was named by does not stand in, as the
-relative-include entry above states: measured on Linux with an include of `sub/../x.xacro` in it and an
-`x.xacro` beside that path, the load refuses, as the reference does, and only a configured root holding
-`x.xacro` at its top renders here, where the reference refuses. On Windows the spelling names the file
-beside the document, or beside the path a served document was named by, so a file there is read and
-these lookups begin only where none is.
+reads. Where a path element exists but is not a directory, `f.txt` a regular file, the two spellings
+part by platform. Without `..`, `f.txt/x.xacro` refuses on every operating system: each element before
+the last is checked, and one that exists and is not a directory refuses for that reason. With `..`,
+`f.txt/../x.xacro` refuses where the operating system reports that `f.txt` is not a directory, as a
+POSIX system reports it. On Windows the path interfaces reduce `f.txt/..` before any element is looked
+at, so the file beside the document is read. Measured on Windows by the `xacro_include_read`,
+`yaml_resource` and `load_linked_mesh` cases that assert the refusal on POSIX, an include and an
+auxiliary document of it read the file beside the document with no configured root's copy standing in,
+an auxiliary document's genuine miss still reads from the root, and a mesh resolves beside the
+document. Measured on Linux, an include and an auxiliary document refuse in both spellings, the cause
+reporting that the element is not a directory, and a mesh spelled either way does not resolve, its
+record carrying the same reason. No configured root's copy stands in for such a spelling, as the
+fallback entry below states. At the command line an auxiliary document refused so prints only that it
+cannot be reached; the reason is in the load's diagnostics, which the command line does not print. Two
+shapes still differ. Where `sub` does not exist, the standard library canonicalizes the missing tail by
+its spelling ([fs.op.weakly.canonical]), so `sub/..` cancels and the file beside the document is read
+here, by all three readers; measured the same way, xacro refuses an include or an auxiliary document of
+it. And where `sub` is a link and nothing is at the spelling as the operating system reads it, that
+miss takes the lookups the fallback entry below describes, and they look for the spelling's lexical
+reduction, `x.xacro`: measured on Linux with `sub` a link to `a/b`, nothing at `a/x.xacro` and a
+configured root holding `x.xacro`, an include and an auxiliary document of `sub/../x.xacro` render the
+root's copy here, whether or not an `x.xacro` stands beside the document, which holds only where the
+link is followed, and refuse with no configured root, while xacro refuses each. In a document a
+directory, bundle or ROS layer served, the copy beside the path it was named by does not stand in, as
+the relative-include entry above states: measured on Linux with an include of `sub/../x.xacro` in it
+and an `x.xacro` beside that path, the load refuses, and only a configured root holding `x.xacro` at
+its top renders here, where xacro refuses. On Windows the spelling names the file beside the document,
+or beside the path a served document was named by, so a file there is read and these lookups begin only
+where none is.
 
 **Under the climb option, a climb out of a byte-served document's package refuses, whatever was
 included before it.** A byte-served document is one served by a layer whose type names no paths: such a
@@ -193,96 +183,93 @@ it was served from. With `climb_above_document` set, the layer that served a byt
 the only place a climb in that document is answered. Inside the document's package the layer resolves
 it; out of the package the include refuses under `xacro_structural_error`, naming the spelling and the
 package, and never reads what an earlier lookup left in the source's scratch tree. Without that rule
-the answer would depend on whether an earlier include had made the layer write the file. The reference
-has no source layers, so this has no counterpart there to compare against.
+the answer would depend on whether an earlier include had made the layer write the file. xacro has no
+source layers, so this has no counterpart there to compare against.
 
 **A link beside the document whose target lies under neither of the document's directories nor any
 configured package root refuses, for an include, an auxiliary document or a mesh, unless the caller
-follows outside links.** The reference opens an include or an auxiliary document beside its document
-wherever a link standing there points. Here the three readers share one rule for a spelling that stays
-inside the document's directory as written. A leading `..` is where they part, as the relative-include
-entry above describes: an include's meets the climb gate first, while an auxiliary document's or a
-mesh's is admitted wherever it lands under one of the directories this rule lists, so with no
-configured root an auxiliary document's refuses where the reference reads it. A file beside a document
-is admitted where its canonical target lies under the directory the document was named in, under the
-one it really lives in, or under a configured package root, tried in that order; the first that
-contains the target admits it, and the order decides only which directory is reported, never which file
-is read. The configured roots are `load_options::package_roots` under `meios::load`, and the trailing
-`package_roots` a caller hands `meios::expand`; with none, only the document's two directories admit. A
-colcon `--symlink-install` tree opened through `install/` therefore resolves its siblings with the
-default options, because they link into the directory the document really lives in, and a sibling
-linking into a configured root is read through that root, which makes every file under the root
-reachable from beside the document. A sibling linking anywhere else refuses in all three: an include
-and a mesh under `uncontained_asset`, an auxiliary document with an `uncontained_asset` record before
-the load refuses it as unreachable. No configured root's same-named copy stands in for an include or an
-auxiliary document. Measured on a document whose included file includes `part.xacro`, a link to a file
-one directory up: upstream renders the property that file binds and here the load refuses, which is the
-`include_outside_link` row the manifest carries. A caller that sets
-`include_options::follow_outside_links`, on `load_options::includes` or on `parse_context::includes`
-when driving the parser directly, has all three take such a link where the operating system resolves
-it, as the reference reads an include or an auxiliary document, and the same document then renders as
-upstream renders it, which is the `include_outside_link_followed` verdict. With the option set, any
-link on the spelling's way makes the followed answer final, a link that stays inside the document's
-directory included: measured with `sub` a link to an empty directory beside the document and a
-configured root holding `sub/leaf.xacro` and `sub/cfg.yaml`, an include of `sub/leaf.xacro` and an
-auxiliary document of `sub/cfg.yaml` each refuse, where with the option unset each renders the root's
-copy; the reference refuses both. Where nothing is at a followed link's target, the include refuses
-under `unresolved_include`, naming the link it followed, and the auxiliary document as unreachable;
-where an auxiliary document's target is a directory, it refuses under `cannot_open` with the operating
-system's cause. In neither case does a configured root's same-named copy stand in. A dangling link is a
-followed link with nothing at its end: with the option set, an include or an auxiliary document of one
-refuses so, and a mesh of one is a missing asset, never a root's copy. A spelling that climbs out
-lexically, or an absolute path landing outside, stays refused with the option set: the option admits
-where a link leads, never where a spelling leads. With the option unset, a dangling link is what the
-standard says `weakly_canonical` makes of it ([fs.op.weakly.canonical]): an absent file beside the
-document. An include or an auxiliary document of one then takes the lookups that follow a miss, which
-the next entry describes, and a mesh of one is a missing asset. Following links is the same kind of
-security choice as admitting a climb: whoever can place a link beside a description can then have it
-read any file the process can open.
+follows outside links.** xacro opens an include or an auxiliary document beside its document wherever a
+link standing there points. Here the three readers share one rule for a spelling that stays inside the
+document's directory as written. A leading `..` is where they part, as the relative-include entry above
+describes: an include's meets the climb gate first, while an auxiliary document's or a mesh's is
+admitted wherever it lands under one of the directories this rule lists, so with no configured root an
+auxiliary document's refuses where xacro reads it. A file beside a document is admitted where its
+canonical target lies under the directory the document was named in, under the one it really lives in,
+or under a configured package root, tried in that order; the first that contains the target admits it,
+and the order decides only which directory is reported, never which file is read. The configured roots
+are `load_options::package_roots` under `meios::load`, and the trailing `package_roots` a caller hands
+`meios::expand`; with none, only the document's two directories admit. A colcon `--symlink-install`
+tree opened through `install/` therefore resolves its siblings with the default options, because they
+link into the directory the document really lives in, and a sibling linking into a configured root is
+read through that root, which makes every file under the root reachable from beside the document. A
+sibling linking anywhere else refuses in all three: an include and a mesh under `uncontained_asset`, an
+auxiliary document with an `uncontained_asset` record before the load refuses it as unreachable. No
+configured root's same-named copy stands in for an include or an auxiliary document. Measured on a
+document whose included file includes `part.xacro`, a link to a file one directory up: the load refuses
+and xacro renders the property that file binds; that is the `include_outside_link` row the manifest
+carries. A caller that sets `include_options::follow_outside_links`, on `load_options::includes` or on
+`parse_context::includes` when driving the parser directly, has all three take such a link where the
+operating system resolves it, and the same document then renders the property that file binds, which is
+the `include_outside_link_followed` verdict. With the option set, any link on the spelling's way makes
+the followed answer final, a link that stays inside the document's directory included: measured with
+`sub` a link to an empty directory beside the document and a configured root holding `sub/leaf.xacro`
+and `sub/cfg.yaml`, an include of `sub/leaf.xacro` and an auxiliary document of `sub/cfg.yaml` each
+refuse, where with the option unset each renders the root's copy. Where nothing is at a followed link's
+target, the include refuses under `unresolved_include`, naming the link it followed, and the auxiliary
+document as unreachable; where an auxiliary document's target is a directory, it refuses under
+`cannot_open` with the operating system's cause. In neither case does a configured root's same-named
+copy stand in. A dangling link is a followed link with nothing at its end: with the option set, an
+include or an auxiliary document of one refuses so, and a mesh of one is a missing asset, never a
+root's copy. A spelling that climbs out lexically, or an absolute path landing outside, stays refused
+with the option set: the option admits where a link leads, never where a spelling leads. With the
+option unset, a dangling link is what the standard says `weakly_canonical` makes of it
+([fs.op.weakly.canonical]): an absent file beside the document. An include or an auxiliary document of
+one then takes the lookups that follow a miss, which the next entry describes, and a mesh of one is a
+missing asset. Following links is the same kind of security choice as admitting a climb: whoever can
+place a link beside a description can then have it read any file the process can open.
 
 **Where nothing is beside the document, a relative include is looked for through the configured
-sources, which the reference never consults, so a document the reference refuses can render here.** The
-reference reads a relative include beside its document or not at all. Here a miss beside the document
-falls back to the configured sources, and a file one of them holds renders where the reference refuses
-for want of it. For a document a source layer served, the miss is first asked of that layer, under the
-document's package and directory, and only then of the configured sources, except that a miss spelled
-through `..` beside a document a directory, bundle or ROS layer served is not asked of that layer and
-goes to the configured sources alone. In a document a layer served as bytes, a relative include is
-asked of that layer before anything beside the document is looked at, whatever an earlier include made
-it write, and only what the layer lacks goes to the configured sources. A file read beside a
-document a path-naming layer served passes its own misses to that layer too only where its spelling holds no `..` element and
-the directory the document was named in admitted it; one spelled through `..`, or one another directory
-admitted, a configured root reached through a link say, does not, and its misses go to the configured
-sources alone. The manifest of document probes carries no row for this, because the whole-document
-comparison configures no source on either side, and with none configured both sides refuse alike; the
-include tests carry it instead, and so does one generated case, whose comparison configures a package
-root: `x///../q/a.xacro`, which refuses there for want of the missing `x` directory and here, where the
-missing element cancels by its spelling and nothing is beside the document at `q/a.xacro`, reads
-`q/a.xacro` from the root, which the `include_161` row of `generated_divergences.cases` records. The fallback answers a
-genuine miss, and only that. A spelling through a path element that is
-not a directory refuses before any fallback, as the reference refuses it, even where a configured root
-holds the name: `f.txt/x.xacro` on every operating system, and `f.txt/../x.xacro` wherever the
-operating system reports `f.txt` as not a directory. Windows reduces `f.txt/..` first, as the `..` entry
-above states, and measured there by the same cases, an include and an auxiliary document of it read the
-file beside the document with no configured root's copy standing in, while a genuine miss still reads
-from the root. Measured on Linux with a configured root holding `x.xacro`, `f.txt/x.xacro`, `c.yaml` and
-`f.txt/c.yaml`, an include of either spelling refuses, and so does an auxiliary document of either,
-while an auxiliary document of a name genuinely absent beside the document still reads from the root. A
-miss through a link beside the document is a genuine miss: where nothing is at `sub/../x.xacro` as the
-operating system reads it, the configured sources are asked for its lexical reduction, `x.xacro`, and
-a root's copy renders, as the `..` entry above measures; a layer that served the document as bytes is
-asked for that reduction before anything beside the document, as the relative-include entry above
-states. A dangling link beside the document, with outside links unset, is one
-case of nothing beside it, as the entry above states: an include of it falls through to the serving
-layer and the configured sources, and an auxiliary document of it to the configured roots, so a root's
-same-named copy renders where the reference refuses for want of the link's target. That is a remaining
-divergence from the reference. Setting `include_options::follow_outside_links` makes such a link refuse
-as the reference does, since a followed link's answer is final. Two anchors belong to the same rule. A
-document expanded under no name, handed to `meios::expand` with an empty document path, looks for
-nothing beside it and goes straight to the configured sources, where the reference's library entry
-anchors such a document at the working directory. And a document named by a relative path anchors its
-relative includes at the working directory, as the reference's does. No pinned corpus document reaches
-an include that is not package-qualified, so none of them is affected.
+sources, so a document xacro refuses can render here.** A miss beside the document falls back to the
+configured sources, and a file one of them holds renders; xacro reads a relative include beside its
+document or not at all, so such a description does not load under xacro. For a document a source layer
+served, the miss is first asked of that layer, under the document's package and directory, and only
+then of the configured sources, except that a miss spelled through `..` beside a document a directory,
+bundle or ROS layer served is not asked of that layer and goes to the configured sources alone. In a
+document a layer served as bytes, a relative include is asked of that layer before anything beside the
+document is looked at, whatever an earlier include made it write, and only what the layer lacks goes to
+the configured sources. A file read beside a document a path-naming layer served passes its own misses
+to that layer too only where its spelling holds no `..` element and the directory the document was
+named in admitted it; one spelled through `..`, or one another directory admitted, a configured root
+reached through a link say, does not, and its misses go to the configured sources alone. The manifest
+of document probes carries no row for this, because the whole-document comparison configures no source
+for either tool, and with none configured meios and xacro both refuse; the include tests carry it
+instead, and so does one generated case, whose comparison configures a package root:
+`x///../q/a.xacro`, whose missing element cancels here by its spelling, so that with nothing beside the
+document at `q/a.xacro` the root's `q/a.xacro` is read, while xacro refuses it for want of the missing
+`x` directory, which the `include_161` row of `generated_divergences.cases` records. The fallback
+answers a genuine miss, and only that. A spelling through a path element that is not a directory
+refuses before any fallback, even where a configured root holds the name: `f.txt/x.xacro` on every
+operating system, and `f.txt/../x.xacro` wherever the operating system reports `f.txt` as not a
+directory. Windows reduces `f.txt/..` first, as the `..` entry above states, and measured there by the
+same cases, an include and an auxiliary document of it read the file beside the document with no
+configured root's copy standing in, while a genuine miss still reads from the root. Measured on Linux
+with a configured root holding `x.xacro`, `f.txt/x.xacro`, `c.yaml` and `f.txt/c.yaml`, an include of
+either spelling refuses, and so does an auxiliary document of either, while an auxiliary document of a
+name genuinely absent beside the document still reads from the root. A miss through a link beside the
+document is a genuine miss: where nothing is at `sub/../x.xacro` as the operating system reads it, the
+configured sources are asked for its lexical reduction, `x.xacro`, and a root's copy renders, as the
+`..` entry above measures; a layer that served the document as bytes is asked for that reduction before
+anything beside the document, as the relative-include entry above states. A dangling link beside the
+document, with outside links unset, is one case of nothing beside it, as the entry above states: an
+include of it falls through to the serving layer and the configured sources, and an auxiliary document
+of it to the configured roots, so a root's same-named copy renders, where xacro refuses for want of the
+link's target. Setting `include_options::follow_outside_links` makes such a link refuse, since a
+followed link's answer is final. Two anchors belong to the same rule. A document expanded under no
+name, handed to `meios::expand` with an empty document path, looks for nothing beside it and goes
+straight to the configured sources, where xacro's library entry anchors such a document at the working
+directory. And a document named by a relative path anchors its relative includes at the working
+directory. No pinned corpus document reaches an include that is not package-qualified, so none of them
+is affected.
 
 **A relative auxiliary document written in a description a byte source served resolves only once that
 source has written the file.** A source that serves bytes writes an entry into its scratch tree the
@@ -297,83 +284,79 @@ the layer that served it; the auxiliary-document reader does not do that yet. A 
 form, `package://` or `$(find)`, asks the source stack and is unaffected.
 
 **An absolute include filename is looked for only through the configured sources, with its root
-removed, where the reference reads the file it names.** The reference opens
-`<xacro:include filename="/opt/robot/arm.xacro"/>` at the path written. Here an absolute spelling is
-never opened directly. Its root is removed: the leading separators, and under the Windows reading a
-leading drive letter and colon with the separators after it. Its `.` elements are then dropped and each
-`..` removes the element before it; a `..` with nothing before it refuses under
-`xacro_structural_error` as escaping the source root. Under the Windows reading, a drive that this leaves
-leading, as in `/x/../D:/a.xacro`, is removed too and what follows it is walked again, so the `..` a
-removed drive uncovers counts as a climb: `/x/../D:../q/f.xacro` refuses as escaping the source root.
-Only these count as the root. A UNC spelling, `//server/share/x.xacro`, keeps `server` and `share`, and a
-device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements looked for under the sources.
-The rest is looked for as a relative path under each configured source, and where no source holds it the
-load refuses under `unresolved_include`, whose message says the configured sources were the only place
-looked. That keeps an include inside the roots the caller configured rather than
-letting a description name any file on the host. Measured on a document that includes the file beside
-it by an absolute path, built from an argument each side binds to the directory it reads the document
-from: upstream renders the property that file binds and here the load refuses, which is the
-`include_absolute_path` row the manifest carries. A find held in a property or an argument and then
-written into an include filename, a
-common idiom, is such an absolute filename here: `${d}/urdf/c.xacro` with `d` bound to `$(find p)`,
-and `$(arg d)/urdf/c.xacro` with `d` defaulted to it. The find has run before the include reads its
-filename, so no directory a find in the filename rendered leads it, and it refuses here even where the
-file it names exists, while the reference reads it; writing the find into the filename itself,
-`$(find p)/urdf/c.xacro`, reads the file on both sides. The `include_held_find_in_property` and
-`include_held_find_in_argument` rows of the manifest measure exactly these two documents. `$(find <pkg>)/...` is the package spelling the reference also reads
-for an include, `package://` is the subject of the next entry, and no pinned corpus document writes an
-absolute include.
+removed; xacro opens the file it names.** Here an absolute spelling such as
+`<xacro:include filename="/opt/robot/arm.xacro"/>` is never opened directly. Its root is removed: the
+leading separators, and under the Windows reading a leading drive letter and colon with the separators
+after it. Its `.` elements are then dropped and each `..` removes the element before it; a `..` with
+nothing before it refuses under `xacro_structural_error` as escaping the source root. Under the Windows
+reading, a drive that this leaves leading, as in `/x/../D:/a.xacro`, is removed too and what follows it
+is walked again, so the `..` a removed drive uncovers counts as a climb: `/x/../D:../q/f.xacro` refuses
+as escaping the source root. Only these count as the root. A UNC spelling, `//server/share/x.xacro`,
+keeps `server` and `share`, and a device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary
+elements looked for under the sources. The rest is looked for as a relative path under each configured
+source, and where no source holds it the load refuses under `unresolved_include`, whose message says
+the configured sources were the only place looked. That keeps an include inside the roots the caller
+configured rather than letting a description name any file on the host. Measured on a document that
+includes the file beside it by an absolute path, built from an argument each tool binds to the
+directory it reads the document from: the load refuses and xacro renders the property that file binds;
+that is the `include_absolute_path` row the manifest carries. A find held in a property or an argument
+and then written into an include filename, a common idiom, is such an absolute filename here:
+`${d}/urdf/c.xacro` with `d` bound to `$(find p)`, and `$(arg d)/urdf/c.xacro` with `d` defaulted to
+it. The find has run before the include reads its filename, so no directory a find in the filename
+rendered leads it, and it refuses here even where the file it names exists, while xacro reads it;
+writing the find into the filename itself, `$(find p)/urdf/c.xacro`, reads the file under meios and
+xacro alike. The `include_held_find_in_property` and `include_held_find_in_argument` rows of the
+manifest measure exactly these two documents. `$(find <pkg>)/...` is the package spelling xacro also
+reads for an include, `package://` is the subject of the next entry, and no pinned corpus document
+writes an absolute include.
 
-**A `package://` include filename resolves here through the configured sources, where the reference
-refuses it.** The reference does not read `package://` in `<xacro:include filename>` as a package
-reference. It joins the spelling onto the directory of the including document as a relative path and
-refuses with "No such file or directory", naming a path such as `./doc/package://p/a.xacro`. Here the
-spelling is split at its first separator into a package and a path within it and resolved through the
-configured sources, as a package-qualified include. A description written against this library with
-`package://` includes therefore loads here and fails under the reference; `$(find <pkg>)/...` is the
-spelling both read. Measured on a document whose include names a package this side's comparison serves
-from the fixture directory: upstream refuses and here the included property renders, which is the
-`include_package_filename` row the manifest carries. An auxiliary document behaves the same way: the
-reference refuses `xacro.load_yaml('package://p/cfg.yaml')` with "No such file or directory", naming
-`doc/package://p/cfg.yaml`, while here the file is read through the configured sources. No manifest row
-carries that half, because the document probes read auxiliary documents through a loader that consults
-no source.
+**A `package://` include filename resolves through the configured sources.** The spelling is split at
+its first separator into a package and a path within it and resolved through the configured sources, as
+a package-qualified include. xacro does not read `package://` in `<xacro:include filename>` as a
+package reference: it joins the spelling onto the directory of the including document as a relative
+path and refuses for want of a file there. A description written against this library with `package://`
+includes therefore loads here and fails under xacro; `$(find <pkg>)/...` is the spelling both read.
+Measured on a document whose include names a package meios's comparison serves from the fixture
+directory: the included property renders and xacro refuses, which is the `include_package_filename` row
+the manifest carries. An auxiliary document behaves the same way: xacro refuses
+`xacro.load_yaml('package://p/cfg.yaml')`, while here the file is read through the configured sources.
+No manifest row carries that half, because the document probes read auxiliary documents through a
+loader that consults no source.
 
-**A path that climbs out of a `$(find)` package refuses here, where the reference reads the sibling
-package's file.** The reference joins a find's package directory and the rest of the filename as
-written, so `$(find p)/../q/a.xacro` reads `q/a.xacro` beside the package. Here a path under a
-directory a find rendered is that package's file, and leaving the package refuses under
+**A path that climbs out of a `$(find)` package refuses; xacro reads the sibling package's file.** A
+path under a directory a find rendered is that package's file, and leaving the package refuses under
 `xacro_structural_error` as escaping the source root, the containment every package-qualified include
-keeps. Measured on a document including `$(find p)/../q/part.xacro` over a root holding both packages:
-upstream renders the sibling's link and here the load refuses, which is the
-`include_find_climbs_out_of_package` row the manifest carries. The sibling package's own find,
-`$(find q)/a.xacro`, is the spelling to write.
+keeps. xacro joins a find's package directory and the rest of the filename as written, so it reads
+`$(find p)/../q/a.xacro` as `q/a.xacro` beside the package. Measured on a document including
+`$(find p)/../q/part.xacro` over a root holding both packages: the load refuses and xacro renders the
+sibling's link; that is the `include_find_climbs_out_of_package` row the manifest carries. The sibling
+package's own find, `$(find q)/a.xacro`, is the spelling to write.
 
-**A glob include filename refuses here, where the reference includes every file it matches.** The
-reference expands an include filename holding `*`, `[` or `?` to the files the pattern matches, in
-sorted order, and includes nothing, with a warning, where none matches. Here an include filename is not
-globbed: the pattern is looked for as a file of that name, and the load refuses under
-`unresolved_include`. Measured on a document including `$(find p)/urdf/c.xac?o` over a root holding
-`p/urdf/c.xacro`: upstream renders the included link and here the load refuses, which is the
-`include_glob_filename` row the manifest carries. Measured with `nomatch_*.xacro`, which matches
-nothing, beside one link, upstream warns and renders the link without the include and here the load
-refuses, which is the `include_glob_matching_nothing` row. Name each file in an include of its own.
+**A glob include filename refuses; xacro includes every file it matches.** An include filename is not
+globbed here: the pattern is looked for as a file of that name, and the load refuses under
+`unresolved_include`. xacro expands an include filename holding `*`, `[` or `?` to the files the
+pattern matches, in sorted order, and includes nothing, with a warning, where none matches. Measured on
+a document including `$(find p)/urdf/c.xac?o` over a root holding `p/urdf/c.xacro`: the load refuses
+and xacro renders the included link; that is the `include_glob_filename` row the manifest carries.
+Measured with `nomatch_*.xacro`, which matches nothing, beside one link, the load refuses and xacro
+warns and renders the link without the include; that is the `include_glob_matching_nothing` row. Name
+each file in an include of its own.
 
-**`$(find)` writes a package's directory as its root was configured, as the reference writes it, except
-that a relative root is written absolute and a `.` element in a root is dropped.** Through a configured
-root that is itself a link, `$(find p)` renders `<root>/p` with the link as it was written, not the
-directory it leads to, and the reference renders the same text: measured with `Rl` a link to `R`, both
-render `<…>/Rl/p`. Through a `ROS_PACKAGE_PATH` entry that is a link, the text is the spelling the
-crawl found the package at, `<…>/Rl/p` again; the reference's package lookup is driven here only
-through configured roots, so nothing compares that half. The spelling reaches the text alone:
-containment, the read and an include's cycle check go by the directory the link leads to. Two spellings
-still differ. A root is made absolute when it is configured, before any lookup, so a relative
-`--package-path R` given from the directory holding `R` renders `<working directory>/R/p` here and
-`R/p` there. And a root's `.` elements are removed when it is configured, resolving no link and
-collapsing no `..`, so `<…>/./R` renders `<…>/R/p` here and `<…>/./R/p` there. Both are deliberate:
-every path this library hands out is absolute and holds no `.` element. They are the
-`find_relative_root` and `find_dotted_root` rows the manifest carries, each probe handing both sides
-the same root spelling from the same directory.
+**`$(find)` writes a package's directory as its root was configured, except that a relative root is
+written absolute and a `.` element in a root is dropped.** Through a configured root that is itself a
+link, `$(find p)` renders `<root>/p` with the link as it was written, not the directory it leads to:
+measured with `Rl` a link to `R`, it renders `<…>/Rl/p`, the same text xacro renders. Through a
+`ROS_PACKAGE_PATH` entry that is a link, the text is the spelling the crawl found the package at,
+`<…>/Rl/p` again; the comparison drives xacro's package lookup only through configured roots, so
+nothing compares that half. The spelling reaches the text alone: containment, the read and an include's
+cycle check go by the directory the link leads to. Two spellings render a text xacro does not. A root
+is made absolute when it is configured, before any lookup, so a relative `--package-path R` given from
+the directory holding `R` renders `<working directory>/R/p` here and `R/p` under xacro. And a root's
+`.` elements are removed when it is configured, resolving no link and collapsing no `..`, so `<…>/./R`
+renders `<…>/R/p` here and `<…>/./R/p` under xacro. Both are deliberate: every path this library hands
+out is absolute and holds no `.` element. They are the `find_relative_root` and `find_dotted_root` rows
+the manifest carries, each probe handing meios and xacro the same root spelling from the same
+directory.
 
 **A source that serves bytes leaks its scratch tree on a platform that will not delete an open file.**
 Such a source materializes an asset into a scratch directory it owns and removes the tree when it is
@@ -563,14 +546,13 @@ evaluator has no such exposure. Its grammar is closed rather than restricted: it
 widen, no object protocol and no way to name a file, and it loud-fails on anything outside what it
 carries.
 
-**The Python evaluator renders `sum`, which the reference does not bind.** `sum` is among the twenty
-builtins `meios::eval-python` binds, while the reference's expression globals hold no name of that
-spelling, so `${sum(x*k for x in range(3))}` with `k` bound to `3` renders `9` under this backend and
-refuses upstream as an undefined name. `abs` is another builtin this backend binds beyond the
-reference's table. The built-in evaluator refuses `${sum([1, 2])}` too, for a different cause: it
-reads no list literal, so it refuses the expression as unsupported. That difference is a row of the
-divergence manifest; the Python backend's rendering has none, because the differential renders this
-side through the built-in evaluator.
+**The Python evaluator renders `sum`.** `sum` is among the twenty builtins `meios::eval-python` binds,
+so `${sum(x*k for x in range(3))}` with `k` bound to `3` renders `9` under this backend; xacro's
+expression globals hold no name of that spelling, so a description written with it does not load under
+xacro. `abs` is another builtin this backend binds that xacro's table lacks. The built-in evaluator
+refuses `${sum([1, 2])}`, for a cause of its own: it reads no list literal, so it refuses the
+expression as unsupported. That difference is a row of the divergence manifest; the Python backend's
+rendering has none, because the differential renders meios through the built-in evaluator.
 
 **The Python backend has no bound on resource exhaustion.** Under `meios::eval-python` an expression
 such as `${10**10**10}` or `${[0]*10**12}` is refused by nothing — it names no withheld builtin,
@@ -589,17 +571,17 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Ninety-three ways this evaluator differs from canonical xacro are measured, and further ones no row
-can carry are written down beside them.** That is not a claim that the list is complete. The reviewed
-manifest carries ninety-three rows and the differential drives them on every push in both directions,
-so a divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
-Sixty-seven of them are the grammar record's, set out after this list. Of the rest, fifteen are a meaning
-upstream has and this grammar refuses — the first five
-entries below, the argument helper the seventh names, and the mapping key an auxiliary document did not
-write as text, which has an entry of its own further down, and an include climbing above its document's
-directory, an absolute include filename, a link beside a document leading out of its directory, a path
-climbing out of a `$(find)` package, the `include_find_climbs_out_of_package` row, and a glob include
-filename, the `include_glob_filename` row, whose entries are under sources and resolution:
+**Ninety-three ways this evaluator differs from xacro are measured, and further ones no row can carry
+are written down beside them.** That is not a claim that the list is complete. The reviewed manifest
+carries ninety-three rows and the differential drives them on every push in both directions, so a
+divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
+Sixty-seven of them are the grammar record's, set out after this list. Of the rest, fifteen are
+constructs xacro renders and this evaluator refuses — the first five entries below, the argument helper
+the seventh names, and the mapping key an auxiliary document did not write as text, which has an entry
+of its own further down, and an include climbing above its document's directory, an absolute include
+filename, a link beside a document leading out of its directory, a path climbing out of a `$(find)`
+package, the `include_find_climbs_out_of_package` row, and a glob include filename, the
+`include_glob_filename` row, whose entries are under sources and resolution:
 
 - A string repeated by an integer, and one string ordered against another. Only the addition of two
   strings and equality between two were measured into this grammar.
@@ -608,343 +590,325 @@ filename, the `include_glob_filename` row, whose entries are under sources and r
   named split takes.
 - The mapping constructor built from a sequence of pairs, and from a positional argument mixed with
   keyword ones. `dict(a=1, b=2)` is the one admitted shape.
-- The remainder operator against a string, which formats upstream: `${'%.3f' % 1.2345}` renders there.
-- An auxiliary document whose anchor contains an alias to itself. Upstream's reader builds a value that
-  contains itself; a value here is immutable once constructed, so the alias meets an anchor that is
-  still incomplete and refuses.
-- A member name the reference's own mapping wrapper answers before it consults the document —
-  `${config.keys}` and the ten others like it. Here that spelling refuses and names `${config['keys']}`
-  instead, because answering it would mean something other than what upstream means by it.
-- The mathematics names reached through a `math` namespace no include wrote, and the reference's own
+- The remainder operator against a string, which xacro formats: `${'%.3f' % 1.2345}` renders under
+  xacro.
+- An auxiliary document whose anchor contains an alias to itself. A value here is immutable once
+  constructed, so the alias meets an anchor that is still incomplete and refuses; PyYAML builds a value
+  that contains itself.
+- A member name that spells a mapping operation — `${config.keys}` and the ten others like it, which
+  xacro's mapping wrapper answers before it consults the document. Here that spelling refuses and names
+  `${config['keys']}` instead, rather than answer it with a meaning xacro does not give it.
+- The mathematics names reached through a `math` namespace no include wrote, and xacro's
   `xacro.tokenize` and message helpers, which are not exposed at all. An include namespace falls
-  through on both sides to the names of the file that wrote the include and then to the global names,
-  and of those global names `pi` and a call to a function the reference's global table lists read
-  alike: `${n.pi}` and `${n.sin(0)}` render on both, and so does `${math.pi}` under an include whose
-  namespace is `math`. The other constants are among these differences: under the built-in evaluator
-  `${n.e}`, `${n.tau}`, `${n.inf}` and `${n.nan}` refuse as undefined names, as their bare spellings
-  do, where upstream renders both, and `${n.math.pi}` refuses as the undefined name `math`, where the
-  bare `${math.pi}` refuses as an unsupported call target, so the two spellings of the `math` head
-  refuse differently here, and upstream renders both. Under the python evaluator `${n.e}` renders as
-  upstream renders it. The reference's `xacro.arg`, which reads an argument by name inside an
-  expression, is not exposed either, and apart from `${n.e}`, which the grammar record holds, it is the
-  one of these the manifest carries: `${xacro.arg('p')}` over an argument defaulted to `A` renders
-  `Aarm` upstream and refuses here, naming the `$(arg)` command.
+  through to the names of the file that wrote the include and then to the global names, and of those
+  global names `pi` and a call to a function xacro's global table lists read as they do bare: `${n.pi}`
+  and `${n.sin(0)}` render, and so does `${math.pi}` under an include whose namespace is `math`. The
+  other constants are among these differences: under the built-in evaluator `${n.e}`, `${n.tau}`,
+  `${n.inf}` and `${n.nan}` refuse as undefined names, as their bare spellings do, and xacro renders
+  both, and `${n.math.pi}` refuses as the undefined name `math`, while the bare `${math.pi}` refuses as
+  an unsupported call target, so the two spellings of the `math` head refuse differently here, and
+  xacro renders both. Under the python evaluator `${n.e}` renders `2.718281828459045`. xacro's
+  `xacro.arg`, which reads an argument by name inside an expression, is not exposed either, and apart
+  from `${n.e}`, which the grammar record holds, it is the one of these the manifest carries:
+  `${xacro.arg('p')}` over an argument defaulted to `A` refuses here, naming the `$(arg)` command, and
+  xacro renders `Aarm`.
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Seven differ in the other direction, rendering here where upstream refuses: a closing brace inside a
+Seven differ in the other direction, rendering here where xacro refuses: a closing brace inside a
 string literal, one expression span written inside another, the absolute value, an argument declared
 without a default, a `$(arg n)` written above its own declaration, `$(dirname)`, and a `package://`
-include filename. The first two follow from a
-span scanner that folds over quotes and counts depth where the reference's pattern does neither, so
-the reference truncates the span and never hands its evaluator a whole expression to refuse. The third
-is a difference in what the evaluator itself carries: the reference's expression globals hold the
-mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
-raises an undefined name there, while every other name on this grammar's mathematics list renders on
-both sides. The next three have entries of their own further down, and the last has one under sources
-and resolution. And four render on both sides with different answers. `and` and `or` yield a boolean
-here rather than the deciding operand, so `${1 or 2}` is `True` here and `1` there, which is deliberate
-and measured, not an oversight. And `$(find)` through a package root configured by a relative spelling,
-or by one holding a `.` element, writes a different directory on each side, which is the
-`find_relative_root` and `find_dotted_root` pair of rows; their entry is under sources and resolution.
+include filename. The first two follow from a span scanner that folds over quotes and counts depth,
+where xacro's pattern does neither, so xacro truncates the span and never hands its evaluator a whole
+expression to refuse. The third is a difference in what the evaluator itself carries: xacro's
+expression globals hold the mathematics module and the two reducers and no builtins at all, so
+`${abs(-3)}` renders `3` here and refuses as an undefined name under xacro, while every other name on
+this grammar's mathematics list renders under both. The next three have entries of their own further
+down, and the last has one under sources and resolution. And four render under both with different
+answers. `and` and `or` yield a boolean here rather than the deciding operand, so `${1 or 2}` is `True`
+here and `1` under xacro, which is deliberate and measured, not an oversight. And `$(find)` through a
+package root configured by a relative spelling, or by one holding a `.` element, writes a different
+directory than xacro does, which is the `find_relative_root` and `find_dotted_root` pair of rows; their
+entry is under sources and resolution.
 
 The last three entries above, the argument helper and `${n.e}` apart, are the ones the manifest does
-not carry, because none of them can be matched by exact text: the colliding member names produce
-upstream text embedding an object's own address, and the other two are absences rather than divergent
+not carry, because none of them can be matched by exact text: the colliding member names produce text
+under xacro embedding an object's own address, and the other two are absences rather than divergent
 renderings. They are recorded here and on the evaluation page instead. The colliding names are checked
-against a committed measurement of what the reference's wrapper answers, and the `math` namespace
-refuses by a named case. `pi` is the mathematics name both sides read alike through an include
-namespace, held by the `include_namespace_reads_mathematics_name` agreement probe, while `e` read the
-same way is the `include_namespace_reads_global_constant` row; the `xacro_namespace` case "a global
-name other than pi refuses through an include namespace under the built-in evaluator, each constant as
-it refuses bare, where the reference renders it" pins this side's refusal of `e`, `tau`, `inf`, `nan`
-and the `math` head through a namespace, and upstream's render of the spellings no row holds was
-measured when this was written. A call to the tokenizing or message helpers refuses naming
-`xacro.load_yaml` as the only helper either evaluator exposes, the two missing functions refuse as any
-unrecognized name does, and nothing names them individually. A fourth difference the manifest cannot
-carry is the separator a located path is written with, further down: it is observable on Windows alone,
-and the job that renders a fresh upstream to compare against runs on Linux, where both implementations
-write the same character.
+against a committed measurement of what xacro's wrapper answers, and the `math` namespace refuses by a
+named case. `pi` read through an include namespace is held against xacro by the
+`include_namespace_reads_mathematics_name` agreement probe, while `e` read the same way is the
+`include_namespace_reads_global_constant` row; the `xacro_namespace.a global name other than pi refuses
+through an include namespace under the built-in evaluator, each constant as it refuses bare, where the
+reference renders it` case pins meios's refusal of `e`, `tau`, `inf`, `nan` and the `math` head through
+a namespace, and xacro's render of the spellings no row holds was measured when this was written. A
+call to the tokenizing or message helpers refuses naming `xacro.load_yaml` as the only helper either
+evaluator exposes, the two missing functions refuse as any unrecognized name does, and nothing names
+them individually. A fourth difference the manifest cannot carry is the separator a located path is
+written with, further down: it is observable on Windows alone, and the job that renders a fresh xacro
+to compare against runs on Linux, where meios and xacro write the same character.
 
 **The grammar record lists sixty-seven measured differences in xacro's own grammar that are not yet
 closed.** Each is a construct of the element grammar, the attribute lists, the substitution lexer or
-its commands, measured against the pinned reference on a minimized document both implementations read,
-and each is a row of the divergence manifest held in both directions; none is claimed to agree. They
-are an `optional` include whose file is missing, `xacro:call`, `xacro:element`,
-`xacro:attribute` and `xacro:targetNamespace` on the root. They are also
-a no-break space between two parameter specs, an argument declared only inside a false conditional or a
-macro never called, a missing directory before a parent step beside the document and under a find, a
-find held in a property or an argument and composed into a filename, a find composed onto text, the
-root that answers a find when two hold its package, a trailing separator after a file under a find,
-`$(cwd)`, `$(eval)` with a leading space, with nothing after it and with a blank expression, `$(env)`
-with a second word, the spacing of `$(optenv)`'s fallback words, the empty `$()`, and an auxiliary
-document's explicit mapping key with no content. They
-are also upstream's literal reading of a property's or a macro argument's text, which removes enclosing
+its commands, measured against the pinned xacro on a minimized document both read, and each is a row of
+the divergence manifest held in both directions; none is claimed to agree. They are an `optional`
+include whose file is missing, `xacro:call`, `xacro:element`, `xacro:attribute` and
+`xacro:targetNamespace` on the root. They are also a no-break space between two parameter specs, an
+argument declared only inside a false conditional or a macro never called, a missing directory before a
+parent step beside the document and under a find, a find held in a property or an argument and composed
+into a filename, a find composed onto text, the root that answers a find when two hold its package, a
+trailing separator after a file under a find, `$(cwd)`, `$(eval)` with a leading space, with nothing
+after it and with a blank expression, `$(env)` with a second word, the spacing of `$(optenv)`'s
+fallback words, the empty `$()`, and an auxiliary document's explicit mapping key with no content. They
+are also xacro's literal reading of a property's or a macro argument's text, which removes enclosing
 single quotes and reads a padded or signed number, a Unicode digit and a spelling of infinity as a
 number; a condition of `1.0`, `TRUE`, the empty text or an expression yielding text; a macro, a
-conditional, a negated conditional or an include missing its required attribute; and a macro
-named `call`, holding a dot or written with the `xacro:` prefix. They are also an attribute in xacro's
-namespace, which upstream removes before evaluating, a
-namespace declaration lifted from an included root and from a macro, character data kept unread,
-`xacro:attribute` under a conditional, a macro body, an included root, a block wrapper, a block element
-and the document's root, `xacro:element` renamed to a conditional and to a macro call, comments,
-which upstream keeps, evaluates after `xacro:eval-comments` until `xacro:eval-comments:off` and deletes before an element of
-xacro's grammar, and processing instructions, which it keeps. They are also a glob include filename
-matching no file, which upstream warns about and includes nothing for, an include whose namespace
-evaluates to a list, which both sides refuse for different causes, upstream because a list cannot key
-a table and this side because it does not read a bracketed list literal, and a find read with no
-package index. The pinned install ships none, so there upstream refuses every find as a substitution it cannot support, where this side refuses a find no
+conditional, a negated conditional or an include missing its required attribute; and a macro named
+`call`, holding a dot or written with the `xacro:` prefix. They are also an attribute in xacro's
+namespace, which xacro removes before evaluating, a namespace declaration lifted from an included root
+and from a macro, character data kept unread, `xacro:attribute` under a conditional, a macro body, an
+included root, a block wrapper, a block element and the document's root, `xacro:element` renamed to a
+conditional and to a macro call, comments, which xacro keeps, evaluates after `xacro:eval-comments`
+until `xacro:eval-comments:off` and deletes before an element of xacro's grammar, and processing
+instructions, which it keeps. They are also a glob include filename matching no file, which xacro warns
+about and includes nothing for, an include whose namespace evaluates to a list, which meios and xacro
+refuse for different causes, xacro because a list cannot key a table and meios because it does not read
+a bracketed list literal, and a find read with no package index. The pinned install ships none, so
+there xacro refuses every find as a substitution it cannot support, where meios refuses a find no
 configured source answers as unresolved; that probe alone is rendered without the package index
-vendored beside the oracle. They are also a chain of properties, each reading the next, deeper
-than the expression-depth ceiling admits, which upstream renders and which refuses here. Last, they are
-an include namespace read as a value, which upstream reads as the table holding its names and which
-refuses here, a global constant other than `pi` read through an include namespace, which upstream
-renders and which refuses here, and a call to `sum`, which upstream's expression globals do not bind,
-so that `${sum([1, 2])}` refuses there as an undefined name, while the built-in evaluator here refuses
-the list it is given as an expression it does not support. A probe marked to keep comments is compared
-on its comments and processing instructions as well, which the canonical text drops. Its probes can be
-handed caller arguments, ordered package roots, their stage as working directory and one fixed
-environment, so that held finds, root precedence and the command layer are measured on equal terms. The
-warning upstream gives for an attribute a property does not declare is not compared by the
-differential, and none is raised here.
+vendored beside the oracle. They are also a chain of properties, each reading the next, deeper than the
+expression-depth ceiling admits, which refuses here and xacro renders. Last, they are an include
+namespace read as a value, which refuses here and xacro reads as the table holding its names, a global
+constant other than `pi` read through an include namespace, which refuses here and xacro renders, and a
+call to `sum`, which the built-in evaluator refuses because it does not support the list it is given,
+while xacro, whose expression globals do not bind `sum`, refuses `${sum([1, 2])}` as an undefined name.
+A probe marked to keep comments is compared on its comments and processing instructions as well, which
+the canonical text drops. Its probes can be handed caller arguments, ordered package roots, their stage
+as working directory and one fixed environment, so that held finds, root precedence and the command
+layer are measured on equal terms. The warning xacro gives for an attribute a property does not declare
+is not compared by the differential, and none is raised here.
 
 **Every construct of the pinned xacro grammar is paired with what measures it, or with the evidence
-that no document reaches it; thirty are recorded differences not yet closed.** The grammar is the derived
-record `grammar_constructs.cases`: ninety-seven constructs, one per element branch, attribute list,
-lexer token, substitution command, special form, raise site and warning site of the pinned source.
-Eighty-five are measured. Thirty of them have at least one recorded difference on which this side
-renders something other than upstream; sixteen more have recorded differences only where this side
-refuses; and thirty-nine are carried by measurements on which both implementations agree, four of
-them warning sites carried by a unit case alone, where upstream warns and this side gives no
-warning and renders the same document. The seven constructs of the `${}` expression surface and the
-command-line driver are left to the boundary rather than measured here. The five sites no document
-reaches under the pinned install are four raise sites, a filename read without a symbol table and
-three value conversions no caller requests, and the warning for a parent scope at the top, since every
-table has a parent there; each is paired with that evidence instead of a measurement, and its standing
-stays open. Beside the unknown-attribute warning, three more warning sites are pinned by what this
-side gives: none of them is raised here. The two warnings for the reference's built-in names are
-raised here as upstream raises them: a property, a macro parameter or an include namespace named
-after a built-in redefines it with a warning, and removing a built-in keeps it with a warning. The
-`property_shadows_pi` and `property_removes_builtin` agreement probes compare the documents on both
-sides, and unit cases pin each warning, which the differential does not compare.
+that no document reaches it; thirty are recorded differences not yet closed.** The grammar is the
+derived record `grammar_constructs.cases`: ninety-seven constructs, one per element branch, attribute
+list, lexer token, substitution command, special form, raise site and warning site of the pinned
+source. Eighty-five are measured. Thirty of them have at least one recorded difference on which meios
+renders something other than xacro; sixteen more have recorded differences only where meios refuses;
+and thirty-nine are carried by measurements on which meios and xacro agree, four of them warning sites
+carried by a unit case alone, where meios renders the same document with no warning and xacro warns.
+The seven constructs of the `${}` expression surface and the command-line driver are left to the
+boundary rather than measured here. The five sites no document reaches under the pinned install are
+four raise sites, a filename read without a symbol table and three value conversions no caller
+requests, and the warning for a parent scope at the top, since every table has a parent there; each is
+paired with that evidence instead of a measurement, and its standing stays open. Beside the
+unknown-attribute warning, three more warning sites are pinned by what meios gives: none of them is
+raised here. The two warnings for built-in names are raised here: a property, a macro parameter or an
+include namespace named after a built-in redefines it with a warning, and removing a built-in keeps it
+with a warning. The `property_shadows_pi` and `property_removes_builtin` agreement probes compare the
+documents against xacro, and unit cases pin each warning, which the differential does not compare.
 
-**Nine generated cases differ from the pinned reference, and a reviewed row records each.** The
-generated comparison the
-[evaluation page](evaluation.md#the-input-space-the-comparison-was-measured-over) describes
-draws six hundred cases from a committed grammar and seed and compares this side's whole rendered
-document, as canonical text, with the pinned reference's recorded one, and two refusals by the code
-each gives for its cause. Nine disagree, and
-`generated_divergences.cases` holds a row for each, with the reason it stays. Five are include
-filenames whose parent element after a find leaves the find's package, which refuse here and read the
-sibling package's file there, the difference of the climbing entry under sources and resolution. One is
-a find held in an argument and written into the filename, which makes it absolute: the reference reads
-it, and here it is looked for only through the configured sources, the difference of the absolute
-filename entry. One is a trailing separator after the file a find names, `$(find  p)/c.xacro/`, which
-the reference refuses as not a directory and which reads the file here, though the same separator after
-a file beside the document refuses here too; no other entry states it. And two are an element missing
-before a parent element beside the document, which the reference refuses for want of the missing
-directory and which cancels by its spelling here, the difference of the `..` entry; one of the two then
-reads its file from the configured package root, the fallback entry's difference. A generated case
-that starts to disagree, or a row whose case stops disagreeing as recorded, fails the comparison.
+**Nine generated cases differ from the pinned xacro, and a reviewed row records each.** The generated
+comparison the [evaluation page](evaluation.md#the-input-space-the-comparison-was-measured-over)
+describes draws six hundred cases from a committed grammar and seed and compares meios's whole rendered
+document, as canonical text, with the pinned xacro's recorded one, and two refusals by the code each
+gives for its cause. Nine disagree, and `generated_divergences.cases` holds a row for each, with the
+reason it stays. Five are include filenames whose parent element after a find leaves the find's
+package, which refuse here and read the sibling package's file under xacro, the difference of the
+climbing entry under sources and resolution. One is a find held in an argument and written into the
+filename, which makes it absolute: here it is looked for only through the configured sources, and xacro
+reads it, the difference of the absolute filename entry. One is a trailing separator after the file a
+find names, `$(find p)/c.xacro/`, which reads the file here and which xacro refuses as not a directory,
+though the same separator after a file beside the document refuses here too; no other entry states it.
+And two are an element missing before a parent element beside the document, which cancels by its
+spelling here and which xacro refuses for want of the missing directory, the difference of the `..`
+entry; one of the two then reads its file from the configured package root, the fallback entry's
+difference. A generated case that starts to disagree, or a row whose case stops disagreeing as
+recorded, fails the comparison.
 
 **A block argument's contents now take effect where the caller wrote them, and a description that
 relied on them not doing so will refuse.** A macro's block argument is expanded at the call site, in
 the caller's macros and scope, before the macro binds it, and walked again wherever the macro inserts
-it, in the inserting scope — which is what the reference does, and which this evaluator did not
-do until recently: it used to expand a block only if the receiving macro inserted it. Two consequences
-are visible on descriptions that load today. A property, an include or a nested macro call written
-inside a block the receiving macro never inserts now takes effect anyway. And a block argument naming a
-property nobody bound now fails the load whether or not the block is ever reached. Measured against
-the pinned reference on minimized documents, each renders or refuses here as it does there: a block
-the macro never inserts that carries a property, a macro call writing a global property, or a macro
-call emitting a link renders the property, the global and no emitted link on both sides; one carrying
-an include renders the included property on both sides with no source configured; and a block naming an
-unbound property refuses on both sides, under a `*` parameter never inserted and under a `**`
-parameter inserted only behind a false condition. So a description that was only ever validated
-against meios, and that hid a defect inside an unreachable block, will stop loading, as it never
-loaded upstream. There is no shim, alias or migration note: this
-project is pre-release and the behavior was changed outright.
+it, in the inserting scope. This evaluator did not do so until recently: it used to expand a block only
+if the receiving macro inserted it. Two consequences are visible on descriptions that load today. A
+property, an include or a nested macro call written inside a block the receiving macro never inserts
+now takes effect anyway. And a block argument naming a property nobody bound now fails the load whether
+or not the block is ever reached. Measured on minimized documents compared against the pinned xacro: a
+block the macro never inserts that carries a property, a macro call writing a global property, or a
+macro call emitting a link renders the property, the global and no emitted link; one carrying an
+include renders the included property with no source configured; and a block naming an unbound property
+refuses, under a `*` parameter never inserted and under a `**` parameter inserted only behind a false
+condition. So a description that was only ever validated against meios, and that hid a defect inside an
+unreachable block, will stop loading; it never loaded under xacro. There is no shim, alias or migration
+note: this project is pre-release and the behavior was changed outright.
 
-**A space outside ASCII between two macro parameters separates them upstream and not here, and both
-sides render.** The reference reads a macro's `params` with a pattern whose whitespace class, applied
-to Python text, takes the no-break space and the other Unicode spaces. Here parameters are separated by
-a space, a tab, a carriage return or a line feed and by nothing else. Measured against the pinned
-reference on `params="a:=1<U+00A0>b:=2"` with a link named `l_${a}`: upstream binds `a` to `1` and
-renders `l_1`, and here `a` binds the rest of the text and the link renders `l_1 b:=2`. Neither side
-reports anything, so a description writing such a space loads on both sides and binds differently. A
-`params` attribute holding only such a space parts the other way: measured on a macro never called
-whose `params` is a single no-break space, the reference reads an empty list and refuses with "list
-index out of range", and here the space is read as the name of one parameter and the document loads. No
-row carries it and no case pins either reading.
+**A space outside ASCII between two macro parameters does not separate them, and the description
+renders differently under xacro.** Parameters are separated by a space, a tab, a carriage return or a
+line feed and by nothing else. xacro reads a macro's `params` with a pattern whose whitespace class,
+applied to Python text, takes the no-break space and the other Unicode spaces. Measured against the
+pinned xacro on `params="a:=1<U+00A0>b:=2"` with a link named `l_${a}`: here `a` binds the rest of the
+text and the link renders `l_1 b:=2`, and xacro binds `a` to `1` and renders `l_1`. Neither reports
+anything, so a description writing such a space loads under both and binds differently. A `params`
+attribute holding only such a space parts the other way: measured on a macro never called whose
+`params` is a single no-break space, xacro reads an empty list and refuses, and here the space is read
+as the name of one parameter and the document loads. No row carries it and no case pins either reading.
 
-**An argument is read only through the substitution commands, as the reference reads it, and a
-description that named one bare now refuses.** Arguments and properties are two binding tables here,
-as they are upstream: the `$(arg n)` command and the `$(eval)` command read the argument table, an
-expression span reads the property table, and a property of an argument's name is a second binding
-beside the argument, never a write to it. This evaluator used to keep one table for both, so
-whichever wrote a name last answered both reads. Two consequences are visible on descriptions that
-load today. A property's `default=` now binds over
-an argument of the same name, and a property's `value=`, a global property or a macro parameter of the
-same name leaves what `$(arg n)` answers alone. Measured against the pinned reference, which renders
-each the same way: an argument `p` defaulted to `A` under a property `p` defaulted to `B` renders
-`${p}base_$(arg p)arm` as `Bbase_Aarm`, and as `Bbase_Carm` with the caller argument `p:=C`; written
-with `value=`, before or after the argument's declaration, it renders `${p}_$(arg p)` as `B_A`, and a
-global property written by a macro as `G_A`; and a macro parameter named like an argument leaves
-`$(arg prefix)` reading the argument. The vendor idiom `<xacro:property name="x" default="$(arg x)"/>`
-therefore binds the property it was written to bind. And an expression that named an argument by its
-bare name — plainly, in a conditional, under `not`, or as a dotted head — now refuses under
-`undefined_property`, under either evaluator; a bare `^` default whose name only an argument binds
-refuses under `xacro_structural_error`, while `^|fallback` takes its fallback as the reference does;
-and `$(arg n)` naming only a property refuses under `unresolved_arg`. Each refusal names the
-`$(arg n)` spelling, and the reference refuses all three. `$(eval)` evaluates its body as upstream's
-does: over the arguments, each one it names converted by the reference's own conversion — a real where
-the text holds a `.`, an integer otherwise, either boolean spelling in any letter case, the text itself
-last, with digits and surrounding spaces read as Python 3.14's `int()` and `float()` read them — after
-the reference's own names, its helpers, the boolean spellings `true` and `false` and the mathematics
-names, which shadow an argument of the same name, and with no property visible. The digits, the spaces
-and the mathematics names are tables taken from Python 3.14 and its Unicode 16.0 data; the reference
-running on another interpreter reads whatever that interpreter's tables hold, so a name or a digit
-added or retired between versions is read here as 3.14 reads it. A body holding a double underscore
-refuses before anything is evaluated, as it does upstream. Its body
-ends at the first closing parenthesis, as the reference's command pattern ends it, so a call, a
-parenthesized subexpression or a `$(arg n)` written inside it refuses on both sides. Every other
-command ends at its first closing parenthesis too, and a `(` or a `$` left in its text once its spans
-are resolved refuses, as the reference's command scanner refuses it: `$(arg zz $(arg q))`,
-`$(arg p $(arg q))` over a bound `p`, `$(find $(arg pkg))`, `$(optenv NAME (a))`, `$(optenv NAME x$y)`
-and an `$(optenv NAME ${w})` whose property holds `a(b` refuse on both sides, and `$(arg ${w})` reads
-the argument `w` names, as it does upstream: a span-built name is resolved before its words are
-counted, and a second word, written or produced, refuses under `unresolved_arg` before any argument is
-looked up, on both sides. Measured against
-the pinned reference, which renders each the same way: an argument `q` defaulted to `3` beside a
-property `q` written `10` renders `$(eval q + 1)` as `4`; an argument `p` defaulted to `A` renders
-`$(eval p + 'arm')` as `Aarm`, and as `Carm` with the caller argument `p:=C`; a conditional testing
-`$(eval flag == 'yes')` over a `yes` default takes its branch; the defaults `1.50`, `TRUE`, `1e3`,
-`1_000` and ` 7 ` evaluate to `1.5`, `True`, `1e3`, `1000` and, plus one, `8`; arguments named `e`,
-`true` and `len` evaluate to the mathematics constant, `True` and the argument; `١٢` plus one is `13`,
-`١.٥` is `1.5`, a `7` padded with a no-break space and an ideographic space is, plus one, `8`, and
-`²`, which is no decimal digit, stays text; `$(eval a__b)` over an argument `a__b` refuses; and a name
-only a property binds refuses. Three readings upstream has refuse here instead, measured but not carried by
-the manifest: the names `inf` and `nan` under the built-in evaluator, a name the reference binds to a
-function, which renders as the function's own text there, and an argument whose number is outside the
-64-bit range, which upstream reads as a Python integer of any size or a real that overflows to `inf`.
-Those three apart, every form this entry names renders as the reference renders it or refuses where
-the reference refuses, as measured above; the sixteen pinned corpus documents flatten byte for byte
-as they did before the change, and none of them reaches `$(eval)`. There is no shim, alias or
-migration note: this project is pre-release and the behavior was changed outright.
+**An argument is read only through the substitution commands, and a description that named one bare now
+refuses.** Arguments and properties are two binding tables here: the `$(arg n)` command and the
+`$(eval)` command read the argument table, an expression span reads the property table, and a property
+of an argument's name is a second binding beside the argument, never a write to it. This evaluator used
+to keep one table for both, so whichever wrote a name last answered both reads. Two consequences are
+visible on descriptions that load today. A property's `default=` now binds over an argument of the same
+name, and a property's `value=`, a global property or a macro parameter of the same name leaves what
+`$(arg n)` answers alone. Measured against the pinned xacro, which renders each the same way: an
+argument `p` defaulted to `A` under a property `p` defaulted to `B` renders `${p}base_$(arg p)arm` as
+`Bbase_Aarm`, and as `Bbase_Carm` with the caller argument `p:=C`; written with `value=`, before or
+after the argument's declaration, it renders `${p}_$(arg p)` as `B_A`, and a global property written by
+a macro as `G_A`; and a macro parameter named like an argument leaves `$(arg prefix)` reading the
+argument. The vendor idiom `<xacro:property name="x" default="$(arg x)"/>` therefore binds the property
+it was written to bind. And an expression that named an argument by its bare name — plainly, in a
+conditional, under `not`, or as a dotted head — now refuses under `undefined_property`, under either
+evaluator; a bare `^` default whose name only an argument binds refuses under `xacro_structural_error`,
+while `^|fallback` takes its fallback; and `$(arg n)` naming only a property refuses under
+`unresolved_arg`. Each refusal names the `$(arg n)` spelling. `$(eval)` evaluates its body over the
+arguments, each one it names converted — to a real where the text holds a `.`, an integer otherwise,
+either boolean spelling in any letter case, the text itself last, with digits and surrounding spaces
+read as Python 3.14's `int()` and `float()` read them — after the evaluator's built-in names, its
+helpers, the boolean spellings `true` and `false` and the mathematics names, which shadow an argument
+of the same name, and with no property visible. The digits, the spaces and the mathematics names are
+tables taken from Python 3.14 and its Unicode 16.0 data; xacro running on another interpreter reads
+whatever that interpreter's tables hold, so a name or a digit added or retired between versions is read
+here as 3.14 reads it. A body holding a double underscore refuses before anything is evaluated. Its
+body ends at the first closing parenthesis, so a call, a parenthesized subexpression or a `$(arg n)`
+written inside it refuses. Every other command ends at its first closing parenthesis too, and a `(` or
+a `$` left in its text once its spans are resolved refuses: `$(arg zz $(arg q))`, `$(arg p $(arg q))`
+over a bound `p`, `$(find $(arg pkg))`, `$(optenv NAME (a))`, `$(optenv NAME x$y)` and an
+`$(optenv NAME ${w})` whose property holds `a(b` refuse, and `$(arg ${w})` reads the argument `w`
+names: a span-built name is resolved before its words are counted, and a second word, written or
+produced, refuses under `unresolved_arg` before any argument is looked up. Measured against the pinned
+xacro, which renders each the same way: an argument `q` defaulted to `3` beside a property `q` written
+`10` renders `$(eval q + 1)` as `4`; an argument `p` defaulted to `A` renders `$(eval p + 'arm')` as
+`Aarm`, and as `Carm` with the caller argument `p:=C`; a conditional testing `$(eval flag == 'yes')`
+over a `yes` default takes its branch; the defaults `1.50`, `TRUE`, `1e3`, `1_000` and ` 7 ` evaluate
+to `1.5`, `True`, `1e3`, `1000` and, plus one, `8`; arguments named `e`, `true` and `len` evaluate to
+the mathematics constant, `True` and the argument; `١٢` plus one is `13`, `١.٥` is `1.5`, a `7` padded
+with a no-break space and an ideographic space is, plus one, `8`, and `²`, which is no decimal digit,
+stays text; `$(eval a__b)` over an argument `a__b` refuses; and a name only a property binds refuses.
+Three forms xacro reads refuse here instead, measured but not carried by the manifest: the names `inf`
+and `nan` under the built-in evaluator, a name xacro binds to a function, which renders as the
+function's own text under xacro, and an argument whose number is outside the 64-bit range, which xacro
+reads as a Python integer of any size or a real that overflows to `inf`. Those three apart, the pinned
+xacro was measured above to give the same result for every form this entry names; the sixteen pinned
+corpus documents flatten byte for byte as they did before the change, and none of them reaches
+`$(eval)`. There is no shim, alias or migration note: this project is pre-release and the behavior was
+changed outright.
 
-**An argument declared without a default is accepted here and refused upstream at the declaration.**
-The reference requires a `default` attribute on every `<xacro:arg>` and refuses the whole document
-without one. Here the declaration binds nothing: a caller supplies the value, or a `$(arg n)` reading
-it refuses as unset, and a document that declares one and never reads it renders. Measured on a
-document declaring `<xacro:arg name="p"/>` beside one link: upstream refuses with a missing-attribute
-error and the link renders here, which is the row the manifest carries.
+**An argument declared without a default is accepted.** The declaration binds nothing: a caller
+supplies the value, or a `$(arg n)` reading it refuses as unset, and a document that declares one and
+never reads it renders. xacro requires a `default` attribute on every `<xacro:arg>` and refuses the
+whole document without one, so such a description does not load under xacro. Measured on a document
+declaring `<xacro:arg name="p"/>` beside one link: the link renders here and xacro refuses, which is
+the row the manifest carries.
 
-**A `$(arg n)` standing above its own declaration resolves here and refuses upstream.** The main
-expansion pass is single-forward, so a pre-pass lends a declared default before the pass begins, but
-only a default that lexes to itself, one holding none of `$$`, `${` and `$(`; a use written above its
-own `<xacro:arg>` element of such a default therefore resolves. The reference reads its argument table
-in document order and refuses the whole document with an undefined-substitution-argument diagnostic. A
-use above any other default refuses as unset here as well: measured with a default of `v$$x` and of
-`${1}`, both sides refuse. The acceptance is deliberate and is pinned by cases, but the direction is
-the permissive one: a description that relies on it loads here and fails there. The manifest carries it
-as the `argument_above_declaration` row: a link named `above_$(arg flag)` written above a `false`
-default renders `above_false` here, and upstream refuses the document. Once the expansion reaches a
-declaration, the first one it reaches binds, whatever a later declaration or one it never reaches says,
-as the reference binds it. That declaration reads its default with no lent value bound, so a
-`$(arg a)` inside it refuses as unset, as the reference refuses it: measured with `default="$(arg a)y"`
-above `default="x"`, both sides refuse at the first declaration. What the pre-pass lends is not limited to declarations the expansion
-reaches: it lends the first default in document order that lexes to itself, wherever its declaration
-stands. So a use above every reached declaration can read one inside a branch never taken, and where no
-declaration of the name is reached at all, every use reads it. Measured with a link named `l_$(arg a)`
-above a declaration of `a` defaulting to `x` inside a false `xacro:if`, itself above a reached
-declaration defaulting to `y`, the link renders `l_x` here; where that skipped declaration, or one in a
-macro never called, is the only one, the link renders `l_x` above it or below it; the reference refuses
-each with the undefined-substitution-argument diagnostic.
+**A `$(arg n)` standing above its own declaration resolves.** The main expansion pass is
+single-forward, so a pre-pass lends a declared default before the pass begins, but only a default that
+lexes to itself, one holding none of `$$`, `${` and `$(`; a use written above its own `<xacro:arg>`
+element of such a default therefore resolves. xacro reads its argument table in document order and
+refuses the whole document. A use above any other default refuses as unset, measured with a default of
+`v$$x` and of `${1}`. The acceptance is deliberate and is pinned by cases, but the direction is the
+permissive one: a description that relies on it loads here and fails under xacro. The manifest carries
+it as the `argument_above_declaration` row: a link named `above_$(arg flag)` written above a `false`
+default renders `above_false` here, and xacro refuses the document. Once the expansion reaches a
+declaration, the first one it reaches binds, whatever a later declaration or one it never reaches says.
+That declaration reads its default with no lent value bound, so a `$(arg a)` inside it refuses as
+unset: measured with `default="$(arg a)y"` above `default="x"`, the load refuses at the first
+declaration. What the pre-pass lends is not limited to declarations the expansion reaches: it lends the
+first default in document order that lexes to itself, wherever its declaration stands. So a use above
+every reached declaration can read one inside a branch never taken, and where no declaration of the
+name is reached at all, every use reads it. Measured with a link named `l_$(arg a)` above a declaration
+of `a` defaulting to `x` inside a false `xacro:if`, itself above a reached declaration defaulting to
+`y`, the link renders `l_x` here; where that skipped declaration, or one in a macro never called, is
+the only one, the link renders `l_x` above it or below it; xacro refuses each.
 
-**A mapping key an auxiliary document wrote as a number or a boolean loads, and nothing can read
-it.** Such a key is admitted, it counts toward the mapping's extent, and it collides with another key
-exactly as the reference's own comparison would have it collide. What no expression has is a spelling
-that reaches it: every subscript key is text, and a dotted member is a name. So the entry is present
-and unreadable rather than refused at the parse, and a description that needs one needs the explicit
-backend. An **empty** scalar written as a key is a different answer, and this page gave the wrong one
-until it was measured: a document writing the explicit-key form with nothing after it does not parse
-here at all — the reader meets a mapping standing where a key belongs and refuses the document at that
-line and column. So an empty key is refused rather than admitted-and-unreadable, and the sentence above
-covers the two kinds it names and no third.
+**A mapping key an auxiliary document wrote as a number or a boolean loads, and nothing can read it.**
+Such a key is admitted, it counts toward the mapping's extent, and it collides with another key exactly
+as Python's key comparison would have it collide. What no expression has is a spelling that reaches it:
+every subscript key is text, and a dotted member is a name. So the entry is present and unreadable
+rather than refused at the parse, and a description that needs one needs the explicit backend. An
+**empty** scalar written as a key is a different answer, and this page gave the wrong one until it was
+measured: a document writing the explicit-key form with nothing after it does not parse here at all —
+the reader meets a mapping standing where a key belongs and refuses the document at that line and
+column. So an empty key is refused rather than admitted-and-unreadable, and the sentence above covers
+the two kinds it names and no third.
 
-**`$(dirname)` renders the directory of the file it is written in, where the reference refuses it
-everywhere.** The pinned reference never hands its directory command a file, so `$(dirname)` refuses
-there with "Cannot substitute $(dirname),no file/directory information available." wherever it is
-written. Here it renders a directory. In the document handed to the load, it is the parent of that
-path as it was handed in: relative where that path is relative, and empty for a bare file name.
-Inside an include, it is the canonical directory of the file the include located, whichever route
-found it (beside the including document, through `package://`, or through a configured source), and
-it is the same from any working directory; an include reached through a linked directory names the
+**`$(dirname)` renders the directory of the file it is written in.** The pinned xacro never hands its
+directory command a file, so it refuses `$(dirname)` wherever it is written, and a description using
+the command does not load there. In the document handed to the load, the directory it renders is the
+parent of that path as it was handed in: relative where that path is relative, and empty for a bare
+file name. Inside an include, it is the canonical directory of the file the include located, whichever
+route found it (beside the including document, through `package://`, or through a configured source),
+and it is the same from any working directory; an include reached through a linked directory names the
 real directory, not the link. Measured on a document including `dirname_command.d/inner.xacro`, which
-names a link after the last segment of its `$(dirname)`: upstream refuses, and here the link is named
-`dirname_command.d`, which is the `dirname_command` row the manifest carries. The value is written into
-the expanded document, so it is a path on the machine that ran the load. No pinned corpus document
-uses the command.
+names a link after the last segment of its `$(dirname)`: here the link is named `dirname_command.d`,
+and xacro refuses, which is the `dirname_command` row the manifest carries. The value is written into
+the expanded document, so it is a path on the machine that ran the load. No pinned corpus document uses
+the command.
 
-**A located path is written with forward separators on every platform, where the reference writes the
-platform's own.** `$(find)` and `$(dirname)` render the path they resolve in the generic spelling, so a
-document reads the same separator on Windows as it does elsewhere. The reference writes the native one,
-which on Windows puts a backslash inside the document text — and where the command sits inside an
-expression span, that text is resolved before the expression is lexed, so the backslash lands inside a
-string literal. A backslash in a literal is refused here rather than given the escape meaning nothing
-measured, so the native spelling would make a description that loads everywhere else refuse on Windows
-alone. The generic spelling is accepted by the platform's own filesystem interfaces and is what a mesh
-URI carries in any case. The reviewed manifest cannot carry this one. A row there is matched by exact
-text against a render the pinned reference produces at that moment, and the job producing that render
-runs on Linux, where the reference writes the same separator this project does — so on the platform
-where the difference exists there is no fresh render to compare against, and on the platform that
-renders there is no difference. What carries it instead is the set of unit assertions that compose the
-expected path in the generic spelling and therefore hold on every platform the suite runs on,
-including the one that would otherwise write a backslash.
+**A located path is written with forward separators on every platform.** `$(find)` and `$(dirname)`
+render the path they resolve in the generic spelling, so a document reads the same separator on Windows
+as it does elsewhere. xacro writes the native one, which on Windows puts a backslash inside the
+document text — and where the command sits inside an expression span, that text is resolved before the
+expression is lexed, so the backslash lands inside a string literal. A backslash in a literal is
+refused here rather than given the escape meaning nothing measured, so the native spelling would make a
+description that loads everywhere else refuse on Windows alone. The generic spelling is accepted by the
+platform's own filesystem interfaces and is what a mesh URI carries in any case. The reviewed manifest
+cannot carry this one. A row there is matched by exact text against a render the pinned xacro produces
+at that moment, and the job producing that render runs on Linux, where xacro writes the same separator
+meios does — so on the platform where the difference exists there is no fresh render to compare
+against, and on the platform that renders there is no difference. What carries it instead is the set of
+unit assertions that compose the expected path in the generic spelling and therefore hold on every
+platform the suite runs on, including the one that would otherwise write a backslash.
 
-**The string operations compare and count by bytes where the reference counts code points, and no
-description can tell the difference.** Substring containment, the named split, the addition of two
-strings and a string's truth value all work over bytes. That was written down here as an unmeasured
-risk; it has since been measured, by driving all four through both implementations over text carrying
-multi-byte characters, and the two agree character for character. They have to. Well-formed UTF-8 is
-self-synchronizing, so a byte-wise search for a well-formed needle cannot match across a character
-boundary and a byte-wise split cannot cut one in half; byte equality and code-point equality coincide
-exactly; and none of the four operations exposes a length or an index, because this grammar has no
-string-length function and no string subscript. A byte sequence that is not well-formed text cannot be
-written into an XML document in the first place. The difference is real in the implementation and has
-no spelling that reaches it from a description.
+**The string operations compare and count by bytes rather than code points, and no description can tell
+the difference.** Substring containment, the named split, the addition of two strings and a string's
+truth value all work over bytes. That was written down here as an unmeasured risk; it has since been
+measured, by driving all four through meios and xacro over text carrying multi-byte characters, and the
+two agree character for character. They have to. Well-formed UTF-8 is self-synchronizing, so a
+byte-wise search for a well-formed needle cannot match across a character boundary and a byte-wise
+split cannot cut one in half; byte equality and code-point equality coincide exactly; and none of the
+four operations exposes a length or an index, because this grammar has no string-length function and no
+string subscript. A byte sequence that is not well-formed text cannot be written into an XML document
+in the first place. The difference is real in the implementation and has no spelling that reaches it
+from a description.
 
-**A chain of properties, each reading the next, renders ten deep here, where the reference renders
-one hundred and sixty-five.** A property is evaluated at its first read, so a property whose value reads
-another nests one evaluation inside the other. Each nested read is charged against the expression-depth
-ceiling at a cost measured in stack, so a long chain refuses with `expansion_budget_exceeded`, located
-at the innermost definition it reached, rather than running the thread out of stack; so charged, the
-longest chain admitted keeps ninefold headroom on a 512 KiB thread, which the test suite measures in an
+**A chain of properties, each reading the next, renders ten deep; xacro renders one hundred and
+sixty-five.** A property is evaluated at its first read, so a property whose value reads another nests
+one evaluation inside the other. Each nested read is charged against the expression-depth ceiling at a
+cost measured in stack, so a long chain refuses with `expansion_budget_exceeded`, located at the
+innermost definition it reached, rather than running the thread out of stack; so charged, the longest
+chain admitted keeps ninefold headroom on a 512 KiB thread, which the test suite measures in an
 unoptimized build. With the built-in evaluator, a chain of ten properties, `p0` written as `${p1}` down
 to a tenth holding a number, renders, and a chain of eleven refuses; a read written inside parentheses
 or arithmetic is charged its nesting as well, so such a chain refuses sooner: written as `${p1 + 1}`,
 six properties render and seven refuse. Under `meios::eval-python` each read also carries the
-interpreter's own frames, and a chain of seven properties written that way renders. The reference
-bounds the same chain only by its
-interpreter's recursion limit: measured against the pinned xacro 2.1.1, it renders a chain of one
-hundred and sixty-five and refuses one of one hundred and sixty-six with "maximum recursion depth
-exceeded". The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest compares a
-chain of thirty-two. A description that needs a longer chain can write each property after the one it
-reads and mark every tenth `lazy_eval="false"`: such a property is evaluated where it is written and
-caches its value, so a later read stops there, and the chain of thirty-two written that way renders on
-both sides. A chain whose reads sit inside arithmetic needs one marked in every six.
+interpreter's own frames, and a chain of seven properties written that way renders. xacro bounds the
+same chain only by its interpreter's recursion limit: measured against the pinned xacro 2.1.1, it
+renders a chain of one hundred and sixty-five and refuses one of one hundred and sixty-six. The
+`property_chain_deeper_than_depth_ceiling` row of the divergence manifest compares a chain of
+thirty-two. A description that needs a longer chain can write each property after the one it reads and
+mark every tenth `lazy_eval="false"`: such a property is evaluated where it is written and caches its
+value, so a later read stops there, and the chain of thirty-two written that way renders under meios
+and xacro alike. A chain whose reads sit inside arithmetic needs one marked in every six.
 
-**An include namespace read as a value refuses here, where the reference reads it as the table holding
-its names.** An include written with `ns="n"` binds `n` to a namespace, and here a namespace has no
-value of its own. A bare `${n}`, or an expression using it as an operand, such as
-`${'a' if n else 'b'}`, refuses with `expression_error` under every policy and names the spelling
-`n.<name>` that reads one of its names; a read that stops at a namespace inside another, `${a.b}`,
-refuses the same way. The reference evaluates the name to its interpreter's table, so that condition
-is true over a namespace holding a name and renders `a`. A bare `${n}` there renders the table's
-printed form, which writes the reference's own functions with their addresses in the running process,
-so it differs from one run to the next and cannot be recorded; the manifest compares the conditional
-spelling, the `include_namespace_read_as_value` row. Read a name the namespace holds instead:
-`${n.w}` renders on both sides.
+**An include namespace read as a value refuses; xacro reads it as the table holding its names.** An
+include written with `ns="n"` binds `n` to a namespace, and here a namespace has no value of its own. A
+bare `${n}`, or an expression using it as an operand, such as `${'a' if n else 'b'}`, refuses with
+`expression_error` under every policy and names the spelling `n.<name>` that reads one of its names; a
+read that stops at a namespace inside another, `${a.b}`, refuses the same way. xacro evaluates the name
+to its interpreter's table, so under xacro that condition is true over a namespace holding a name and
+renders `a`. A bare `${n}` there renders the table's printed form, which writes xacro's own functions
+with their addresses in the running process, so it differs from one run to the next and cannot be
+recorded; the manifest compares the conditional spelling, the `include_namespace_read_as_value` row.
+Read a name the namespace holds instead: `${n.w}` renders under both.
 
 ## Command-line behavior
 
@@ -996,12 +960,12 @@ and a plain local build does not, so a developer running the corpus by hand sees
 is not every authoring style, and a description written in some other house style can still meet a
 refusal that nothing here would have caught.
 
-**Two of the pinned family's own entry points do not load.** All eight documents
-`franka_description` ships were rendered against the pinned upstream and compared; the six that are
-corpus documents load and agree, and the two that are not — its two-arm and mobile two-arm
-assemblies — build their arm list with a bracket literal and then take a slice of it. Neither
-spelling is read here, so both refuse rather than loading with the wrong model. A description
-assembling its parts that way is outside what the corpus proves.
+**Two of the pinned family's own entry points do not load.** All eight documents `franka_description`
+ships were rendered against the pinned xacro and compared; the six that are corpus documents load and
+agree, and the two that are not — its two-arm and mobile two-arm assemblies — build their arm list with
+a bracket literal and then take a slice of it. Neither spelling is read here, so both refuse rather
+than loading with the wrong model. A description assembling its parts that way is outside what the
+corpus proves.
 
 **The corpus exercises two of the asset reference forms.** Nearly every asset reference in it is a
 `package://` URI or a `$(find …)` substitution. The absolute `file://` form is covered by one
@@ -1010,17 +974,17 @@ rows are `file://` throughout — and no shipping document carries a relative re
 what the corpus leaves to a case table of crafted documents is the containment rule and the
 relative base, not the whole URI contract.
 
-**The comparison against a fresh upstream render is confined to Linux, and so is the corpus that
-feeds it.** Every corpus document the built-in evaluator handles is expanded by it, with the
-interpreter binding switched off, and both that comparison and the pinned corpus run on every push —
-on Linux. Producing a fresh reference render needs the pinned upstream tooling and only the Linux
-workflow installs it, which is the older half of this. The other half is that the corpus tier is a
-Linux gate too. What macOS and Windows fetch the corpus for is the `clean-consumer` job, and that
-job loads two of the twenty documents — the `ur3e` variant and the KR6 — through a consumer that
-takes meios both by `find_package` against an installed package and by `FetchContent` from the
-source tree, checking them against the same recorded facts. So on those two platforms eighteen of
-the twenty pinned documents are not loaded at all, and no statement here that a pinned entry point
-loads on three platforms reaches further than that pair.
+**The comparison against a fresh xacro render is confined to Linux, and so is the corpus that feeds
+it.** Every corpus document the built-in evaluator handles is expanded by it, with the interpreter
+binding switched off, and both that comparison and the pinned corpus run on every push — on Linux.
+Producing a fresh xacro render needs the pinned xacro tooling and only the Linux workflow installs it,
+which is the older half of this. The other half is that the corpus tier is a Linux gate too. What macOS
+and Windows fetch the corpus for is the `clean-consumer` job, and that job loads two of the twenty
+documents — the `ur3e` variant and the KR6 — through a consumer that takes meios both by `find_package`
+against an installed package and by `FetchContent` from the source tree, checking them against the same
+recorded facts. So on those two platforms eighteen of the twenty pinned documents are not loaded at
+all, and no statement here that a pinned entry point loads on three platforms reaches further than that
+pair.
 
 **The KUKA LBR family is pinned as a description package, not as its umbrella repository.**
 `lbr-stack/lbr_fri_ros2_stack` is deliberately not fetched: its published tarball contains no robot
@@ -1141,19 +1105,19 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Claim | Carried by |
 |---|---|
 | No runtime remote fetch | Nothing, and that is the claim: it is an absent capability. Every source the library has is driven by `io_sources.*` and `io_source_stack.*`, and none of them takes a URL. |
-| A symlink-installed workspace is measured on crafted layouts, not on a live colcon build | Both layouts opened through the install tree: `load_linked_install.a relative include loads beside a document opened through a linked install directory`, `load_linked_install.a relative include loads beside a document opened through per-file install links`, the two `load_linked_install` auxiliary-document cases of the same shapes, `load_linked_mesh.a relative mesh resolves beside a document opened through a linked install directory` and `load_linked_mesh.a relative mesh resolves beside a document opened through per-file install links`. The sibling linking into neither directory: `load_linked_install.an install link leading into neither directory of its document refuses an include unless outside links are followed`, `load_linked_install.an auxiliary document linked into neither directory of its document refuses unless outside links are followed` and `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options`. The package-qualified reference through `install/share`: `load_linked_root.a package reference through a root whose files link out of it refuses as uncontained`, which links each file under `install/share` into the source tree and asserts the `package://` mesh's `uncontained_asset` refusal, the `package://` auxiliary document's refusal with its one `uncontained_asset` record, and both resolving once the source tree is the root, beside `xacro_include_read.a package include of a link pointing out of its configured root refuses as uncontained` for the include. The `$(find)` spellings, the linked-directory shape and the reference's readings are carried by the measurement the entry states, the `meios` command line and pinned xacro 2.1.1 on crafted trees of both shapes. The root that is itself a link: `load_linked_root.a package root given as a link serves its package includes`, `load_linked_root.a package root given as a link serves its package-form auxiliary documents`, `load_linked_root.a package root given as a link resolves a package mesh` and `load_linked_root.a directory source and a bundle source over a linked root report its real directory and read the asset through it`. The ROS layer's linked package directory: `ros_source.a colcon --symlink-install package dir resolves to the real files`. Its per-file links: `ros_package_link.an in-package link reads through ROS_PACKAGE_PATH as through a configured root`, `ros_package_link.a package under a ROS_PACKAGE_PATH entry that is itself a link reads` and `ros_package_link.a link leading out of its ROS package still refuses as uncontained`. Nothing builds a real `--symlink-install` workspace — which is the claim. |
+| A symlink-installed workspace is measured on crafted layouts, not on a live colcon build | Both layouts opened through the install tree: `load_linked_install.a relative include loads beside a document opened through a linked install directory`, `load_linked_install.a relative include loads beside a document opened through per-file install links`, the two `load_linked_install` auxiliary-document cases of the same shapes, `load_linked_mesh.a relative mesh resolves beside a document opened through a linked install directory` and `load_linked_mesh.a relative mesh resolves beside a document opened through per-file install links`. The sibling linking into neither directory: `load_linked_install.an install link leading into neither directory of its document refuses an include unless outside links are followed`, `load_linked_install.an auxiliary document linked into neither directory of its document refuses unless outside links are followed` and `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options`. The package-qualified reference through `install/share`: `load_linked_root.a package reference through a root whose files link out of it refuses as uncontained`, which links each file under `install/share` into the source tree and asserts the `package://` mesh's `uncontained_asset` refusal, the `package://` auxiliary document's refusal with its one `uncontained_asset` record, and both resolving once the source tree is the root, beside `xacro_include_read.a package include of a link pointing out of its configured root refuses as uncontained` for the include. The `$(find)` spellings, the linked-directory shape and xacro's readings are carried by the measurement the entry states, the `meios` command line and pinned xacro 2.1.1 on crafted trees of both shapes. The root that is itself a link: `load_linked_root.a package root given as a link serves its package includes`, `load_linked_root.a package root given as a link serves its package-form auxiliary documents`, `load_linked_root.a package root given as a link resolves a package mesh` and `load_linked_root.a directory source and a bundle source over a linked root report its real directory and read the asset through it`. The ROS layer's linked package directory: `ros_source.a colcon --symlink-install package dir resolves to the real files`. Its per-file links: `ros_package_link.an in-package link reads through ROS_PACKAGE_PATH as through a configured root`, `ros_package_link.a package under a ROS_PACKAGE_PATH entry that is itself a link reads` and `ros_package_link.a link leading out of its ROS package still refuses as uncontained`. Nothing builds a real `--symlink-install` workspace — which is the claim. |
 | A relative asset path anchors to the top-level input document | `uri_cases.uri relative base survives a document named relatively`, and the rule marker the asset-resolution page publishes, held to the table by `uri_drift.the asset document and the uri table name the same rules`. |
-| A relative include resolves beside its document and refuses to climb above it unless the caller admits the climb | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The admitted climb is held to upstream by the `include_parent_directory_climbed` agreement verdict of `native_differential`, the same document loaded with the climb admitted and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller admitting a climb reads an include above the document's directory`, `load_include_options.an admitted climb that names nothing refuses and consults no source` and `load_include_options.an admitted climb resolves through a linked directory as the operating system does`, which opens a document through a linked directory and climbs out of it, refused unset and read where the operating system resolves it admitted. The climb in a document a memory source served, inside its package, is carried by `load_include_options.a served document's climb inside its package resolves through its layer whatever was included first`, in both include orders. That the layer's type decides it, asking the layer nothing: `load_served_layer.a layer's type alone says whether it names paths`, over a directory, a bundle and a memory source, and a test-local source that names no paths. The climb in a document a bundle source served, read where the operating system resolves it: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; through a beside link into a second configured root: `load_served_layer.a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote`. The ROS layer's climb, in its package and out of it, is carried by the measurement the entry states, a program loading through that layer alone against pinned xacro 2.1.1; no case drives it. `load_include_options.the include options default to refusing a climb` pins the default. An auxiliary document's leading `..`: `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`, beside `load_beside_root.an include's leading .. landing under a configured root meets the climb gate`; the reference's reading of both is carried by the measurement the entry states. The resolution itself is held to upstream by five of the `include_` agreement verdicts (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution`, `xacro_include_precedence` and `xacro_include_identity` cases. The anchor of a package-served document: `load_package_anchor.a document a package lookup served through an in-root link anchors its includes where it was named` and `load_package_anchor.a document a package lookup served through an in-root link anchors its auxiliary documents where it was named`, each by both package spellings, with `load_package_anchor.a package-served document reached through an in-root link is keyed by its canonical file` for the identity and `ros_package_link.a document the ROS layer served through an in-package link anchors its includes where it was named` for the ROS layer; the reference's reading through `$(find)` is carried by the measurement the entry states. The served document is carried by `xacro_include_served.a relative include in a document a byte source served resolves through that source` and `xacro_include_served.a served document's sibling resolves the same whether or not an earlier include wrote it`; a sibling where nothing is beside the named path by `load_served_layer.a sibling of a document served through an in-root link refuses where nothing is beside its named path`, and the file another directory admitted by `load_served_layer.a beside hit a configured root admitted through a linked directory carries no served record on POSIX, so the serving layer does not answer its miss, and the spelling is read lexically on Windows`, which on Windows requires the file beside the named path to be read, beside `load_served_layer.a beside hit a configured root admitted through a linked directory with nothing beside the named path refuses its sibling's miss on POSIX and the spelling itself on Windows` for the refusal measured there with nothing beside it, for want of the spelling itself. The file spelled through `..`: `load_served_layer.a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, and is read lexically on Windows`, over `$(find)` and `package://`, and at the command line `cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows`; that a spelling with no `..` keeps the record, by `load_served_layer.a sibling spelled without a parent element keeps the served record, so the serving layer answers its miss`. The reference's refusal of that shape is carried by the measurement the entry states. The miss spelled through `..` beside a document a path-naming layer served, not asked of that layer: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`, over `$(find)` and `package://`; the layer that serves bytes, asked first: `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it`, and whatever an earlier include made it write, with no lower layer's copy standing in, `load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in`, over the memory layer alone and over one stacked on a directory layer; the command line and the reference by the measurement the entry states. |
-| A `..` that climbs back inside the document's directory is read where the operating system resolves it, and refused through a path element that is not a directory wherever the operating system reports one; two shapes still differ | Through a link to a directory under nothing that admits it, for the include: `load_include_options.a spelling back through a linked directory is judged where the operating system resolves it`, refused with the options unset and with the climb alone and reading where the link leads with outside links followed on POSIX, and reading the file beside the document in all three on Windows; for the auxiliary document and the mesh: `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root refuses unless outside links are followed on POSIX and is read lexically on Windows` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root refuses unless outside links are followed on POSIX and is read lexically on Windows`. Through a link into a configured root: `load_beside_root.an include spelled back through a linked directory into a configured root reads where the link leads on POSIX, its nested include anchored there, and is read lexically on Windows`, `load_beside_root.an auxiliary document spelled back through a linked directory into a configured root loads where the link leads on POSIX and is read lexically on Windows` and `load_beside_root.a mesh spelled back through a linked directory into a configured root resolves where the link leads on POSIX and is read lexically on Windows`. Each of these linked-directory cases asserts the POSIX reading on POSIX and the lexical reading the entry states on Windows, and the `load_beside_root` ones write a file beside the document and assert on Windows that the load reads it. The outcomes the entry gives as measured there are those of the include with the options unset, and the refusals with nothing beside the document, which their own cases carry: `load_beside_root.an include spelled back through a linked directory into a configured root with nothing beside the document reads where the link leads on POSIX and refuses for want of the file beside the document on Windows`, `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root with nothing beside the document refuses as unresolved, with one uncontained record on POSIX and none on Windows` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root with nothing beside the document refuses, as uncontained on POSIX and as unresolved on Windows`, the last two with outside links unset. The path element that is not a directory, without `..`, on every platform: `xacro_include_read.an include spelled through a file that is not a directory with no parent element refuses, and no configured source's copy stands in`, `yaml_resource.a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in` and `load_linked_mesh.a mesh spelled through a file that is not a directory with no parent element does not resolve, and its record names why`; with `..`: `xacro_include_read.an include spelled back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured source's copy stands in`, `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured root's copy stands in` and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does not resolve on POSIX, its record naming why, and resolves beside the document on Windows`, each asserting the refusal on POSIX and, on Windows, the reading the entry states as measured there. The command line printing only the primary line is carried by the measurement the entry states. The directory that does not exist: `load_beside_root.a spelling through a directory that does not exist reads the file beside the document`, for all three readers, beside `load_include_options.a climb that stays inside the document's directory takes the ordinary lookups with the climb admitted` and `load_include_options.a served document's climb that stays inside its directory resolves through its layer with the climb admitted`. The miss through a link looked for under the lexical reduction is carried by the measurement the entry states, the `meios` command line against pinned xacro 2.1.1; no case pins it. In a document a path-naming layer served, the copy beside the named path not standing in: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`, beside `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it` for a layer that serves bytes; the configured root's copy that still renders there by the measurement the entry states. The reference's reading with no `sub` is compared by the `include_102` and `include_161` rows of `generated_divergences.cases`, two generated cases of it; its readings through the link and through the regular file are carried by the measurement the entry states, and no manifest row compares them. |
+| A relative include resolves beside its document and refuses to climb above it unless the caller admits the climb | The `include_parent_directory` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a relative include climbing above its document's directory refuses as escaping`, which pins the row's bare refusal to its cause. The admitted climb is held against xacro by the `include_parent_directory_climbed` agreement verdict of `native_differential`, the same document loaded with the climb admitted and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller admitting a climb reads an include above the document's directory`, `load_include_options.an admitted climb that names nothing refuses and consults no source` and `load_include_options.an admitted climb resolves through a linked directory as the operating system does`, which opens a document through a linked directory and climbs out of it, refused unset and read where the operating system resolves it admitted. The climb in a document a memory source served, inside its package, is carried by `load_include_options.a served document's climb inside its package resolves through its layer whatever was included first`, in both include orders. That the layer's type decides it, asking the layer nothing: `load_served_layer.a layer's type alone says whether it names paths`, over a directory, a bundle and a memory source, and a test-local source that names no paths. The climb in a document a bundle source served, read where the operating system resolves it: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; through a beside link into a second configured root: `load_served_layer.a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote`. The ROS layer's climb, in its package and out of it, is carried by the measurement the entry states, a program loading through that layer alone against pinned xacro 2.1.1; no case drives it. `load_include_options.the include options default to refusing a climb` pins the default. An auxiliary document's leading `..`: `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`, beside `load_beside_root.an include's leading .. landing under a configured root meets the climb gate`; xacro's reading of both is carried by the measurement the entry states. The resolution itself is held against xacro by five of the `include_` agreement verdicts (a file beside its document, a nested include, the same nested include with a configured root holding a same-named file, an include in a macro body, and a document opened through a link, whose includes resolve beside the link), beside the other `xacro_include_resolution`, `xacro_include_precedence` and `xacro_include_identity` cases. The anchor of a package-served document: `load_package_anchor.a document a package lookup served through an in-root link anchors its includes where it was named` and `load_package_anchor.a document a package lookup served through an in-root link anchors its auxiliary documents where it was named`, each by both package spellings, with `load_package_anchor.a package-served document reached through an in-root link is keyed by its canonical file` for the identity and `ros_package_link.a document the ROS layer served through an in-package link anchors its includes where it was named` for the ROS layer; xacro's reading through `$(find)` is carried by the measurement the entry states. The served document is carried by `xacro_include_served.a relative include in a document a byte source served resolves through that source` and `xacro_include_served.a served document's sibling resolves the same whether or not an earlier include wrote it`; a sibling where nothing is beside the named path by `load_served_layer.a sibling of a document served through an in-root link refuses where nothing is beside its named path`, and the file another directory admitted by `load_served_layer.a beside hit a configured root admitted through a linked directory carries no served record on POSIX, so the serving layer does not answer its miss, and the spelling is read lexically on Windows`, which on Windows requires the file beside the named path to be read, beside `load_served_layer.a beside hit a configured root admitted through a linked directory with nothing beside the named path refuses its sibling's miss on POSIX and the spelling itself on Windows` for the refusal measured there with nothing beside it, for want of the spelling itself. The file spelled through `..`: `load_served_layer.a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, and is read lexically on Windows`, over `$(find)` and `package://`, and at the command line `cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows`; that a spelling with no `..` keeps the record, by `load_served_layer.a sibling spelled without a parent element keeps the served record, so the serving layer answers its miss`. xacro's refusal of that shape is carried by the measurement the entry states. The miss spelled through `..` beside a document a path-naming layer served, not asked of that layer: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`, over `$(find)` and `package://`; the layer that serves bytes, asked first: `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it`, and whatever an earlier include made it write, with no lower layer's copy standing in, `load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in`, over the memory layer alone and over one stacked on a directory layer; the command line and xacro by the measurement the entry states. |
+| A `..` that climbs back inside the document's directory is read where the operating system resolves it, and refused through a path element that is not a directory wherever the operating system reports one; two shapes still differ | Through a link to a directory under nothing that admits it, for the include: `load_include_options.a spelling back through a linked directory is judged where the operating system resolves it`, refused with the options unset and with the climb alone and reading where the link leads with outside links followed on POSIX, and reading the file beside the document in all three on Windows; for the auxiliary document and the mesh: `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root refuses unless outside links are followed on POSIX and is read lexically on Windows` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root refuses unless outside links are followed on POSIX and is read lexically on Windows`. Through a link into a configured root: `load_beside_root.an include spelled back through a linked directory into a configured root reads where the link leads on POSIX, its nested include anchored there, and is read lexically on Windows`, `load_beside_root.an auxiliary document spelled back through a linked directory into a configured root loads where the link leads on POSIX and is read lexically on Windows` and `load_beside_root.a mesh spelled back through a linked directory into a configured root resolves where the link leads on POSIX and is read lexically on Windows`. Each of these linked-directory cases asserts the POSIX reading on POSIX and the lexical reading the entry states on Windows, and the `load_beside_root` ones write a file beside the document and assert on Windows that the load reads it. The outcomes the entry gives as measured there are those of the include with the options unset, and the refusals with nothing beside the document, which their own cases carry: `load_beside_root.an include spelled back through a linked directory into a configured root with nothing beside the document reads where the link leads on POSIX and refuses for want of the file beside the document on Windows`, `load_beside_root.an auxiliary document spelled back through a linked directory leading under no configured root with nothing beside the document refuses as unresolved, with one uncontained record on POSIX and none on Windows` and `load_beside_root.a mesh spelled back through a linked directory leading under no configured root with nothing beside the document refuses, as uncontained on POSIX and as unresolved on Windows`, the last two with outside links unset. The path element that is not a directory, without `..`, on every platform: `xacro_include_read.an include spelled through a file that is not a directory with no parent element refuses, and no configured source's copy stands in`, `yaml_resource.a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in` and `load_linked_mesh.a mesh spelled through a file that is not a directory with no parent element does not resolve, and its record names why`; with `..`: `xacro_include_read.an include spelled back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured source's copy stands in`, `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured root's copy stands in` and `load_linked_mesh.a mesh spelled back out of a file that is not a directory does not resolve on POSIX, its record naming why, and resolves beside the document on Windows`, each asserting the refusal on POSIX and, on Windows, the reading the entry states as measured there. The command line printing only the primary line is carried by the measurement the entry states. The directory that does not exist: `load_beside_root.a spelling through a directory that does not exist reads the file beside the document`, for all three readers, beside `load_include_options.a climb that stays inside the document's directory takes the ordinary lookups with the climb admitted` and `load_include_options.a served document's climb that stays inside its directory resolves through its layer with the climb admitted`. The miss through a link looked for under the lexical reduction is carried by the measurement the entry states, the `meios` command line against pinned xacro 2.1.1; no case pins it. In a document a path-naming layer served, the copy beside the named path not standing in: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`, beside `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it` for a layer that serves bytes; the configured root's copy that still renders there by the measurement the entry states. xacro's reading with no `sub` is compared by the `include_102` and `include_161` rows of `generated_divergences.cases`, two generated cases of it; its readings through the link and through the regular file are carried by the measurement the entry states, and no manifest row compares them. |
 | Under the climb option, a climb out of a byte-served document's package refuses | `load_include_options.a served document's climb out of its package refuses whatever was included first`, which asserts the refusal in both include orders over a memory source. The definition, read from a layer's type: `load_served_layer.a layer's type alone says whether it names paths`, which asserts that a directory and a bundle source name paths, that a memory source and a test-local source with no paths do not, and that asking logs nothing. A bundle source's document read from disk: `load_include_options.a bundle-served document's admitted climb reads where the operating system resolves it`; a directory source's, through a beside link: `load_served_layer.a beside link into a second configured root climbs as the reference reads it, with no record naming a path the description never wrote`. The ROS layer is carried by the measurement the relative-include entry states. |
-| A link beside the document whose target lies under neither of its directories nor any configured root refuses unless the caller follows outside links | The `include_outside_link` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a link beside the document that escapes it refuses without falling through`. The followed link is held to upstream by the `include_outside_link_followed` agreement verdict of `native_differential`, the same document loaded with outside links followed and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller following outside links reads a sibling link that leaves the document's directory`; `load_include_options.the include options default to refusing an outside link` pins the default. The fixture's link is a committed symbolic link, so the comparison runs where the fresh-render job runs, on Linux. The one rule and a configured root's admission, for the three readers: `load_beside_root.an include linked beside its description into a configured root loads`, `load_beside_root.an auxiliary document linked beside its description into a configured root loads` and `load_beside_root.a mesh linked beside its description into a configured root resolves`; the roots an expansion is handed, and none: `load_beside_root.a beside include linking into the roots an expansion is given is read, and refused with none`. Where a leading `..` parts them: `load_beside_root.an include's leading .. landing under a configured root meets the climb gate` and `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`; the reference's reading of the auxiliary document by the measurement the relative-include entry states, and the mesh's admission by the measurement the [containment](asset-resolution.md#containment) rule states; no case pins the mesh's. The colcon sentence and the refusal in all three: the include and auxiliary-document cases of `load_linked_install`, `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options` and `load_linked_mesh.a mesh linked into neither directory of its document resolves with outside links followed`. The stand-in sentence for an auxiliary document: `yaml_resource_containment.an escaping link beside the document refuses even where a configured root holds the name` and `yaml_resource_containment.a configured root reached through a link reads the resource it contains`. The followed answer through a link that stays inside the document's directory, in both option states: `load_beside_root.a miss through a link that stays inside the document's directory is final with outside links followed` and `load_beside_root.an auxiliary document's miss through a link that stays inside the document's directory is final with outside links followed`; the reference's refusal by the measurement the entry states. The followed answer through a link leading out: `load_include_options.a followed directory link to an absent target refuses even where a configured root holds the name`, `yaml_resource_followed.a followed link to a directory lacking the spec ends the sweep where a configured root holds the name` and `yaml_resource_followed.a followed link naming a directory ends the sweep where a configured root holds the name`. The dangling link with the option set: `load_include_options.a dangling sibling link with outside links followed refuses even where a configured root holds the name` and `yaml_resource_followed.a dangling link with outside links followed ends the sweep where a configured root holds the name`; a dangling mesh link in both option states: `load_linked_mesh.a dangling mesh link beside its document is a missing asset, never a root's copy, in both option states`; with the option unset, the fallback entry's two cases. The spelling sentence: `yaml_resource_containment.a traversal spec stays refused with outside links followed` and `load_linked_mesh.a mesh path climbing out of its document's directories stays refused with outside links followed` for the lexical climb-out; no case sets the option over an absolute path landing outside, and `yaml_resource_containment.an absolute spec is judged by where it lands, not by how it looks` pins that refusal with it unset. |
-| A relative include falls back to the configured sources where the reference refuses | No row of the document manifest, because the whole-document comparison configures no source; the generated comparison configures a package root, and the `include_161` row of `generated_divergences.cases`, driven in both directions by `generated_differential`, records one generated case of it. `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source` and `xacro_include_served.a sibling the serving layer lacks falls back to the configured sources`; upstream has nothing to compare either with. The file another directory admitted, whose miss is not asked of the serving layer: `load_served_layer.a beside hit a configured root admitted through a linked directory carries no served record on POSIX, so the serving layer does not answer its miss, and the spelling is read lexically on Windows`, which on Windows requires the file beside the named path to be read, beside `load_served_layer.a beside hit a configured root admitted through a linked directory with nothing beside the named path refuses its sibling's miss on POSIX and the spelling itself on Windows` for the refusal measured there with nothing beside it; the file spelled through `..`: `load_served_layer.a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, and is read lexically on Windows` and `cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows`, these linked-directory cases asserting the POSIX reading on POSIX and the lexical reading on Windows. The spelling through a path element that is not a directory, refused before any fallback even where a configured root holds the name: without `..`, `xacro_include_read.an include spelled through a file that is not a directory with no parent element refuses, and no configured source's copy stands in` and `yaml_resource.a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in`; with `..`, `xacro_include_read.an include spelled back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured source's copy stands in` and `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured root's copy stands in`, the two asserting on Windows the reading the entry states as measured there; the `yaml_resource` pair also reads a genuine miss from the root. The miss through a link looked for under the lexical reduction: the measurement the `..` entry states. The miss spelled through `..` beside a document a path-naming layer served, sent to the configured sources alone: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`; the byte-serving layer asked first, whatever an earlier include made it write: `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it` and `load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in`. The dangling link with outside links unset: `load_include_options.a dangling sibling link with outside links unset falls through to the configured sources` and `yaml_resource_followed.a dangling link with outside links unset falls through to a configured root`; the option's refusal by the followed dangling cases the outside-link entry names. The unnamed document is carried by `xacro_include_resolution.a document expanded under no name looks for nothing beside it`, and the relative document path by `xacro_include_resolution.a document named by a relative path anchors its relative includes at the working directory`. |
+| A link beside the document whose target lies under neither of its directories nor any configured root refuses unless the caller follows outside links | The `include_outside_link` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_resolution.a link beside the document that escapes it refuses without falling through`. The followed link is held against xacro by the `include_outside_link_followed` agreement verdict of `native_differential`, the same document loaded with outside links followed and compared whole, through the load path and the expansion entry, beside `load_include_options.a caller following outside links reads a sibling link that leaves the document's directory`; `load_include_options.the include options default to refusing an outside link` pins the default. The fixture's link is a committed symbolic link, so the comparison runs where the fresh-render job runs, on Linux. The one rule and a configured root's admission, for the three readers: `load_beside_root.an include linked beside its description into a configured root loads`, `load_beside_root.an auxiliary document linked beside its description into a configured root loads` and `load_beside_root.a mesh linked beside its description into a configured root resolves`; the roots an expansion is handed, and none: `load_beside_root.a beside include linking into the roots an expansion is given is read, and refused with none`. Where a leading `..` parts them: `load_beside_root.an include's leading .. landing under a configured root meets the climb gate` and `load_beside_root.an auxiliary document's leading .. landing under a configured root loads, and refuses with none`; xacro's reading of the auxiliary document by the measurement the relative-include entry states, and the mesh's admission by the measurement the [containment](asset-resolution.md#containment) rule states; no case pins the mesh's. The colcon sentence and the refusal in all three: the include and auxiliary-document cases of `load_linked_install`, `load_linked_mesh.a mesh linked into neither directory of its document refuses with the default options` and `load_linked_mesh.a mesh linked into neither directory of its document resolves with outside links followed`. The stand-in sentence for an auxiliary document: `yaml_resource_containment.an escaping link beside the document refuses even where a configured root holds the name` and `yaml_resource_containment.a configured root reached through a link reads the resource it contains`. The followed answer through a link that stays inside the document's directory, in both option states: `load_beside_root.a miss through a link that stays inside the document's directory is final with outside links followed` and `load_beside_root.an auxiliary document's miss through a link that stays inside the document's directory is final with outside links followed`; xacro's refusal by the measurement the entry states. The followed answer through a link leading out: `load_include_options.a followed directory link to an absent target refuses even where a configured root holds the name`, `yaml_resource_followed.a followed link to a directory lacking the spec ends the sweep where a configured root holds the name` and `yaml_resource_followed.a followed link naming a directory ends the sweep where a configured root holds the name`. The dangling link with the option set: `load_include_options.a dangling sibling link with outside links followed refuses even where a configured root holds the name` and `yaml_resource_followed.a dangling link with outside links followed ends the sweep where a configured root holds the name`; a dangling mesh link in both option states: `load_linked_mesh.a dangling mesh link beside its document is a missing asset, never a root's copy, in both option states`; with the option unset, the fallback entry's two cases. The spelling sentence: `yaml_resource_containment.a traversal spec stays refused with outside links followed` and `load_linked_mesh.a mesh path climbing out of its document's directories stays refused with outside links followed` for the lexical climb-out; no case sets the option over an absolute path landing outside, and `yaml_resource_containment.an absolute spec is judged by where it lands, not by how it looks` pins that refusal with it unset. |
+| A relative include falls back to the configured sources where xacro refuses | No row of the document manifest, because the whole-document comparison configures no source; the generated comparison configures a package root, and the `include_161` row of `generated_divergences.cases`, driven in both directions by `generated_differential`, records one generated case of it. `xacro_include_resolution.a relative include with nothing beside its document falls back to a configured source` and `xacro_include_served.a sibling the serving layer lacks falls back to the configured sources`; xacro has nothing to compare either with. The file another directory admitted, whose miss is not asked of the serving layer: `load_served_layer.a beside hit a configured root admitted through a linked directory carries no served record on POSIX, so the serving layer does not answer its miss, and the spelling is read lexically on Windows`, which on Windows requires the file beside the named path to be read, beside `load_served_layer.a beside hit a configured root admitted through a linked directory with nothing beside the named path refuses its sibling's miss on POSIX and the spelling itself on Windows` for the refusal measured there with nothing beside it; the file spelled through `..`: `load_served_layer.a sibling spelled back through a linked directory carries no served record, so its miss refuses as the reference refuses it on POSIX, and is read lexically on Windows` and `cli_package_path: a sibling spelled back through a linked directory refuses as the reference refuses it on POSIX and is read lexically on Windows`, these linked-directory cases asserting the POSIX reading on POSIX and the lexical reading on Windows. The spelling through a path element that is not a directory, refused before any fallback even where a configured root holds the name: without `..`, `xacro_include_read.an include spelled through a file that is not a directory with no parent element refuses, and no configured source's copy stands in` and `yaml_resource.a spelling through a file that is not a directory with no parent element refuses, and no configured root's copy stands in`; with `..`, `xacro_include_read.an include spelled back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured source's copy stands in` and `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the document on Windows, and no configured root's copy stands in`, the two asserting on Windows the reading the entry states as measured there; the `yaml_resource` pair also reads a genuine miss from the root. The miss through a link looked for under the lexical reduction: the measurement the `..` entry states. The miss spelled through `..` beside a document a path-naming layer served, sent to the configured sources alone: `load_served_layer.a sibling miss spelled back through a linked directory is not asked of the serving layer, so it refuses as the reference refuses it on POSIX, and is read lexically on Windows`; the byte-serving layer asked first, whatever an earlier include made it write: `load_served_layer.a byte-served document's sibling spelled through a parent element is still asked of the layer that served it` and `load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the layer that served it whatever an earlier include wrote, and no lower layer's file stands in`. The dangling link with outside links unset: `load_include_options.a dangling sibling link with outside links unset falls through to the configured sources` and `yaml_resource_followed.a dangling link with outside links unset falls through to a configured root`; the option's refusal by the followed dangling cases the outside-link entry names. The unnamed document is carried by `xacro_include_resolution.a document expanded under no name looks for nothing beside it`, and the relative document path by `xacro_include_resolution.a document named by a relative path anchors its relative includes at the working directory`. |
 | A relative auxiliary document in a byte-served description resolves only once its source has written the file | `yaml_resource.a relative spec in a byte-served document resolves only once its source has written the file`, which asserts both the refusal before the file is written and the text after. |
-| An absolute include filename is looked for only through the configured sources | The `include_absolute_path` row of the divergence manifest, driven as a whole document through both implementations, each binding the argument the include is built from to the directory it reads the document from, beside `xacro_include_resolution.an absolute include spelling is not looked for beside its document`, which pins this side's refusal and its message. The root removed, under the Windows reading a drive letter and colon with it, is carried on every host by `xacro_include_target.an absolute spelling loses its root before it is walked, under either grammar` and `xacro_include_target.a drive the walk leaves leading is removed, so the result is never rooted`; the `..` a removed drive uncovers, refused as escaping under the Windows reading and kept as a name under the POSIX one, by `xacro_include_target.a parent element a removed drive leaves leading escapes under the Windows grammar and stays a name under the POSIX one`; and the UNC and device spellings keeping all but their leading separators by `xacro_include_target.a UNC or device spelling loses only its leading separators under the Windows grammar`. A find held in a property or an argument and then written into an include filename is carried by the `include_held_find_in_property` and `include_held_find_in_argument` rows of the divergence manifest, and by the `include_004` row of `generated_divergences.cases`, a generated case of a find held in an argument. |
-| A `package://` include filename resolves here through the configured sources, where the reference refuses it | The `include_package_filename` row of the divergence manifest, driven as a whole document through both implementations, this side serving the fixture directory as a configured source for that probe alone. The auxiliary-document sentence is carried by the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line with `--package-path` on one crafted tree; no manifest row compares it, because the document probes read auxiliary documents through a loader that consults no source. |
-| A path that climbs out of a `$(find)` package refuses here | The `include_find_climbs_out_of_package` row of the divergence manifest, driven as a whole document through both implementations, the probe handed its own package tree as the only root on both sides, beside `xacro_include_spelling.a path that climbs out of a find's package refuses`, which pins the refusal and its cause. The `include_030`, `include_050`, `include_071`, `include_145` and `include_146` rows of `generated_divergences.cases` are five generated cases of it. |
-| A glob include filename refuses here | The `include_glob_filename` row of the divergence manifest, driven as a whole document through both implementations, the probe handed its own package tree as the only root on both sides. The pattern that matches nothing: the `include_glob_matching_nothing` row, driven the same way, its stage holding no file the pattern matches. |
-| `$(find)` writes a package's directory as its root was configured, except a relative root and a `.` element | The linked root: `load_package_anchor.the find command through a linked root renders the root as it was configured`, and at the command line `cli_package_path: the find command through a linked root renders the root as it was configured`; the reference's text by the measurement the entry states. The ROS layer: `ros_source.a ROS1 crawl through a linked root names its packages where they were crawled` and `cli_package_path: the find command through a linked ROS package path renders the crawled spelling`. That containment and the cycle check go by the link's target: `load_package_anchor.a package-served document reached through an in-root link is keyed by its canonical file`. The two spellings that differ: the `find_relative_root` and `find_dotted_root` rows of the divergence manifest, driven through both implementations, beside `cli_package_path: a relative package path renders the find command's directory absolute`, `load_package_anchor.a configured root's current-directory elements do not reach the find command's text` and `ros_source.a ROS root's current-directory elements do not reach a located package's name`. |
+| An absolute include filename is looked for only through the configured sources | The `include_absolute_path` row of the divergence manifest, driven as a whole document through both implementations, each binding the argument the include is built from to the directory it reads the document from, beside `xacro_include_resolution.an absolute include spelling is not looked for beside its document`, which pins meios's refusal and its message. The root removed, under the Windows reading a drive letter and colon with it, is carried on every host by `xacro_include_target.an absolute spelling loses its root before it is walked, under either grammar` and `xacro_include_target.a drive the walk leaves leading is removed, so the result is never rooted`; the `..` a removed drive uncovers, refused as escaping under the Windows reading and kept as a name under the POSIX one, by `xacro_include_target.a parent element a removed drive leaves leading escapes under the Windows grammar and stays a name under the POSIX one`; and the UNC and device spellings keeping all but their leading separators by `xacro_include_target.a UNC or device spelling loses only its leading separators under the Windows grammar`. A find held in a property or an argument and then written into an include filename is carried by the `include_held_find_in_property` and `include_held_find_in_argument` rows of the divergence manifest, and by the `include_004` row of `generated_divergences.cases`, a generated case of a find held in an argument. |
+| A `package://` include filename resolves through the configured sources, where xacro refuses it | The `include_package_filename` row of the divergence manifest, driven as a whole document through both implementations, meios serving the fixture directory as a configured source for that probe alone. The auxiliary-document sentence is carried by the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line with `--package-path` on one crafted tree; no manifest row compares it, because the document probes read auxiliary documents through a loader that consults no source. |
+| A path that climbs out of a `$(find)` package refuses here | The `include_find_climbs_out_of_package` row of the divergence manifest, driven as a whole document through both implementations, the probe handed its own package tree as the only root for meios and xacro alike, beside `xacro_include_spelling.a path that climbs out of a find's package refuses`, which pins the refusal and its cause. The `include_030`, `include_050`, `include_071`, `include_145` and `include_146` rows of `generated_divergences.cases` are five generated cases of it. |
+| A glob include filename refuses here | The `include_glob_filename` row of the divergence manifest, driven as a whole document through both implementations, the probe handed its own package tree as the only root for meios and xacro alike. The pattern that matches nothing: the `include_glob_matching_nothing` row, driven the same way, its stage holding no file the pattern matches. |
+| `$(find)` writes a package's directory as its root was configured, except a relative root and a `.` element | The linked root: `load_package_anchor.the find command through a linked root renders the root as it was configured`, and at the command line `cli_package_path: the find command through a linked root renders the root as it was configured`; xacro's text by the measurement the entry states. The ROS layer: `ros_source.a ROS1 crawl through a linked root names its packages where they were crawled` and `cli_package_path: the find command through a linked ROS package path renders the crawled spelling`. That containment and the cycle check go by the link's target: `load_package_anchor.a package-served document reached through an in-root link is keyed by its canonical file`. The two spellings that differ: the `find_relative_root` and `find_dotted_root` rows of the divergence manifest, driven through both implementations, beside `cli_package_path: a relative package path renders the find command's directory absolute`, `load_package_anchor.a configured root's current-directory elements do not reach the find command's text` and `ros_source.a ROS root's current-directory elements do not reach a located package's name`. |
 | A byte-serving source leaks its scratch tree where an open file cannot be deleted | `io_sources.the scratch tree is removed when the source that owns it dies` and the `scratch_teardown.*` stems, which drive removal stopping at its first error. The platform that will not delete an open file is not one the suite runs on. |
 | A narrow window between creating a scratch root and narrowing it | Nothing drives the window itself. Its two ends are carried: `scratch_setup.the candidate loop takes the first free name and exhausts at its bound` and `scratch_setup.a root that could not be narrowed is removed and refused`. |
 | Narrowing replaces permission bits, and not every platform decides access that way | `io_sources.the scratch root is reachable by its owner alone`, on the platforms whose access decision *is* a permission bit. Nothing drives an access-control-list platform, which is the claim. |
@@ -1185,7 +1149,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Under a permissive setting a partially-valid element is lost whole | `profile_permissive.a visual whose origin the reader refuses is dropped whole` and `urdf_fields.a required part that is missing drops its containing element at every setting`. |
 | `load_into` stages the model before it pushes | `load_into.a failed load leaves every counter on the sink at zero`, `load_into.an unopenable path leaves the sink untouched too`, `load_into.the success summary agrees with the entry point it delegates to`. |
 | The Python evaluator runs a restricted subset with false refusals | `eval_python_refusal.a scope-bound name spelled format is refused all the same`, `eval_python_refusal.an expression reaching past arithmetic refuses under a named rule`, and the `eval_python_abuse.*` stem. |
-| The Python evaluator renders `sum`, which the reference does not bind | `eval_python_scope.a name read inside a generator expression reads the property`, which pins `l9` for the generator sum, and `eval_python_refusal.the allowlisted names a description actually uses still evaluate`, which pins `sum(range(4))` and `abs(-3.5)`. The reference's refusal is the upstream column of the `sum_not_a_reference_global` row of the divergence manifest, driven as a whole document through both implementations, whose other column is the built-in evaluator's refusal. |
+| The Python evaluator renders `sum` | `eval_python_scope.a name read inside a generator expression reads the property`, which pins `l9` for the generator sum, and `eval_python_refusal.the allowlisted names a description actually uses still evaluate`, which pins `sum(range(4))` and `abs(-3.5)`. xacro's refusal is the `upstream` column of the `sum_not_a_reference_global` row of the divergence manifest, driven as a whole document through both implementations, whose other column is the built-in evaluator's refusal. |
 | The Python backend has no bound on resource exhaustion | **Nothing** — there is no bound to drive. The contrast is carried: `native_ceilings.*` and `native_limits.*` drive the built-in evaluator's eleven, and `xacro_depth.*` and `xacro_budget.*` the expansion three. |
 | Python xacro expressions are recovered by literal re-parsing | `eval_python_container.an authored literal-shaped property value stays a string under subscript`, `eval_python_container.a set is refused rather than emitted as a container it is not`, and the `eval_python_container_table` stem. |
 
@@ -1195,19 +1159,19 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 |---|---|
 | Ninety-three measured differences | The ninety-three rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | Sixty-seven measured differences of the grammar record, not yet closed | The sixty-seven entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list raises no warning here`. |
-| Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for this side reads `REFUSED` exactly where the standing says it refuses. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, by the `macro_name_with_xacro_prefix` and `include_glob_matching_nothing` rows, and by the `property_shadows_pi` and `property_removes_builtin` agreement probes beside the `xacro_property` cases that pin the two warnings for the built-in names. |
-| Nine generated cases differ from the pinned reference, each recorded | The nine rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
-| A block argument's contents take effect where the caller wrote them | The `block_property_never_inserted`, `block_global_call_never_inserted`, `block_emitting_call_never_inserted`, `block_include_never_inserted`, `block_unbound_never_inserted` and `block_unbound_discarded` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh upstream render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. The insertion walked again in the inserting scope is held to upstream by the `block_evaluated_where_inserted`, `block_inserted_twice_evaluated_each_time`, `block_reads_inserting_scope`, `block_wrapper_attribute_evaluated` and `block_parameter_seen_by_nested_call` agreement verdicts. |
-| A space outside ASCII between two macro parameters separates them upstream and not here | **Nothing** beyond the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line on one crafted document, and the list holding only such a space on a second. A case would write such a space between two parameters and assert the binding. |
-| An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh upstream render, a refusal on both sides agreeing only where upstream's wording and this side's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh upstream render on every run, so a later change to their output surfaces there as a disagreement. |
+| Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for meios reads `REFUSED` exactly where the standing says it refuses. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, by the `macro_name_with_xacro_prefix` and `include_glob_matching_nothing` rows, and by the `property_shadows_pi` and `property_removes_builtin` agreement probes beside the `xacro_property` cases that pin the two warnings for the built-in names. |
+| Nine generated cases differ from the pinned xacro, each recorded | The nine rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
+| A block argument's contents take effect where the caller wrote them | The `block_property_never_inserted`, `block_global_call_never_inserted`, `block_emitting_call_never_inserted`, `block_include_never_inserted`, `block_unbound_never_inserted` and `block_unbound_discarded` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh xacro render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. The insertion walked again in the inserting scope is held against xacro by the `block_evaluated_where_inserted`, `block_inserted_twice_evaluated_each_time`, `block_reads_inserting_scope`, `block_wrapper_attribute_evaluated` and `block_parameter_seen_by_nested_call` agreement verdicts. |
+| A space outside ASCII between two macro parameters does not separate them, and the description renders differently under xacro | **Nothing** beyond the measurement the entry states, pinned xacro 2.1.1 against the `meios` command line on one crafted document, and the list holding only such a space on a second. A case would write such a space between two parameters and assert the binding. |
+| An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh xacro render, a refusal by both agreeing only where xacro's wording and meios's diagnostic code are the ones the comparator names. Beside them `xacro_property.the minimized binding documents render as the reference renders them`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. Of the three readings that refuse here, the out-of-range number is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh xacro render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is accepted | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations. |
-| A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. Only a default that lexes to itself is lent: `xacro_arg_declaration.a default that lexes to itself is still lent to a use above its declaration` and `xacro_arg_declaration.a use above a default holding a stray double dollar refuses as unset`; the use above a `${1}` default by the measurement the entry states. The first declaration the expansion reaches binds: `xacro_arg_declaration.a later declaration does not stand in for the first one the expansion reaches`, `xacro_arg_declaration.a declaration the expansion never reaches binds nothing`, `xacro_arg_declaration.a declaration in an include reached first binds before the including document's own` and `xacro_arg_declaration.a declaration in a macro body binds on the first call only`, held to upstream by the `argument_redeclared_after_refusing_default`, `argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro` and `argument_declared_in_include_first` agreement verdicts of `native_differential`. That the reached declaration reads its default with no lent value bound: `xacro_arg_declaration.a reached declaration reads its own default with no lent value bound`, held to upstream by the `argument_default_reads_itself_before_redeclaration` agreement verdict. The default lent from a declaration the expansion never reaches is carried by the measurement the entry states; no case pins it. |
+| A `$(arg n)` above its own declaration resolves | The `argument_above_declaration` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg.a use above its own declaration still resolves the default` and `xacro_arg_domain.a use above its own declaration renders the same spelling the declaration seeds`. Only a default that lexes to itself is lent: `xacro_arg_declaration.a default that lexes to itself is still lent to a use above its declaration` and `xacro_arg_declaration.a use above a default holding a stray double dollar refuses as unset`; the use above a `${1}` default by the measurement the entry states. The first declaration the expansion reaches binds: `xacro_arg_declaration.a later declaration does not stand in for the first one the expansion reaches`, `xacro_arg_declaration.a declaration the expansion never reaches binds nothing`, `xacro_arg_declaration.a declaration in an include reached first binds before the including document's own` and `xacro_arg_declaration.a declaration in a macro body binds on the first call only`, held against xacro by the `argument_redeclared_after_refusing_default`, `argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro` and `argument_declared_in_include_first` agreement verdicts of `native_differential`. That the reached declaration reads its default with no lent value bound: `xacro_arg_declaration.a reached declaration reads its own default with no lent value bound`, held against xacro by the `argument_default_reads_itself_before_redeclaration` agreement verdict. The default lent from a declaration the expansion never reaches is carried by the measurement the entry states; no case pins it. |
 | A non-text mapping key loads and nothing reads it | The `non_text_mapping_key` row of the divergence manifest, driven as a whole document through both implementations, plus `native_yaml.a key is read in any of the scalar kinds a document can write`. The empty-scalar sentence beside it is carried by the reader's own refusal, measured while that row was minimized. |
 | `$(dirname)` renders the directory of the file it is written in | The `dirname_command` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_identity.the directory command names the located directory of the file it is written in`, which pins the value inside a package include and a beside include and at the top, from two working directories. The relative and empty top-level values and the linked-directory value are carried by the measurement the entry states. |
 | A located path is written with generic separators | The assertions in `xacro_subst_command` that compose an expected path in the generic spelling, and `xacro_arg.a nested arg default resolves at declaration`, which is where the last native spelling was found. No manifest row is possible, and the entry says why. |
-| The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry this side's behavior. |
-| A chain of properties each reading the next renders ten deep here, where the reference renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The lengths and the headroom are pinned by `native_span_depth.a chain of bare deferred reads keeps ninefold headroom` and `native_span_depth.a chain of deferred reads inside arithmetic keeps ninefold headroom`, each counting its chain exactly and refusing one longer before it meters the stack, and the Python backend's by `eval_python_scope.a deferred chain read by the backend refuses on the shared ceiling one level past its pin` and `eval_python_scope.a deferred chain read by the backend keeps ninefold headroom`. The reference's one hundred and sixty-five, and the rewritten chains rendering on both sides, were measured while this page was written and are carried by nothing. |
-| An include namespace read as a value refuses here | The `include_namespace_read_as_value` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_namespace.a namespace read as a value refuses under every policy, naming the dotted spelling` and `xacro_namespace.a namespace an expression stops at inside another refuses with its dotted spelling`. The printed form of a bare read upstream was measured while this page was written and is carried by nothing. |
+| The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry meios's behavior. |
+| A chain of properties each reading the next renders ten deep; xacro renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The lengths and the headroom are pinned by `native_span_depth.a chain of bare deferred reads keeps ninefold headroom` and `native_span_depth.a chain of deferred reads inside arithmetic keeps ninefold headroom`, each counting its chain exactly and refusing one longer before it meters the stack, and the Python backend's by `eval_python_scope.a deferred chain read by the backend refuses on the shared ceiling one level past its pin` and `eval_python_scope.a deferred chain read by the backend keeps ninefold headroom`. xacro's one hundred and sixty-five, and the rewritten chains rendering under both, were measured while this page was written and are carried by nothing. |
+| An include namespace read as a value refuses here | The `include_namespace_read_as_value` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_namespace.a namespace read as a value refuses under every policy, naming the dotted spelling` and `xacro_namespace.a namespace an expression stops at inside another refuses with its dotted spelling`. The printed form of a bare read under xacro was measured while this page was written and is carried by nothing. |
 
 ### Command-line behavior
 
@@ -1225,7 +1189,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | Five vendors, twenty documents | `cmake/corpus_documents.cmake`, which names every one outright, and the sixteen rows of `tests/golden/oracle/compatibility_ledger.cases`, which the ledger test pairs against the listfile in both directions — a pinned document with no row fails, and a row naming no pinned document fails. |
 | Two of the pinned family's own entry points do not load | **Nothing drives them**, because they are deliberately not corpus documents. The measurement that put them outside is recorded in the listfile beside the six that are in. |
 | The corpus exercises two of the asset reference forms | The `file://` rows of `ur5e_abs_paths_facts.cases`, and `uri_cases.uri rows accepted` for the forms the corpus does not reach. |
-| The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned upstream tooling and registers the corpus tier, and the other two fetch the corpus only for the `clean-consumer` job. |
+| The fresh-render comparison, and the corpus, are Linux gates | The three platform workflows, read against each other: one installs the pinned xacro tooling and registers the corpus tier, and the other two fetch the corpus only for the `clean-consumer` job. |
 | The KUKA LBR family is pinned as a description package | Its `PINS` row and its license determination in `cmake/corpus.cmake`. That the umbrella repository's other packages are unpinned is carried by their absence from the listfile. |
 | Fragments are not loaded, by design | The listfile's own rule, and the count it states: pointing the selection at the macro extension would load twenty-one documents carrying a `<robot>` root with no name and no links. |
 

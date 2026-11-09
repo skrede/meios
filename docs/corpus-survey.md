@@ -11,7 +11,7 @@ expanded document belongs to the [URDF profile](urdf-profile.md), and what is no
 [known limitations](known-limitations.md). Nothing on this page restates any of those. A candidate
 appearing here was not pinned when the survey ran and is not claimed to load on the strength of
 appearing here. One of them — the Kinova arm — has since been pinned, after being driven through this
-project's own loader and compared against the reference; its row says so, and it is the only one.
+project's own loader and compared against xacro; its row says so, and it is the only one.
 
 A second question was answered later and is recorded in a section of its own near the end: for each
 candidate, what happens when this project's own loader is pointed at it. That is a different
@@ -24,19 +24,19 @@ entries are findings rather than robots.
 
 ## Authority
 
-Every fact in the candidate tables comes from the upstream's own repository at the revision named in
+Every fact in the candidate tables comes from the description's own repository at the revision named in
 its row, read directly rather than through a package index, a distribution or a mirror. Revisions are
 recorded as commit identifiers rather than as tags or versions, because a tag can be moved and a commit
-cannot. Each candidate row below carries an abbreviated identifier beside its license; the table in this
-section carries the full one for every upstream the survey touched.
+cannot. Each candidate row below carries an abbreviated identifier beside its license; the table in
+this section carries the full one for every repository the survey touched.
 
-Where a row says a construct was *evaluated*, the description was rendered by the same upstream tooling
-this project measures against — xacro 2.1.1 on PyYAML 6.0.3 — with its expression evaluator
-instrumented to report the expressions it actually evaluated, and the construct appears in that report.
-Where a row says a construct was *written*, the spelling was read in the source at the named revision
-and no render reached it; each such row says what stopped the render.
+Where a row says a construct was *evaluated*, the description was rendered by the xacro this project
+measures against — xacro 2.1.1 on PyYAML 6.0.3 — with its expression evaluator instrumented to report
+the expressions it actually evaluated, and the construct appears in that report. Where a row says a
+construct was *written*, the spelling was read in the source at the named revision and no render
+reached it; each such row says what stopped the render.
 
-| Upstream | Revision consulted | Declared license |
+| Repository | Revision consulted | Declared license |
 |---|---|---|
 | <https://github.com/enactic/openarm_description> | `1fba2cbc05001f05b4514120b70130b4ac06f409` | Apache-2.0 |
 | <https://github.com/Kinovarobotics/ros2_kortex> | `c50057a02fb64e854b2759261994f43173bec703` | BSD-3-Clause |
@@ -64,23 +64,23 @@ and no render reached it; each such row says what stopped the render.
 | <https://github.com/RethinkRobotics/baxter_common> | `6c4b0f375fe4e356a3b12df26ef7c0d5e58df86e` | BSD-3-Clause |
 | <https://github.com/agimus-project/agimus-franka-description> | not consulted at a revision — see its row | — |
 
-Two upstreams already pinned by this project's own corpus appear in the findings below, cited by the
-revisions the corpus already records rather than by new ones:
-`UniversalRobots/Universal_Robots_ROS2_Description` at tag `4.3.1`, archive digest
-`3532a25c9942…`, BSD-3-Clause; and `frankarobotics/franka_description` at tag `2.8.1`, archive
-digest `4adcc45f83fd…`, Apache-2.0.
+Two description repositories already pinned by this project's own corpus appear in the findings below,
+cited by the revisions the corpus already records rather than by new ones:
+`UniversalRobots/Universal_Robots_ROS2_Description` at tag `4.3.1`, archive digest `3532a25c9942…`,
+BSD-3-Clause; and `frankarobotics/franka_description` at tag `2.8.1`, archive digest `4adcc45f83fd…`,
+Apache-2.0.
 
-A license here is the upstream's own declaration — the repository's `LICENSE` file, or the `<license>`
-element of the package manifests where there is no root file. Where the manifests within one repository
-disagree, the row says so rather than picking one. Nothing here is a legal determination and nothing
-here has been checked for a mismatch between a declaration and the file contents; a candidate that is
-ever acquired gets its own determination at that point.
+A license here is the repository's own declaration — its `LICENSE` file, or the `<license>` element of
+the package manifests where there is no root file. Where the manifests within one repository disagree,
+the row says so rather than picking one. Nothing here is a legal determination and nothing here has
+been checked for a mismatch between a declaration and the file contents; a candidate that is ever
+acquired gets its own determination at that point.
 
 **Two candidates state one license in a package manifest and a different one in the repository's own
 license file.** Both are recorded here with both spellings and neither is resolved, because resolving
 one in this project's favour would be this project making a claim it cannot support:
 
-| Upstream | Package manifest declares | Root license file is | Note |
+| Repository | Package manifest declares | Root license file is | Note |
 |---|---|---|---|
 | `shadow-robot/sr_common` | `sr_description/package.xml`: **`GPL`** | verbatim BSD 3-Clause; the description files' own headers carry a BSD notice | not a spelling difference — two different licenses. It is not acquired, so no determination was made. |
 | `DoosanRobotics/doosan-robot2` | `dsr_description2/package.xml`: **`Apache License 2.0`** | BSD 3-Clause | the same shape. It is not acquired either. |
@@ -129,7 +129,8 @@ below.
 ## What the survey found
 
 Six of the eight have a carrier. Two do not, and that is the more useful half of the answer. Four of
-the six are answered by an upstream this project already pins, which is the other useful half.
+the six are answered by a description repository this project already pins, which is the other useful
+half.
 
 | Construct | Answer | Where it is answered |
 |---|---|---|
@@ -144,7 +145,7 @@ the six are answered by an upstream this project already pins, which is the othe
 
 ## Candidates carrying a construct on the gap list
 
-| Upstream | Revision · license | Contributes | Where, at that revision | Observation |
+| Repository | Revision · license | Contributes | Where, at that revision | Observation |
 |---|---|---|---|---|
 | `enactic/openarm_description` | `1fba2cbc0500` · Apache-2.0 | `document-sequence`, `sequence-subscript`, `negative-index`, `mapping-literal` | `assets/robot/openarm_v2.0/urdf/utils/openarm_v20_robot.xacro` reads `struct/topology.yaml`, whose `links:` is a list, and takes `['links'][0]` and `['links'][-1]` off it; the same file and its siblings build six-key origin mappings with `dict(x=…, y=…, z=…, roll=…, pitch=…, yaw=…)` | **evaluated** — `assets/robot/openarm_v2.0/urdf/openarm_v20.urdf.xacro` renders to completion and the instrumented run reports `dict(x=1, y=1, z=1)`, `component_topology['links'][0]` and `component_topology['links'][-1]` |
 | `Kinovarobotics/ros2_kortex` | `c50057a02fb6` · BSD-3-Clause | `mapping-literal` | `kortex_description/robots/kortex_robot.xacro` declares a seven-joint initial-position mapping as a macro-parameter default | **evaluated** — `kortex_description/robots/gen3.xacro dof:=7` renders to completion and the instrumented run reports `dict(joint_1=0.0, …, joint_7=0.0)`, even though the caller then overrides that parameter with a loaded document |
@@ -152,24 +153,24 @@ the six are answered by an upstream this project already pins, which is the othe
 | `clearpathrobotics/clearpath_common` | `811baf06a327` · BSD-3-Clause | `mapping-literal` | `clearpath_manipulators_description/urdf/lift/ewellix.urdf.xacro` builds `dict(lower=0.0, upper=0.0)`; `clearpath_platform_description/urdf/common.urdf.xacro` builds a twenty-six-argument letter table the same way and then subscripts it | **written, not evaluated.** Both sites are eagerly-evaluated properties inside macros, so any caller reaches them — but this vendor's top-level documents are produced by a generator from a robot specification rather than shipped as files, and no shipped document in the repository is a top-level description. Reaching these needs a generated document this survey did not produce |
 | `husky/husky` | `41e15d283a8d` · BSD-3-Clause | `named-split`, `sequence-subscript` | `husky_description/urdf/pacs.urdf.xacro` composes bracket offsets out of `${bracket_xyz.split(' ')[0]}` and its two siblings | **written, not evaluated.** The macro is reached only when the mounting system is switched on through the environment, and the top-level `husky.urdf.xacro` render stopped earlier on accessory packages that live outside this repository and were not fetched. The subscript here indexes a split's result, which is a sequence. Note that the same file's neighboring mount checks write `x not in python.range(…)`, which this evaluator refuses, so this description would need that measured before it could be pinned |
 
-## Findings inside upstreams this project already pins
+## Findings inside repositories this project already pins
 
 Four gap-list constructs turn out to be reachable without acquiring anything, which is a more useful
 answer than another robot would have been.
 
 **Three of the eight are written in the Franka description this project already pins, and its own
-pinned entry points evaluate them upstream.** `robots/common/utils.xacro` and
+pinned entry points evaluate them under xacro.** `robots/common/utils.xacro` and
 `end_effectors/common/utils.xacro` define a capsule macro that computes `xyz.split(' ')[0]` and
 branches on `'y' in direction` — two spellings, three of the eight constructs. Rendering
-`robots/fr3/fr3.urdf.xacro` through the pinned upstream with default arguments evaluates both. This
-project's own record of that same document reports neither, and the reason is a real difference in
-evaluation order rather than a gap in the record: the macro call sits inside a block argument that the
-receiving macro discards unless self-collision geometry is asked for, and the reference expands a block
-argument's contents at the call site while this project expands them only if the block is inserted. So
-the constructs are present, are reached upstream, and are not reached here. That difference is
-described in [known limitations](known-limitations.md); what matters for this survey is that no
-acquisition at all stands between this project and `named-split`, `sequence-subscript` and
-`string-membership`.
+`robots/fr3/fr3.urdf.xacro` through the pinned xacro with default arguments evaluates both. This
+project's own record of that same document reported neither when the survey ran, and the reason was a
+real difference in evaluation order rather than a gap in the record: the macro call sits inside a block
+argument that the receiving macro discards unless self-collision geometry is asked for, and this
+project then expanded a block argument's contents only if the block was inserted, while xacro expands
+them at the call site. So the constructs are present, are reached under xacro, and were not reached
+here. That difference is described in [known limitations](known-limitations.md); what matters for this
+survey is that no acquisition at all stands between this project and `named-split`,
+`sequence-subscript` and `string-membership`.
 
 **The keyword-argument mapping constructor is in the Universal Robots description this project already
 pins, in a second top-level document it ships and this project does not pin.**
@@ -180,18 +181,18 @@ Both halves of that are measured rather than inferred: rendering `urdf/ur.urdf.x
 this project measures reports no expression at all from the gap list, and rendering
 `urdf/ur_mocked.urdf.xacro` at the same revision and with the same variant renders to completion and
 reports `dict(shoulder_pan_joint=0.0, …)`. So a second answer to `mapping-literal` also needs no
-acquisition — only a document already inside a pinned upstream. The same construct in the same shape is
-in the driver repository beside it, `ur_robot_driver/urdf/ur.ros2_control.xacro`, which is a hardware
-interface rather than a robot description.
+acquisition — only a document already inside a pinned repository. The same construct in the same shape
+is in the driver repository beside it, `ur_robot_driver/urdf/ur.ros2_control.xacro`, which is a
+hardware interface rather than a robot description.
 
 ## The two constructs with no carrier
 
 **`merge-key`: found twice, never in a document a description loads.** Every auxiliary document in this
-survey was parsed with the reference reader — 1 405 files across twenty-eight upstreams, counting the
-four this project already pins. Exactly two repositories write a merge key, and in both it is in a
+survey was parsed with PyYAML — 1 405 files across twenty-eight repositories, counting the four this
+project already pins. Exactly two repositories write a merge key, and in both it is in a
 motion-planning parameter file that a parameter server reads rather than a file any description loads:
 
-| Upstream | Revision · license | File | Why it does not answer the question |
+| Repository | Revision · license | File | Why it does not answer the question |
 |---|---|---|---|
 | `TAMS-Group/tams_ur5_setup` | `4dacfaf15b61` · BSD-3-Clause | `tams_ur5_setup_moveit_config/config/joint_limits.yaml` | anchors and merge keys throughout, but the repository's own description loads a different file, from a package outside this repository |
 | `ubi-agni/agni_robots` | `c51fa23d0d17` · mixed BSD / GPLv3 | six files under `agni_moveit_config/*/config/`, including planner and joint-limit configurations | same shape; the descriptions in the same repository load `agni_description/robots/robots.yaml` and a tactile-sensor file, neither of which carries a merge key or an anchor |
@@ -231,7 +232,7 @@ unit case and a row in the reviewed divergence manifest.
 Each of these was read at the revision in the authority table. None of them carries anything on the gap
 list; the column says what was checked.
 
-| Upstream | Revision · license | Why not selected |
+| Repository | Revision · license | Why not selected |
 |---|---|---|
 | `flexivrobotics/flexiv_description` | `f33331a7f75b` · Apache-2.0 | maintained and it does read auxiliary documents, but every `in` test in it is against a mapping and every subscript is by name — nothing on the gap list. Its sixty-five auxiliary documents hold no merge key, no anchor and no non-text key |
 | `DoosanRobotics/doosan-robot2` | `ec9242546ec6` · BSD-3-Clause | 111 auxiliary documents parsed, none carrying a gap-list construct; no split, no sequence index, no mapping constructor in any of its descriptions |
@@ -251,7 +252,7 @@ list; the column says what was checked.
 | `PickNikRobotics/moveit_resources` | `0faf2b7c67dc` · BSD (manifests) | no gap-list construct. **Unmaintained by its own record: last pushed 2019-05-24.** It is also a test-fixture collection rather than a vendor's own description, which makes it weak evidence about how anyone authors |
 | `ubi-agni/agni_robots` | `c51fa23d0d17` · mixed BSD / GPLv3 | carries a merge key, but not in a file its descriptions load — see above. Its descriptions do reach further than most, using dotted access into loaded mappings, but that construct is already covered. **Last pushed 2025-01-24**, and its manifests mix BSD with GPLv3 |
 | `TAMS-Group/tams_ur5_setup` | `4dacfaf15b61` · BSD-3-Clause | carries a merge key, but not in a file its descriptions load — see above. **Last pushed 2025-01-08**, and it is a laboratory's own integration rather than a vendor's or a community's description |
-| `agimus-project/agimus-franka-description` | `not consulted` · not determined | a fork of an upstream this project already pins. Whatever it carries, it carries as derived work, so recording it as an independent carrier would double-count one authoring style. Not consulted at a revision for that reason |
+| `agimus-project/agimus-franka-description` | `not consulted` · not determined | a fork of a repository this project already pins. Whatever it carries, it carries as derived work, so recording it as an independent carrier would double-count one authoring style. Not consulted at a revision for that reason |
 | `RethinkRobotics/baxter_common` | `6c4b0f375fe4` · BSD-3-Clause | see below |
 
 **`RethinkRobotics/baxter_common`, at `6c4b0f375fe4e356a3b12df26ef7c0d5e58df86e` (tag `v1.2.0`),
@@ -264,13 +265,13 @@ wherever it goes, and it should never be presented as a current description.
 
 ## What this project's own loader measured
 
-Everything above is a measurement of the **reference** tooling. The closing section below has always
-said so in as many words, and the distinction turned out to matter more than the wording suggested: a
-document the reference renders is not a document this project loads. So every candidate named on this
-page was subsequently driven through this project's own loader, and the verdicts are recorded here so
-that a later reader does not repeat the work.
+Everything above is a measurement of the **xacro** tooling. The closing section below has always said
+so in as many words, and the distinction turned out to matter more than the wording suggested: a
+document xacro renders is not a document this project loads. So every candidate named on this page was
+subsequently driven through this project's own loader, and the verdicts are recorded here so that a
+later reader does not repeat the work.
 
-**How, and where.** Each upstream was fetched at the revision its row names, extracted, and its entry
+**How, and where.** Each repository was fetched at the revision its row names, extracted, and its entry
 point driven through this project's command-line tool with the extracted tree as the package root. The
 control throughout was the already-pinned `franka_description/robots/fr3/fr3.urdf.xacro`, driven
 through the identical harness and flattened successfully, so a failure below is the document's and not
@@ -281,14 +282,14 @@ own evidence; what is recorded here is a probe of candidates, not a gate.
 
 ### The three candidates the survey selected
 
-All three were selected because the reference evaluated a gap-list construct while rendering them. All
-three refuse here, each on a different thing:
+All three were selected because xacro evaluated a gap-list construct while rendering them. All three
+refuse here, each on a different thing:
 
 | Candidate | Entry point driven | Verdict | Refuses on |
 |---|---|---|---|
-| `shadow-robot/sr_common` | `sr_description/robots/sr_hand.urdf.xacro` | **refuses** | a namespaced set constructor, `${python.set('hand_e hand_g hand_c'.split())}`. Behind it: a set value kind the model does not have, the no-separator split this grammar deliberately refuses, a bracket list literal, string methods and string subscripting, and the reference's own message helper. Its bimanual sibling fails at the same site and there is no third entry point. |
+| `shadow-robot/sr_common` | `sr_description/robots/sr_hand.urdf.xacro` | **refuses** | a namespaced set constructor, `${python.set('hand_e hand_g hand_c'.split())}`. Behind it: a set value kind the model does not have, the no-separator split this grammar deliberately refuses, a bracket list literal, string methods and string subscripting, and xacro's own message helper. Its bimanual sibling fails at the same site and there is no third entry point. |
 | `enactic/openarm_description` | `assets/robot/openarm_v2.0/urdf/openarm_v20.urdf.xacro` | **refuses** | a bracket list comprehension. Comprehensions are named outright as future work rather than as a gap. Its v1.0 entry point refuses independently on a tuple literal, and its gripper entry point on a numeric constructor; the repository also writes a lazy-evaluation attribute on 154 properties, which this evaluator has no concept of. |
-| `Kinovarobotics/ros2_kortex` | `kortex_description/robots/gen3.xacro dof:=7` | **refused when probed; loads now** | it refused on a property declaring a fallback attribute, and then on the order a block argument is expanded in. Both are behaviors this project has since brought into line with the reference, and the document is now a pinned corpus entry point that renders element for element with the reference. |
+| `Kinovarobotics/ros2_kortex` | `kortex_description/robots/gen3.xacro dof:=7` | **refused when probed; loads now** | it refused on a property declaring a fallback attribute, and then on the order a block argument is expanded in. Both behaviors have since changed in this project, and the document is now a pinned corpus entry point whose flattened output matches xacro's element for element. |
 
 That the first two refuse is not a correction to this survey's method. The closing section states
 plainly what its *evaluated* column means, and it never meant native loadability. What was missing was
@@ -337,8 +338,8 @@ candidate written in a form this grammar does not read.
 **One form would change the answer more than any other: the bracket list literal.** It is the first
 blocker for `flexivrobotics/flexiv_description` and for `pal-robotics/tiago_robot`; it is what keeps
 the two-arm and mobile two-arm assemblies of the already-pinned Franka description outside the corpus;
-and it is one of several things `shadow-robot/sr_common` needs. Four independent upstreams stand behind
-one spelling.
+and it is one of several things `shadow-robot/sr_common` needs. Four independent repositories stand
+behind one spelling.
 
 ## What was checked, and what was not
 
@@ -350,15 +351,16 @@ Stated plainly, so a later reader can tell the survey's reach from its conclusio
   document — followed by reading each hit's repository directly. A search finds what it is spelled for;
   a construct written in a spelling nobody guessed would not have been found.
 - **How auxiliary documents were checked.** Every `.yaml` and `.yml` file in every candidate
-  repository was parsed with the reference reader, and every key of every mapping was inspected for its
-  type. That is a parse rather than a pattern match, which is why the `non-string-key` negative is worth
-  something. It is also indiscriminate: it reads a repository's build configuration alongside its robot
+  repository was parsed with PyYAML, and every key of every mapping was inspected for its type. That is
+  a parse rather than a pattern match, which is why the `non-string-key` negative is worth something.
+  It is also indiscriminate: it reads a repository's build configuration alongside its robot
   configuration, which is why the merge-key rows above say *which* file carried it.
-- **What "evaluated" means and does not mean.** It means the reference tooling reported evaluating that
-  expression while rendering that document. It does **not** mean the document loads in meios — several
-  of these descriptions use comprehensions, method calls on loaded mappings and namespaced helpers this
-  evaluator refuses, and any of them would need that measured before it could be pinned.
-- **What was not checked.** No license was verified beyond the upstream's own declaration. No candidate
-  was rendered on more than one argument set unless the row says so. No repository outside those in the
-  authority table was searched, and no non-public source of any kind was consulted. No description here
-  was invented, and no row records a construct that was not read in the source at the revision named.
+- **What "evaluated" means and does not mean.** It means the instrumented xacro reported evaluating
+  that expression while rendering that document. It does **not** mean the document loads in meios —
+  several of these descriptions use comprehensions, method calls on loaded mappings and namespaced
+  helpers this evaluator refuses, and any of them would need that measured before it could be pinned.
+- **What was not checked.** No license was verified beyond the repository's own declaration. No
+  candidate was rendered on more than one argument set unless the row says so. No repository outside
+  those in the authority table was searched, and no non-public source of any kind was consulted. No
+  description here was invented, and no row records a construct that was not read in the source at the
+  revision named.

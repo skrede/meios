@@ -187,8 +187,8 @@ declares, not because a consumer of the library has any use for them.
 | Option | Default | Appears when | What it does |
 | --- | --- | --- | --- |
 | `MEIOS_FETCH_CORPUS` | `OFF` | tests are built | Fetch the pinned robot-description corpus and build the corpus test. |
-| `MEIOS_CORPUS_BREADTH` | `OFF` | tests are built | Load every top-level document the pinned known-good upstream ships. |
-| `MEIOS_EXAMPLE_FETCH_NETWORK` | **`ON`** | examples are built | Fetch the pinned upstream description for the examples. |
+| `MEIOS_CORPUS_BREADTH` | `OFF` | tests are built | Load every top-level document the pinned known-good description repositories ship. |
+| `MEIOS_EXAMPLE_FETCH_NETWORK` | **`ON`** | examples are built | Fetch the pinned description repository for the examples. |
 
 ### What the library does over the network
 
@@ -200,11 +200,11 @@ machine.
 
 The two fetching options above are a separate matter and belong to this project's own test and
 example builds, not to the library. `MEIOS_EXAMPLE_FETCH_NETWORK` is deliberately on: the
-manifest-resolution example resolves a pinned, hashed upstream package alongside the one authored
-here, because that example is only worth reading if it resolves a genuine package as well as an
-authored one. Turning it off leaves the in-repository trees alone and needs no network. Neither
-option changes what the library does, and neither is reachable unless you are building this
-project's examples or tests yourself.
+manifest-resolution example resolves a pinned, hashed package fetched from its description
+repository alongside the one authored here, because that example is only worth reading if it
+resolves a genuine package as well as an authored one. Turning it off leaves the in-repository trees
+alone and needs no network. Neither option changes what the library does, and neither is reachable
+unless you are building this project's examples or tests yourself.
 
 ### Variables that are not options
 

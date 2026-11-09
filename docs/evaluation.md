@@ -3,9 +3,9 @@
 A xacro description carries executable expressions, and this page is the contract for what meios will
 and will not run when it evaluates them. It is the one place that owns the boundary: the supported
 grammar, the rules that refuse everything else, the ceilings that bound one load, where those rules
-diverge from the compatibility target, exactly what the running evidence for that comparison covers,
-how the resource helper reaches a file, what a loaded configuration is readable by, and the explicit
-backend for a description that needs more than the grammar carries.
+differ from xacro, exactly what the running evidence for that comparison covers, how the resource
+helper reaches a file, what a loaded configuration is readable by, and the explicit backend for a
+description that needs more than the grammar carries.
 
 The evaluator that runs is compiled into the library. It needs no interpreter, no Python installation
 and no Python packages; nothing about it is opt-in. `meios::yaml`, which is what lets an expression
@@ -52,31 +52,28 @@ description needing Python behavior the grammar does not carry; it has
 - `xacro.load_yaml(spec)`, where `spec` is any expression yielding text, under the rules in
   [the resource helper](#the-resource-helper).
 - Every property, argument and macro parameter the description itself has bound. `True` and `False`
-  are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it.
-  A property may shadow a built-in name such as `pi`, with a warning, as it may upstream.
+  are the boolean literals, and `pi` answers `3.141592653589793` without the description binding it. A
+  property may shadow a built-in name such as `pi`, with a warning.
 
-**A name in an expression is read under its NFKC form, as Python reads it.** Wherever an expression
-names something — a bare name, a member, a namespace member, a call target, a `dict(...)` keyword and
-a name in `$(eval)` — the name is read as its NFKC normalization, so `${ﬁ}` reads `fi`, `${ｐｉ}`
-reads `pi`, and a property bound as `π` is read by `${π}`. A keyword is recognized on the written
-text, as Python's tokenizer recognizes it, so `${ｉｆ}` is the undefined name `if`, and a spelling of
-`None`, `True` or `False` outside ASCII refuses as Python refuses it, `${Ｔrue}` with `the constant
-'True' cannot be spelled outside ASCII`. A character no identifier admits refuses as Python refuses
-it, at the same code point, naming that code point and never quoting the character: `the character
-U+20AC cannot stand at its position in a name` for `€`, and `the character U+00A0 cannot stand at
-its position in a name` for a no-break space inside an expression. The characters Python's
-`str.strip()` removes are removed from both ends of a `${…}` body once the body's own substitutions
-have resolved, as the reference strips the body before compiling it. These are the characters
+**A name in an expression is read under its NFKC form.** Wherever an expression names something — a
+bare name, a member, a namespace member, a call target, a `dict(...)` keyword and a name in `$(eval)` —
+the name is read as its NFKC normalization, so `${ﬁ}` reads `fi`, `${ｐｉ}` reads `pi`, and a property
+bound as `π` is read by `${π}`. A keyword is recognized on the written text, so `${ｉｆ}` is the
+undefined name `if`, and a spelling of `None`, `True` or `False` outside ASCII refuses, `${Ｔrue}` with
+`the constant 'True' cannot be spelled outside ASCII`. A character no identifier admits refuses at that
+character, naming its code point and never quoting it: `the character U+20AC cannot stand at its
+position in a name` for `€`, and `the character U+00A0 cannot stand at its position in a name` for a
+no-break space inside an expression. The characters Python's `str.strip()` removes are removed from
+both ends of a `${…}` body once the body's own substitutions have resolved. These are the characters
 `str.isspace()` holds, among them the no-break space U+00A0 and the ideographic space U+3000, so a
-`${p}` written with a no-break space beside the name reads `p`, under either evaluator. The
-evaluation command's body is not stripped: the reference hands it to Python's `eval` as written, so
-the same character at either end of `$(eval …)` refuses on both sides. A name is stored as it is
-written, whether a property's, a macro parameter's or an argument's, so a macro parameter written in
-decomposed form is not read by its composed spelling, on either side. The
+`${p}` written with a no-break space beside the name reads `p`, under either evaluator. The evaluation
+command's body is not stripped, so the same character at either end of `$(eval …)` refuses. A name is
+stored as it is written, whether a property's, a macro parameter's or an argument's, so a macro
+parameter written in decomposed form is not read by its composed spelling. The
 `property_name_non_ascii_read`, `expression_reads_normalized_name`,
 `expression_normalized_keyword_is_a_name`, `expression_invalid_character` and
-`expression_unicode_space_at_edge` agreement probes hold these against a fresh upstream render,
-beside the `native_identifier_read`, `native_identifier_fault` and `native_expression_space` cases.
+`expression_unicode_space_at_edge` agreement probes hold these against a fresh xacro render, beside the
+`native_identifier_read`, `native_identifier_fault` and `native_expression_space` cases.
 
 **What a bound value is, before an expression ever reads it.** A property and a macro parameter each
 bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
@@ -87,58 +84,56 @@ followed by `${'' if hand else prefix}` takes the branch a reader expects; a non
 take the other one. The same reading is applied to whatever an expression evaluates to, so
 `${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
 
-**A property's value is evaluated at its first read, in the table that defined it.** As the reference
-does, the text written in `value` or `default` is stored where the property is written, and the first
-expression that reads the name evaluates it with the defining table current; the value, or the
-refusal, is cached in that table. So a property may name one written below it; a property written in
-a macro body reads that call's parameters, while one written outside the macro and read from its body
-does not; and a property nothing reads is never evaluated, so a value that would fail refuses nothing.
-A text whose evaluation reads its own name again, directly or through others, refuses as a circular
-variable definition under `xacro_structural_error`, naming each step with the line that defined it:
-`the value of 'a' depends on itself: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. A property
-written with `lazy_eval="false"`, or with `scope` set to `global` or `parent`, is evaluated where it
-is written, against the bindings above it; `lazy_eval` is read as a condition is read, so `yes`
-refuses. Once `expand` returns, nothing evaluates a stored text any more: a property whose text
-holds an expression and that the expansion never read reads absent from the scope.
+**A property's value is evaluated at its first read, in the table that defined it.** The text written
+in `value` or `default` is stored where the property is written, and the first expression that reads
+the name evaluates it with the defining table current; the value, or the refusal, is cached in that
+table. So a property may name one written below it; a property written in a macro body reads that
+call's parameters, while one written outside the macro and read from its body does not; and a property
+nothing reads is never evaluated, so a value that would fail refuses nothing. A text whose evaluation
+reads its own name again, directly or through others, refuses as a circular variable definition under
+`xacro_structural_error`, naming each step with the line that defined it: `the value of 'a' depends on
+itself: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. A property written with `lazy_eval="false"`, or
+with `scope` set to `global` or `parent`, is evaluated where it is written, against the bindings above
+it; `lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns, nothing
+evaluates a stored text any more: a property whose text holds an expression and that the expansion
+never read reads absent from the scope.
 
-**A property's name is evaluated and checked before anything else about it, as the reference checks
-it.** The `name` attribute is required, and it is evaluated as an attribute is, so `name="${p}_x"`
-with `p` bound to `a` binds `a_x`. What it evaluates to must be text forming a Python identifier as
-Python 3.14 reads one under Unicode 16.0 — `_` or an XID_Start character first, XID_Continue
-characters after — that is not one of the language's hard keywords, is its own NFKC normalization,
-and does not open with a double underscore. A name failing any of these refuses under
-`xacro_structural_error` before `remove`, `default` or `value` is read, and one failing any of the
-first three refuses with meios's own diagnostic naming it, such as `xacro:property name 'a€' is not
-a name an expression can read`. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is
-`fi`, refuse on both sides, and `π` binds on both. The `property_name_non_ascii_not_identifier`,
+**A property's name is evaluated and checked before anything else about it.** The `name` attribute is
+required, and it is evaluated as an attribute is, so `name="${p}_x"` with `p` bound to `a` binds `a_x`.
+What it evaluates to must be text forming a Python identifier as Python 3.14 reads one under Unicode
+16.0 — `_` or an XID_Start character first, XID_Continue characters after — that is not one of the
+language's hard keywords, is its own NFKC normalization, and does not open with a double underscore. A
+name failing any of these refuses under `xacro_structural_error` before `remove`, `default` or `value`
+is read, and one failing any of the first three refuses with meios's own diagnostic naming it, such as
+`xacro:property name 'a€' is not a name an expression can read`. So `a€`, which is not an identifier,
+and `ﬁ`, whose NFKC form is `fi`, refuse, and `π` binds. The `property_name_non_ascii_not_identifier`,
 `property_name_not_normalized` and `property_name_non_ascii_binds` agreement probes hold those three
-against a fresh upstream render, beside the other `property_name_` and the `property_without_name`
-agreement probes and the `xacro_property` cases. The identifier and normalization tables this rule
-and the name reading above use are generated from Python 3.14's `unicodedata` (Unicode 16.0.0), and
-regenerated and checked against that interpreter on every CI run; the reference running on another
-interpreter reads whatever that interpreter's tables hold, so a character added or retired between
-Unicode versions is read here as 3.14 reads it.
+against a fresh xacro render, beside the other `property_name_` and the `property_without_name`
+agreement probes and the `xacro_property` cases. The identifier and normalization tables this rule and
+the name reading above use are generated from Python 3.14's `unicodedata` (Unicode 16.0.0), and
+regenerated and checked against that interpreter on every CI run, so a character added or retired
+between Unicode versions is read here by the Unicode 16.0 tables, whichever interpreter xacro runs on.
 
-**An argument binds the text, and the site that reads it is where that reading happens.** An
-argument — a declared default, or an override a caller hands the load — binds the characters that
-were written; the conversion above is not applied to it. Only a default that is itself one whole
-expression binds that expression's value, exactly as an attribute of the same shape does, so
-`default="${1+1}"` binds the integer `2`. Everything else stays as written, which is what leaves
-`$(arg flag)` of a `false`-spelled default rendering `false` into a flattened document rather than
-the `False` a boolean spells, and what leaves a `0.10` default its trailing zero. The conversion
-happens instead where the argument is read into something that does bind a value:
-`<xacro:m flag="$(arg flag)"/>` hands text to the parameter, the parameter binds it by the reading
-above, and `${flag}` inside that macro is a boolean. Both implementations keep two tables — an
-argument table the `$(arg n)` and `$(eval)` commands read, and a property table an expression span
-reads — so an expression span cannot name an argument: `${flag}` over an argument alone refuses, and
-the refusal names `$(arg flag)`. A property of an argument's name is a second binding beside the
-argument, never a write to it, so a property's `default=` binds over an argument of the same name and
-`$(arg n)` answers the argument whatever property is written. `$(eval)` reads each argument it names
-through the reference's own conversion rather than the one above — `1e3` stays text there, `1_000` is
-the integer `1000`, and a digit is any decimal digit Python 3.14 reads, so `١٢` is `12` — sees the
-mathematics names and the spellings `true` and `false` before any argument, sees no property, refuses a
-double underscore, and ends at its first closing parenthesis, so its body holds no call;
-[known limitations](known-limitations.md#expression-evaluation) records what was measured.
+**An argument binds the text, and the site that reads it is where that reading happens.** An argument —
+a declared default, or an override a caller hands the load — binds the characters that were written;
+the conversion above is not applied to it. Only a default that is itself one whole expression binds
+that expression's value, exactly as an attribute of the same shape does, so `default="${1+1}"` binds
+the integer `2`. Everything else stays as written, which is what leaves `$(arg flag)` of a
+`false`-spelled default rendering `false` into a flattened document rather than the `False` a boolean
+spells, and what leaves a `0.10` default its trailing zero. The conversion happens instead where the
+argument is read into something that does bind a value: `<xacro:m flag="$(arg flag)"/>` hands text to
+the parameter, the parameter binds it by the reading above, and `${flag}` inside that macro is a
+boolean. Both implementations keep two tables — an argument table the `$(arg n)` and `$(eval)` commands
+read, and a property table an expression span reads — so an expression span cannot name an argument:
+`${flag}` over an argument alone refuses, and the refusal names `$(arg flag)`. A property of an
+argument's name is a second binding beside the argument, never a write to it, so a property's
+`default=` binds over an argument of the same name and `$(arg n)` answers the argument whatever
+property is written. `$(eval)` reads each argument it names through a conversion of its own rather than
+the one above — `1e3` stays text there, `1_000` is the integer `1000`, and a digit is any decimal digit
+Python 3.14 reads, so `١٢` is `12` — sees the mathematics names and the spellings `true` and `false`
+before any argument, sees no property, refuses a double underscore, and ends at its first closing
+parenthesis, so its body holds no call; [known limitations](known-limitations.md#expression-evaluation)
+records what was measured.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
 bound, so one argument never sees a sibling's new value: a call passing both
@@ -156,41 +151,37 @@ floor   max   min   radians   sin   sqrt   tan
 
 `min` and `max` take one or more arguments — zero is a fault, not an identity — `atan2` takes exactly
 two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
-integers whatever they are handed. Fourteen of the fifteen names render identically to the reference.
-`abs` is the exception and is not a compatible spelling: the reference's expression globals carry the
-mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
-raises an undefined name there. It is a reviewed divergence, and the section on divergences below
-carries it. Any other name followed by `(` is refused by that name, so a
-description reaching for a function this list does not carry is told which one it reached for rather
-than that something went wrong. A name on the list called at the wrong arity is refused the same way,
-by name, so `atan2(x)` reports the function rather than the count.
+integers whatever they are handed. All fifteen render here. `abs` is not a portable spelling: xacro's
+expression globals carry the mathematics module and the two reducers and no builtins at all, so
+`${abs(-3)}`, which renders `3` here, raises an undefined name under xacro. It is a reviewed
+difference, and the section on differences below carries it. Any other name followed by `(` is refused
+by that name, so a description reaching for a function this list does not carry is told which one it
+reached for rather than that something went wrong. A name on the list called at the wrong arity is
+refused the same way, by name, so `atan2(x)` reports the function rather than the count.
 
-**A span's own text is resolved before its expression is evaluated.** `${...}` and `$(...)` both
-expand any span written inside them first, and what the evaluator or the command dispatcher is handed
-is the string that produced — so `${xacro.load_yaml('$(find arm_description)/cfg/limits.yaml')}` has
-already become a path by the time the expression runs. That is the order the reference resolves a
-substitution in, and it is why the spelling a real description writes for a package-qualified
-document reads at all. A command ends at its first closing parenthesis, as the reference's pattern
-ends it, so one command cannot be written inside another, and a `(` or a `$` left in a command's text
-once its spans are resolved refuses, as the reference's command scanner refuses it; only the
-`$(eval)` body, which an evaluator reads, may hold either. The argument command takes exactly one
-name once its spans are resolved, and refuses a second word whether or not the argument is bound, as
-the reference does: `$(arg ${a + b})` reads the argument the sum names, and a span that produces two
+**A span's own text is resolved before its expression is evaluated.** `${...}` and `$(...)` both expand
+any span written inside them first, and what the evaluator or the command dispatcher is handed is the
+string that produced — so `${xacro.load_yaml('$(find arm_description)/cfg/limits.yaml')}` has already
+become a path by the time the expression runs. That order is why the spelling a real description writes
+for a package-qualified document reads at all. A command ends at its first closing parenthesis, so one
+command cannot be written inside another, and a `(` or a `$` left in a command's text once its spans
+are resolved refuses; only the `$(eval)` body, which an evaluator reads, may hold either. The argument
+command takes exactly one name once its spans are resolved, and refuses a second word whether or not
+the argument is bound: `$(arg ${a + b})` reads the argument the sum names, and a span that produces two
 words refuses.
 
 All of that nesting is charged against the expression-depth ceiling, and each shape is charged what it
-costs in stack rather than one apiece: descending into the grammar is one and a nested scan is four.
-An expression's own nesting counts on the same ceiling as the spans it stands inside, so an
-expression inside a nested span has that much less room. So charged, every shape the ceiling admits
-keeps ninefold headroom on a 512 KiB thread, which the test suite measures in an unoptimized build,
-and a document nesting expression spans past it refuses at a stated position rather than running
-out of stack; commands, which end at their first closing parenthesis, do not nest at all. A property
-evaluated at its first read nests too: each such read is a level charged nineteen on top of the
-nesting of the expression that reads it, so a chain of ten properties each reading the next renders
-and one of eleven refuses with `expansion_budget_exceeded`, where the reference renders a chain of one
-hundred and sixty-five, a difference [known limitations](known-limitations.md#expression-evaluation)
-lists. A read inside arithmetic carries that nesting as well, so a chain of `${p1 + 1}` reads renders
-six properties deep.
+costs in stack rather than one apiece: descending into the grammar is one and a nested scan is four. An
+expression's own nesting counts on the same ceiling as the spans it stands inside, so an expression
+inside a nested span has that much less room. So charged, every shape the ceiling admits keeps ninefold
+headroom on a 512 KiB thread, which the test suite measures in an unoptimized build, and a document
+nesting expression spans past it refuses at a stated position rather than running out of stack;
+commands, which end at their first closing parenthesis, do not nest at all. A property evaluated at its
+first read nests too: each such read is a level charged nineteen on top of the nesting of the
+expression that reads it, so a chain of ten properties each reading the next renders and one of eleven
+refuses with `expansion_budget_exceeded`; xacro renders a chain of one hundred and sixty-five, a
+difference [known limitations](known-limitations.md#expression-evaluation) lists. A read inside
+arithmetic carries that nesting as well, so a chain of `${p1 + 1}` reads renders six properties deep.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
 integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
@@ -203,19 +194,19 @@ the grammar builds is charged one element before each of its elements is built, 
 collection cannot outgrow a loaded one.
 
 **A string is text, and the operations on it are the ones a real description evaluates.** String
-literals evaluate, compare for equality against another string, and serve as mapping keys. Two
-strings add to their concatenation, a string's truth value is its emptiness, `'x' in text` tests
-substring containment, and `text.split('<separator>')` yields the fields between separators — an
-empty field wherever two separators meet and at either end — which the subscript layer then indexes.
-Every other meaning a string carries in Python stays out and refuses: repetition by an integer,
-ordering one string against another, and every member spelling but the one named split. A string
-added to any other kind refuses the way the reference's own type error refuses it, because coercing a
-string to a number is how a description quietly means something other than what it says.
+literals evaluate, compare for equality against another string, and serve as mapping keys. Two strings
+add to their concatenation, a string's truth value is its emptiness, `'x' in text` tests substring
+containment, and `text.split('<separator>')` yields the fields between separators — an empty field
+wherever two separators meet and at either end — which the subscript layer then indexes. Every other
+meaning a string carries in Python stays out and refuses: repetition by an integer, ordering one string
+against another, and every member spelling but the one named split. A string added to any other kind
+refuses, because coercing a string to a number is how a description quietly means something other than
+what it says.
 
-The four admitted meanings compare and count by bytes where the reference counts code points. The two
-agree over the ASCII text every measured description carries; whether any of them carries non-ASCII
-text through containment, a split or a concatenation is unmeasured, so the difference is recorded
-here rather than claimed absent.
+The four admitted meanings compare and count by bytes, where xacro counts code points. Bytes and code
+points agree over the ASCII text every measured description carries; whether any of them carries
+non-ASCII text through containment, a split or a concatenation is unmeasured, so the difference is
+recorded here rather than claimed absent.
 
 ## What refuses, and by which rule
 
@@ -230,14 +221,12 @@ decided by the failure's kind, and there are exactly four:
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
 Every diagnostic carries a `file:line:column` and a `diagnostic_code`, so a caller branches on a code
-rather than matching message text. The message is meios's own: where the reference refuses the same
-input, the two agree on whether it refuses and under which code, not on the words. Under the python
-evaluator, a message the interpreter raises itself, such as its refusal of a bare name nothing
-binds, is passed through as the interpreter wrote it, while the built-in evaluator writes its own.
-`unsupported_expression` covers the whole first row, `undefined_property` covers both a name the
-scope does not bind and a key a mapping does not hold, and `expansion_budget_exceeded` covers a
-crossed ceiling. The message names the lexeme the walk stopped on, which is what tells you where in
-a long expression to look.
+rather than matching message text. The message is meios's own. Under the python evaluator, a message
+the interpreter raises itself, such as its refusal of a bare name nothing binds, is passed through as
+the interpreter wrote it, while the built-in evaluator writes its own. `unsupported_expression` covers
+the whole first row, `undefined_property` covers both a name the scope does not bind and a key a
+mapping does not hold, and `expansion_budget_exceeded` covers a crossed ceiling. The message names the
+lexeme the walk stopped on, which is what tells you where in a long expression to look.
 
 **Malformed syntax is refused before anything is evaluated.** One left-to-right walk over the token
 stream alternates operands and operators, so `1 +` is reported as an expression ending where an
@@ -245,51 +234,46 @@ operand is expected and `f(1 + )` as an unexpected `)`. A closing bracket is the
 legality turns on what stands before it, which is why an empty argument list is accepted and a
 truncated argument is not.
 
-**A dotted spelling reads an include namespace's names or a loaded mapping's keys, and nothing
-else.** An include written with `ns="n"` reads its file into a namespace of its own, and `${n.w}` reads
-the name `w` that file bound; a name the namespace does not hold falls through to the names of the
-file that wrote the include and then, as the reference's does, to the global names, reading what
-that name reads bare: `${n.pi}` reads the constant and `${n.sin(0)}` calls the function. The
-constants `e`, `tau`, `inf` and `nan` refuse bare here as undefined names, so `${n.e}`, `${n.tau}`,
-`${n.inf}` and `${n.nan}` refuse as undefined names too, where the reference renders each constant
-under either spelling. `${n.math.pi}` refuses as the undefined name `math`, while the bare
-`${math.pi}` refuses as an unsupported call target, so the two spellings refuse differently here,
-and the reference renders both; the parity gaps
-[below](#where-this-diverges-from-the-compatibility-target) name what holds each of these. A call
-through a namespace to a name the reference's global table does not hold refuses as an undefined
-name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A namespace inside
-another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro `m` the
-namespace holds. A call in that macro's body of a macro the including file defined, `<xacro:outer/>`,
-refuses on both sides under `xacro_structural_error`, so the
-`namespace_macro_cannot_call_outer_macro` agreement probe agrees. A namespace has no value of its
-own, so `${n}` read bare refuses, naming the dotted spelling, where the reference reads its table,
-as [known limitations](known-limitations.md#expression-evaluation) lists. A namespace named `math`
-shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`, and
-`${math.pi}` reads the constant by falling through.
-`xacro.load_yaml` is the one namespaced call the grammar carries; every other namespaced spelling,
-`math.pi` among them where no include names its namespace `math`, is refused by name. A dot after a
-value is a member read, and it resolves only for a value that came out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the same key
-`${config['joint_limits']['wrist_3']['effort']}` reads, chains with a subscript in either order, and
-survives a property, a macro argument and a nested scope. A mapping a description built itself —
-what the mapping constructor below returns — has no member path at all, and neither does a loaded
-sequence or a loaded scalar. Two member spellings
-are refused on a loaded mapping as well: a name the reference's own mapping wrapper answers before
-it consults the document (`clear`, `copy`, `fromkeys`, `get`, `items`, `keys`, `pop`, `popitem`,
-`setdefault`, `update`, `values`), and any name written with a leading `__`. Both point at the
-subscript spelling instead, because a description that means something here other than what it
-means upstream is worse than a description that will not load.
+**A dotted spelling reads an include namespace's names or a loaded mapping's keys, and nothing else.**
+An include written with `ns="n"` reads its file into a namespace of its own, and `${n.w}` reads the
+name `w` that file bound; a name the namespace does not hold falls through to the names of the file
+that wrote the include and then to the global names, reading what that name reads bare: `${n.pi}` reads
+the constant and `${n.sin(0)}` calls the function. The constants `e`, `tau`, `inf` and `nan` refuse
+bare here as undefined names, so `${n.e}`, `${n.tau}`, `${n.inf}` and `${n.nan}` refuse as undefined
+names too; xacro renders each constant under either spelling. `${n.math.pi}` refuses as the undefined
+name `math`, while the bare `${math.pi}` refuses as an unsupported call target, so the two spellings
+refuse differently here; xacro renders both, and the differences [below](#where-meios-and-xacro-differ)
+name what holds each of these. A call through a namespace to a name xacro's global table does not hold
+refuses as an undefined name, `${n.abs(-2)}` among them, though the bare `${abs(-2)}` renders here. A
+namespace inside another reads through both dots, as `${a.b.c}` does. `<xacro:n.m/>` calls the macro
+`m` the namespace holds. A call in that macro's body of a macro the including file defined,
+`<xacro:outer/>`, refuses under `xacro_structural_error`, which the
+`namespace_macro_cannot_call_outer_macro` agreement probe holds against a fresh xacro render. A
+namespace has no value of its own, so `${n}` read bare refuses, naming the dotted spelling; xacro reads
+its table, as [known limitations](known-limitations.md#expression-evaluation) lists. A namespace named
+`math` shadows the mathematics names under that spelling: `${math.c}` reads the namespace's `c`, and
+`${math.pi}` reads the constant by falling through. `xacro.load_yaml` is the one namespaced call the
+grammar carries; every other namespaced spelling, `math.pi` among them where no include names its
+namespace `math`, is refused by name. A dot after a value is a member read, and it resolves only for a
+value that came out of a loaded auxiliary document: `${config.joint_limits.wrist_3.effort}` reads the
+same key `${config['joint_limits']['wrist_3']['effort']}` reads, chains with a subscript in either
+order, and survives a property, a macro argument and a nested scope. A mapping a description built
+itself — what the mapping constructor below returns — has no member path at all, and neither does a
+loaded sequence or a loaded scalar. Two member spellings are refused on a loaded mapping as well: a
+name that spells a mapping operation (`clear`, `copy`, `fromkeys`, `get`, `items`, `keys`, `pop`,
+`popitem`, `setdefault`, `update`, `values`), and any name written with a leading `__`. Both point at
+the subscript spelling instead, because a description that means something here other than what it
+means under xacro is worse than a description that will not load.
 
 **The mapping constructor builds a mapping; every other constructor is refused by name.**
 `dict(a=1, b=2)` takes keyword arguments and nothing else, and builds a mapping the grammar can
 subscript, test membership on and nest inside another one. A positional argument, a pair-sequence
-argument and a mixture of the two each refuse naming what was met instead, and a repeated keyword
-name refuses the way the reference refuses it rather than resolving to one of its values. What it
-builds is an authored mapping, so it has no member path: `dict(a=1)['a']` reads, `dict(a=1).a` does
-not. `list(...)`, `set(...)` and `tuple(...)` are named outright, so the diagnostic says which
-constructor was reached for instead of reporting an unrecognized function; a set and a tuple have no
-representable kind here at all. Brace-literal and bracket-literal container syntax stays refused —
-the reference's own substitution scanner closes the span at the first `}`, so a brace literal never
-reaches its interpreter either.
+argument and a mixture of the two each refuse naming what was met instead, and a repeated keyword name
+refuses rather than resolving to one of its values. What it builds is an authored mapping, so it has no
+member path: `dict(a=1)['a']` reads, `dict(a=1).a` does not. `list(...)`, `set(...)` and `tuple(...)`
+are named outright, so the diagnostic says which constructor was reached for instead of reporting an
+unrecognized function; a set and a tuple have no representable kind here at all. Brace-literal and
+bracket-literal container syntax stays refused.
 
 **Subscripting reads a mapping by a text key and a sequence by an integer index; membership tests a
 mapping and a string, and refuses a sequence.** `list[0]` and `list[-1]` read, and an index outside
@@ -350,320 +334,303 @@ filename, so a number or a collection reaching the call says so at the call inst
 path nobody wrote.
 
 **Six unit tags convert, and only over a numeric literal.** `!radians`, `!degrees`, `!meters`,
-`!millimeters`, `!foot` and `!inches` each multiply their tagged value by the reference's own
-constant, so `!degrees 90` reads as `1.5707963267948966` and `!inches 12` as `0.30479999999999996`.
-The reference evaluates a tagged scalar's text as an expression; here the character set admits a
-decimal literal and nothing else, so a tag written over a name, a call or a hexadecimal literal
-declines rather than being approximated. That decline is softenable — a lenient policy leaves the
-span verbatim — while a tag outside the six is a fault under every policy, named in the diagnostic,
-because a conversion this table does not carry has no constant to apply.
+`!millimeters`, `!foot` and `!inches` each multiply their tagged value by a fixed constant, so
+`!degrees 90` reads as `1.5707963267948966` and `!inches 12` as `0.30479999999999996`. The character
+set here admits a decimal literal and nothing else, so a tag written over a name, a call or a
+hexadecimal literal declines rather than being approximated; xacro evaluates a tagged scalar's text as
+an expression. That decline is softenable — a lenient policy leaves the span verbatim — while a tag
+outside the six is a fault under every policy, named in the diagnostic, because a conversion this table
+does not carry has no constant to apply.
 
-## Where this diverges from the compatibility target
+## Where meios and xacro differ
 
-The reference is xacro's own evaluation of a `${}` body through Python. The two differ in both
-directions, and every difference below is measured against a pinned upstream rather than reasoned
-about from its source.
+xacro evaluates a `${}` body through Python. meios and xacro differ in both directions, and every
+difference below is measured against the pinned xacro rather than reasoned about from its source.
 
-**Tighter, by construction rather than by restriction.** The reference hands an expression to an
-interpreter alongside a symbol table; there is no interpreter here and no table to widen.
-Comprehensions, generator expressions, lambdas, f-strings, every string method but the one named
-split, the sequence and set constructors, the object protocol and the import machinery are not
-restricted — they are absent from the grammar, and an expression reaching for one is refused with a
-located diagnostic. The one thing a dot can mean here is a key of a mapping this evaluator loaded;
-it reaches no attribute of anything. Nothing in the grammar can name
-the filesystem, the network or the process: the one route to a file is the resource helper, where C++
-resolves the spec, enforces containment and reads the bytes.
+**Tighter, by construction rather than by restriction.** There is no interpreter here and no symbol
+table to widen, where xacro hands an expression to an interpreter alongside one. Comprehensions,
+generator expressions, lambdas, f-strings, every string method but the one named split, the sequence
+and set constructors, the object protocol and the import machinery are not restricted — they are absent
+from the grammar, and an expression reaching for one is refused with a located diagnostic. The one
+thing a dot can mean here is a key of a mapping this evaluator loaded; it reaches no attribute of
+anything. Nothing in the grammar can name the filesystem, the network or the process: the one route to
+a file is the resource helper, where C++ resolves the spec, enforces containment and reads the bytes.
 
 **`and` and `or` yield a boolean, not the deciding operand.** `${1 or 2}` renders `True` here and `1`
-upstream; `${2 and 3}` renders `True` here and `3`. This is measured and deliberately unchanged — the
-grammar's logical operators produce booleans, and the measured descriptions use them in conditions
+under xacro; `${2 and 3}` renders `True` here and `3`. This is measured and deliberately unchanged —
+the grammar's logical operators produce booleans, and the measured descriptions use them in conditions
 rather than for their operand. It is recorded as a reviewed divergence, which means the comparison
 fails if it stops reproducing exactly as much as it fails if a new one appears.
 
-**The mapping constructor takes keyword arguments where the reference takes more.** The reference
-also builds a mapping from a sequence of pairs and from a mixture of a positional argument and
-keyword ones; `${dict([('a', 1)])}` renders there and refuses here. Only the keyword spelling was
-measured and admitted, so the wider shapes refuse rather than taking a meaning nothing measured.
-Both are recorded as reviewed divergences, which means the comparison fails if either stops
-reproducing exactly as much as it fails if a new one appears.
+**The mapping constructor takes keyword arguments, and xacro takes more.** xacro also builds a mapping
+from a sequence of pairs and from a mixture of a positional argument and keyword ones;
+`${dict([('a', 1)])}` refuses here and renders under xacro. Only the keyword spelling was measured and
+admitted, so the wider shapes refuse rather than taking a meaning nothing measured. Both are recorded
+as reviewed divergences, which means the comparison fails if either stops reproducing exactly as much
+as it fails if a new one appears.
 
-**A member name the reference's mapping wrapper answers itself is refused, not answered.** The
-reference hands a loaded mapping back inside a wrapper that tries ordinary attribute lookup before
-falling through to the document, so `${config.keys}` renders a bound method there — text carrying
-the object's own address — while `${config['keys']}` renders the document's value. The eleven
-colliding names are measured into a committed record and the refusing set is checked against it
-rather than written down. Here the attribute spelling refuses and names the subscript spelling; the
-subscript spelling agrees with the reference and is compared on every push. This one is recorded as
-a reviewed divergence in prose rather than in the manifest the comparison reads, because the text
-the reference produces embeds an address and does not reproduce between runs.
+**A member read spelling a mapping operation is refused, not answered.** Here the attribute spelling
+`${config.keys}` refuses and names the subscript spelling, and `${config['keys']}` renders the
+document's value, which is compared against xacro on every push. xacro hands a loaded mapping back
+inside a wrapper that tries ordinary attribute lookup before falling through to the document, so
+`${config.keys}` renders a bound method there — text carrying the object's own address. The eleven
+colliding names are measured into a committed record and the refusing set is checked against it rather
+than written down. This one is recorded as a reviewed divergence in prose rather than in the manifest
+the comparison reads, because the text xacro produces embeds an address and does not reproduce between
+runs.
 
-**A missing key is named; the mapping's other keys are not.** The reference raises a bare key error.
-Here the diagnostic names the key that was absent and the `file:line` that read it, and deliberately
-never lists the keys the mapping does hold: a diagnostic must not spill the configuration it declined
-to read. Against a configuration nested three mappings deep that costs you one lookup you can make
-yourself, and it means a message written into a build log carries no auxiliary content.
+**A missing key is named; the mapping's other keys are not.** The diagnostic names the key that was
+absent and the `file:line` that read it, and deliberately never lists the keys the mapping does hold: a
+diagnostic must not spill the configuration it declined to read. Against a configuration nested three
+mappings deep that costs you one lookup you can make yourself, and it means a message written into a
+build log carries no auxiliary content.
 
-**Auxiliary scalars resolve to the same kinds.** How a scalar in an auxiliary document reads is a
-recorded measurement against the pinned reader rather than a reading of the YAML specification, and
-it agrees row for row: `yes` and `no` are booleans while `y` and `n` are strings, `010` is the
-integer 8 and `1_000` is 1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no
-value at all is a null that spells `None`.
+**How an auxiliary scalar reads.** How a scalar in an auxiliary document reads is a recorded
+measurement against the pinned PyYAML rather than a reading of the YAML specification, compared row for
+row: `yes` and `no` are booleans while `y` and `n` are strings, `010` is the integer 8 and `1_000` is
+1000, `1e5` is a string while `1.0e+5` is a real, and a key written with no value at all is a null that
+spells `None`.
 
 **A block argument's contents are evaluated at the call site and walked again where they are
-inserted, on both sides.** A macro's block argument is expanded where the caller wrote it, in the
-caller's macros and scope; the block parameters then bind to the element children of that expanded
-result, in the call's own table. Where a macro inserts a block, its contents are walked again in the
-inserting scope, as the reference walks them: a span the call site left escaped, `$${x}`, is evaluated
-at each insertion and reads the inserting call's parameters, and a `**` block's wrapper has its
-attributes evaluated again, and discarded, before its children are inserted. A block a call hands on
-is seen by a macro its body calls. This evaluator used to expand a block only where the receiving
-macro inserted it, which made an undefined name inside a discarded
-block a load failure upstream and nothing at all here. That difference is closed, and the two sides now
-agree on the failure as well as on the rendering. The change is visible on descriptions that load: a
-side effect written inside a block nobody inserts now takes effect, and a block naming an unbound
-property now fails the load whether or not it is reached. [Known limitations](known-limitations.md)
-says so in the reader's own terms. The `block_` agreement probes hold the insertion against a fresh
-upstream render, among them a block inserted twice and a block reading the inserting call's parameter.
+inserted.** A macro's block argument is expanded where the caller wrote it, in the caller's macros and
+scope; the block parameters then bind to the element children of that expanded result, in the call's
+own table. Where a macro inserts a block, its contents are walked again in the inserting scope: a span
+the call site left escaped, `$${x}`, is evaluated at each insertion and reads the inserting call's
+parameters, and a `**` block's wrapper has its attributes evaluated again, and discarded, before its
+children are inserted. A block a call hands on is seen by a macro its body calls. This evaluator used
+to expand a block only where the receiving macro inserted it, which made an undefined name inside a
+discarded block a load failure under xacro and nothing at all here. That difference is closed. The
+change is visible on descriptions that load: a side effect written inside a block nobody inserts now
+takes effect, and a block naming an unbound property now fails the load whether or not it is reached.
+[Known limitations](known-limitations.md) says so in the reader's own terms. The `block_` agreement
+probes hold the insertion against a fresh xacro render, among them a block inserted twice and a block
+reading the inserting call's parameter.
 
-**A property written with no value is a block, as the reference stores it.** A property with neither
-`value` nor `default` binds no value: its element content is stored as a block of the property's name,
-in the table its `scope` selects, and `<xacro:insert_block>` inserts that content, walked in the
-inserting scope, so a block property inserted from a macro body reads that call's parameters. A block
-property is found before a block parameter of the same name. An expression span does not reach a
-block, so `${p}` over a property written with nothing refuses as an undefined name, inserting it
-inserts nothing, and a name already bound to a value keeps that value. A removal of a name no table
-holds stores its content the same way. The `property_` and `block_property_` agreement probes hold
-these against a fresh upstream render.
+**A property written with no value is a block.** A property with neither `value` nor `default` binds no
+value: its element content is stored as a block of the property's name, in the table its `scope`
+selects, and `<xacro:insert_block>` inserts that content, walked in the inserting scope, so a block
+property inserted from a macro body reads that call's parameters. A block property is found before a
+block parameter of the same name. An expression span does not reach a block, so `${p}` over a property
+written with nothing refuses as an undefined name, inserting it inserts nothing, and a name already
+bound to a value keeps that value. A removal of a name no table holds stores its content the same way.
+The `property_` and `block_property_` agreement probes hold these against a fresh xacro render.
 
-**A call that leaves a block parameter without an element refuses, as the reference refuses it.** The
-reference expands a macro call's children and then refuses the call for any `*` or `**` parameter
-left without an element, before it reads any default, so a call holding only an `<xacro:include>` of
-a document that binds a property, only a property, or nothing at all refuses even when the macro
-never inserts the block. The same refusal is raised here, under `xacro_structural_error` at the
-call's own `file:line`, naming the first parameter left without an element. The `include_sole_block`
-agreement probe and the generated macro cases the reference refuses for a block parameter left
-without an element hold it, two of them over a default that would refuse if it were read.
+**A call that leaves a block parameter without an element refuses.** A macro call's children are
+expanded, and then the call refuses for any `*` or `**` parameter left without an element, before any
+default is read, so a call holding only an `<xacro:include>` of a document that binds a property, only
+a property, or nothing at all refuses even when the macro never inserts the block. The refusal is
+raised under `xacro_structural_error` at the call's own `file:line`, naming the first parameter left
+without an element. The `include_sole_block` agreement probe and the generated macro cases xacro
+refuses for a block parameter left without an element hold it, two of them over a default that would
+refuse if it were read.
 
-**A macro call binds in the reference's order, and refuses where the reference refuses.** The reference
-binds a call's attributes in document order, then takes the call's expanded children as its block
-arguments, then the defaults, and only then refuses a parameter still unbound; the same order is taken
-here, all of it in the caller's scope before the macro's body is entered. A property written among a
-call's children is therefore not visible to the call's attributes, which refuse it as an undefined name
-on both sides, while a default reads it. A default reads a parameter the call supplied too, as the
-invocation's own scope holds it, so `b:=${a}` with both supplied renders, and one reading a parameter
-the call left out refuses. An attribute naming no declared parameter, a namespace declaration or a
-block parameter's name included, refuses naming the attribute, and an element no block parameter
-takes refuses naming the first left over; a child that expands to nothing, a property say, takes no
-block parameter. Where two of these refusals meet in one call, the one the reference raises first is
-raised here. Each is reported under `xacro_structural_error` at the call's own `file:line`, for a
-macro defined in another file as well; a parameter left unbound is refused under the same code. A
-default that refuses is reported at the call's own `file:line` too, under its own cause, whether or
-not the call supplied its parameter, for a macro defined in another file as well. Thirteen
-`macro_call_` agreement probes hold this against a fresh upstream render: an undeclared attribute, a
-namespace declaration and a block parameter's name written as attributes; one and two surplus
-elements; an undeclared attribute before a missing parameter, a refusing block child, an absent
-block and a refusing attribute, and a surplus element before a missing parameter; an attribute
-reading a child's property, a default reading one, and a child that is only a property. The
-`macro_default_reads_supplied_parameter` probe holds a default's reading of a supplied parameter,
-beside the `xacro_macro_defaults` cases, which pin the omitted one's refusal too. The
-`xacro_macro_call` cases pin the location, the included macro among them, and `xacro_macro_call.a
-default that refuses while the call supplied its parameter is reported at the call, for a macro defined
-in another file` the supplied parameter's refusing default.
+**A macro call binds in a fixed order.** A call's attributes bind in document order, then the call's
+expanded children as its block arguments, then the defaults, and only then is a parameter still unbound
+refused, all of it in the caller's scope before the macro's body is entered. A property written among a
+call's children is therefore not visible to the call's attributes, which refuse it as an undefined
+name, while a default reads it. A default reads a parameter the call supplied too, as the invocation's
+own scope holds it, so `b:=${a}` with both supplied renders, and one reading a parameter the call left
+out refuses. An attribute naming no declared parameter, a namespace declaration or a block parameter's
+name included, refuses naming the attribute, and an element no block parameter takes refuses naming the
+first left over; a child that expands to nothing, a property say, takes no block parameter. Where two
+of these refusals meet in one call, the first by a fixed precedence is raised, and the probes below pin
+it. Each is reported under `xacro_structural_error` at the call's own `file:line`, for a macro defined
+in another file as well; a parameter left unbound is refused under the same code. A default that
+refuses is reported at the call's own `file:line` too, under its own cause, whether or not the call
+supplied its parameter, for a macro defined in another file as well. Thirteen `macro_call_` agreement
+probes hold this against a fresh xacro render: an undeclared attribute, a namespace declaration and a
+block parameter's name written as attributes; one and two surplus elements; an undeclared attribute
+before a missing parameter, a refusing block child, an absent block and a refusing attribute, and a
+surplus element before a missing parameter; an attribute reading a child's property, a default reading
+one, and a child that is only a property. The `macro_default_reads_supplied_parameter` probe holds a
+default's reading of a supplied parameter, beside the `xacro_macro_defaults` cases, which pin the
+omitted one's refusal too. The `xacro_macro_call` cases pin the location, the included macro among
+them, and `xacro_macro_call.a default that refuses while the call supplied its parameter is reported at
+the call, for a macro defined in another file` the supplied parameter's refusing default.
 
-**A macro's parameter list reads as the reference's pattern reads it.** The reference splits `params`
-with its `re_macro_arg` pattern, and the scanner here follows that pattern rather than splitting at
-every space. A default that opens with one `${…}` or `$(…)` span binds that span whole, a space inside
-it included, so `a:=${1 + 2} b:=2` binds `a` to `3` and `a:=$(arg y) b:=2` binds it to the argument. A
-space may stand on either side of the separator: `a := 1`, `a= 1` and `a :=1` each bind `1`. An empty
-default, `a:=`, is no default, so a call omitting `a` refuses as missing it. A parameter whose quote
-never closes, `tag:='world`, is read whole as a name with no default, so a call omitting it refuses as
-missing `tag:='world`, as the reference refuses it. `a:=^d` takes `a` from the enclosing scope or else
-`d`, and `a:=^|` alone takes it from the enclosing scope or refuses. And text after a newline that
-follows a parameter is not read, because the pattern's last group stops at a newline. The
+**A macro's parameter list is read parameter by parameter, not split at every space.** A default that
+opens with one `${…}` or `$(…)` span binds that span whole, a space inside it included, so
+`a:=${1 + 2} b:=2` binds `a` to `3` and `a:=$(arg y) b:=2` binds it to the argument. A space may stand
+on either side of the separator: `a := 1`, `a= 1` and `a :=1` each bind `1`. An empty default, `a:=`,
+is no default, so a call omitting `a` refuses as missing it. A parameter whose quote never closes,
+`tag:='world`, is read whole as a name with no default, so a call omitting it refuses as missing
+`tag:='world`. `a:=^d` takes `a` from the enclosing scope or else `d`, and `a:=^|` alone takes it from
+the enclosing scope or refuses. And text after a newline that follows a parameter is not read. The
 `macro_default_empty`, `macro_default_spans_whitespace`, `macro_default_argument_command` and
 `macro_param_spaced_separator` agreement probes hold the span, separator and empty shapes against a
-fresh upstream render; the `xacro_macro_params` cases pin those, the unclosed quote and the newline;
-and the two forward markers are carried by a measurement against the pinned reference alone. A `params`
+fresh xacro render; the `xacro_macro_params` cases pin those, the unclosed quote and the newline; and
+the two forward markers are carried by a measurement against the pinned xacro alone. A `params`
 attribute holding only whitespace refuses under `xacro_structural_error` at the definition once the
-expansion reaches it, called or not, as the reference refuses it with "list index out of range", while
-one in a definition the expansion never reaches is never read; an empty `params` and a list ending in
-whitespace read as before. The `macro_params_only_whitespace` and
-`macro_params_only_whitespace_never_reached` agreement probes hold both against a fresh upstream
-render, beside the `xacro_macro_defaults` cases. One separator still differs: a space outside ASCII,
-which [known limitations](known-limitations.md) records.
+expansion reaches it, called or not, while one in a definition the expansion never reaches is never
+read; an empty `params` and a list ending in whitespace read as before. The
+`macro_params_only_whitespace` and `macro_params_only_whitespace_never_reached` agreement probes hold
+both against a fresh xacro render, beside the `xacro_macro_defaults` cases. One separator still
+differs: a space outside ASCII, which [known limitations](known-limitations.md) records.
 
-**A run of dollars escapes or refuses as the reference's lexer has it.** A run of two or more `$`
-before `{` or `(` writes one `$` fewer and the opener, and lexing goes on after it: `$${x}` renders
-`${x}`, `$$(arg y)` renders `$(arg y)` and `$$$${x}` renders `$$${x}`. A `$$` before anything else, or
-ending the text, refuses under `expression_error`, naming the run, at the run's own column and under
-every evaluation policy, inside an expression body as well, so `a$$x`, `a$$` and `${'$$'}` each
-refuse on both sides. In an argument's default it refuses at the declaration, whether or not the
-argument is read, unless a caller's argument leaves that default unread. The token straight after a
-span is lexed before the span is evaluated, because the reference's lexer reads one token ahead:
-`${nope}$$x` refuses for the dollar run on both sides rather than for the undefined name, and
-`${nope}${x` refuses as an unterminated span on both sides. Exactly one token is looked at, so
-`${nope}a$$x` refuses for the undefined name on both sides. A following `${` token ends at its first
-`}`, as the reference's pattern has it, so `${nope}${'a}'` and `${nope}${a{b}` refuse for the
-undefined name on both sides, while a span's own close stays quote-aware, the difference recorded
-below. An include filename is lexed the same way, so after a `$(find …)` in it, `$(find ${nope})$$x`
-refuses for the dollar run on both sides; the order its other refusals take is stated with the
-include filename below. A single `$` before anything but an opener stays text, as `$x` does on both
-sides. The `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end` and
-`dollar_run_inside_expression` agreement probes hold this against a fresh upstream render, with
-`dollar_run_in_argument_default`, `dollar_run_in_unused_argument_default` and
-`dollar_run_in_redeclared_argument_default` for an argument's default,
-`dollar_run_after_undefined_name`, `dollar_run_after_unset_argument`,
+**A run of dollars escapes or refuses.** A run of two or more `$` before `{` or `(` writes one `$`
+fewer and the opener, and lexing goes on after it: `$${x}` renders `${x}`, `$$(arg y)` renders
+`$(arg y)` and `$$$${x}` renders `$$${x}`. A `$$` before anything else, or ending the text, refuses
+under `expression_error`, naming the run, at the run's own column and under every evaluation policy,
+inside an expression body as well, so `a$$x`, `a$$` and `${'$$'}` each refuse. In an argument's default
+it refuses at the declaration, whether or not the argument is read, unless a caller's argument leaves
+that default unread. The token straight after a span is lexed before the span is evaluated:
+`${nope}$$x` refuses for the dollar run rather than for the undefined name, and `${nope}${x` refuses as
+an unterminated span. Exactly one token is looked at, so `${nope}a$$x` refuses for the undefined name.
+A following `${` token ends at its first `}`, so `${nope}${'a}'` and `${nope}${a{b}` refuse for the
+undefined name, while a span's own close stays quote-aware, the difference recorded below. An include
+filename is lexed the same way, so after a `$(find …)` in it, `$(find ${nope})$$x` refuses for the
+dollar run; the order its other refusals take is stated with the include filename below. A single `$`
+before anything but an opener stays text, as `$x` does. The `dollar_run_escapes_openers`,
+`dollar_run_before_text`, `dollar_run_at_end` and `dollar_run_inside_expression` agreement probes hold
+this against a fresh xacro render, with `dollar_run_in_argument_default`,
+`dollar_run_in_unused_argument_default` and `dollar_run_in_redeclared_argument_default` for an
+argument's default, `dollar_run_after_undefined_name`, `dollar_run_after_unset_argument`,
 `dollar_run_after_division_by_zero` and `unterminated_span_after_undefined_name` for the token after a
 span, and `include_dollar_run_after_find` and `include_unterminated_span_after_find` for the token
-after an include's find, beside the `xacro_dollar_run`, `xacro_arg_declaration`,
-`xacro_lex_lookahead` and `xacro_include_find` cases and
-`arg_scan.scan_args lists no argument a run of dollars escapes`, which keeps an escaped `$(arg …)` out
-of the argument listing. `${'$${x}'}` renders `${x}` here and refuses there, which is the closing brace
-inside a string literal, recorded below; it adds no difference of its own.
+after an include's find, beside the `xacro_dollar_run`, `xacro_arg_declaration`, `xacro_lex_lookahead`
+and `xacro_include_find` cases and `arg_scan.scan_args lists no argument a run of dollars
+escapes`, which keeps an escaped `$(arg …)` out of the argument listing. `${'$${x}'}` renders `${x}`
+here and refuses under xacro, which is the closing brace inside a string literal, recorded below; it
+adds no difference of its own.
 
-**An argument's default is read at the first declaration the expansion reaches, as the reference reads
-it.** A later declaration of the same name binds nothing, so a second default neither replaces the
-first nor rescues one that refuses, and a declaration the expansion never reaches, in a branch not
-taken or a macro never called, binds nothing where a reached declaration follows it. A declaration in
-an included file the expansion reaches first binds before the including document's own, and one in a
-macro body binds on the first call. The declaration the expansion reaches reads its default with no
-lent value bound, so a `$(arg a)` in it refuses as unset, as the reference refuses it. The
-`argument_redeclared_after_refusing_default`, `argument_redeclared_after_expression_default`,
-`argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro`,
-`argument_declared_in_include_first` and `argument_default_reads_itself_before_redeclaration`
-agreement probes hold this against a fresh upstream render, beside the `xacro_arg_declaration` cases. What a use above every
-reached declaration reads, and what a declaration the expansion never reaches still lends where none is
-reached, [known limitations](known-limitations.md) records.
+**An argument's default is read at the first declaration the expansion reaches.** A later declaration
+of the same name binds nothing, so a second default neither replaces the first nor rescues one that
+refuses, and a declaration the expansion never reaches, in a branch not taken or a macro never called,
+binds nothing where a reached declaration follows it. A declaration in an included file the expansion
+reaches first binds before the including document's own, and one in a macro body binds on the first
+call. The declaration the expansion reaches reads its default with no lent value bound, so a `$(arg a)`
+in it refuses as unset. The `argument_redeclared_after_refusing_default`,
+`argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`,
+`argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
+`argument_default_reads_itself_before_redeclaration` agreement probes hold this against a fresh xacro
+render, beside the `xacro_arg_declaration` cases. What a use above every reached declaration reads, and
+what a declaration the expansion never reaches still lends where none is reached, [known
+limitations](known-limitations.md) records.
 
-**An include filename is substituted whole and then read as a path, as the reference reads it.** Every
-include filename but a `package://` one is substituted as text, left to right with the one-token
-lookahead above, and each `$(find …)` in it writes its package's directory as the command writes it
-anywhere. The result is then resolved as a path, and a path whose leading elements are a directory a
-find in the filename rendered is looked up as that package's file. A path counts as under that
-directory only where it is rooted the way the directory is: a drive in both or in neither, and a
-separator after it in both or in neither. So `/$(find p)/urdf/c.xacro` doubles the leading separator
-on POSIX and is still `p`'s file here, while on Windows it puts a separator before the drive the find
-renders and is looked for as an absolute filename, as `xacro_include_target.a spelling is under a
-find's directory only where both are rooted alike, a drive included` asserts for both readings. That is
-this side's reading alone; no reference reading of it is claimed. A padded or substituted package
-name reaches the package: `$(find  p)/urdf/c.xacro`, `$(find p )/urdf/c.xacro`,
-`$(find ${sp})/urdf/c.xacro` with `sp` bound to ` p` and `$(find ${pk})/urdf/c.xacro` with `pk` bound
-to `p` each read `p`'s file on both sides, and so do a find an expression produces,
-`${'$(find p)'}/urdf/c.xacro`, one behind an empty span, `${''}$(find p)/urdf/c.xacro`, and a path
-after the find written `//` or `/./`. A find composed with text that is not a separator does not
-reach its package. `$(find p)urdf/c.xacro` names a directory `purdf` beside the package's own: with
-none there it refuses on both sides, under
-`unresolved_include` here; where `purdf/c.xacro` exists the reference reads it and this side refuses,
-because the filename is then an absolute path no rendered directory leads, which the absolute-filename
-entry below covers. `$(find p)./urdf/c.xacro` and `$(find p)urdf/../urdf/c.xacro` refuse on both sides,
-and so do `x/$(find p)/urdf/c.xacro` and `$$(find p)/urdf/c.xacro`, whose run of dollars escapes the
-find, each for want of the file the text names. The find command takes exactly one package name, in an
-include and anywhere else: `$(find p q)/urdf/c.xacro` and an attribute's `$(find p urdf)` refuse under
-`unresolved_find`, naming the second word, as the reference refuses them with "accepts exactly one
-argument". A package name written as a rooted path names no package: `$(find /opt/ws/p)` refuses under
-`unresolved_find`, as not resolving, in an include filename and in an attribute alike, even where that
-directory is a package inside a configured root, and on Windows so does a name opening with a drive.
-The reference looks a package name up in the ROS package index, which holds no such name, so against
-the real index it would refuse it too, with `PackageNotFoundError`; that is reasoned from the index's
-interface, not run. The comparison's stand-in for that index joins the name onto its root as a path
-and renders it, and no compared case writes such a name. `xacro_include_find.a find naming its package
-by a rooted path names no package, even a package directory inside a configured root` asserts this
-side's refusal. A command's words are separated by spaces alone, as the reference separates them, so a
-tab is part of a word wherever the command is written. Written as `&#9;`, since XML reads a literal tab
-in an attribute as a space, `$(find&#9;p)/urdf/c.xacro`, an attribute's `$(find&#9;p)` and an
-attribute's `$(arg&#9;y)` name no known command and refuse under `unknown_substitution`, and
-`$(find p&#9;)/urdf/c.xacro` names a package whose name ends in a tab and refuses under
-`unresolved_find`. The `include_find_tab_before_package`, `include_find_tab_after_package`,
-`find_command_tab_before_package` and `arg_command_tab_before_name` agreement probes hold these
-against a fresh upstream render, beside `xacro_include_spelling.a tab beside a find's package is part
-of a word, so the find does not reach its package` and `xacro_command_body.a command's words are
-separated by a space alone, so a tab stays inside a word, as the reference separates them`; the
-literal tab read as a space was measured against the pinned reference. A path that climbs out of the
-find's package, `$(find p)/../q/a.xacro`, refuses here as
-escaping the source root, the containment every package-qualified include keeps, while the reference
-reads the sibling package's file; that is the `include_find_climbs_out_of_package` row, a reviewed
-divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a new one
-appears. A `package://` filename is split instead, its package text taken as written, so
-`package://${pk}/…` refuses here, and the reference refuses every `package://` filename. The
-`include_find_padded_package`, `include_find_in_literal`, `include_find_composed`,
-`include_find_two_words`, `find_command_second_word` and `include_escaped_find` agreement probes hold
-the padded, produced, composed, two-word and escaped spellings against a fresh upstream render. The
-`xacro_include_spelling` cases pin the padded, produced, composed, two-word and climbing spellings over
-a directory layer, `xacro_include_find.a find package read from a bound property renders its package's
+**An include filename is substituted whole and then read as a path.** Every include filename but a
+`package://` one is substituted as text, left to right with the one-token lookahead above, and each
+`$(find …)` in it writes its package's directory as the command writes it anywhere. The result is then
+resolved as a path, and a path whose leading elements are a directory a find in the filename rendered
+is looked up as that package's file. A path counts as under that directory only where it is rooted the
+way the directory is: a drive in both or in neither, and a separator after it in both or in neither. So
+`/$(find p)/urdf/c.xacro` doubles the leading separator on POSIX and is still `p`'s file here, while on
+Windows it puts a separator before the drive the find renders and is looked for as an absolute
+filename, as `xacro_include_target.a spelling is under a find's directory only where both are rooted
+alike, a drive included` asserts for both readings. That reading is meios's alone; no xacro reading of
+it is claimed. A padded or substituted package name reaches the package: `$(find p)/urdf/c.xacro`,
+`$(find p )/urdf/c.xacro`, `$(find ${sp})/urdf/c.xacro` with `sp` bound to ` p` and
+`$(find ${pk})/urdf/c.xacro` with `pk` bound to `p` each read `p`'s file, and so do a find an
+expression produces, `${'$(find p)'}/urdf/c.xacro`, one behind an empty span,
+`${''}$(find p)/urdf/c.xacro`, and a path after the find written `//` or `/./`. A find composed with
+text that is not a separator does not reach its package. `$(find p)urdf/c.xacro` names a directory
+`purdf` beside the package's own: with none there it refuses under `unresolved_include`; where
+`purdf/c.xacro` exists it still refuses here, because the filename is then an absolute path no rendered
+directory leads, which the absolute-filename entry below covers, and xacro reads that file.
+`$(find p)./urdf/c.xacro` and `$(find p)urdf/../urdf/c.xacro` refuse, and so do
+`x/$(find p)/urdf/c.xacro` and `$$(find p)/urdf/c.xacro`, whose run of dollars escapes the find, each
+for want of the file the text names. The find command takes exactly one package name, in an include and
+anywhere else: `$(find p q)/urdf/c.xacro` and an attribute's `$(find p urdf)` refuse under
+`unresolved_find`, naming the second word. A package name written as a rooted path names no package:
+`$(find /opt/ws/p)` refuses under `unresolved_find`, as not resolving, in an include filename and in an
+attribute alike, even where that directory is a package inside a configured root, and on Windows so
+does a name opening with a drive. xacro looks a package name up in the ROS package index, which holds
+no such name, so against the real index it would refuse it too; that is reasoned from the index's
+interface, not run. The comparison's stand-in for that index joins the name onto its root as a path and
+renders it, and no compared case writes such a name. `xacro_include_find.a find naming its package by a
+rooted path names no package, even a package directory inside a configured
+root` asserts meios's refusal. A command's words are separated by spaces alone, so a tab is part of a
+word wherever the command is written. Written as `&#9;`, since XML reads a literal tab in an attribute
+as a space, `$(find&#9;p)/urdf/c.xacro`, an attribute's `$(find&#9;p)` and an attribute's `$(arg&#9;y)`
+name no known command and refuse under `unknown_substitution`, and `$(find p&#9;)/urdf/c.xacro` names a
+package whose name ends in a tab and refuses under `unresolved_find`. The
+`include_find_tab_before_package`, `include_find_tab_after_package`, `find_command_tab_before_package`
+and `arg_command_tab_before_name` agreement probes hold these against a fresh xacro render, beside
+`xacro_include_spelling.a tab beside a find's package is part of a word, so the find does not reach its
+package` and `xacro_command_body.a command's words are separated by a space alone, so a tab stays
+inside a word, as the reference separates them`; the literal tab read as a space was measured against
+the pinned xacro. A path that climbs out of the find's package, `$(find p)/../q/a.xacro`, refuses here
+as escaping the source root, the containment every package-qualified include keeps; xacro reads the
+sibling package's file. That is the `include_find_climbs_out_of_package` row, a reviewed divergence, so
+the comparison fails if it stops reproducing exactly as much as it fails if a new one appears. A
+`package://` filename is split instead, its package text taken as written, so `package://${pk}/…`
+refuses here; xacro refuses every `package://` filename. The `include_find_padded_package`,
+`include_find_in_literal`, `include_find_composed`, `include_find_two_words`,
+`find_command_second_word` and `include_escaped_find` agreement probes hold the padded, produced,
+composed, two-word and escaped spellings against a fresh xacro render. The `xacro_include_spelling`
+cases pin the padded, produced, composed, two-word and climbing spellings over a directory layer,
+`xacro_include_find.a find package read from a bound property renders its package's
 file` the bound one, and the `xacro_dollar_run` include cases the substituted package text and the
 `package://` text taken as written; the composition onto an existing `purdf` was measured against the
-pinned reference, and no case pins it. The generated include family below varies the find's spelling,
-its separator and the path after it.
+pinned xacro, and no case pins it. The generated include family below varies the find's spelling, its
+separator and the path after it.
 
 **A find whose package only a layer that serves bytes holds routes to that layer as the filename's
 first token alone.** A memory source names no paths, so such a find has no directory to write. As the
-filename's first token, followed by a separator or by nothing, it routes the rest of the filename to the
-source stack as that package's file: `$(find p)/urdf/a.xacro` and `$(find  p)/urdf/a.xacro` read the
+filename's first token, followed by a separator or by nothing, it routes the rest of the filename to
+the source stack as that package's file: `$(find p)/urdf/a.xacro` and `$(find p)/urdf/a.xacro` read the
 memory layer's file, and a memory layer stacked above a directory layer holding the same package
 outranks it. Anywhere else, after text, inside a span, beside a second find or followed by text that is
 not a separator, the include refuses under `unresolved_include`, naming the package and saying that no
 layer naming paths holds it. The `xacro_include_bytes` cases pin these; a find beside a second find was
-measured with a library program and no case pins it. The reference has no such layer, so nothing here
-is compared with it.
+measured with a library program and no case pins it. xacro has no such layer, so nothing here is
+compared with it.
 
-**An include filename's refusals fall in the order the lexer meets them.** Where every configured
-layer names paths, a token after a span that does not lex refuses before the span is evaluated, a
-span's inner text is substituted before its command runs, and a find's package is resolved when the
-lexer reaches it, so a missing package, or a find with none, refuses under `unresolved_find` before the
-rest of the filename is read, as the reference raises for the package first:
-`$(find nopkg)/${nope}.xacro` and `$(find )/c.xacro` refuse for the package on both sides. A second
-word refuses at the find too. Only once the whole filename is substituted is it resolved, and a
+**An include filename's refusals fall in the order the lexer meets them.** Where every configured layer
+names paths, a token after a span that does not lex refuses before the span is evaluated, a span's
+inner text is substituted before its command runs, and a find's package is resolved when the lexer
+reaches it, so a missing package, or a find with none, refuses under `unresolved_find` before the rest
+of the filename is read: `$(find nopkg)/${nope}.xacro` and `$(find )/c.xacro` refuse for the package. A
+second word refuses at the find too. Only once the whole filename is substituted is it resolved, and a
 miss then refuses under `unresolved_include` and a climb out of a package under
 `xacro_structural_error`. A refusal's offset is counted into the whole filename, so
 `$(find p)/urdf/${x` refuses as an unterminated span at offset 15, and `$(find p)/$(arg ${x)`, whose
-unterminated span sits inside a command, at offset 16. Where a layer that serves bytes is
-configured, a find whose package no layer naming paths holds is decided, as the first token, only
-once the rest of the filename is read: `$(find nopkg)/${nope}.xacro` then refuses for the undefined
-name, under `undefined_property`, and `$(find nopkg)/a.xacro` under `unresolved_include`, naming
-`nopkg/a.xacro`. Anywhere else such a find refuses when the lexer reaches it, as the passage above
-states. The `include_missing_package_before_undefined_name` and
-`include_find_without_package` agreement probes hold the package resolved first against a fresh
-upstream render, beside `xacro_include_find.the package of a leading find is resolved before the rest of
-the filename is substituted`, `xacro_include_spelling.an include filename refuses at its first refusing
-token, at an offset into the whole filename` and, for a layer that serves bytes,
+unterminated span sits inside a command, at offset 16. Where a layer that serves bytes is configured, a
+find whose package no layer naming paths holds is decided, as the first token, only once the rest of
+the filename is read: `$(find nopkg)/${nope}.xacro` then refuses for the undefined name, under
+`undefined_property`, and `$(find nopkg)/a.xacro` under `unresolved_include`, naming `nopkg/a.xacro`.
+Anywhere else such a find refuses when the lexer reaches it, as the passage above states. The
+`include_missing_package_before_undefined_name` and `include_find_without_package` agreement probes
+hold the package resolved first against a fresh xacro render, beside
+`xacro_include_find.the package of a leading find is resolved before the rest of the filename is
+substituted`, `xacro_include_spelling.an include filename refuses at its first refusing token, at an
+offset into the whole filename` and, for a layer that serves bytes,
 `xacro_include_bytes.a memory layer's find of a package it does not hold refuses as an unresolved
 include`; the undefined name decided first over such a layer was measured with a library program, and
 no case pins it.
 
-**A glob include filename refuses here and is expanded there.** The reference expands an include
-filename holding `*`, `[` or `?` to the files it matches, in sorted order, and includes nothing where
-none matches. Here an include filename is not globbed, so the pattern is looked for as a file of that
-name and refuses under `unresolved_include`: `$(find p)/urdf/c.xac?o` renders the package's `c.xacro`
-there and refuses here, and `nomatch*.xacro` renders without the include there and refuses here. The
-first is the `include_glob_filename` row, a reviewed divergence, so the comparison fails if it stops
-reproducing exactly as much as it fails if a new one appears; the second was measured against the
-pinned reference and no row carries it.
+**A glob include filename refuses here; xacro expands it.** An include filename is not globbed here, so
+the pattern is looked for as a file of that name and refuses under `unresolved_include`. xacro expands
+an include filename holding `*`, `[` or `?` to the files it matches, in sorted order, and includes
+nothing where none matches, so `$(find p)/urdf/c.xac?o` refuses here and renders the package's
+`c.xacro` under xacro, and `nomatch*.xacro` refuses here and renders without the include under xacro.
+The first is the `include_glob_filename` row, a reviewed divergence, so the comparison fails if it
+stops reproducing exactly as much as it fails if a new one appears; the second was measured against the
+pinned xacro and no row carries it.
 
 **`$(find)` writes a package's directory as its root was configured, except that a relative root is
 written absolute and a `.` element dropped.** Through a configured root that is a link the text keeps
-the link, `<…>/Rl/p`, as the reference's does, and through a `ROS_PACKAGE_PATH` entry that is a link it
-keeps the spelling the crawl found the package at; containment and the read go by the directory the
-link leads to. A root is made absolute and its `.` elements dropped when it is configured, so a
-relative root, `R` from the directory holding it, renders `<working directory>/R/p` here and `R/p`
-there, and `<…>/./R` renders `<…>/R/p` here and `<…>/./R/p` there. Both are reviewed divergences, the
-`find_relative_root` and `find_dotted_root` rows, each probe handing both sides the same root spelling
-from the same directory, so the comparison fails if either stops reproducing exactly as much as it
-fails if a new one appears; the `load_package_anchor`, `ros_source` and `cli_package_path` cases pin
-the linked, dotted and relative spellings.
+the link, `<…>/Rl/p`, and through a `ROS_PACKAGE_PATH` entry that is a link it keeps the spelling the
+crawl found the package at; containment and the read go by the directory the link leads to. A root is
+made absolute and its `.` elements dropped when it is configured, so a relative root, `R` from the
+directory holding it, renders `<working directory>/R/p` here and `R/p` under xacro, and `<…>/./R`
+renders `<…>/R/p` here and `<…>/./R/p` under xacro. Both are reviewed divergences, the
+`find_relative_root` and `find_dotted_root` rows, each probe handing meios and xacro the same root
+spelling from the same directory, so the comparison fails if either stops reproducing exactly as much
+as it fails if a new one appears; the `load_package_anchor`, `ros_source` and `cli_package_path` cases
+pin the linked, dotted and relative spellings.
 
 **A relative include resolves against the document that writes it, then through the configured
-sources.** The reference joins a relative `<xacro:include>` filename onto the directory of the file
-being processed (the including document, and inside a macro body the document that calls the macro), at
-the path that file was named by, and consults nothing else. The same anchor is taken here, so a nested
-include reads the file beside the include that names it, a document opened through a link anchors at
-the link, and a configured root holding a same-named file does not stand in for the file beside the
-document. A document a package lookup served, through `package://` or `$(find)` and a directory, bundle
-or ROS layer, anchors the same way, at the path the lookup named it by, `root/package/relative`, even
-where that path is a link, so its includes and auxiliary documents read the files beside that path, as
-the reference reads them through `$(find)`; the file the link leads to stays the document's identity,
-as the `load_package_anchor` and `ros_package_link` cases pin. A file beside the document is admitted
-where its canonical target lies under the directory the document was named in, under the one it really
-lives in, or under a configured package root, which under `meios::load` are
+sources.** A relative `<xacro:include>` filename is joined onto the directory of the file being
+processed (the including document, and inside a macro body the document that calls the macro), at the
+path that file was named by, so a nested include reads the file beside the include that names it, a
+document opened through a link anchors at the link, and a configured root holding a same-named file
+does not stand in for the file beside the document. A document a package lookup served, through
+`package://` or `$(find)` and a directory, bundle or ROS layer, anchors the same way, at the path the
+lookup named it by, `root/package/relative`, even where that path is a link, so its includes and
+auxiliary documents read the files beside that path; the file the link leads to stays the document's
+identity, as the `load_package_anchor` and `ros_package_link` cases pin. A file beside the document is
+admitted where its canonical target lies under the directory the document was named in, under the one
+it really lives in, or under a configured package root, which under `meios::load` are
 `load_options::package_roots` and for a caller of `meios::expand` the trailing `package_roots` it
 passes; with none, only the document's two directories admit. A document opened through a symlinked
 install tree therefore reads the siblings that link into the directory it really lives in, and a
@@ -671,58 +638,56 @@ sibling linked into a configured root is read through that root. A document a di
 layer served is read beside the path it was named by. Only where nothing is there is the sibling asked
 of the layer that served the document, and not even then where the spelling holds a `..` element: such
 a miss goes to the configured sources alone, so on POSIX `sub/../c.xacro` in the document, through a
-linked `sub` with nothing at `a/c.xacro`, refuses as the reference refuses it. On Windows the path
-interfaces reduce `sub/..` before any link is consulted, so that spelling names the `c.xacro` beside
-the named path, and measured there the load succeeds instead of refusing. A relative include in a
-document a memory source served, a layer that serves bytes, is asked of that layer first, with or
-without a `..` element, and nothing beside the file the layer materialized decides it, so it resolves
-the same whatever an earlier include made the layer write, and only what the layer lacks goes to the
-configured sources. The `load_served_layer` cases pin both, the second by
-`load_served_layer.a byte-served document's sibling spelled through a parent element resolves in the
-layer that served it whatever an earlier include wrote, and no lower layer's file stands in`. A file
-read beside a document a path-naming layer served passes its own misses to that layer only where its
-spelling holds no `..` element and the directory the document was named in admitted it, so neither a
-file a configured root admitted through a link nor one spelled `sub/../b.xacro` through a linked `sub`
-is answered from the layer, and on POSIX the second refuses its miss as the reference refuses it. On
-Windows `sub/../b.xacro` names the `b.xacro` beside the named path instead, and measured there through
-`$(find)` the load succeeds instead of refusing. The `load_served_layer` and `cli_package_path` cases
-pin both readings, which file the Windows loads read included. Where neither holds the file, the
-filename is then looked for through the configured sources, which the reference does not consult, so a
-document the reference refuses for want of that file can render here. That fallback answers a genuine
-miss only: a spelling through a path element that is not a directory refuses before any fallback even
-where a configured root holds the name, as the reference refuses it, within the platform bound stated
-below for the `..` spelling. A document expanded under no name looks for nothing beside it, where the
-reference's library entry anchors it at the working directory. A `..` that climbs back inside the
-directory, `sub/../x.xacro`, is joined as written and judged where the operating system resolves it, as
-the reference reads it, so on POSIX, through a linked `sub`, it is read where the link leads if one of
-those admitting directories holds that, and refused as an outside link otherwise. On Windows the path
-interfaces reduce `sub/..` before any link is consulted, so the spelling names the file beside the
-document whatever `sub` links to, and no link is followed: measured there, an include of it with an
-`x.xacro` beside the document loads where POSIX refuses it, and one through a link into a configured
-root with none beside the document refuses for want of it. Through a path element that is not a
-directory, a regular file `f.txt`, `f.txt/x.xacro` refuses on every operating system, because each
-element before the last is checked and one that exists and is not a directory refuses;
-`f.txt/../x.xacro` refuses where the operating system reports `f.txt` as not a directory, as a POSIX
-system does, and on Windows the path interfaces reduce `f.txt/..` first and read the file beside the
-document, as the reference would there. On Linux both sides refuse both spellings with
-"Not a directory", as the `xacro_include_read` and `yaml_resource` cases pin, a case per spelling. The
+linked `sub` with nothing at `a/c.xacro`, refuses. On Windows the path interfaces reduce `sub/..`
+before any link is consulted, so that spelling names the `c.xacro` beside the named path, and measured
+there the load succeeds instead of refusing. A relative include in a document a memory source served, a
+layer that serves bytes, is asked of that layer first, with or without a `..` element, and nothing
+beside the file the layer materialized decides it, so it resolves the same whatever an earlier include
+made the layer write, and only what the layer lacks goes to the configured sources. The
+`load_served_layer` cases pin both, the second by `load_served_layer.a byte-served document's sibling
+spelled through a parent element resolves in the layer that served it whatever an earlier include
+wrote, and no lower layer's file stands in`. A file read beside a document a path-naming layer served
+passes its own misses to that layer only where its spelling holds no `..` element and the directory the
+document was named in admitted it, so neither a file a configured root admitted through a link nor one
+spelled `sub/../b.xacro` through a linked `sub` is answered from the layer, and on POSIX the second
+refuses its miss. On Windows `sub/../b.xacro` names the `b.xacro` beside the named path instead, and
+measured there through `$(find)` the load succeeds instead of refusing. The `load_served_layer` and
+`cli_package_path` cases pin both readings, which file the Windows loads read included. Where neither
+holds the file, the filename is then looked for through the configured sources, which xacro does not
+consult, so a document xacro refuses for want of that file can render here. That fallback answers a
+genuine miss only: a spelling through a path element that is not a directory refuses before any
+fallback even where a configured root holds the name, within the platform bound stated below for the
+`..` spelling. A document expanded under no name looks for nothing beside it; xacro's library entry
+anchors it at the working directory. A `..` that climbs back inside the directory, `sub/../x.xacro`, is
+joined as written and judged where the operating system resolves it, so on POSIX, through a linked
+`sub`, it is read where the link leads if one of those admitting directories holds that, and refused as
+an outside link otherwise. On Windows the path interfaces reduce `sub/..` before any link is consulted,
+so the spelling names the file beside the document whatever `sub` links to, and no link is followed:
+measured there, an include of it with an `x.xacro` beside the document loads where POSIX refuses it,
+and one through a link into a configured root with none beside the document refuses for want of it.
+Through a path element that is not a directory, a regular file `f.txt`, `f.txt/x.xacro` refuses on
+every operating system, because each element before the last is checked and one that exists and is not
+a directory refuses; `f.txt/../x.xacro` refuses where the operating system reports `f.txt` as not a
+directory, as a POSIX system does, and on Windows the path interfaces reduce `f.txt/..` first and read
+the file beside the document. On Linux both spellings refuse, the cause reporting that the element is
+not a directory, as the `xacro_include_read` and `yaml_resource` cases pin, a case per spelling. The
 `..` ones, `xacro_include_read.an include spelled back out of a file that is not a directory refuses on
-POSIX and reads the file beside the document on Windows, and no configured source's copy stands in` and
-`yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
-file beside the document on Windows, and no configured root's copy stands in`, assert that reading on
-Windows, where it is measured: the include and the auxiliary document read the file beside the document
-with no configured root's copy standing in, and the auxiliary document's genuine miss still reads from
-the root. Two shapes still differ. Through a `sub` that does not exist the missing tail is reduced by
-its spelling, and the file beside the document is read where the reference refuses. And where `sub` is
-a link and nothing is at `sub/../x.xacro` as the operating system reads it, the miss is looked for
-under the spelling's lexical reduction, `x.xacro`, in the configured sources, so a copy one of them
-holds can render where the reference refuses, and a layer that served the document as bytes is asked
-for that reduction first, as above; [known limitations](known-limitations.md) gives the measured
-shapes. Two lookups the reference makes are refused here by default: a filename climbing above that
-directory with `..` refuses as climbing above the directory of the document that writes it, and a link
-beside the document whose target lies under none of the directories that admit it refuses under
-`uncontained_asset`. The reference reads both. Each is a reviewed divergence, so the comparison fails
-if it stops reproducing exactly as much as it fails if a new one appears.
+POSIX and reads the file beside the document on Windows, and no configured source's copy stands
+in` and `yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads
+the file beside the document on Windows, and no configured root's copy stands
+in`, assert that reading on Windows, where it is measured: the include and the auxiliary document read
+the file beside the document with no configured root's copy standing in, and the auxiliary document's
+genuine miss still reads from the root. Two shapes still differ. Through a `sub` that does not exist
+the missing tail is reduced by its spelling, and the file beside the document is read; xacro refuses
+it. And where `sub` is a link and nothing is at `sub/../x.xacro` as the operating system reads it, the
+miss is looked for under the spelling's lexical reduction, `x.xacro`, in the configured sources, so a
+copy one of them holds can render here, where xacro refuses, and a layer that served the document as
+bytes is asked for that reduction first, as above; [known limitations](known-limitations.md) gives the
+measured shapes. Two lookups are refused here by default: a filename climbing above that directory with
+`..` refuses as climbing above the directory of the document that writes it, and a link beside the
+document whose target lies under none of the directories that admit it refuses under
+`uncontained_asset`. xacro reads both. Each is a reviewed divergence, so the comparison fails if it
+stops reproducing exactly as much as it fails if a new one appears.
 
 **Two caller options lift those two refusals, and both are off by default.** `meios::include_options`
 carries `climb_above_document`, which admits a relative include whose spelling leaves its document's
@@ -742,140 +707,137 @@ through a link that stays inside, where with the option unset the root's copy re
 unset, a dangling link is an absent file beside the document and falls through to the lookups after a
 miss, as [known limitations](known-limitations.md) states. A lexical climb-out and an absolute path
 landing outside stay refused with the option set. With one set, the document its refusal stopped
-renders as the reference renders it, and the comparison holds each opted-in document to a fresh
-upstream render beside the default refusal of the same document. Both are `false` on
-`load_options::includes`, on every `meios::expand` call that does not pass them, and on
-`parse_context::includes` wherever a caller building that context for the parser leaves it out. Only
-the calling program sets them: a description cannot, and the `meios` command line exposes neither.
-Setting one lets a description read any file the process can open, except that a climb in a document a
-layer naming no paths served stays inside that document's package, so it is a decision about how far
-the description is trusted, not about parity.
+renders, and the comparison holds each opted-in document to a fresh xacro render beside the default
+refusal of the same document. Both are `false` on `load_options::includes`, on every `meios::expand`
+call that does not pass them, and on `parse_context::includes` wherever a caller building that context
+for the parser leaves it out. Only the calling program sets them: a description cannot, and the `meios`
+command line exposes neither. Setting one lets a description read any file the process can open, except
+that a climb in a document a layer naming no paths served stays inside that document's package, so it
+is a decision about how far the description is trusted.
 
-**An absolute include filename refuses here and is read there.** The reference opens an include written
-as an absolute path where it points. Here the root is removed, the leading separators and under the
-Windows reading a leading drive letter and colon with the separators after it. Under the Windows reading,
-a drive that the removal of `.` and `..` leaves leading, as in `/x/../D:/a.xacro`, is removed too and
-what follows it is walked again, so a `..` it uncovers counts as a climb: `/x/../D:../q/f.xacro` refuses
-as escaping the source root. Only these count as the root, so a UNC spelling, `//server/share/x.xacro`,
-keeps `server` and `share`, and a device spelling, `\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary
-elements. The rest is looked for only through the configured sources, so an include stays inside the
-roots the caller configured, and where none of them holds it the load refuses.
-This is a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it
-fails if a new one appears.
-
-**A `package://` include filename resolves here and is refused there.** The reference does not read
-`package://` in an include filename as a package reference: it joins the spelling onto the directory
-of the including document as a relative path and refuses where nothing is there. Here the spelling is
-split into a package and a path within it and resolved through the configured sources, as a
-package-qualified include. `$(find <pkg>)/...` is the spelling both read, so it is the one to write in
-a description meant to load under both. This is a reviewed divergence, the `include_package_filename`
-row, so the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
-
-**`$(dirname)` renders here and refuses there.** The reference never hands its directory command a
-file and refuses it wherever it is written. Here it renders the directory of the file it is written
-in: at the top, the parent of the document path as the load was handed it, and inside an include the
-canonical directory of the file the include located, the same from any working directory. This is a
-reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a
+**An absolute include filename refuses here; xacro reads it.** Here the root is removed, the leading
+separators and under the Windows reading a leading drive letter and colon with the separators after it.
+Under the Windows reading, a drive that the removal of `.` and `..` leaves leading, as in
+`/x/../D:/a.xacro`, is removed too and what follows it is walked again, so a `..` it uncovers counts as
+a climb: `/x/../D:../q/f.xacro` refuses as escaping the source root. Only these count as the root, so a
+UNC spelling, `//server/share/x.xacro`, keeps `server` and `share`, and a device spelling,
+`\\?\C:\x.xacro`, keeps `?` and `C:`, as ordinary elements. The rest is looked for only through the
+configured sources, so an include stays inside the roots the caller configured, and where none of them
+holds it the load refuses. xacro opens an include written as an absolute path where it points. This is
+a reviewed divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a
 new one appears.
 
-**The absolute value renders here and refuses there.** `${abs(-3)}` is `3` here; upstream raises an
+**A `package://` include filename resolves here; xacro refuses it.** Here the spelling is split into a
+package and a path within it and resolved through the configured sources, as a package-qualified
+include. xacro does not read `package://` in an include filename as a package reference: it joins the
+spelling onto the directory of the including document as a relative path and refuses where nothing is
+there. `$(find <pkg>)/...` is the spelling both read, so it is the one to write in a description meant
+to load under both. This is a reviewed divergence, the `include_package_filename` row, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+
+**`$(dirname)` renders here; xacro refuses it.** Here it renders the directory of the file it is
+written in: at the top, the parent of the document path as the load was handed it, and inside an
+include the canonical directory of the file the include located, the same from any working directory.
+xacro refuses it wherever it is written. This is a reviewed divergence, so the comparison fails if it
+stops reproducing exactly as much as it fails if a new one appears.
+
+**The absolute value renders here; xacro refuses it.** `${abs(-3)}` is `3` here; xacro raises an
 undefined name, because its expression globals are the mathematics module and the two reducers with no
 builtins beside them. It is the one difference on this page that runs in that direction for a reason
-belonging to the evaluator rather than to the reference's span scanner, and it is a reviewed
-divergence, so the comparison fails if it stops reproducing exactly as much as it fails if a new one
-appears. The function is documented, implemented and range-checked here and a pinned description
-already reaches it, so it is recorded rather than removed.
+belonging to the evaluator rather than to xacro's span scanner, and it is a reviewed divergence, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears. The function
+is documented, implemented and range-checked here and a pinned description already reaches it, so it is
+recorded rather than removed.
 
-**A self-referential alias graph loads there and refuses here.** A document whose anchor contains an
-alias to itself — `a: &x [1, *x]` — reads upstream as a value that contains itself, because its reader
+**A self-referential alias graph refuses here; PyYAML loads it.** A document whose anchor contains an
+alias to itself — `a: &x [1, *x]` — reads under PyYAML as a value that contains itself, because PyYAML
 builds a mutable node and fills it in afterwards. A value here is immutable once constructed and its
 collection storage is shared by copying, which cannot denote a cycle at all: the alias arrives while
-its own anchor is still incomplete, and that is where it refuses. This is a reviewed divergence, so
-the comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
+its own anchor is still incomplete, and that is where it refuses. This is a reviewed divergence, so the
+comparison fails if it stops reproducing exactly as much as it fails if a new one appears.
 
-**Two string meanings and two mapping-constructor shapes refuse here and render there.** A string
-repeated by an integer and one string ordered against another both render upstream; only the addition
-of two strings and equality between two were measured into this grammar, so the multiplication
+**Two string meanings and two mapping-constructor shapes refuse here; xacro renders them.** A string
+repeated by an integer and one string ordered against another both render under xacro; only the
+addition of two strings and equality between two were measured into this grammar, so the multiplication
 operator and the ordering operators refuse a string operand rather than taking a meaning nothing
-measured. The same rule governs the split: the no-argument form collapses runs of whitespace and
-drops the leading and trailing fields, which is a different algorithm from the explicit-separator form
+measured. The same rule governs the split: the no-argument form collapses runs of whitespace and drops
+the leading and trailing fields, which is a different algorithm from the explicit-separator form
 admitted here, and a second argument bounding how many separators are consumed is a second parameter
 this one operation does not take. All four are reviewed divergences, and so are the two wider mapping
 constructor shapes above.
 
-**The span scanner is quote-aware and counts nesting where the reference's is neither.** The
-reference finds a `${}` span's end with a pattern that stops at the first `}` wherever it stands, and
-three spellings differ because of it. `${'a}b'}` renders `a}b` here and refuses there as an
-unterminated string literal, because a brace inside a literal is that literal's text here.
-`${${'1 + 2'}}` renders `3` here and refuses there, because the close finder here counts depth and
-the inner scan then resolves the nested span before the outer expression runs. And
-`${'%.3f' % 1.2345}` renders `1.234` there and refuses here, because only arithmetic remainder was
-measured into this grammar and a string operand takes no formatting meaning. All three are recorded
-as reviewed divergences, so the comparison fails if one stops reproducing exactly as much as it fails
-if a new one appears. Two neighboring spellings are *not* divergences, though they refuse for
-different reasons on each side: `${ {'a': 1} }` and `${f'{v:.3f}'}` refuse on both, there because the
-truncated fragment will not parse and here because neither a brace literal nor a format literal is in
-the grammar.
+**The span scanner is quote-aware and counts nesting; xacro's is neither.** xacro finds a `${}` span's
+end with a pattern that stops at the first `}` wherever it stands, and three spellings differ because
+of it. `${'a}b'}` renders `a}b` here and refuses under xacro as an unterminated string literal, because
+a brace inside a literal is that literal's text here. `${${'1 + 2'}}` renders `3` here and refuses
+under xacro, because the close finder here counts depth and the inner scan then resolves the nested
+span before the outer expression runs. And `${'%.3f' % 1.2345}` refuses here and renders `1.234` under
+xacro, because only arithmetic remainder was measured into this grammar and a string operand takes no
+formatting meaning. All three are recorded as reviewed divergences, so the comparison fails if one
+stops reproducing exactly as much as it fails if a new one appears. Two neighboring spellings are *not*
+divergences, though meios and xacro refuse them for different reasons: `${ {'a': 1} }` and
+`${f'{v:.3f}'}` refuse here because neither a brace literal nor a format literal is in the grammar, and
+under xacro because the truncated fragment will not parse.
 
-**Parity gaps that predate this grammar.** The mathematics names are also reachable through a `math`
-namespace upstream, so `${math.pi}` works there and is refused here as an unsupported call target
-when no include names its namespace `math`. Through an include namespace both sides fall through to
-the global names, and they agree on `pi` and on a call to a function the global table lists:
-`${n.pi}`, `${n.n.pi}`, `${math.pi}` under an include whose namespace is `math`, and `${n.sin(0)}`
-render on both. The `include_namespace_reads_mathematics_name` agreement probe holds `${n.pi}` against
-a fresh upstream render, and the `xacro_namespace` cases "a read through an include namespace falls
-through to the mathematics constant" and "a call through an include namespace dispatches as the bare
-call does" pin this side's renders. The other constants and the `math` head differ. Under the
-built-in evaluator `${n.e}`, `${n.n.e}`, `${n.tau}`, `${n.inf}` and `${n.nan}` refuse as undefined
-names, as the bare `${e}`, `${tau}`, `${inf}` and `${nan}` do, where upstream renders both spellings;
-the `include_namespace_reads_global_constant` row holds `${n.e}` in both directions. `${n.math.pi}`
-refuses as the undefined name `math`, where the bare `${math.pi}` refuses as an unsupported call target
-whose message advises the bare name; upstream renders both, so the `math` head's two spellings refuse
-differently here, not alike. The `xacro_namespace` case "a global name other than pi refuses through an
-include namespace under the built-in evaluator, each constant as it refuses bare, where the reference
-renders it" pins each of those namespaced spellings and the bare constants, and the `native_expression`
+**Differences that predate this grammar.** `${math.pi}` is refused here as an unsupported call target
+when no include names its namespace `math`; under xacro the mathematics names are also reachable
+through a `math` namespace, so it renders there. Through an include namespace a name falls through to
+the global names, so `pi` and a call to a function the global table lists read: `${n.pi}`, `${n.n.pi}`,
+`${math.pi}` under an include whose namespace is `math`, and `${n.sin(0)}` render. The
+`include_namespace_reads_mathematics_name` agreement probe holds `${n.pi}` against a fresh xacro
+render, and the `xacro_namespace` cases "a read through an include namespace falls through to the
+mathematics constant" and "a call through an include namespace dispatches as the bare call does" pin
+meios's renders. The other constants and the `math` head differ. Under the built-in evaluator `${n.e}`,
+`${n.n.e}`, `${n.tau}`, `${n.inf}` and `${n.nan}` refuse as undefined names, as the bare `${e}`,
+`${tau}`, `${inf}` and `${nan}` do; xacro renders both spellings; the
+`include_namespace_reads_global_constant` row holds `${n.e}` in both directions. `${n.math.pi}` refuses
+as the undefined name `math`, while the bare `${math.pi}` refuses as an unsupported call target whose
+message advises the bare name, so the `math` head's two spellings refuse differently here, not alike;
+xacro renders both. The `xacro_namespace.a global name other than pi refuses through an include
+namespace under the built-in evaluator, each constant as it refuses bare, where the reference renders
+it` case pins each of those namespaced spellings and the bare constants, and the `native_expression`
 case "a construct outside the measured surface refuses by name" and the `native_member` case "a call
 target's refusal advises the python evaluator only for a head that evaluator binds" pin the bare
-`${math.pi}`. Upstream's render of each spelling neither that probe nor that row holds was measured
-when this was written, and nothing carries it. Under the python evaluator `${n.e}` renders
-`2.718281828459045`, as upstream renders it, which the `eval_python_scope` case "a mathematics
-constant other than pi renders through a namespace under the python backend alone" pins. The
-reference's argument, tokenizing and message helpers (`xacro.arg`, `xacro.tokenize`,
-`xacro.message` / `warning` / `error` / `fatal`) are not exposed at all: a call to any of the
-reference's helpers but `xacro.load_yaml` refuses under either evaluator, and the refusal names
-`xacro.load_yaml` as the only helper either exposes. The argument helper is a reviewed divergence,
-since it renders upstream; a refusal of it also names the `$(arg)` command. `map` and `filter` are not
-among the functions above, and `${list(map(...))}` does appear in real descriptions, which makes it the
-omission most likely to be met in practice. Every one of these is a loud refusal naming what it met, so
-it is a decision rather than a silent difference in what a document means.
+`${math.pi}`. xacro's render of each spelling neither that probe nor that row holds was measured when
+this was written, and nothing carries it. Under the python evaluator `${n.e}` renders
+`2.718281828459045`, which the `eval_python_scope` case "a mathematics constant other than pi renders
+through a namespace under the python backend alone" pins. xacro's argument, tokenizing and message
+helpers (`xacro.arg`, `xacro.tokenize`, `xacro.message` / `warning` / `error` / `fatal`) are not
+exposed at all: a call to any `xacro.` helper but `xacro.load_yaml` refuses under either evaluator, and
+the refusal names `xacro.load_yaml` as the only helper either exposes. The argument helper is a
+reviewed divergence, since it renders under xacro; a refusal of it also names the `$(arg)` command.
+`map` and `filter` are not among the functions above, and `${list(map(...))}` does appear in real
+descriptions, which makes it the omission most likely to be met in practice. Every one of these is a
+loud refusal naming what it met, so it is a decision rather than a silent difference in what a document
+means.
 
 ## What this evidence covers
 
-Everything this page claims about agreement with the compatibility target rests on a comparison that
-runs on every push, not on a reading of upstream's source. Three things are compared for each input:
-a fresh render produced by the pinned upstream at that moment, the committed record of what upstream
-produced when it was last measured, and what meios produces. A fresh render disagreeing with a
-committed record fails the comparison as loudly as a meios-versus-upstream disagreement does, so a
-re-measurement is surfaced rather than absorbed by rewriting the record.
+Everything this page claims about agreement with xacro rests on a comparison that runs on every push,
+not on a reading of xacro's source. Three things are compared for each input: a fresh render produced
+by the pinned xacro at that moment, the committed record of what xacro produced when it was last
+measured, and what meios produces. A fresh render disagreeing with a committed record fails the
+comparison as loudly as a meios-versus-xacro disagreement does, so a re-measurement is surfaced rather
+than absorbed by rewriting the record.
 
 What is compared, exactly:
 
-- **The pinned upstream tooling** — `xacro` 2.1.1 and PyYAML 6.0.3, and no other distribution.
+- **The pinned xacro tooling** — `xacro` 2.1.1 and PyYAML 6.0.3, and no other distribution.
 - **Universal Robots ROS2 Description at tag `4.3.1`** (archive digest `3532a25c9942…`), through five
   documents, each paired by name with its own measured record:
   - the `ur5e` variant of the top-level document; that same document with its safety-limit elements
     switched on; and that same document again with its mesh references forced to absolute paths;
   - the `ur3e` variant, where a boolean read out of an auxiliary document types a joint and that type
     then reaches a limit element carrying no position keys;
-  - the `ur7e` variant, whose configuration upstream ships as a verbatim copy of `ur5e`'s, so it
-    renders the same document and its record is the same record. It is measured because upstream
-    names the variant, not because it adds a form the other four do not reach.
+  - the `ur7e` variant, whose configuration the Universal Robots description ships as a verbatim copy
+    of `ur5e`'s, so it renders the same document and its record is the same record. It is measured
+    because the description names the variant, not because it adds a form the other four do not reach.
 - **`kuka_experimental`'s `kr6r900sixx.xacro`** — the one measured document resolving `$(find)`
   across two sibling packages.
 - **A second top-level document the same Universal Robots package ships**, driven with a
   distinguishing name as well as the variant. It reaches the keyword-argument mapping constructor
-  through a macro-parameter default its own call overrides, and declares a property fallback where
-  the main entry point declares a value.
+  through a macro-parameter default its own call overrides, and declares a property fallback where the
+  main entry point declares a value.
 - **KUKA LBR Med 14 R820 at tag `v2.5.0`** (archive digest `edb596d3e2b7…`), whose macro reads a
   joint-limits document through `xacro.load_yaml` and computes every joint's limits out of it.
 - **Franka Robotics' description at tag `2.8.1`** (archive digest `4adcc45f83fd…`), through six of
@@ -898,17 +860,17 @@ What is compared, exactly:
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
   loads. Each is driven through a document seeding exactly the names it reads, so a failing case
   names one form.
-- **One hundred and four authored expression cases beside them** — the spellings no pinned
-  description reaches, named here and driven through the same minimized document: an index into a
-  sequence, forwards and backwards and off both ends, a key the reference's own mapping wrapper
-  answers itself, the keyword-argument mapping constructor and every argument shape it refuses, every
-  string meaning this grammar admits or refuses, every arithmetic, comparison and logical spelling
-  including the chained comparison, the dotted read of a loaded key, and the mathematics names called
-  by bare name. What each of them measures is not left to a reader to infer: the grammar's accepted
-  forms are enumerated in the test tree, and that enumeration is paired against these rows in both
-  directions, so a form no row measures fails the build and a row no form names fails it too.
+- **One hundred and four authored expression cases beside them** — the spellings no pinned description
+  reaches, named here and driven through the same minimized document: an index into a sequence,
+  forwards and backwards and off both ends, a key that spells a mapping operation, the keyword-argument
+  mapping constructor and every argument shape it refuses, every string meaning this grammar admits or
+  refuses, every arithmetic, comparison and logical spelling including the chained comparison, the
+  dotted read of a loaded key, and the mathematics names called by bare name. What each of them
+  measures is not left to a reader to infer: the grammar's accepted forms are enumerated in the test
+  tree, and that enumeration is paired against these rows in both directions, so a form no row measures
+  fails the build and a row no form names fails it too.
 - **A separate recorded table of tagged scalars** — nineteen rows covering every one of the six unit
-  tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned reader rather
+  tags, and beside it the kinds a plain scalar resolves to, both recorded from the pinned PyYAML rather
   than read off the YAML specification.
 - **Thirty-two minimized binding documents**, three of them driven a second time with a caller
   argument, each compared whole: a property's default and value over an argument of the same name,
@@ -922,45 +884,44 @@ What is compared, exactly:
   name: a second word written over an unset and over a bound argument, and a span-built name with and
   without a space. Beside them sit six documents over a block argument the macro never inserts: a
   property, a global write, an emitting call and an include inside it, and an unbound name under each
-  kind of block parameter. Four more hold a relative include to the reference's anchor, one of them
+  kind of block parameter. Four more hold a relative include's anchor against xacro's, one of them
   driven a second time with a configured root holding a same-named file: a file beside its document, a
   nested include, an include written in a macro body, and a document opened through a link. Two more
   are loaded under a caller's include options: the climbing document with the climb admitted, and a
   document whose included file includes a link leading out of its directory, with outside links
-  followed. Twenty more hold a macro call to the reference's binding: the thirteen `macro_call_`
+  followed. Twenty more hold a macro call's binding against xacro's: the thirteen `macro_call_`
   documents over undeclared attributes, surplus elements, the order between refusals and a child's
   property, `macro_default_reads_supplied_parameter`, a default reading a parameter the call supplied,
   and six over the parameter list, `macro_default_empty`, `macro_default_spans_whitespace`,
   `macro_default_argument_command`, `macro_param_spaced_separator`, `macro_params_only_whitespace` and
-  `macro_params_only_whitespace_never_reached`. Twelve hold a run of dollars to the reference's lexer:
+  `macro_params_only_whitespace_never_reached`. Twelve hold a run of dollars against xacro's lexer:
   `dollar_run_escapes_openers`, `dollar_run_before_text`, `dollar_run_at_end`,
   `dollar_run_inside_expression`, `include_escaped_find`, an include whose run of dollars escapes its
   `$(find …)`, the three `dollar_run_in_` documents, a stray run in an argument's default read, unread
   and redeclared, and four over the token after a span, the three `dollar_run_after_` documents and
-  `unterminated_span_after_undefined_name`. Nine more hold a `$(find …)` to the reference's reading:
-  `include_dollar_run_after_find` and `include_unterminated_span_after_find` over the token after one in
-  an include filename, `include_missing_package_before_undefined_name` and
+  `unterminated_span_after_undefined_name`. Nine more hold a `$(find …)` against xacro's reading:
+  `include_dollar_run_after_find` and `include_unterminated_span_after_find` over the token after one
+  in an include filename, `include_missing_package_before_undefined_name` and
   `include_find_without_package` over its package resolved before the rest of the filename,
   `include_find_padded_package`, `include_find_in_literal`, `include_find_composed` and
   `include_find_two_words` over its package name and what follows it, and `find_command_second_word`
-  over the one package name it takes in an attribute. Four more hold a command's words to the
-  reference's separation: `include_find_tab_before_package` and `include_find_tab_after_package` over
-  a tab beside a find's package in an include filename, and `find_command_tab_before_package` and
-  `arg_command_tab_before_name` over a tab after a command's name in an attribute. Six more
-  hold an argument's default to the declaration the expansion reaches first: the two
-  `argument_redeclared_` documents, `argument_declared_in_skipped_branch`,
-  `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
-  `argument_default_reads_itself_before_redeclaration`, whose default reads its own name before a
-  later declaration. The last two stand alone: `property_forward_reference`, a property whose value
-  reads one written below it, and `include_sole_block`, a call whose one child is an include binding a
-  property, refused on both sides as leaving its block parameter without an element. Together these
-  are ninety-seven documents and four second drives, the hundred and one agreement probes the grammar
-  record does not hold. The meios side is what the load path builds, under the caller
-  arguments a consumer would hand it, written back out by the serializer the command line flattens
-  with; the expansion alone is held to the same render beside it. Two refusals agree only on their
-  cause: upstream's own wording and this side's diagnostic code, both named per document, and upstream's
-  exception mapped to the code this side gives for it, so a fixture missing from both sides or a refusal
-  for an unrelated reason fails the run.
+  over the one package name it takes in an attribute. Four more hold a command's word separation
+  against xacro's: `include_find_tab_before_package` and `include_find_tab_after_package` over a tab
+  beside a find's package in an include filename, and `find_command_tab_before_package` and
+  `arg_command_tab_before_name` over a tab after a command's name in an attribute. Six more hold an
+  argument's default to the declaration the expansion reaches first: the two `argument_redeclared_`
+  documents, `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro`,
+  `argument_declared_in_include_first` and `argument_default_reads_itself_before_redeclaration`, whose
+  default reads its own name before a later declaration. The last two stand alone:
+  `property_forward_reference`, a property whose value reads one written below it, and
+  `include_sole_block`, a call whose one child is an include binding a property, refused by meios and
+  xacro alike as leaving its block parameter without an element. Together these are ninety-seven
+  documents and four second drives, the hundred and one agreement probes the grammar record does not
+  hold. meios's output is what the load path builds, under the caller arguments a consumer would hand
+  it, written back out by the serializer the command line flattens with; the expansion alone is held to
+  the same render beside it. Two refusals agree only on their cause: xacro's own wording and meios's
+  diagnostic code, both named per document, and xacro's exception mapped to the code meios gives for
+  it, so a fixture missing from both or a refusal for an unrelated reason fails the run.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -970,53 +931,52 @@ too.
 
 **What each pinned entry point is, and what it exercises, is recorded rather than described.** A third
 committed record carries one row per pinned entry point: the document, its immutable source revision,
-the arguments it needs, what upstream produced, what meios produced, which constructs the load
-actually exercised, and any reviewed divergence. The construct column is compared against an
-observation taken from loading that document, in both directions, so a description that quietly stops
-exercising what it was pinned for fails as loudly as one that starts exercising something the row does
-not claim. All sixteen rows record agreement — on the result and on the whole normalized rendered
-document — and that empty divergence column is asserted empty rather than ignored. Two things fall
-straight out of the record: exactly one pinned description resolves a duplicate key, and no Universal
-Robots or KUKA entry point reads a mapping by a member name.
+the arguments it needs, what xacro produced, what meios produced, which constructs the load actually
+exercised, and any reviewed divergence. The construct column is compared against an observation taken
+from loading that document, in both directions, so a description that quietly stops exercising what it
+was pinned for fails as loudly as one that starts exercising something the row does not claim. All
+sixteen rows record agreement — on the result and on the whole normalized rendered document — and that
+empty divergence column is asserted empty rather than ignored. Two things fall straight out of the
+record: exactly one pinned description resolves a duplicate key, and no Universal Robots or KUKA entry
+point reads a mapping by a member name.
 
-The comparison against a fresh upstream render runs on Linux, where the pinned upstream tooling is
-installed and run — and so does the corpus tier that feeds it. What macOS and Windows fetch the corpus
-for is a narrower thing: on each of the three, a consumer outside this project loads two of the pinned
-documents — the `ur3e` variant and the KR6 — natively and checks them against the same recorded facts.
-So agreement with upstream is established on one platform, and of the pinned documents exactly those
-two are established to resolve to the same facts on all three. The rest are established on Linux.
+The comparison against a fresh xacro render runs on Linux, where the pinned xacro tooling is installed
+and run — and so does the corpus tier that feeds it. What macOS and Windows fetch the corpus for is a
+narrower thing: on each of the three, a consumer outside this project loads two of the pinned documents
+— the `ur3e` variant and the KR6 — natively and checks them against the same recorded facts. So
+agreement with xacro is established on one platform, and of the pinned documents exactly those two are
+established to resolve to the same facts on all three. The rest are established on Linux.
 
 That is the whole of it. The claim extends no further than these documents at these revisions, these
-expression forms and the input space the next section states. Another vendor's authoring style,
-another revision of the same upstream, or an expression form the closure above does not contain is
-covered by nothing on this page, and [known limitations](known-limitations.md) is where the rest of
-what is not yet proven is written down.
+expression forms and the input space the next section states. Another vendor's authoring style, another
+revision of the same description, or an expression form the closure above does not contain is covered
+by nothing on this page, and [known limitations](known-limitations.md) is where the rest of what is not
+yet proven is written down.
 
 ## The input space the comparison was measured over
 
-**That every difference from the reference is either fixed or recorded holds over a stated input
-space, and is not claimed beyond it.** Inside it, a disagreement fails the comparison unless a reviewed
-row records it, and a recorded one that stops reproducing fails it too. A difference outside it is not
-claimed absent, whoever finds it. The space has four parts, each counted on the tree this page
-describes:
+**That every difference from xacro is either fixed or recorded holds over a stated input space, and is
+not claimed beyond it.** Inside it, a disagreement fails the comparison unless a reviewed row records
+it, and a recorded one that stops reproducing fails it too. A difference outside it is not claimed
+absent, whoever finds it. The space has four parts, each counted on the tree this page describes:
 
 - **The pinned corpus documents**: the sixteen entry points above, each compared whole against its
-  record and a fresh upstream render, the `document` rows of
+  record and a fresh xacro render, the `document` rows of
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
   and four authored cases above, which are the `expression` rows of the inventory.
 - **The committed probes**: one hundred and eighty-two agreement probes, the `agreement` rows of the
   inventory and the documents the enumeration above names, eighty-one of them the grammar record's,
-  each held to a fresh upstream render. An expansion-only agreement probe compares a construct the robot model does
-  not carry on the whole canonical expansion. Beside them are the probes whose difference the reviewed
-  manifest `differential_divergences.cases` records, ninety-three rows of it: thirteen
+  each held to a fresh xacro render. An expansion-only agreement probe compares a construct the robot
+  model does not carry on the whole canonical expansion. Beside them are the probes whose difference
+  the reviewed manifest `differential_divergences.cases` records, ninety-three rows of it: thirteen
   document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
   and the grammar record's sixty-seven document probes, a group listed in
-  `tests/tools/oracle/grammar_probes.py`. A probe refused on both sides agrees only on
-  the same cause: upstream's exception class and message stem, mapped through `tests/refusal_causes.h` to the
-  code this side gives for that cause, and an upstream refusal no row maps fails the run. The
-  expression cases and expression probes still compare a refusal by refusal alone, because they
-  measure the `${}` surface, whose evaluator reports that it failed and no code.
+  `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
+  cause: xacro's exception class and message stem, mapped through `tests/refusal_causes.h` to the code
+  meios gives for that cause, and a xacro refusal no row maps fails the run. The expression cases and
+  expression probes still compare a refusal by refusal alone, because they measure the `${}` surface,
+  whose evaluator reports that it failed and no code.
 - **The generated set**: a committed grammar, `tests/tools/oracle/recorder/generated_families.py`, from
   which `generated.py` draws two hundred cases in each of three families from one splitmix64 sequence
   seeded `0x6d65696f73`, six hundred in all: include filenames, `$` shapes in an attribute, and macro
@@ -1028,28 +988,27 @@ describes:
   text; the macro family varies a parameter's name, its form and its default, and the call's children.
   A call names the parameters its macro declares, each with odds of three in four, and one undeclared
   name with odds of one in eight, and the document reads the property `b` again after the call, so a
-  parameter named `b` that shadows it must leave with the call for the document to render as the
-  reference renders it. The pinned reference's verdict for every case is recorded in
-  `tests/golden/oracle/generated_cases.cases`, whose header carries the seed, the count per family and
-  the template each family's text is written into, and `generated_differential` compares this side's
-  verdict with that record on every run. A verdict is the cause of a refusal or, where the document
-  rendered, the whole rendered document, read on both sides into the project's own canonical text
-  (`meios::canonical_xml`: attributes sorted, insignificant whitespace collapsed, comments and
-  processing instructions dropped) after the staged paths are normalized, so every element and
-  attribute is compared. Two refusals agree only on the same cause: upstream's exception class, which
-  the record's cause column carries beside the refusal's first line, and its message stem, mapped
-  through `tests/refusal_causes.h` to the code this side gives, the same rule the probes follow. An
-  upstream refusal no row maps fails the run. Nine cases disagree, and
+  parameter named `b` that shadows it must leave with the call for the two renders to agree. The pinned
+  xacro's verdict for every case is recorded in `tests/golden/oracle/generated_cases.cases`, whose
+  header carries the seed, the count per family and the template each family's text is written into,
+  and `generated_differential` compares meios's verdict with that record on every run. A verdict is the
+  cause of a refusal or, where the document rendered, the whole rendered document, read from both tools
+  into the project's own canonical text (`meios::canonical_xml`: attributes sorted, insignificant
+  whitespace collapsed, comments and processing instructions dropped) after the staged paths are
+  normalized, so every element and attribute is compared. Two refusals agree only on the same cause:
+  xacro's exception class, which the record's cause column carries beside the refusal's first line, and
+  its message stem, mapped through `tests/refusal_causes.h` to the code meios gives, the same rule the
+  probes follow. A xacro refusal no row maps fails the run. Nine cases disagree, and
   `tests/golden/oracle/generated_divergences.cases` records each as a reviewed row with its reason:
   five where a parent element after a find leaves the find's package, the difference the
   `include_find_climbs_out_of_package` row records; one where a find held in an argument makes the
   filename absolute, the difference the `include_absolute_path` row records; one where a separator
-  after the file a find names is read here and refused as not a directory by the reference; and two
-  where an element missing before a parent element beside the document cancels by its spelling here,
-  one of them then found through the configured sources. [Known limitations](known-limitations.md)
-  discloses all four.
+  after the file a find names is read here, and xacro refuses it as not a directory; and two where an
+  element missing before a parent element beside the document cancels by its spelling here, one of them
+  then found through the configured sources. [Known limitations](known-limitations.md) discloses all
+  four.
 
-**The grammar these parts are held to is derived from the pinned reference's own source, and the build
+**The grammar these parts are held to is derived from the pinned xacro's own source, and the build
 pairs each of its constructs with what carries it.** `tests/golden/oracle/grammar_constructs.cases`
 lists ninety-seven constructs, found by walking the pinned xacro's syntax tree rather than listed by
 hand: one per element branch, attribute list, lexer token, substitution command, special form, raise
@@ -1058,70 +1017,68 @@ construct no pairing names fails the build, and so does a pairing whose construc
 lists or whose key its record does not hold. A carrier is an agreement probe, a corpus document, a row
 of the reviewed manifest, a generated case, an expression case or a unit case, and the standing a
 pairing states is checked against it; a site no document reaches is paired with that evidence instead,
-and its standing stays open. A construct said to agree points only at a measurement on which
-both implementations agree, or at a unit case; a recorded difference points at a manifest or generated
-row, and is said to refuse here exactly where that row's column for this side reads `REFUSED`.
-Counting each construct by its least settled pairing, eighty-five are measured: thirty-nine agree,
-four of them warning sites a unit case carries alone, where upstream warns and this side does not;
-sixteen are recorded differences on which this side refuses; and thirty are recorded differences on
-which it renders something else. The seven constructs of the `${}` expression surface and the
-command-line driver are paired with the boundary rather than measured here. Five sites, four raise
-sites and one warning, are reached by no document under the pinned install; `grammar::unreached_sites`
-pairs each with the reason. The raise for a substitution the install cannot support is not among
-them: the pinned install ships no package index, so every find reaches it there, and the
-`find_without_package_index` probe is rendered without the index the oracle vendors.
+and its standing stays open. A construct said to agree points only at a measurement on which both
+implementations agree, or at a unit case; a recorded difference points at a manifest or generated row,
+and is said to refuse here exactly where that row's column for meios reads `REFUSED`. Counting each
+construct by its least settled pairing, eighty-five are measured: thirty-nine agree, four of them
+warning sites a unit case carries alone, where xacro warns and meios does not; sixteen are recorded
+differences on which meios refuses; and thirty are recorded differences on which it renders something
+else. The seven constructs of the `${}` expression surface and the command-line driver are paired with
+the boundary rather than measured here. Five sites, four raise sites and one warning, are reached by no
+document under the pinned install; `grammar::unreached_sites` pairs each with the reason. The raise for
+a substitution the install cannot support is not among them: the pinned install ships no package index,
+so every find reaches it there, and the `find_without_package_index` probe is rendered without the
+index the oracle vendors.
 
 **Most generated include and macro cases test agreement on a refusal, not on a rendering.** Of the two
-hundred cases in each family, the reference renders seventeen include cases, eighty-four span cases
-and eighteen macro cases, and refuses the rest. In the include family every non-empty text after the
-path refuses, a trailing separator among it, as do a missing package, an empty find, a find given two
-words, a missing file and an undefined name in the path, and of the cases that hold a find in a
-property or an argument only one renders. In the macro family the one hundred and eighty-two refusals
-are thirty-eight calls holding fewer children than the block parameters declared, sixty undefined
-names, thirty runs of `$` that escape no opener, twenty-nine children no block parameter takes,
-twenty-one call attributes naming no parameter the reference reads as declared, nineteen of them the
-undeclared name, and four forwarded defaults with nothing to forward. Every case that declares `b`
-twice is among the refusals, so no case the reference renders reads `b` after a call that bound it
-twice. A render here where the reference refuses is a silent divergence, so agreement on a refusal
-is a real test, but these two families reach few verdicts on which file an include read or what a
-parameter bound. The span family is the one that compares renderings in number.
+hundred cases in each family, xacro renders seventeen include cases, eighty-four span cases and
+eighteen macro cases, and refuses the rest. In the include family every non-empty text after the path
+refuses, a trailing separator among it, as do a missing package, an empty find, a find given two words,
+a missing file and an undefined name in the path, and of the cases that hold a find in a property or an
+argument only one renders. In the macro family the one hundred and eighty-two refusals are thirty-eight
+calls holding fewer children than the block parameters declared, sixty undefined names, thirty runs of
+`$` that escape no opener, twenty-nine children no block parameter takes, twenty-one call attributes
+naming no parameter xacro reads as declared, nineteen of them the undeclared name, and four forwarded
+defaults with nothing to forward. Every case that declares `b` twice is among the refusals, so no case
+xacro renders reads `b` after a call that bound it twice. A render here where xacro refuses is a silent
+divergence, so agreement on a refusal is a real test, but these two families reach few verdicts on
+which file an include read or what a parameter bound. The span family is the one that compares
+renderings in number.
 
 **What the generated set leaves out, and what carries it instead.** The grammar writes no glob
 character into an include filename; the `include_glob_filename` document probe carries one, under its
 manifest row. It writes no `package://` filename, which the `include_package_filename` row records, and
-no literal absolute path to a file that exists; the absolute filenames that name one are finds held
-in a property or an argument, which the `include_absolute_path` row records, and the few filenames it
-starts with a separator name nothing and refuse on both sides. It writes none of the `eval`,
-`dirname`, `env`, `optenv` and `cwd` commands. The `eval_` agreement probes compare `eval`, three of
-the `command_` agreement probes compare `optenv` over an unset variable, and the `dirname_command` row
+no literal absolute path to a file that exists; the absolute filenames that name one are finds held in
+a property or an argument, which the `include_absolute_path` row records, and the few filenames it
+starts with a separator name nothing and refuse for both. It writes none of the `eval`, `dirname`,
+`env`, `optenv` and `cwd` commands. The `eval_` agreement probes compare `eval`, three of the
+`command_` agreement probes compare `optenv` over an unset variable, and the `dirname_command` row
 records `dirname`. The `env_variable_unset` agreement probe and the `env_command_two_words` row compare
-`env`, and the `cwd_command` row compares `cwd`: the reference implements `$(cwd)` as the working
-directory, and this side refuses it under `unknown_substitution`.
+`env`, and the `cwd_command` row compares `cwd`: meios refuses `$(cwd)` under `unknown_substitution`,
+and xacro renders it as the working directory.
 
 **What the generated comparison holds fixed, and what carries each instead.** It runs one directory
-layer under `eval_policy::fail`. A layer that serves bytes has no counterpart in the reference, so no
-case of it can be compared there: the `xacro_include_bytes`, `xacro_include_served` and
-`load_served_layer` cases carry it, against this side's own rule. A stack of more than one layer is
-carried by the `load_served_layer` and `xacro_include_precedence` cases. The lenient policies, `warn`
-and `skip`, are carried by the `xacro_policy_prop` property, which holds that an expansion logging an
-error under either returns no document, and by the `xacro_lex_lookahead` cases. None of these makes a
-claim of agreement with the reference. It runs the core evaluator alone: the cases whose names begin
-`eval_python` carry the python evaluator. Two of them,
-`eval_python.python evaluator matches the golden CPython corpus` and
-`eval_python_unrestricted.both evaluators render every golden corpus row identically`, compare it with
-the text CPython's `str` gives for each expression, as recorded in `tests/golden/expr/arithmetic.cases`,
-`tests/golden/expr/functions.cases` and `tests/golden/expr/precedence.cases`; every other case
-compares it with this side's own rule, and none with a render of the pinned reference. It passes no
-caller argument: the three agreement probes driven a second time with one,
-`property_default_over_caller_argument`,
-`property_default_reads_caller_argument` and `eval_string_caller_argument`, compare that with the
-reference. Its include is written only in a top-level document no layer served, so neither
-served-sibling route is compared: the `xacro_include_served` and `load_served_layer` cases carry those,
-against this side's own rule. Its macro family defines one macro and calls it once, at top level: the
-corpus documents, each compared whole, call macros from macro bodies and from included files, as
-`ur_description`'s `ur_robot`, defined in an included file, calls `cylinder_inertial` from its body.
-The record holds no machine path, so the comparison runs in
-every test tree on every platform; so far it has run on Linux alone.
+layer under `eval_policy::fail`. A layer that serves bytes has no counterpart in xacro, so no case of
+it can be compared there: the `xacro_include_bytes`, `xacro_include_served` and `load_served_layer`
+cases carry it, against meios's own rule. A stack of more than one layer is carried by the
+`load_served_layer` and `xacro_include_precedence` cases. The lenient policies, `warn` and `skip`, are
+carried by the `xacro_policy_prop` property, which holds that an expansion logging an error under
+either returns no document, and by the `xacro_lex_lookahead` cases. None of these makes a claim of
+agreement with xacro. It runs the core evaluator alone: the cases whose names begin `eval_python` carry
+the python evaluator. Two of them, `eval_python.python evaluator matches the golden CPython
+corpus` and `eval_python_unrestricted.both evaluators render every golden corpus row
+identically`, compare it with the text CPython's `str` gives for each expression, as recorded in
+`tests/golden/expr/arithmetic.cases`, `tests/golden/expr/functions.cases` and
+`tests/golden/expr/precedence.cases`; every other case compares it with meios's own rule, and none with
+a render of the pinned xacro. It passes no caller argument: the three agreement probes driven a second
+time with one, `property_default_over_caller_argument`, `property_default_reads_caller_argument` and
+`eval_string_caller_argument`, compare that with xacro. Its include is written only in a top-level
+document no layer served, so neither served-sibling route is compared: the `xacro_include_served` and
+`load_served_layer` cases carry those, against meios's own rule. Its macro family defines one macro and
+calls it once, at top level: the corpus documents, each compared whole, call macros from macro bodies
+and from included files, as `ur_description`'s `ur_robot`, defined in an included file, calls
+`cylinder_inertial` from its body. The record holds no machine path, so the comparison runs in every
+test tree on every platform; so far it has run on Linux alone.
 
 ## What this is not
 
@@ -1178,24 +1135,24 @@ directory the document was named in, the one it really lives in, or a configured
 include beside its document is held to. That rule holds for a spelling that stays inside the document's
 directory as written: an include's leading `..` meets the climb gate first, while an auxiliary
 document's is admitted wherever it lands under one of those directories, so it loads under a configured
-root holding the file and, with no configured root, refuses where the reference reads it, as the
-`load_beside_root` cases pin. A spelling through a path element that is not a directory, `f.txt` a
-regular file, refuses as it refuses there, and no configured root's copy stands in: `f.txt/x.yaml` on
-every operating system, and `f.txt/../x.yaml` where the operating system reports `f.txt` as not a
-directory. Windows, whose path interfaces reduce `f.txt/..` first, reads the file beside the document,
-with no configured root's copy standing in, and still reads a genuine miss from the root, as measured
-there. The two `yaml_resource` cases, one per spelling, pin it, and the `..` one, `yaml_resource.a
-spelling back out of a file that is not a directory refuses on POSIX and reads the file beside the
-document on Windows, and no configured root's copy stands in`, asserts that reading on Windows. A
-link beside the document leading under none of those directories refuses under `uncontained_asset` with
-no configured root's same-named copy standing in, unless the caller sets
-`include_options::follow_outside_links`. A followed link's answer is final: a link to nothing, a
-dangling one included, ends the lookup as unreachable, and a link naming a directory refuses under
-`cannot_open`, with no configured root's copy read in either place. A `package://` spec naming a link
-inside a configured root is read through the root, and one naming a link that leads out of the root
-refuses, with an `uncontained_asset` record; a `$(find)` spelling reaches this reader already
-substituted to a path and is judged where it lands. [Known limitations](known-limitations.md) gives the
-measured shapes.
+root holding the file and, with no configured root, refuses, as the `load_beside_root` cases pin; xacro
+reads that file. A spelling through a path element that is not a directory, `f.txt` a regular file,
+refuses as it refuses there, and no configured root's copy stands in: `f.txt/x.yaml` on every operating
+system, and `f.txt/../x.yaml` where the operating system reports `f.txt` as not a directory. Windows,
+whose path interfaces reduce `f.txt/..` first, reads the file beside the document, with no configured
+root's copy standing in, and still reads a genuine miss from the root, as measured there. The two
+`yaml_resource` cases, one per spelling, pin it, and the `..` one,
+`yaml_resource.a spelling back out of a file that is not a directory refuses on POSIX and reads the
+file beside the document on Windows, and no configured root's copy stands
+in`, asserts that reading on Windows. A link beside the document leading under none of those
+directories refuses under `uncontained_asset` with no configured root's same-named copy standing in,
+unless the caller sets `include_options::follow_outside_links`. A followed link's answer is final: a
+link to nothing, a dangling one included, ends the lookup as unreachable, and a link naming a directory
+refuses under `cannot_open`, with no configured root's copy read in either place. A `package://` spec
+naming a link inside a configured root is read through the root, and one naming a link that leads out
+of the root refuses, with an `uncontained_asset` record; a `$(find)` spelling reaches this reader
+already substituted to a path and is judged where it lands. [Known limitations](known-limitations.md)
+gives the measured shapes.
 
 **Which document a relative spec resolves against.** The document it is written in — which is not
 always the top-level one:
@@ -1203,9 +1160,9 @@ always the top-level one:
 - Inside an included file, that included file. A spec whose text is a bare `inner-config.yaml`, bound
   in a file pulled in by `<xacro:include>`, resolves next to *that* file, not next to the description
   that included it.
-- Inside a macro body, the document that **invoked** the macro, not the one that defined it. This
-  matches the compatibility target and is not obvious from reading the macro: a macro that loads a
-  configuration sitting beside its own definition will not find it when called from elsewhere.
+- Inside a macro body, the document that **invoked** the macro, not the one that defined it. This is
+  not obvious from reading the macro: a macro that loads a configuration sitting beside its own
+  definition will not find it when called from elsewhere.
 - A document served as bytes by a source layer does have a directory: such a layer materializes the
   bytes into a scratch area it owns and hands back the path of the file it wrote, and a relative spec
   written in that document is probed beside that path. The layer writes an entry into that area only
@@ -1238,24 +1195,23 @@ has not earned the right to state either way.
 
 ## Reading a loaded configuration
 
-A mapping or a sequence that came back from `xacro.load_yaml` is a value like any other: it binds to
-a property, passes as a macro argument, and is read by subscript. A mapping also answers a dotted
-read, so `${config.joint_limits}` and `${config['joint_limits']}` reach the same key; a sequence is
-read by index only, counting back from the end for a negative one, so `${links[-1]}` is the last
-element of a `links:` list. Both spellings of a name the reference's mapping wrapper answers itself
-are covered by the dotted rule above.
+A mapping or a sequence that came back from `xacro.load_yaml` is a value like any other: it binds to a
+property, passes as a macro argument, and is read by subscript. A mapping also answers a dotted read,
+so `${config.joint_limits}` and `${config['joint_limits']}` reach the same key; a sequence is read by
+index only, counting back from the end for a negative one, so `${links[-1]}` is the last element of a
+`links:` list. Both spellings of a name that spells a mapping operation are covered by the dotted rule
+above.
 
 **What a document may say, and how it reads.** An anchor and the alias that names it denote the same
 subtree, so a configuration that writes one inertia and reuses it reads the same both places. A merge
 key flattens the mapping it names into the one that carries it, and a key the carrying mapping also
-writes wins over the merged one. A key written twice resolves to the first position and the last
-value, which is a rule a real robot description reaches: one auxiliary document in the measured
-corpus writes a key twice. And a key need not be text — a document may write a number, a boolean or
-an empty key, and it loads. Two such keys are the same key when the reference's own comparison would
-say so, which means the numeric kinds compare by value across their whole range (`1` and `true` are
-one key) while text and a null compare only within their own kind (`'1'` and `1` are two). What a
-non-text key does *not* have is a way to be read: every subscript key is text, so such an entry loads,
-counts and can collide, and no expression reaches it.
+writes wins over the merged one. A key written twice resolves to the first position and the last value,
+which is a rule a real robot description reaches: one auxiliary document in the measured corpus writes
+a key twice. And a key need not be text — a document may write a number, a boolean or an empty key, and
+it loads. Two such keys are the same key by one rule: the numeric kinds compare by value across their
+whole range (`1` and `true` are one key), while text and a null compare only within their own kind
+(`'1'` and `1` are two). What a non-text key does *not* have is a way to be read: every subscript key
+is text, so such an entry loads, counts and can collide, and no expression reaches it.
 
 **What crosses a property boundary.** An attribute that is exactly one `${…}` binds the value that
 span evaluated to, with its kind and its origin intact, so a mapping or a sequence crosses a
@@ -1353,47 +1309,44 @@ int main()
 ## meios::eval-python: an explicit backend
 
 `meios::eval-python` is a separate module, off by default, for a description you trust that needs
-Python behavior the grammar above does not carry — a comprehension, an f-string, a string method
-other than the named split, a method call on a loaded mapping, string repetition or ordering, or a
-unit tag written over something other than a numeric literal: it registers the same six tags and
-evaluates the tagged text as an expression, the way the reference does. It drives a *found* (never
-fetched) CPython. Its default
-class, `meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses
-anything outside it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`,
-`format-traversal`, `non-allowlisted-builtin`, `uncontained-yaml-path`. Its sibling
-`meios::unrestricted_python_evaluator` applies none of those rules and evaluates whatever CPython
-evaluates, `${__import__('os').getcwd()}` included.
+Python behavior the grammar above does not carry — a comprehension, an f-string, a string method other
+than the named split, a method call on a loaded mapping, string repetition or ordering, or a unit tag
+written over something other than a numeric literal: it registers the same six tags and evaluates the
+tagged text as an expression. It drives a *found* (never fetched) CPython. Its default class,
+`meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses anything outside
+it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`, `format-traversal`,
+`non-allowlisted-builtin`, `uncontained-yaml-path`. Its sibling `meios::unrestricted_python_evaluator`
+applies none of those rules and evaluates whatever CPython evaluates, `${__import__('os').getcwd()}`
+included.
 
 **Under both classes a name is read when Python evaluates it**, at any depth of the expression: the
-expression is evaluated over a mapping that reads the scope as its globals, as the reference evaluates
-over its table of properties, so a name inside a lambda, a generator expression or a comprehension is
-read the way one at the top level is. A property is evaluated only if the expression reads it:
-`${'x' if c else b}` with `c` true never evaluates `b`, whatever `b`'s own text would do. A name is
-looked up in the scope first, then among the mathematics names and the two spellings of the
-resource helper, then among the builtins, so a property shadows a mathematics name of its spelling:
-a property `pi` written `3` reads `3`, as it does under the built-in evaluator. The restricted
-class's guard asks the scope about the name Python reads, after Python normalizes it, so a property
-shadows a withheld builtin under any spelling Python normalizes to its name: with a property `open`
-bound, `${ｏｐｅｎ}` renders it, which the `eval_python_scope` case "a property shadows the withheld
-builtin its name normalizes to, as the guard reads the name Python reads" pins. A property whose own
-text refuses is never replaced by the mathematics name or builtin of its spelling; the read refuses,
-carrying the one record that text's evaluation logged. An include namespace is read through a dot,
-`${n.w}`, falling through to the names of the file that wrote the include and then to the names a
-bare read reaches, as under the built-in evaluator, so `${n.pi}` reads the constant and `${n.sin(0)}`
-calls the function. Those names are this backend's, so `${n.e}` renders `2.718281828459045` as the
-reference renders it, and `${n.abs(-2)}` renders here as the bare call does, where the reference's
-global table holds no `abs` and refuses it; a member no name answers
-raises `NameError: nothing in scope binds 'w'`, which suggests no argument command, as under the
-built-in evaluator. A property's text evaluated at its first read under this backend is charged
-against the expression-depth ceiling as the built-in evaluator charges it, and a circular definition
-refuses the same way. Each read this backend makes carries a nesting of nine, for the interpreter's
-frames that stay on the stack beneath the evaluation the read starts, so each level is charged that
-beside the nineteen a deferred read costs: a chain of seven properties each reading the next inside
-arithmetic renders under it, where six do under the built-in evaluator, and one longer refuses with
-`expansion_budget_exceeded`. Measured on a 512 KiB thread with the ceiling lifted, the interpreter's
-own parser refuses such a chain of forty-nine properties, before the thread runs out. The
-`eval_python_scope` cases carry all of this, and run each namespace document under the built-in
-evaluator as well.
+expression is evaluated over a mapping that reads the scope as its globals, so a name inside a lambda,
+a generator expression or a comprehension is read the way one at the top level is. A property is
+evaluated only if the expression reads it: `${'x' if c else b}` with `c` true never evaluates `b`,
+whatever `b`'s own text would do. A name is looked up in the scope first, then among the mathematics
+names and the two spellings of the resource helper, then among the builtins, so a property shadows a
+mathematics name of its spelling: a property `pi` written `3` reads `3`, as it does under the built-in
+evaluator. The restricted class's guard asks the scope about the name Python reads, after Python
+normalizes it, so a property shadows a withheld builtin under any spelling Python normalizes to its
+name: with a property `open` bound, `${ｏｐｅｎ}` renders it, which the `eval_python_scope` case "a
+property shadows the withheld builtin its name normalizes to, as the guard reads the name Python reads"
+pins. A property whose own text refuses is never replaced by the mathematics name or builtin of its
+spelling; the read refuses, carrying the one record that text's evaluation logged. An include namespace
+is read through a dot, `${n.w}`, falling through to the names of the file that wrote the include and
+then to the names a bare read reaches, as under the built-in evaluator, so `${n.pi}` reads the constant
+and `${n.sin(0)}` calls the function. Those names are this backend's, so `${n.e}` renders
+`2.718281828459045`, and `${n.abs(-2)}` renders here as the bare call does, where xacro's global table
+holds no `abs` and refuses it; a member no name answers raises `NameError: nothing in scope binds 'w'`,
+which suggests no argument command, as under the built-in evaluator. A property's text evaluated at its
+first read under this backend is charged against the expression-depth ceiling as the built-in evaluator
+charges it, and a circular definition refuses the same way. Each read this backend makes carries a
+nesting of nine, for the interpreter's frames that stay on the stack beneath the evaluation the read
+starts, so each level is charged that beside the nineteen a deferred read costs: a chain of seven
+properties each reading the next inside arithmetic renders under it, where six do under the built-in
+evaluator, and one longer refuses with `expansion_budget_exceeded`. Measured on a 512 KiB thread with
+the ceiling lifted, the interpreter's own parser refuses such a chain of forty-nine properties, before
+the thread runs out. The `eval_python_scope` cases carry all of this, and run each namespace document
+under the built-in evaluator as well.
 
 The unrestricted class is reachable only from C++. The command-line tool never constructs it and
 carries no flag for it, so arbitrary code execution is never one flag away from an ad-hoc invocation
@@ -1436,11 +1389,11 @@ arithmetic wants a number, surfaces at the expression that reads it and not at t
 it — which is why the ceilings bound the parse and the diagnostics name the reader.
 
 **The fuzzing is a robustness check, not a proof of this boundary.** A harness drives this evaluator
-directly on arbitrary bytes, asserting that no input makes it invoke undefined behavior; a loud
-failure result is an acceptable outcome there and a sanitizer trap is not. That is a genuine property
-of a parser that must not crash on hostile-looking input, and it says nothing about whether the
-grammar admits the right forms. The proof of *that* is the table-driven suites and the comparison
-above: `tests/golden/oracle/expressions.cases` states every measured expression, its upstream
-rendering and its verdict, and `tests/unit/native_expression_test.cpp` and
-`tests/integration/native_differential_test.cpp` run that table through the evaluator seam and
-through a full document expansion.
+directly on arbitrary bytes, asserting that no input makes it invoke undefined behavior; a loud failure
+result is an acceptable outcome there and a sanitizer trap is not. That is a genuine property of a
+parser that must not crash on hostile-looking input, and it says nothing about whether the grammar
+admits the right forms. The proof of *that* is the table-driven suites and the comparison above:
+`tests/golden/oracle/expressions.cases` states every measured expression, its xacro rendering and its
+verdict, and `tests/unit/native_expression_test.cpp` and
+`tests/integration/native_differential_test.cpp` run that table through the evaluator seam and through
+a full document expansion.

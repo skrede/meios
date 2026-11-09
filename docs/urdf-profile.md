@@ -110,12 +110,12 @@ rotation conversion in the interface and none is planned for it. That is deliber
 owns kinematics, and a conversion here would be a second implementation to keep honest. What this
 page ships instead is worked evidence.
 
-`tests/golden/urdf/rpy_reference.cases` carries a set of `rpy` triples with the rotation matrix and
-the unit quaternion each one denotes under the convention above, at full double precision, one row
-per line with a self-describing header. Point your own implementation at it: if your matrix matches
-every row, you have the same convention meios documents and the reference parser implements. The
-quaternion column follows the reference parser's `setFromRPY`, so the two representations in a row
-are the same rotation and a consumer may check against whichever it computes.
+`tests/golden/urdf/rpy_reference.cases` carries a set of `rpy` triples with the rotation matrix and the
+unit quaternion each one denotes under the convention above, at full double precision, one row per line
+with a self-describing header. Point your own implementation at it: if your matrix matches every row,
+you have the same convention meios documents and urdfdom implements. The quaternion column follows
+urdfdom's `setFromRPY`, so the two representations in a row are the same rotation and a consumer may
+check against whichever it computes.
 
 ## Where this profile decides on its own authority
 
@@ -166,12 +166,12 @@ texture with it and needs no name to be read.
 
 **A name is exact bytes, and only an absent, empty or all-whitespace one is refused.** The wiki never
 mentions whitespace or an empty attribute value. meios takes a name to be the attribute value as
-authored: it never trims surrounding whitespace, folds case, or normalises before comparing, so
+authored: it never trims surrounding whitespace, folds case, or normalizes before comparing, so
 `Base_Link` and `base_link` are two links and `base_link` and `base_link ` are two more. Any folding
-would invent an equivalence the document never stated and would begin refusing descriptions the
-reference parser accepts. A name with internal whitespace is a legal name and is left alone. What is
-refused is a name that is absent, empty, or nothing but whitespace: such an element has no identity,
-several of them silently share one, and a joint cannot reference any of them.
+would invent an equivalence the document never stated and would begin refusing descriptions urdfdom
+accepts. A name with internal whitespace is a legal name and is left alone. What is refused is a name
+that is absent, empty, or nothing but whitespace: such an element has no identity, several of them
+silently share one, and a joint cannot reference any of them.
 
 **A document declaring no `<link>` is refused.** The wiki never addresses whether an empty `<robot>`
 is a robot. meios refuses it: a description with no links describes no body, every consumer of the
@@ -188,8 +188,8 @@ joint page states that the `<mimic>` `offset` "Defaults to 0" and states no defa
 multiplier, so keeping one cannot be presented as following the specification. meios keeps it because
 one is the only value that makes the relation the wiki documents — `value = multiplier * other +
 offset` — an identity, so a `<mimic>` that names only its target still means what an author writing it
-would expect; the reference parser agrees. This is the single value in this profile that is defaulted
-without a citation. `rule:mimic-multiplier-default`
+would expect. This is the single value in this profile that is defaulted without a citation.
+`rule:mimic-multiplier-default`
 
 **A shape element the profile does not describe is not read as a shape.** The wiki gives `<geometry>`
 exactly four children — `<box>`, `<cylinder>`, `<sphere>` and `<mesh>` — and says nothing about a
@@ -284,9 +284,9 @@ joint receives a value the document never asked for and which the specification 
 it. Branch on the joint's kind first; the member is meaningful only on the four kinds above.
 
 **An `<axis>` that carries no `xyz` is refused.** The joint page marks the attribute required on a
-present element, and there is no third reading: leaving the axis at zero — which is what the reference
-parser does — is a silently wrong axis, and substituting the absent-element default would treat writing
-the element and omitting it as the same act.
+present element, and there is no third reading: leaving the axis at zero — which is what urdfdom does —
+is a silently wrong axis, and substituting the absent-element default would treat writing the element
+and omitting it as the same act.
 
 **An axis is stored with exactly the components the document authored, and is never rescaled to unit
 length.** The wiki's own examples are unit vectors and it says the axis is "specified in the joint
@@ -314,7 +314,7 @@ This is the one default on this page that meios does not simply keep. Every othe
 states for an element survives verbatim, and a default the wiki does not state is not invented — with
 the single exception recorded in the own-authority section above, the `<mimic>` multiplier.
 
-### From the reference parser
+### Where meios and urdfdom differ
 
 urdfdom is read here as an instrument for finding out what real descriptions rely on, never as a
 specification. Where the two differ, the difference is deliberate.
@@ -349,9 +349,9 @@ refusal is urdfdom's own invention — the wiki gives both attributes a stated d
 empty `<dynamics>` is a well-formed element that says nothing. meios keeps the stated defaults and
 reads it as written.
 
-**Where the two agree on an identity rule, that agreement is corroboration and not authority.** The
-reference parser also refuses a blank name, a duplicate name and a dangling link reference, and every
-identity rule on this page would stand without it.
+**Where the two agree on an identity rule, that agreement is corroboration and not authority.** urdfdom
+also refuses a blank name, a duplicate name and a dangling link reference, and every identity rule on
+this page would stand without it.
 
 ## Rules
 
