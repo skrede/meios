@@ -108,8 +108,8 @@ Python 3.14 reads one under Unicode 16.0 — `_` or an XID_Start character first
 characters after — that is not one of the language's hard keywords, is its own NFKC normalization,
 and does not open with a double underscore. A name failing any of these refuses under
 `xacro_structural_error` before `remove`, `default` or `value` is read, and one failing any of the
-first three refuses naming the name, as the reference refuses it, with `xacro:property name 'a€' is
-not a name an expression can read`. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is
+first three refuses with meios's own diagnostic naming it, such as `xacro:property name 'a€' is not
+a name an expression can read`. So `a€`, which is not an identifier, and `ﬁ`, whose NFKC form is
 `fi`, refuse on both sides, and `π` binds on both. The `property_name_non_ascii_not_identifier`,
 `property_name_not_normalized` and `property_name_non_ascii_binds` agreement probes hold those three
 against a fresh upstream render, beside the other `property_name_` and the `property_without_name`
