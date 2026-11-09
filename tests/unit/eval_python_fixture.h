@@ -23,7 +23,7 @@
 namespace
 {
 
-std::optional<std::string> evaluate(std::string_view expr, const meios::eval_scope &scope)
+inline std::optional<std::string> evaluate(std::string_view expr, const meios::eval_scope &scope)
 {
     meios::python_evaluator evaluator;
     meios::log_sink silent;
@@ -80,14 +80,14 @@ struct fixed_text final : meios::text_resource_loader::fetcher
     std::string m_text;
 };
 
-void install_yaml(meios::eval_scope &scope, std::string text)
+inline void install_yaml(meios::eval_scope &scope, std::string text)
 {
     scope.install_text_loader(meios::text_resource_loader{ std::make_unique<fixed_text>(std::move(text)) });
 }
 
-outcome run(std::string_view source, meios::eval_policy policy,
-            const std::shared_ptr<meios::evaluator_handle> &backend,
-            std::optional<std::string> yaml = std::nullopt)
+inline outcome run(std::string_view source, meios::eval_policy policy,
+                   const std::shared_ptr<meios::evaluator_handle> &backend,
+                   std::optional<std::string> yaml = std::nullopt)
 {
     tally counts;
     meios::log_sink_f sink{ std::ref(counts) };
@@ -102,14 +102,21 @@ outcome run(std::string_view source, meios::eval_policy policy,
 
 constexpr std::string_view header = "<robot xmlns:xacro=\"http://ros.org/wiki/xacro\">";
 
-std::string span_document(std::string_view inner)
+inline std::string span_document(std::string_view inner)
 {
     return std::string(header) + "<l>" + std::string(inner) + "</l></robot>";
 }
 
+inline std::string yaml_document(std::string_view expression)
+{
+    return std::string(header)
+        + "<xacro:property name=\"config\" value=\"${xacro.load_yaml('limits.yaml')}\"/>"
+        + "<l>" + std::string(expression) + "</l></robot>";
+}
+
 // Only a resolved expansion has a document; asking whether a span survived a refused one
 // is asking a question the error arm cannot answer, so the query says so loudly.
-bool leaves(const outcome &result, std::string_view span)
+inline bool leaves(const outcome &result, std::string_view span)
 {
     REQUIRE(result.expanded);
     return result.expanded->document.find(span) != std::string::npos;

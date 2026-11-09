@@ -12,9 +12,12 @@ if(TARGET meios_eval-python)
         catch_discover_tests(eval_python_test TEST_PREFIX "eval_python.")
     endif()
 
-    set(eval_python_container_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_container_test.cpp)
+    set(eval_python_container_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_rehydrate_test.cpp)
     if(EXISTS ${eval_python_container_src})
-        add_executable(eval_python_container_test ${eval_python_container_src})
+        add_executable(eval_python_container_test ${eval_python_container_src}
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_emit_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_result_type_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_null_test.cpp)
         target_link_libraries(eval_python_container_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
                 Catch2::Catch2WithMain)
