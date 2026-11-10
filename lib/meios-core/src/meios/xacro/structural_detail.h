@@ -30,6 +30,12 @@ value substitute_arg_value(expand_ctx &ctx, pugi::xml_node in, std::string_view 
                            const std::filesystem::path &document, bool &ok,
                            std::optional<std::size_t> attr_index = std::nullopt);
 
+// The argument reading, under the fail policy whatever policy the document expands under: a
+// condition decides which subtree exists, so it is never left half-expanded.
+value substitute_condition_value(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
+                                 const std::filesystem::path &document, bool &ok,
+                                 std::optional<std::size_t> attr_index = std::nullopt);
+
 std::string strip_container_marker(std::string text);
 
 bool process_children(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,

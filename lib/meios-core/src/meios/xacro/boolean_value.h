@@ -3,19 +3,14 @@
 
 #include "meios/xacro/value.h"
 
-#include <string>
 #include <optional>
-#include <string_view>
 
 namespace meios::detail
 {
 
-// The canonical decimal text of what Python's int() reads from the text, or nothing where int()
-// raises. Python also reads Unicode digits and Unicode whitespace there; only ASCII is read here.
-std::optional<std::string> python_int(std::string_view text);
-
-// From xacro 2.1.1's get_boolean_value: a string reads true, True, false and False by spelling and
-// any other text through int(), and a typed value by its Python truth.
+// The one boolean reading of a condition or a boolean attribute. Text reads by the spellings true,
+// True, false and False, then as an integer or a finite real by whether it is nonzero; any other
+// text is no boolean. A typed value reads by its truth, a collection true when it is non-empty.
 std::optional<bool> get_boolean_value(const value &v);
 
 }

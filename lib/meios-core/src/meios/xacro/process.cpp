@@ -1,21 +1,15 @@
-#include "eval_parser.h"
-#include "eval_session.h"
 #include "macro_tables.h"
+#include "boolean_value.h"
 #include "structural_detail.h"
-#include "substitution_detail.h"
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
-#include "meios/xacro/substitution.h"
-#include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/container_marker.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
-#include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
 
-#include <cctype>
 #include <string>
 #include <optional>
 #include <algorithm>
@@ -28,56 +22,20 @@ namespace meios::detail
 namespace
 {
 
-std::string lowered(std::string_view text)
-{
-    std::string out;
-    for(char c : text)
-        out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    return out;
-}
-
-// xacro accepts the literal booleans true/false/1/0 (case-insensitive) as well as
-// a ${} expression; substitution resolves the expression, then the result is
-// coerced. An unrecognized non-empty string is evaluated as a fallback expression.
-bool condition_true(expand_ctx &ctx, const std::string &text, const source_location &at)
-{
-    std::string flag = lowered(text);
-    if(flag == "true" || flag == "1")
-        return true;
-    if(flag == "false" || flag == "0" || flag.empty())
-        return false;
-    core_evaluator evaluator;
-    const std::optional<bool> truth =
-        truthy(evaluator.eval(text, ctx.scope, ctx.log, at, ctx.session));
-    if(evaluator.failed() || !truth)
-    {
-        record_terminal(ctx, at, diagnostic_code::xacro_structural_error,
-                        "conditional test did not evaluate: " + text);
-        ctx.ok = false;
-    }
-    return truth.value_or(false);
-}
-
 bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                  const std::filesystem::path &document)
 {
-    // A structural conditional cannot be left half-expanded, so its test is always
-    // resolved with fail policy; eval_policy leniency reaches text/attribute spans only.
-    const source_location at = locate(ctx, in);
-    const expected<substitution, expansion_error> result =
-        substitute_refined(in.attribute("value").value(), ctx.scope, ctx.sources, document,
-                           eval_policy::fail, ctx.backend, ctx.session, ctx.log, at);
-    if(!result)
-    {
-        record_terminal(ctx, result.error());
-        ctx.ok = false;
+    const std::string_view tag = in.name();
+    const std::string authored = strip_authored_markers(in.attribute("value").value());
+    bool ok                    = true;
+    const value read           = substitute_condition_value(ctx, in, authored, document, ok, attr_dom_index(in, "value"));
+    if(!ok)
         return false;
-    }
-    bool truth = condition_true(ctx, result->text, at);
-    if(!ctx.ok)
-        return false;
-    bool wants_true = std::string_view(in.name()) == "xacro:if";
-    if(truth == wants_true)
+    const std::optional<bool> truth = get_boolean_value(read);
+    if(!truth)
+        return fail(ctx, in, diagnostic_code::xacro_structural_error,
+                    std::string(tag) + " value=\"" + authored + "\" evaluates to \"" + read.text().value_or("") + "\", which is not a boolean");
+    if(*truth == (tag == "xacro:if"))
         return process_children(ctx, in, out, document);
     return true;
 }

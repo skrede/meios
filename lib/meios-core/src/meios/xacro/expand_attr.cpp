@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
+#include "meios/xacro/eval_policy.h"
 #include "meios/xacro/substitution.h"
 
 #include "meios/diagnostic/expansion_error.h"
@@ -33,15 +34,18 @@ std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view na
     return std::nullopt;
 }
 
-std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
-                            const std::filesystem::path &document, bool &ok,
-                            std::optional<std::size_t> attr_index)
+namespace
+{
+
+std::string substituted_text(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
+                             const std::filesystem::path &document, eval_policy policy, bool &ok,
+                             std::optional<std::size_t> attr_index)
 {
     const source_location at = locate(ctx, in);
     const std::string_view host_text =
         ctx.origins.empty() ? std::string_view{} : ctx.origins.back().text;
     const expected<substitution, expansion_error> result =
-        substitute_refined(raw, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
+        substitute_refined(raw, ctx.scope, ctx.sources, document, policy, ctx.backend,
                            ctx.session, ctx.log, at, in, host_text, attr_index);
     ok = result.has_value();
     if(!ok)
@@ -53,9 +57,6 @@ std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view
     return result->text;
 }
 
-namespace
-{
-
 value as_written(std::string_view text)
 {
     return value{ std::string(text) };
@@ -65,17 +66,17 @@ value as_written(std::string_view text)
 // text path, so mixed text still renders. A cleared ok is a terminal failure; an absent
 // value with ok still set is a span a lenient policy retained, which binds as written.
 value substituted(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
-                  const std::filesystem::path &document, bool &ok,
+                  const std::filesystem::path &document, eval_policy policy, bool &ok,
                   std::optional<std::size_t> attr_index, value (&bind_text)(std::string_view))
 {
     const std::optional<std::string_view> inner = exact_expression(raw);
     if(!inner)
     {
-        const std::string text = substitute_attr(ctx, in, raw, document, ok, attr_index);
+        const std::string text = substituted_text(ctx, in, raw, document, policy, ok, attr_index);
         return ok ? bind_text(text) : value{};
     }
     const expected<std::optional<value>, expansion_error> bound =
-        substitute_exact(*inner, ctx.scope, ctx.sources, document, ctx.mode, ctx.backend,
+        substitute_exact(*inner, ctx.scope, ctx.sources, document, policy, ctx.backend,
                          ctx.session, ctx.log, locate(ctx, in));
     ok = bound.has_value();
     if(!ok)
@@ -89,11 +90,18 @@ value substituted(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
 
 }
 
+std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
+                            const std::filesystem::path &document, bool &ok,
+                            std::optional<std::size_t> attr_index)
+{
+    return substituted_text(ctx, in, raw, document, ctx.mode, ok, attr_index);
+}
+
 value substitute_attr_value(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index)
 {
-    return substituted(ctx, in, raw, document, ok, attr_index, classify);
+    return substituted(ctx, in, raw, document, ctx.mode, ok, attr_index, classify);
 }
 
 // An argument is bound in the substitution domain, where a written literal stays the characters
@@ -105,7 +113,14 @@ value substitute_arg_value(expand_ctx &ctx, pugi::xml_node in, std::string_view 
                            const std::filesystem::path &document, bool &ok,
                            std::optional<std::size_t> attr_index)
 {
-    return substituted(ctx, in, raw, document, ok, attr_index, as_written);
+    return substituted(ctx, in, raw, document, ctx.mode, ok, attr_index, as_written);
+}
+
+value substitute_condition_value(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,
+                                 const std::filesystem::path &document, bool &ok,
+                                 std::optional<std::size_t> attr_index)
+{
+    return substituted(ctx, in, raw, document, eval_policy::fail, ok, attr_index, as_written);
 }
 
 }

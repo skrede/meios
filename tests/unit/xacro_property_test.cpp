@@ -149,14 +149,14 @@ TEST_CASE("an eager lazy_eval spelling evaluates at the definition and a lazy on
         meios::log_sink silent;
         return expand_body(std::string(R"(<xacro:property name="p" value="${nope}" lazy_eval=")") + spelling + R"("/><link name="l"/>)", silent);
     };
-    for(const char *eager : {"false", "0", "${False}"})
+    for(const char *eager : {"false", "0", "0.0", "${False}"})
         DYNAMIC_SECTION("eager " << eager)
         {
             const expansion_result out = define(eager);
             REQUIRE_FALSE(out.has_value());
             REQUIRE(out.error().code == meios::diagnostic_code::undefined_property);
         }
-    for(const char *lazy : {"true", ""})
+    for(const char *lazy : {"true", "", "1.0"})
         DYNAMIC_SECTION("lazy " << lazy)
         {
             const expansion_result out = define(lazy);
@@ -167,7 +167,7 @@ TEST_CASE("an eager lazy_eval spelling evaluates at the definition and a lazy on
 
 TEST_CASE("a property's lazy_eval outside the boolean rule refuses as no boolean", "[xacro][scope][property]")
 {
-    for(const char *spelling : {"yes", "1.0"})
+    for(const char *spelling : {"yes", "TRUE"})
     {
         DYNAMIC_SECTION(spelling)
         {
