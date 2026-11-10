@@ -120,16 +120,15 @@ inline std::optional<double> as_double(const value &v)
     return v.real();
 }
 
-// Null and a string are the non-arithmetic kinds with a settled truth value here: null is
-// false, and a string is false exactly when it holds no bytes. A collection has one in Python
-// too, by the same emptiness rule, but that meaning is outside the measured surface and is
-// refused rather than approximated.
+// Null is false, and a string, a sequence or a mapping is false exactly when it holds nothing.
 inline std::optional<bool> truthy(const value &v)
 {
     if(v.kind() == value_kind::null)
         return false;
     if(v.kind() == value_kind::string)
         return !v.text()->empty();
+    if(v.kind() == value_kind::sequence || v.kind() == value_kind::mapping)
+        return v.size() != 0;
     if(std::optional<double> number = as_double(v))
         return *number != 0.0;
     return std::nullopt;

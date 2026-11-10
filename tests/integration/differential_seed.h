@@ -100,9 +100,7 @@ struct probe
     std::string_view expression;
 };
 
-inline constexpr std::array<probe, 13> divergence_probes{
-    probe{ driven::grammar, "div_or_operand", "1 or 2" },
-    probe{ driven::grammar, "div_and_operand", "2 and 3" },
+inline constexpr std::array<probe, 11> divergence_probes{
     probe{ driven::document, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" },
     probe{ driven::grammar, "div_dict_pair_sequence", "dict([('a', 1)])" },
     probe{ driven::grammar, "div_dict_mixed_arguments", "dict([('a', 1)], b=2)" },

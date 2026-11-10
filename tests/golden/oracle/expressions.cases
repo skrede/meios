@@ -122,6 +122,12 @@ n33	False and undefined_probe_name	False
 n34	True or False	True	
 n35	True or undefined_probe_name	True	
 n36	1 / 0	REFUSED	division by zero 
+n37	1 or 2	1	
+n38	0 or 2	2	
+n39	2 and 3	3	
+n40	0 and 3	0	
+n41	'' or 'x'	x	
+n42	'y' if sec_mesh_files else 'n'	y	
 m01	acos(1)	0.0	
 m02	asin(0)	0.0	
 m03	atan(1)	0.7853981633974483	

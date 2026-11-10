@@ -67,7 +67,7 @@ TEST_CASE("an adjacency the parser names better is left to the parser", "[native
     const probe::outcome no_else  = probe::evaluate("1 if True");
     const probe::outcome no_first = probe::evaluate("if True else 1");
     const probe::outcome empty    = probe::evaluate("");
-    const probe::outcome text     = probe::evaluate("cfg and True");
+    const probe::outcome text     = probe::evaluate("-cfg");
 
     REQUIRE_FALSE(no_else.messages.empty());
     CHECK(no_else.messages.front().find("expected 'else' in conditional") != std::string::npos);
@@ -109,9 +109,9 @@ TEST_CASE("a construct the parser owns keeps its own verdict whichever way the d
     CHECK(probe::evaluate("1 if True else {1: 2}").rendered == "1");
     CHECK(probe::evaluate("1 if True else [3]").rendered == "1");
     CHECK(probe::evaluate("True or {1: 2}").rendered == "True");
-    // A refused disjunction still carries its left operand, so the failure flag rather than the
-    // null spelling is what marks a refusal here.
-    CHECK(probe::evaluate("False or {1: 2}").rendered == "False");
+    // A refused disjunction yields no value and so renders the null spelling; the failure flag,
+    // not that spelling, is what marks a refusal here.
+    CHECK(probe::evaluate("False or {1: 2}").rendered == "None");
     for(const quoted_at &owned : {quoted_at{"1 if False else {1: 2}", "'{'"}, quoted_at{"1 if False else [3]", "'['"}, quoted_at{"False or {1: 2}", "'{'"}})
     {
         INFO("expression: " << owned.text);

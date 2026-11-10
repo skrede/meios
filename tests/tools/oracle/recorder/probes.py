@@ -65,8 +65,9 @@ STRING_PROBES = ("'x' + 'y'", "'' + 'y'", "'x' + ''", "'' + ''", "name + '_' + t
 # writes and no family above reaches, each reduced to the smallest expression exercising one of
 # them. Three groups earn their place beyond the bare spelling: an integer operation whose result
 # stays an integer beside a division whose result does not, a floor and a remainder taken over a
-# negative operand, and a logical operator whose second operand names nothing -- the last being
-# the only spelling that says out loud whether the operand was evaluated.
+# negative operand, a logical operator whose second operand names nothing -- the only spelling
+# that says out loud whether the operand was evaluated -- and a logical operator yielding one of
+# its operands rather than a boolean, a loaded collection read by its truth among them.
 GRAMMAR_PROBES = ("42", "3.5", "'x'", "True", "False", "radius", "pi", "(1 + 2) * 3",
                   "-42", "+42", "+3.5",
                   "2 + 3", "5 - 3", "3 * 4", "7 / 2",
@@ -77,7 +78,9 @@ GRAMMAR_PROBES = ("42", "3.5", "'x'", "True", "False", "radius", "pi", "(1 + 2) 
                   "1 < 2 < 3", "1 < 3 < 2",
                   "True and False", "False and undefined_probe_name",
                   "True or False", "True or undefined_probe_name",
-                  "1 / 0")
+                  "1 / 0",
+                  "1 or 2", "0 or 2", "2 and 3", "0 and 3", "'' or 'x'",
+                  "'y' if sec_mesh_files else 'n'")
 # The mathematics the grammar calls by bare name. `abs` is not here: upstream's expression
 # globals carry the mathematics module and the two reducers and no builtins at all, so `abs`
 # refuses there and renders here. That is a difference in what each side accepts rather than in

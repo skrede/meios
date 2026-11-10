@@ -109,9 +109,9 @@ TEST_CASE("a malformed conditional still refuses by name", "[native][branch]")
     CHECK(no_first.messages.front().find("'if'") != std::string::npos);
 }
 
-TEST_CASE("a condition whose truth cannot be taken evaluates neither branch", "[native][branch]")
+TEST_CASE("a condition that refuses evaluates neither branch", "[native][branch]")
 {
-    const probe::outcome ran = probe::evaluate("undefined_name if cfg else missing_name");
+    const probe::outcome ran = probe::evaluate("undefined_name if -cfg else missing_name");
 
     CHECK(ran.failed);
     REQUIRE(ran.messages.size() == 1);

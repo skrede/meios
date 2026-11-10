@@ -53,29 +53,26 @@ TEST_CASE("the empty string is false and every other string is true, in every tr
     CHECK(strings::evaluate("not ''").rendered == "True");
     CHECK(strings::evaluate("not 'a'").rendered == "False");
     CHECK(strings::evaluate("not blank").rendered == "True");
-    CHECK(strings::evaluate("'' and True").rendered == "False");
+    CHECK(strings::evaluate("'' and True").rendered.empty());
     CHECK(strings::evaluate("'a' and True").rendered == "True");
     CHECK(strings::evaluate("'' or False").rendered == "False");
-    CHECK(strings::evaluate("'a' or False").rendered == "True");
+    CHECK(strings::evaluate("'a' or False").rendered == "a");
     CHECK(strings::evaluate("'yes' if 'a' else 'no'").rendered == "yes");
     CHECK(strings::evaluate("'yes' if '' else 'no'").rendered == "no");
     CHECK(strings::evaluate("'' if prefix else prefix + '_'").rendered.empty());
     CHECK(strings::evaluate("'' if blank else prefix + '_'").rendered == "arm_");
 }
 
-TEST_CASE("a collection still has no truth value and refuses wherever one is taken",
+TEST_CASE("a collection is true exactly when it holds anything, in every truth position",
           "[native][string]")
 {
-    for(std::string_view form : { "not table", "not fields", "table and True", "loaded or False",
-                                  "'a' if table else 'b'" })
-    {
-        INFO("expression: " << form);
-        const strings::outcome ran = strings::evaluate(std::string(form));
-        CHECK(ran.failed);
-        CHECK(ran.kind == meios::eval_failure_kind::error);
-        REQUIRE_FALSE(ran.messages.empty());
-        CHECK(ran.messages.front().find("no arithmetic meaning") != std::string::npos);
-    }
+    CHECK(strings::evaluate("not table").rendered == "False");
+    CHECK(strings::evaluate("not fields").rendered == "False");
+    CHECK(strings::evaluate("not dict()").rendered == "True");
+    CHECK(strings::evaluate("table and True").rendered == "True");
+    CHECK(strings::evaluate("(loaded or False)[1]").rendered == "2");
+    CHECK(strings::evaluate("'a' if table else 'b'").rendered == "a");
+    CHECK(strings::evaluate("'a' if dict() else 'b'").rendered == "b");
 }
 
 TEST_CASE("membership against a string haystack tests substring containment", "[native][string]")

@@ -31,9 +31,10 @@ value parse_and(parser &p)
     value left = parse_not(p);
     while(p.accept(token_kind::kw_and))
     {
-        const bool decided = !need_truth(p, left);
-        if(decided) p.pos = p.spans.and_operand_end(p.pos);
-        left = decided ? value{ false } : value{ need_truth(p, parse_not(p)) };
+        if(need_truth(p, left))
+            left = parse_not(p);
+        else
+            p.pos = p.spans.and_operand_end(p.pos);
     }
     return left;
 }
@@ -45,9 +46,10 @@ value parse_or(parser &p)
     value left = parse_and(p);
     while(p.accept(token_kind::kw_or))
     {
-        const bool decided = need_truth(p, left);
-        if(decided) p.pos = p.spans.or_operand_end(p.pos);
-        left = decided ? value{ true } : value{ need_truth(p, parse_and(p)) };
+        if(need_truth(p, left))
+            p.pos = p.spans.or_operand_end(p.pos);
+        else
+            left = parse_and(p);
     }
     return left;
 }

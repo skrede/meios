@@ -88,3 +88,16 @@ TEST_CASE("a property's remove reads by the same rule, and an empty one as its d
     REQUIRE(kept.has_value());
     CHECK(kept->document.find("<link name=\"l1\"") != std::string::npos);
 }
+
+TEST_CASE("text a logical operator yields refuses as a condition unless it spells a boolean", "[xacro][condition]")
+{
+    require_structural_refusal(expand_body(conditional("if", " value=\"${'' or 'x'}\"")), 2);
+    require_structural_refusal(expand_body(conditional("unless", " value=\"${'' and 'x'}\"")), 2);
+    REQUIRE(takes_branch("if", " value=\"${'' or 'true'}\""));
+}
+
+TEST_CASE("a number a logical operator yields is read by its truth", "[xacro][condition]")
+{
+    REQUIRE(takes_branch("if", " value=\"${0 or 2}\""));
+    REQUIRE_FALSE(takes_branch("if", " value=\"${2 and 0}\""));
+}

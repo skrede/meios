@@ -61,13 +61,35 @@ TEST_CASE("a skipped operand ends at an argument comma", "[native][branch]")
     CHECK(probe::evaluate("min(True or undefined_name, -1)").rendered == "-1");
 }
 
-TEST_CASE("a collection operand still refuses and says so once, where a string now decides", "[native][branch]")
+TEST_CASE("and and or yield the operand that decides them, unconverted", "[native][branch]")
 {
-    const probe::outcome ran = probe::evaluate("cfg and True");
+    CHECK(probe::evaluate("1 or 2").rendered == "1");
+    CHECK(probe::evaluate("0 or 2").rendered == "2");
+    CHECK(probe::evaluate("2 and 3").rendered == "3");
+    CHECK(probe::evaluate("0 and 3").rendered == "0");
+    CHECK(probe::evaluate("'' or 'x'").rendered == "x");
+    CHECK(probe::evaluate("'a' and ''").rendered.empty());
+    CHECK_FALSE(probe::evaluate("'a' and ''").failed);
+    CHECK(probe::evaluate("not 2").rendered == "False");
+}
 
-    CHECK(ran.kind == meios::eval_failure_kind::error);
-    REQUIRE(ran.messages.size() == 1);
-    CHECK(ran.messages.front().find("no arithmetic meaning") != std::string::npos);
-    CHECK(probe::evaluate("cfg or True").kind == meios::eval_failure_kind::error);
+TEST_CASE("a guarded concatenation yields the joined text or the empty text", "[native][branch]")
+{
+    CHECK(probe::evaluate("word and word + '_' or ''").rendered == "text_");
+    CHECK(probe::evaluate("'ab' and 'ab' + '_' or ''").rendered == "ab_");
+    const probe::outcome empty = probe::evaluate("'' and '' + '_' or ''");
+    CHECK_FALSE(empty.failed);
+    CHECK(empty.rendered.empty());
+}
+
+TEST_CASE("a collection is true when it holds anything", "[native][branch]")
+{
+    const probe::outcome conjunction = probe::evaluate("cfg and True");
+
+    CHECK_FALSE(conjunction.failed);
+    CHECK(conjunction.rendered == "True");
+    CHECK(probe::evaluate("(cfg or True)['length']").rendered == "0.12");
+    CHECK(probe::evaluate("'y' if cfg else 'n'").rendered == "y");
+    CHECK(probe::evaluate("not cfg").rendered == "False");
     CHECK(probe::evaluate("word and True").rendered == "True");
 }
