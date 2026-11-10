@@ -832,8 +832,8 @@ the only one, the link renders `l_x` above it or below it; xacro refuses each.
 Such a key is admitted, it counts toward the mapping's extent, and it collides with another key exactly
 as Python's key comparison would have it collide. What no expression has is a spelling that reaches it:
 every subscript key is text, and a dotted member is a name. So the entry is present and unreadable
-rather than refused at the parse, and a description that needs one needs the explicit backend. An
-**empty** scalar written as a key is a different answer, and this page gave the wrong one until it was
+rather than refused at the parse, and a description that needs one needs the explicit backend.
+An **empty** scalar written as a key is a different answer, and this page gave the wrong one until it was
 measured: a document writing the explicit-key form with nothing after it does not parse here at all —
 the reader meets a mapping standing where a key belongs and refuses the document at that line and
 column. So an empty key is refused rather than admitted-and-unreadable, and the sentence above covers
