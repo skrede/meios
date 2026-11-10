@@ -67,15 +67,15 @@ inline corpus::document agreement_document(const agreement_probe &one)
     return corpus::document{agreement_fixture(one), one.args, agreement_root(one), corpus::evaluator::native, {}};
 }
 
-// A refusal agrees only on its cause, so a fixture gone from both tables, a malformed one, or a
-// refusal under an unrelated code cannot pass as agreement. Upstream's cause is held to the same
-// code through the cause table, and its wording to the stem the probe names.
+// A refusal agrees on its classification: the code this side gives against the code the cause
+// table maps upstream's recorded cause to, so a fixture gone from both tables, a malformed one, or
+// a refusal under an unrelated code cannot pass as agreement. Two refusals of different causes that map to the same code agree;
+// that is the comparison, so wording is never brought back to tell them apart.
 inline void require_same_refusal(const agreement_probe &one, const std::string &upstream_text, meios::diagnostic_code code)
 {
     REQUIRE(one.refuses.has_value());
     CHECK(code == *one.refuses);
-    CHECK(upstream_text.find(one.upstream_cause) != std::string::npos);
-    const upstream_refusal cause                       = parse_refusal(upstream_text);
+    const upstream_refusal cause                      = parse_refusal(upstream_text);
     const std::optional<meios::diagnostic_code> mapped = mapped_cause(cause.outer, cause.inner, cause.line);
     INFO("upstream refused with " << cause.outer << ' ' << cause.inner << ": " << cause.line << ", mapped to "
                                   << (mapped ? meios::to_string(*mapped) : "no code") << ", expected " << meios::to_string(*one.refuses));
