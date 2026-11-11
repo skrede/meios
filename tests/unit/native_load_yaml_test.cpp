@@ -1,10 +1,18 @@
 #include "load_yaml_probe.h"
 
+#include <meios/io/source_stack.h>
+
+#ifdef MEIOS_TEST_HAS_YAML
+    #include <meios/yaml/parser.h>
+#endif
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 #include <vector>
 #include <utility>
+#include <filesystem>
+#include <functional>
 #include <string_view>
 
 using load_yaml::evaluate;
@@ -106,3 +114,67 @@ TEST_CASE("bytes reach the parser only through the scope's document-relative loa
     CHECK(without.loads.empty());
     CHECK(names(without, "cannot reach the auxiliary document \"cfg/arm.yaml\""));
 }
+
+#ifdef MEIOS_TEST_HAS_YAML
+
+namespace
+{
+
+using expanded = meios::expected<meios::expansion, meios::expansion_error>;
+
+class one_document final : public meios::text_resource_loader::fetcher
+{
+public:
+    explicit one_document(std::string_view text) : m_text(text) {}
+
+    meios::text_resource_result fetch(std::string_view, const std::filesystem::path &) override
+    {
+        return m_text;
+    }
+
+private:
+    std::string m_text;
+};
+
+expanded expand_reading(std::string_view auxiliary, std::string_view subscript)
+{
+    const std::string document = "<robot xmlns:xacro=\"http://www.ros.org/wiki/xacro\" name=\"probe\">\n\n"
+                                 "<link name=\"l_${xacro.load_yaml('aliases.yaml')"
+                               + std::string(subscript) + "}\"/>\n</robot>\n";
+    load_yaml::heard sink;
+    meios::log_sink_f log{ std::ref(sink) };
+    meios::eval_scope scope;
+    scope.install_text_loader(meios::text_resource_loader{ std::make_unique<one_document>(auxiliary) });
+    scope.install_yaml_parser(meios::make_yaml_parser());
+    meios::source_stack sources;
+    return meios::expand(document, scope, sources, "robot.xacro", meios::expansion_limits{}, log);
+}
+
+}
+
+TEST_CASE("an alias inside the node it names refuses at the line of the expression that loads it",
+          "[native][yaml][load_yaml]")
+{
+    const expanded out = expand_reading("a: &a [1, *a]\n", "['a']");
+
+    REQUIRE_FALSE(out.has_value());
+    CHECK(out.error().loc.file == std::filesystem::path("robot.xacro"));
+    CHECK(out.error().loc.line == 3);
+    CHECK(out.error().message.find("not yet complete") != std::string::npos);
+}
+
+TEST_CASE("an anchor reused by an alias outside the node it names loads as the value it holds",
+          "[native][yaml][load_yaml]")
+{
+    const std::pair<std::string_view, std::string_view> rows[] = {{"['b'][0]", "l_1"}, {"['b'][1]", "l_2"}};
+
+    for(const std::pair<std::string_view, std::string_view> &row : rows)
+    {
+        INFO(row.first);
+        const expanded out = expand_reading("a: &a [1, 2]\nb: *a\n", row.first);
+        REQUIRE(out.has_value());
+        CHECK(out.value().document.find("<link name=\"" + std::string(row.second) + "\"") != std::string::npos);
+    }
+}
+
+#endif

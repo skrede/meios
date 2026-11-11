@@ -5,7 +5,7 @@
 # that refuses is recorded as REFUSED followed by the diagnostic code it gives, upstream's mapped
 # through tests/refusal_causes.h. An expression probe's refusal stays REFUSED. No refusal's
 # wording is compared, on either side.
-div_self_reference	[1, [1, [...]]]	REFUSED	a self-referential alias graph loads upstream as a value that contains itself; an immutable value with shared collection storage cannot denote one, so the alias arrives while its anchor is still incomplete and refuses there
+div_self_reference	[1, [1, [...]]]	REFUSED	here a value never contains itself, so an alias inside the node it names refuses where the document is read, while an anchor reused by aliases outside that node loads; upstream builds a value that contains itself
 div_dict_pair_sequence	{'a': 1}	REFUSED	the mapping constructor is admitted in its keyword-argument spelling alone, so a pair-sequence argument refuses here rather than taking a meaning nothing measured
 div_dict_mixed_arguments	{'a': 1, 'b': 2}	REFUSED	a positional argument mixed with keyword arguments refuses for the same reason the pair-sequence argument does
 div_string_repetition	ababab	REFUSED	a string repeated by an integer renders upstream; only the addition of two strings was measured into this grammar, so the multiplication operator refuses a string rather than taking a meaning nothing measured

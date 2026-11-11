@@ -7,14 +7,14 @@ from pathlib import Path
 from recorder.corpus import REPO
 from grammar_probes import GRAMMAR_AGREEMENT_PROBES, GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
 
-# The known divergences, measured and deliberately not changed: a self-referential alias graph
-# that loads here as a value containing itself, the two mapping-constructor argument shapes
-# upstream accepts that are refused here, the four string meanings upstream carries that this
-# grammar does not -- repetition, ordering, and the split's two further argument shapes -- the one
-# mathematics name this grammar answers and upstream does not, and three differences in what the
-# span scanner hands the evaluator, upstream's own span pattern being ^\$\{[^\}]*\} and so neither
-# quote-aware nor nesting. None needs the expressions.cases seed scope -- the first reads only the
-# document written beside the probe, which load_yaml resolves relative to the probe itself.
+# The known divergences, measured and deliberately not changed: an alias inside the node it names,
+# the two mapping-constructor argument shapes upstream accepts that are refused here, the four
+# string meanings upstream carries that this grammar does not -- repetition, ordering, and the
+# split's two further argument shapes -- the one mathematics name this grammar answers and
+# upstream does not, and three differences in what the span scanner hands the evaluator,
+# upstream's own span pattern being ^\$\{[^\}]*\} and so neither quote-aware nor nesting. None
+# needs the expressions.cases seed scope -- the first reads only the document written beside the
+# probe, which load_yaml resolves relative to the probe itself.
 DIVERGENCE_PROBES = (("div_self_reference", "xacro.load_yaml('recursive.yaml')['a']"),
                      ("div_dict_pair_sequence", "dict([('a', 1)])"),
                      ("div_dict_mixed_arguments", "dict([('a', 1)], b=2)"),
