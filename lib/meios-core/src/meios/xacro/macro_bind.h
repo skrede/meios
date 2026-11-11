@@ -1,6 +1,7 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_MACRO_BIND_H
 #define HPP_GUARD_MEIOS_XACRO_MACRO_BIND_H
 
+#include "dispatch_view.h"
 #include "expand_context.h"
 
 #include <pugixml.hpp>
@@ -28,8 +29,9 @@ struct call_binding
 };
 
 // Runs in the caller's scope before the macro's frame and origin exist, so a refusal names the
-// call's own line and leaves the caller's tables as they were.
-bool bind_call(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document, call_binding &bound);
+// call's own line and leaves the caller's tables as they were. An attribute the call's rename
+// consumed is no argument.
+bool bind_call(expand_ctx &ctx, const macro_def &def, const dispatch_view &call, const std::filesystem::path &document, call_binding &bound);
 
 }
 

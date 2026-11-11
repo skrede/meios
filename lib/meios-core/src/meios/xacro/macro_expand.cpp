@@ -81,12 +81,13 @@ bool define_macro(expand_ctx &ctx, pugi::xml_node in)
     return true;
 }
 
-bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, pugi::xml_node call,
+bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, const dispatch_view &view,
                        pugi::xml_node out, const std::filesystem::path &document)
 {
-    const macro_def &def = found.def;
+    const macro_def &def      = found.def;
+    const pugi::xml_node call = view.node;
     call_binding bound;
-    if(!ctx.charge_work(call) || !bind_call(ctx, def, call, document, bound))
+    if(!ctx.charge_work(call) || !bind_call(ctx, def, view, document, bound))
         return false;
     const invocation_frame frame(ctx.scope, found.symbols, ctx.macros, found.macros);
     for(std::size_t i = 0; i < def.params.size(); ++i)

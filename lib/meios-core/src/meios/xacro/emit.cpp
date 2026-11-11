@@ -10,12 +10,12 @@
 namespace meios::detail
 {
 
-bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
+bool emit_element(expand_ctx &ctx, pugi::xml_node in, const std::string &name, pugi::xml_node out,
                   const std::filesystem::path &document)
 {
     if(!ctx.charge_output(in))
         return false;
-    pugi::xml_node element = out.append_child(in.name());
+    pugi::xml_node element = out.append_child(name.c_str());
     std::size_t attr_index = 0;
     for(pugi::xml_attribute attr : in.attributes())
     {

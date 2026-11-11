@@ -362,3 +362,10 @@ cdata_kept_verbatim	agreement
 included_root_namespace_lifted	agreement
 macro_namespace_lifted	agreement
 root_target_namespace	agreement
+macro_called_by_name_attribute	agreement
+element_named_by_attribute	agreement
+element_renamed_to_conditional	agreement
+element_renamed_to_macro_call	agreement
+element_renamed_to_property	agreement
+call_unknown_macro	agreement
+element_name_not_text	agreement

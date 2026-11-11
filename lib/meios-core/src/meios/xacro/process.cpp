@@ -1,5 +1,5 @@
-#include "macro_tables.h"
 #include "boolean_value.h"
+#include "dispatch_view.h"
 #include "namespace_lift.h"
 #include "xacro_attributes.h"
 #include "structural_detail.h"
@@ -24,10 +24,11 @@ namespace meios::detail
 namespace
 {
 
-bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
+bool conditional(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out,
                  const std::filesystem::path &document)
 {
-    const std::string_view tag = in.name();
+    const pugi::xml_node in    = view.node;
+    const std::string_view tag = view.name;
     const std::string authored = strip_authored_markers(in.attribute("value").value());
     bool ok                    = true;
     const value read           = substitute_condition_value(ctx, in, authored, document, ok, attr_dom_index(in, "value"));
@@ -59,31 +60,29 @@ bool copy_text(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out, const std
     return true;
 }
 
-bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
-                      const std::filesystem::path &document)
-{
-    std::string_view name = in.name();
-    if(name == "xacro:property")
-        return check_attributes(ctx, in, name) && define_property(ctx, in, document);
-    if(name == "xacro:macro")
-        return check_attributes(ctx, in, name) && define_macro(ctx, in);
-    if(name == "xacro:arg")
-        return check_attributes(ctx, in, name) && declare_arg(ctx, in, document);
-    if(name == "xacro:include")
-        return check_attributes(ctx, in, name) && expand_include(ctx, in, out, document);
-    if(name == "xacro:if" || name == "xacro:unless")
-        return check_attributes(ctx, in, name) && conditional(ctx, in, out, document);
-    if(name == "xacro:insert_block")
-        return check_attributes(ctx, in, name) && insert_block(ctx, in, out, document);
-    if(name.rfind("xacro:", 0) != 0)
-        return emit_element(ctx, in, out, document);
-    const std::optional<resolved_macro> found = resolve_macro(ctx.macros, ctx.scope, name.substr(6));
-    if(found)
-        return instantiate_macro(ctx, *found, in, out, document);
-    return fail(ctx, in, diagnostic_code::xacro_structural_error,
-                "unknown xacro element <" + std::string(name) + '>');
 }
 
+bool dispatch_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out,
+                      const std::filesystem::path &document)
+{
+    const std::string_view name = view.name;
+    if(name == "xacro:property")
+        return check_attributes(ctx, view) && define_property(ctx, view.node, document);
+    if(name == "xacro:macro")
+        return check_attributes(ctx, view) && define_macro(ctx, view.node);
+    if(name == "xacro:arg")
+        return check_attributes(ctx, view) && declare_arg(ctx, view.node, document);
+    if(name == "xacro:include")
+        return check_attributes(ctx, view) && expand_include(ctx, view.node, out, document);
+    if(name == "xacro:if" || name == "xacro:unless")
+        return check_attributes(ctx, view) && conditional(ctx, view, out, document);
+    if(name == "xacro:insert_block")
+        return check_attributes(ctx, view) && insert_block(ctx, view.node, out, document);
+    if(name == "xacro:element")
+        return check_attributes(ctx, view) && rename_element(ctx, view, out, document);
+    if(!name.starts_with("xacro:"))
+        return emit_element(ctx, view.node, view.name, out, document);
+    return call_macro(ctx, view, out, document);
 }
 
 std::string strip_container_marker(std::string text)
@@ -111,7 +110,7 @@ bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return copy_text(ctx, in, out, document);
     if(kind != pugi::node_element)
         return true;
-    return dispatch_element(ctx, in, out, document);
+    return dispatch_element(ctx, authored_view(in), out, document);
 }
 
 bool process_children(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,

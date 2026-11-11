@@ -1,5 +1,6 @@
 #include "macro_bind.h"
 #include "literal_read.h"
+#include "dispatch_view.h"
 #include "namespace_lift.h"
 #include "structural_detail.h"
 
@@ -80,11 +81,14 @@ std::string block_spelling(const macro_def &def, std::size_t i)
 // Every attribute is checked and evaluated in document order, so the first refusal reported is the
 // first one written. An attribute spelled like a block parameter, or a namespace declaration, names
 // no parameter an attribute can set.
-bool bind_attributes(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document,
+bool bind_attributes(expand_ctx &ctx, const macro_def &def, const dispatch_view &view, const std::filesystem::path &document,
                      call_binding &bound, std::vector<bool> &supplied)
 {
+    const pugi::xml_node call = view.node;
     for(pugi::xml_attribute attr : call.attributes())
     {
+        if(consumed(view, attr.name()))
+            continue;
         const auto at = std::find(def.params.begin(), def.params.end(), std::string_view(attr.name()));
         if(at == def.params.end())
             return fail(ctx, call, diagnostic_code::xacro_structural_error, call_to(def) + "sets '" + attr.name() + "', which names no parameter an attribute can set");
@@ -165,11 +169,12 @@ bool require_supplied(expand_ctx &ctx, const macro_def &def, pugi::xml_node call
 // table the body alone reads. Binding as it went would let one argument read a sibling's new
 // value -- which a description does write, passing both `ee_id="${ee_id}_${ee_color}"` and a
 // second argument naming `ee_id`, where the two spellings mean different things.
-bool bind_call(expand_ctx &ctx, const macro_def &def, pugi::xml_node call, const std::filesystem::path &document, call_binding &bound)
+bool bind_call(expand_ctx &ctx, const macro_def &def, const dispatch_view &view, const std::filesystem::path &document, call_binding &bound)
 {
+    const pugi::xml_node call = view.node;
     std::vector<bool> supplied(def.params.size(), false);
     bound.values.resize(def.params.size());
-    return bind_attributes(ctx, def, call, document, bound, supplied)
+    return bind_attributes(ctx, def, view, document, bound, supplied)
         && bind_blocks(ctx, def, call, document, bound.blocks)
         && bind_defaults(ctx, def, call, document, bound, supplied)
         && require_supplied(ctx, def, call, supplied);

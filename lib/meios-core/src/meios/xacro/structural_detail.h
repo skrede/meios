@@ -1,6 +1,7 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_STRUCTURAL_DETAIL_H
 #define HPP_GUARD_MEIOS_XACRO_STRUCTURAL_DETAIL_H
 
+#include "dispatch_view.h"
 #include "expand_context.h"
 
 #include <pugixml.hpp>
@@ -40,7 +41,9 @@ bool process_children(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                       const std::filesystem::path &document);
 bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document);
-bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
+bool dispatch_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out,
+                      const std::filesystem::path &document);
+bool emit_element(expand_ctx &ctx, pugi::xml_node in, const std::string &name, pugi::xml_node out,
                   const std::filesystem::path &document);
 bool insert_block(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
                   const std::filesystem::path &document);
@@ -87,8 +90,12 @@ bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path
 bool parse_params(std::string_view spec, macro_def &def);
 
 bool define_macro(expand_ctx &ctx, pugi::xml_node in);
-bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, pugi::xml_node call,
+bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, const dispatch_view &call,
                        pugi::xml_node out, const std::filesystem::path &document);
+// The macro call a name in xacro's namespace makes when no construct takes it; xacro:call names its
+// macro in an attribute instead.
+bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
+bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
 
 }
 

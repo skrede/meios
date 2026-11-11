@@ -51,17 +51,17 @@ bool listed(std::string_view list, std::string_view name)
     return !first_name(list, [name](std::string_view one) { return one == name; }).empty();
 }
 
-bool present(pugi::xml_node in, std::string_view name)
+bool present(const dispatch_view &view, std::string_view name)
 {
-    for(pugi::xml_attribute attr : in.attributes())
+    for(pugi::xml_attribute attr : view.node.attributes())
         if(name == attr.name())
-            return true;
+            return !consumed(view, name);
     return false;
 }
 
-bool known(const attribute_row &row, std::string_view name, std::string_view dropped)
+bool known(const attribute_row &row, std::string_view name, const dispatch_view &view)
 {
-    return name == dropped || name.starts_with("xmlns:") || listed(row.required, name) || listed(row.optional, name);
+    return consumed(view, name) || name.starts_with("xmlns:") || listed(row.required, name) || listed(row.optional, name);
 }
 
 }
@@ -71,20 +71,20 @@ std::span<const attribute_row> attribute_rows()
     return rows;
 }
 
-bool check_attributes(expand_ctx &ctx, pugi::xml_node in, std::string_view tag, std::string_view dropped)
+bool check_attributes(expand_ctx &ctx, const dispatch_view &view)
 {
-    const auto row = std::ranges::find(rows, tag, &attribute_row::tag);
+    const auto row = std::ranges::find(rows, std::string_view(view.name), &attribute_row::tag);
     if(row == rows.end())
         return true;
-    const std::string_view missing = first_name(row->required, [in](std::string_view name) { return !present(in, name); });
+    const std::string_view missing = first_name(row->required, [&view](std::string_view name) { return !present(view, name); });
     if(!missing.empty())
-        return fail(ctx, in, diagnostic_code::xacro_structural_error, '<' + std::string(tag) + "> needs a " + std::string(missing) + " attribute");
+        return fail(ctx, view.node, diagnostic_code::xacro_structural_error, '<' + view.name + "> needs a " + std::string(missing) + " attribute");
     if(!row->warns)
         return true;
-    for(pugi::xml_attribute attr : in.attributes())
-        if(!known(*row, attr.name(), dropped))
-            ctx.log.log(level::warn, diagnostic_code::unknown_attribute, locate(ctx, in),
-                        '<' + std::string(tag) + "> carries an attribute '" + attr.name() + "' it does not read");
+    for(pugi::xml_attribute attr : view.node.attributes())
+        if(!known(*row, attr.name(), view))
+            ctx.log.log(level::warn, diagnostic_code::unknown_attribute, locate(ctx, view.node),
+                        '<' + view.name + "> carries an attribute '" + attr.name() + "' it does not read");
     return true;
 }
 

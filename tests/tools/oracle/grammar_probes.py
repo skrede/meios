@@ -1,9 +1,7 @@
 # The grammar record's document probes: constructs of xacro's own grammar measured against the
 # pinned reference, each recorded as a divergence until the two sides agree.
 
-GRAMMAR_DOCUMENT_PROBES = ("macro_called_by_name_attribute",
-                           "element_named_by_attribute",
-                           "attribute_set_on_parent",
+GRAMMAR_DOCUMENT_PROBES = ("attribute_set_on_parent",
                            "include_find_answering_root_only",
                            "macro_params_unicode_space_between",
                            "include_missing_element_before_parent",
@@ -32,8 +30,6 @@ GRAMMAR_DOCUMENT_PROBES = ("macro_called_by_name_attribute",
                            "attribute_under_block_wrapper",
                            "attribute_under_block_element",
                            "attribute_on_document_root",
-                           "element_renamed_to_conditional",
-                           "element_renamed_to_macro_call",
                            "comment_evaluated_under_eval_comments",
                            "comment_before_xacro_element_removed",
                            "processing_instruction_kept",
@@ -158,7 +154,14 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("cdata_kept_verbatim", "cdata_kept_verbatim", None),
                             ("included_root_namespace_lifted", "included_root_namespace_lifted", None),
                             ("macro_namespace_lifted", "macro_namespace_lifted", None),
-                            ("root_target_namespace", "root_target_namespace", None))
+                            ("root_target_namespace", "root_target_namespace", None),
+                            ("macro_called_by_name_attribute", "macro_called_by_name_attribute", None),
+                            ("element_named_by_attribute", "element_named_by_attribute", None),
+                            ("element_renamed_to_conditional", "element_renamed_to_conditional", None),
+                            ("element_renamed_to_macro_call", "element_renamed_to_macro_call", None),
+                            ("element_renamed_to_property", "element_renamed_to_property", None),
+                            ("call_unknown_macro", "call_unknown_macro", None),
+                            ("element_name_not_text", "element_name_not_text", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

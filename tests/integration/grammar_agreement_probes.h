@@ -120,6 +120,13 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"included_root_namespace_lifted", "included_root_namespace_lifted", {}, std::nullopt, {}, {}, true},
         agreement_probe{"macro_namespace_lifted", "macro_namespace_lifted", {}, std::nullopt, {}, {}, true},
         agreement_probe{"root_target_namespace", "root_target_namespace", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"macro_called_by_name_attribute", "macro_called_by_name_attribute", {}},
+        agreement_probe{"element_named_by_attribute", "element_named_by_attribute", {}},
+        agreement_probe{"element_renamed_to_conditional", "element_renamed_to_conditional", {}},
+        agreement_probe{"element_renamed_to_macro_call", "element_renamed_to_macro_call", {}},
+        agreement_probe{"element_renamed_to_property", "element_renamed_to_property", {}},
+        agreement_probe{"call_unknown_macro", "call_unknown_macro", {}, meios::diagnostic_code::xacro_structural_error},
+        agreement_probe{"element_name_not_text", "element_name_not_text", {}, meios::diagnostic_code::xacro_structural_error},
 };
 
 }

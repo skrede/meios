@@ -1,9 +1,8 @@
 #ifndef HPP_GUARD_MEIOS_XACRO_XACRO_ATTRIBUTES_H
 #define HPP_GUARD_MEIOS_XACRO_XACRO_ATTRIBUTES_H
 
+#include "dispatch_view.h"
 #include "expand_context.h"
-
-#include <pugixml.hpp>
 
 #include <span>
 #include <string_view>
@@ -26,8 +25,8 @@ std::span<const attribute_row> attribute_rows();
 
 // Refuses the first required attribute that is absent, in list order; an attribute present but
 // empty is not absent. Otherwise warns once per attribute the row does not list, in document
-// order, apart from an xmlns: declaration and the one attribute a rename already consumed.
-bool check_attributes(expand_ctx &ctx, pugi::xml_node in, std::string_view tag, std::string_view dropped = {});
+// order, apart from an xmlns: declaration. An attribute a rename consumed is neither.
+bool check_attributes(expand_ctx &ctx, const dispatch_view &view);
 
 }
 

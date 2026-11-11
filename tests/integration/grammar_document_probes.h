@@ -11,9 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 46> grammar_document_probes{
-        document_probe{false, "macro_called_by_name_attribute"},
-        document_probe{false, "element_named_by_attribute"},
+inline const std::array<document_probe, 42> grammar_document_probes{
         document_probe{false, "attribute_set_on_parent"},
         document_probe{
                 false, "include_find_answering_root_only", false, false, {}, false, {}, {"include_find_answering_root_only.d/r1", "include_find_answering_root_only.d/r2"}, false},
@@ -44,8 +42,6 @@ inline const std::array<document_probe, 46> grammar_document_probes{
         document_probe{false, "attribute_under_block_wrapper"},
         document_probe{false, "attribute_under_block_element"},
         document_probe{false, "attribute_on_document_root"},
-        document_probe{false, "element_renamed_to_conditional"},
-        document_probe{false, "element_renamed_to_macro_call"},
         document_probe{false, "comment_evaluated_under_eval_comments", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "comment_before_xacro_element_removed", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "processing_instruction_kept", false, false, {}, false, {}, {}, false, true},
