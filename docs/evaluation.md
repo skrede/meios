@@ -35,7 +35,12 @@ description needing Python behavior the grammar does not carry; it has
 - Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
   reads as both comparisons rather than as a comparison against a boolean.
 - Boolean logic: `and`, `or`, `not`, short-circuiting — an operand that cannot change the result is
-  never evaluated.
+  never evaluated. `or` yields its first true operand, or its last when none is, and `and` its first
+  false operand, or its last when none is, without converting it: `${1 or 2}` is `1`, `${0 or 2}` is
+  `2`, `${2 and 3}` is `3`, `${0 and 3}` is `0` and `${'' or 'x'}` is `x`, so the idiom
+  `${p and p + '_' or ''}` over `p` bound to `ab` reads `ab_`. `not` yields a boolean. A sequence or a
+  mapping is true when it holds anything. The logical rows of the expression record hold these
+  against xacro, beside the `native_branch_logic` cases.
 - The conditional expression, `a if condition else b`. Only the branch taken is evaluated.
 - Membership, against two kinds: `key in mapping`, where the key reads as text, and
   `'x' in text`, which tests substring containment.
@@ -76,13 +81,29 @@ parameter written in decomposed form is not read by its composed spelling. The
 `native_identifier_read`, `native_identifier_fault` and `native_expression_space` cases.
 
 **What a bound value is, before an expression ever reads it.** A property and a macro parameter each
-bind a *value*, not the text the author wrote. The text is read as an integer, then as a real, then
-as one of `true`, `True`, `false` and `False`, and it stays a string only if none of those fit — the
-order is what leaves `1` an integer rather than a true, and `yes` and `no` strings rather than
-booleans. So `<xacro:property name="hand" value="false"/>`
-followed by `${'' if hand else prefix}` takes the branch a reader expects; a non-empty string would
-take the other one. The same reading is applied to whatever an expression evaluates to, so
-`${'0' + '1'}` binds the integer `1`, exactly as `value="01"` does.
+bind a *value*, not the text the author wrote, and the text is read as a literal. A value wholly
+enclosed in single quotes, two characters or more, loses the quotes and stays text, so `'abc'` binds
+`abc`, `''` the empty text and `'a'b'` the text `a'b`. A value holding `_` stays text. Otherwise text
+Python's `int()` reads becomes an integer, text its `float()` reads as a finite real becomes a real,
+and `true`, `True`, `false` and `False` become booleans; anything else stays text. The order is what
+leaves `1` an integer rather than a true, and `yes` and `no` text rather than booleans. So ` 1`, `+1`
+and `١` bind `1`, `00012` binds `12`, `1.50` binds `1.5`, `1e3` binds `1000.0` and `1_0` the text
+`1_0`, while `0x10`, `TRUE` and ` true ` stay as written. An integer too wide for 64 bits keeps its
+digits as text, so read by name it renders as written and arithmetic on it refuses; a value that is
+one span reading it, `c="${b}"` or a macro argument `a="${b}"`, binds it as a real instead and renders
+`1e+20`, where xacro renders the digits. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+stays text as written, because a real here is always finite; [known
+limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
+runs wherever a value is bound: a property evaluated where it is written, a property stored for its
+first read, which keeps the unquoted text so `'${x}'` stores `${x}`, that property once its first read
+resolves it, a macro argument and a macro parameter's default. So
+`<xacro:property name="hand" value="false"/>` followed by `${'' if hand else prefix}` takes the branch
+a reader expects; a non-empty string would take the other one. The same reading is applied to
+whatever an expression evaluates to, so `${'0' + '1'}` binds the integer `1`, exactly as `value="01"`
+does. An argument and a boolean attribute are not read this way; both are described below. The
+`property_quoted_value`, `property_padded_number`, `property_signed_number`, `property_unicode_digit`
+and `macro_argument_literal_reading` agreement probes hold this against a fresh xacro render, beside
+the `xacro_literal_read` cases.
 
 **A property's value is evaluated at its first read, in the table that defined it.** The text written
 in `value` or `default` is stored where the property is written, and the first expression that reads
@@ -94,7 +115,7 @@ reads its own name again, directly or through others, refuses as a circular vari
 `xacro_structural_error`, naming each step with the line that defined it: `the value of 'a' depends on
 itself: a (robot.xacro:2) -> b (robot.xacro:3) -> a`. A property written with `lazy_eval="false"`, or
 with `scope` set to `global` or `parent`, is evaluated where it is written, against the bindings above
-it; `lazy_eval` is read as a condition is read, so `yes` refuses. Once `expand` returns, nothing
+it; `lazy_eval` is read by the boolean rule below, so `yes` refuses. Once `expand` returns, nothing
 evaluates a stored text any more: a property whose text holds an expression and that the expansion
 never read reads absent from the scope.
 
@@ -113,6 +134,28 @@ agreement probes and the `xacro_property` cases. The identifier and normalizatio
 the name reading above use are generated from Python 3.14's `unicodedata` (Unicode 16.0.0), and
 regenerated and checked against that interpreter on every CI run, so a character added or retired
 between Unicode versions is read here by the Unicode 16.0 tables, whichever interpreter xacro runs on.
+
+**A condition and every boolean attribute are read by one rule.** The `value` of `xacro:if` and
+`xacro:unless`, an include's `optional`, and a property's `remove` and `lazy_eval` are substituted
+once, and what the substitution produced is never evaluated a second time. Its reading: `true` and
+`True` are true, `false` and `False` false; text Python's `int()` reads — surrounding whitespace, a
+sign, single underscores between digits, any Unicode decimal digit — is true when it is nonzero, and
+so is text `float()` reads as a finite real; a typed boolean, integer or real reads by its truth, a
+null is false, and a sequence or a mapping is true when it holds anything. Letter case is not folded.
+Anything else refuses under `xacro_structural_error` at the element's `file:line`, naming the authored
+value and what it evaluated to, as `xacro:if value="TRUE" evaluates to "TRUE", which is not a boolean`
+does; so `TRUE`, `yes`, `nan`, `inf` and `${'a'}` refuse, and `xacro:if value="${'' or 'x'}"` refuses
+because the `or` yields the text `x`. `1_0` and `١` take the branch, and so does `1.0`, where xacro
+refuses it, a difference [known limitations](known-limitations.md#expression-evaluation) lists. An
+empty `value` on `xacro:if` or `xacro:unless` refuses, as an empty `optional` does, and a missing
+`value` refuses as a missing required attribute, below; an empty `remove` or `lazy_eval` reads as that
+attribute's default. A value that pads one span with spaces, `value=" ${True} "`, is read by what the
+span yields, so it takes the branch, where xacro reads the padded value as text and refuses it; no
+probe holds that shape yet. The `conditional_upper_true`, `conditional_empty`,
+`conditional_quoted_text`, `conditional_without_value`, `unless_without_value`,
+`conditional_underscore_digits`, `conditional_unicode_digit`, `conditional_not_a_number` and
+`conditional_padded_one` agreement probes hold the rule against a fresh xacro render, beside the
+`xacro_condition` and `native_boolean_value` cases.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An argument —
 a declared default, or an override a caller hands the load — binds the characters that were written;
@@ -356,12 +399,6 @@ thing a dot can mean here is a key of a mapping this evaluator loaded; it reache
 anything. Nothing in the grammar can name the filesystem, the network or the process: the one route to
 a file is the resource helper, where C++ resolves the spec, enforces containment and reads the bytes.
 
-**`and` and `or` yield a boolean, not the deciding operand.** `${1 or 2}` renders `True` here and `1`
-under xacro; `${2 and 3}` renders `True` here and `3`. This is measured and deliberately unchanged —
-the grammar's logical operators produce booleans, and the measured descriptions use them in conditions
-rather than for their operand. It is recorded as a reviewed divergence, which means the comparison
-fails if it stops reproducing exactly as much as it fails if a new one appears.
-
 **The mapping constructor takes keyword arguments, and xacro takes more.** xacro also builds a mapping
 from a sequence of pairs and from a mixture of a positional argument and keyword ones;
 `${dict([('a', 1)])}` refuses here and renders under xacro. Only the keyword spelling was measured and
@@ -464,8 +501,15 @@ attribute holding only whitespace refuses under `xacro_structural_error` at the 
 expansion reaches it, called or not, while one in a definition the expansion never reaches is never
 read; an empty `params` and a list ending in whitespace read as before. The
 `macro_params_only_whitespace` and `macro_params_only_whitespace_never_reached` agreement probes hold
-both against a fresh xacro render, beside the `xacro_macro_defaults` cases. One separator still
-differs: a space outside ASCII, which [known limitations](known-limitations.md) records.
+both against a fresh xacro render, beside the `xacro_macro_defaults` cases. Every character Python's
+`str.isspace()` holds separates two parameters, not ASCII whitespace alone: the twenty-nine code
+points the name reading above strips, the no-break space U+00A0, the ideographic space U+3000 and the
+form feed among them, so `a:=1` and `b:=2` written with a no-break space between them bind `a` to `1`
+and `b` to `2`, and a `params` attribute holding only such characters refuses at the definition as
+one holding only ASCII whitespace does. Such a character inside a quoted default stays part of the
+default. The `macro_params_unicode_space_between` agreement probe holds the no-break space against a
+fresh xacro render, beside the `xacro_macro_params` cases. XML 1.0 admits no form feed, so xacro
+cannot load a document holding one and a unit case alone pins that separator.
 
 **A run of dollars escapes or refuses.** A run of two or more `$` before `{` or `(` writes one `$`
 fewer and the opener, and lexing goes on after it: `$${x}` renders `${x}`, `$$(arg y)` renders
@@ -493,19 +537,133 @@ escapes`, which keeps an escaped `$(arg …)` out of the argument listing. `${'$
 here and refuses under xacro, which is the closing brace inside a string literal, recorded below; it
 adds no difference of its own.
 
-**An argument's default is read at the first declaration the expansion reaches.** A later declaration
-of the same name binds nothing, so a second default neither replaces the first nor rescues one that
-refuses, and a declaration the expansion never reaches, in a branch not taken or a macro never called,
-binds nothing where a reached declaration follows it. A declaration in an included file the expansion
-reaches first binds before the including document's own, and one in a macro body binds on the first
-call. The declaration the expansion reaches reads its default with no lent value bound, so a `$(arg a)`
-in it refuses as unset. The `argument_redeclared_after_refusing_default`,
+**An argument binds where the expansion first reaches its declaration.** Nothing is bound ahead of the
+walk: a `$(arg n)` the expansion reaches before any declaration of `n` refuses under `unresolved_arg`
+unless a caller supplied `n`, with `$(arg n) has no value here: no caller supplied it, and no
+declaration the expansion has reached gives it a default`. The first declaration the expansion reaches
+binds its default, unless a caller supplied the name. A later declaration of the same name binds
+nothing, so a second default neither replaces the first nor rescues one that refuses, and a declaration
+the expansion never reaches, in a branch not taken or a macro never called, binds nothing at all. A
+declaration in an included file the expansion reaches first binds before the including document's own,
+and one in a macro body binds on the first call. A declaration reads its default before it binds, so a
+`$(arg a)` in the default of `a` refuses as unset. A declaration without a `default` is a required
+argument: it binds nothing, and a caller supplies it or its first use refuses under `unresolved_arg`
+at that use's `file:line` with the message above. xacro refuses a declaration without a default
+wherever it stands, a difference [known limitations](known-limitations.md#expression-evaluation)
+lists. A description whose root reads an argument above its declaration therefore needs that argument
+from its caller: the Universal Robots `ur.urdf.xacro` names its robot `$(arg name)` before declaring
+`name`, so it loads with `name:=` given beside `ur_type:=`; xacro needs the same. The
+`argument_above_declaration`, `argument_lent_from_false_conditional`,
+`argument_lent_from_uncalled_macro`, `argument_redeclared_after_refusing_default`,
 `argument_redeclared_after_expression_default`, `argument_declared_in_skipped_branch`,
 `argument_declared_in_uncalled_macro`, `argument_declared_in_include_first` and
 `argument_default_reads_itself_before_redeclaration` agreement probes hold this against a fresh xacro
-render, beside the `xacro_arg_declaration` cases. What a use above every reached declaration reads, and
-what a declaration the expansion never reaches still lends where none is reached, [known
-limitations](known-limitations.md) records.
+render, beside the `xacro_arg` and `xacro_arg_declaration` cases.
+
+**Each xacro element names the attributes it requires and the ones it reads.** `xacro:include`
+requires `filename` and reads `ns` and `optional`; `xacro:macro` requires `name` and reads `params`;
+`xacro:property` requires `name` and reads `value`, `default`, `remove`, `scope` and `lazy_eval`;
+`xacro:arg` requires `name` and reads `default` without requiring it, since a declaration without one
+is a required argument; `xacro:insert_block` requires `name`; `xacro:if` and `xacro:unless` require
+`value`; `xacro:call` requires `macro`; `xacro:element` requires `xacro:name`; and `xacro:attribute`
+requires `name` and `value`. An element missing a required attribute refuses under
+`xacro_structural_error` at its `file:line` before anything else about it is read, naming the element
+and the attribute, as `<xacro:macro> needs a name attribute` does; an attribute written empty is
+present, not missing. An attribute one of the first seven elements does not read warns at that element
+under `unknown_attribute`, once per attribute in document order, as `<xacro:if> carries an attribute
+'doc' it does not read` does; a namespace declaration, `xmlns:` and a prefix, never warns. That code
+withdraws the load's `parsed` claim, as an attribute the URDF reader does not know does. `xacro:call`,
+`xacro:element` and `xacro:attribute` warn about nothing, since their other attributes are a macro's
+parameters, the renamed element's own attributes, or nothing they read. An `xacro:arg` whose `name` is
+empty refuses, `<xacro:arg> has an empty name`, where xacro renders the document. The
+`macro_without_name`, `include_without_filename`, `property_without_name`,
+`conditional_without_value` and `unless_without_value` agreement probes hold the refusals against a
+fresh xacro render, beside the `xacro_attribute_table` cases, one of which pairs the table with the
+attribute lists the pinned xacro's source declares, so a change to either fails the build.
+
+**A macro's name is checked where it is defined.** A macro named `call` refuses, `a macro cannot be
+named 'call', which xacro:call takes`, and so does a name holding a `.`, `macro name 'a.b' holds a
+'.', which separates a namespace from a name`, both under `xacro_structural_error`. The dot is looked
+for in the whole name, so `xacro:a.b` refuses as dotted. A name opening with `xacro:` warns, `macro
+name 'xacro:m' is defined as 'm'`, and defines the macro under the rest of the name. The
+`macro_named_call`, `macro_name_with_dot` and `macro_name_with_xacro_prefix` agreement probes hold
+these against a fresh xacro render, beside the `xacro_macro_redeclared` cases, which pin the warning.
+
+**`xacro:call` calls the macro its `macro` attribute names.** `<xacro:call macro="m" a="1"/>`
+evaluates `macro` as text and expands the macro it names exactly as `<xacro:m a="1"/>` would: its
+other attributes and its children bind as that call's, and `macro` takes no part in the binding. A
+dotted name reaches a macro an include namespace holds, as `<xacro:n.m/>` does. A name no macro
+answers refuses under `xacro_structural_error` at the call's `file:line`, as `<xacro:call> names
+'nope', which is not a macro in scope` does, and so does `macro="if"`, which names no macro rather
+than a conditional. An empty `macro` refuses as naming no macro, and `macro="call"` refuses as a call
+with no `macro` attribute. The `call_empty_macro`, `macro_called_by_name_attribute` and
+`call_unknown_macro` agreement probes hold these against a fresh xacro render, beside the
+`xacro_element_construct` cases.
+
+**`xacro:element` is processed again under the name it evaluates.** `<xacro:element
+xacro:name="${'li' + 'nk'}" name="l"/>` evaluates `xacro:name` as text and handles the same element as
+if that name had been written: a plain element, a conditional, a property, an argument, a macro
+definition, a macro call, an `xacro:call`, and an `xacro:element`, which then refuses for want of its
+own `xacro:name`. `xacro:name` takes no part in what the renamed element reads; its other attributes
+are evaluated once, where the new name's branch evaluates them, and every diagnostic it raises
+carries the element's own `file:line`. An evaluated name, here and for `xacro:attribute` below, must
+be a name by the Name production of XML 1.0 (fifth edition, section 2.3); one that is not refuses under
+`xacro_structural_error`, naming the text, as `<xacro:element> evaluates its xacro:name to 'a><x',
+which is not an XML name` does, so evaluated text cannot write markup into the output, and an empty one
+refuses too. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text into
+its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML, and a name
+with a leading space, ` a`, yields one an XML reader reads back as `a`; here each refuses. The
+`element_empty_name`, `element_named_by_attribute`, `element_renamed_to_conditional`,
+`element_renamed_to_macro_call`, `element_renamed_to_property` and `element_name_not_text` agreement
+probes hold these against a fresh xacro render, beside the `xacro_element_construct` cases, which pin
+the shapes whose xacro output cannot be read back.
+
+**`xacro:attribute` sets an attribute on the element its content lands in.** `<xacro:attribute
+name="type" value="t"/>` evaluates `name` and `value` as text and sets the attribute on the element
+holding it, overwriting a value already there, whether authored or set by an earlier
+`xacro:attribute`; a plain element, the top document's root, a `*` block's element and an element
+`xacro:element` renamed each receive it. An evaluated value that is not text is written as its text,
+so `value="${1}"` sets `1`, where xacro refuses. Where the element holding it does not reach the
+output — a conditional, a macro body, an included document's root, a `**` block's wrapper or a block
+property's body — the attribute is set on the element that parent's content lands in, the enclosing
+element of the conditional, the call, the include or the insertion, and one located `level::info`
+note says so: `attribute 'type' placed on <link>, the element its parent's content lands in`. xacro
+sets it on the node the output drops, so there the attribute is lost; [known
+limitations](known-limitations.md#expression-evaluation) lists both differences. Written directly
+among a macro call's arguments, or where the content lands in no output element, it sets nothing and
+warns, `attribute 'a' is written where no element receives it, so it is not set`, and xacro sets
+nothing there either. The `attribute_empty_name`, `attribute_set_on_parent`,
+`attribute_under_block_element` and `attribute_on_document_root` agreement probes hold the placement on
+an element the output keeps against a fresh xacro render, beside the `xacro_attribute_place` cases.
+
+**An attribute in the xacro namespace is removed unread, and character data is kept as written.** An
+output element's attributes whose names carry the `xacro:` prefix are dropped before any attribute is
+evaluated, so `<link xacro:foo="${nope}" name="l"/>` renders `<link name="l"/>` and refuses nothing,
+and a `**` block's wrapper drops them the same way. A `<![CDATA[…]]>` section is copied into the output
+as character data without substitution, so `<![CDATA[${x}]]>` keeps `${x}`, and an undefined name or
+an unset argument inside one refuses nothing. The `xacro_attribute_removed`,
+`xacro_attribute_never_evaluated` and `cdata_kept_verbatim` agreement probes hold these against a fresh
+xacro render, beside the `xacro_output_shape` cases.
+
+**The namespace declarations of an included root and of a macro definition are lifted onto the element
+their content lands in.** After an included document expands, each `xmlns:` declaration on its root
+other than `xmlns:xacro` is evaluated in the including scope and set on the element the include's
+content lands in; after a macro body expands, each `xmlns:` declaration on the definition element is
+set on the element the call's content lands in. A prefix that element already declares with the same
+value is left alone. One it declares with another value keeps its value, and one located warning names
+the prefix and both values: `namespace prefix 'foo' is already bound to "urn:f" on <robot>, so its
+declaration as "urn:g" here is not lifted`. A declaration whose content lands directly under a
+conditional or in a `**` block's content is dropped, which xacro does too, and one whose content lands in
+a `*` block's element is kept there. Only the namespace declarations of an included root or a
+macro definition are evaluated: their other attributes are not read here, and xacro evaluates them and
+refuses one that fails, such as `name="${nope}"`; an element's `xmlns:xacro` is skipped unread, where
+xacro evaluates it. `xacro:targetNamespace` on the top document's root is evaluated and sets the output
+root's default namespace, `xmlns`, over one written there, and is itself removed with the other `xacro:`
+attributes; an empty value leaves the root as written, and on an included document's root it has no
+effect. The `included_root_namespace_lifted`, `macro_namespace_lifted` and `root_target_namespace`
+agreement probes hold these against a fresh xacro render, beside the `xacro_output_shape` and
+`xacro_include_read` cases; a unit case built from measured xacro renders, and no probe, holds the
+dropped declarations.
 
 **An include filename is substituted whole and then read as a path.** Every include filename but a
 `package://` one is substituted as text, left to right with the one-token lookahead above, and each
@@ -596,6 +754,24 @@ offset into the whole filename` and, for a layer that serves bytes,
 `xacro_include_bytes.a memory layer's find of a package it does not hold refuses as an unresolved
 include`; the undefined name decided first over such a layer was measured with a library program, and
 no case pins it.
+
+**An include marked `optional` whose own file cannot be read includes nothing.** `optional` is
+evaluated and then read by the boolean rule above, so `true`, `1` and `${True}` mark the include
+optional, `false`, `0` and an absent attribute do not, and an empty or other value refuses under
+`xacro_structural_error`. An optional include whose file is not found, is a directory, or may not be
+read includes nothing and logs one located `level::info` note naming the filename and the reason, as
+`optional include "missing.xacro" was not read: it was not found; nothing was included` does; the load
+renders as if the include were absent. Every other failure refuses whether the include is optional or
+not: a file outside the directories that admit it, a filename climbing above its document's directory,
+a package no source holds and a find naming none, a file too large to read, and a file that does not
+parse. A layer that serves only bytes cannot say whether it holds a package, so a missing
+`package://` file only such a layer could serve refuses under `optional` too. The mark covers the
+include's own file and nothing it reads: an include missing inside a file an optional include read
+refuses as any include does. xacro also skips that nested failure and renders the document without
+what the included file held, and it refuses an `optional` written as an expression; [known
+limitations](known-limitations.md#expression-evaluation) lists both differences. The
+`include_optional_missing_file` and `include_optional_directory` agreement probes hold the skip against
+a fresh xacro render, beside the `xacro_include_read` cases, which pin the refusals and the note.
 
 **A glob include filename refuses here; xacro expands it.** An include filename is not globbed here, so
 the pattern is looked for as a file of that name and refuses under `unresolved_include`. xacro expands
@@ -822,7 +998,8 @@ What is compared, exactly:
 
 - **The pinned xacro tooling** — `xacro` 2.1.1 and PyYAML 6.0.3, and no other distribution.
 - **Universal Robots ROS2 Description at tag `4.3.1`** (archive digest `3532a25c9942…`), through five
-  documents, each paired by name with its own measured record:
+  documents, each paired by name with its own measured record and each handed `name:=ur` beside its
+  variant, because the document's root reads `$(arg name)` above the declaration:
   - the `ur5e` variant of the top-level document; that same document with its safety-limit elements
     switched on; and that same document again with its mesh references forced to absolute paths;
   - the `ur3e` variant, where a boolean read out of an auxiliary document types a joint and that type
@@ -858,12 +1035,13 @@ What is compared, exactly:
   string comparison, the membership test, the subscript chain, `pi`, and the four auxiliary-document
   loads. Each is driven through a document seeding exactly the names it reads, so a failing case
   names one form.
-- **One hundred and four authored expression cases beside them** — the spellings no pinned description
+- **One hundred and ten authored expression cases beside them** — the spellings no pinned description
   reaches, named here and driven through the same minimized document: an index into a sequence,
   forwards and backwards and off both ends, a key that spells a mapping operation, the keyword-argument
   mapping constructor and every argument shape it refuses, every string meaning this grammar admits or
-  refuses, every arithmetic, comparison and logical spelling including the chained comparison, the
-  dotted read of a loaded key, and the mathematics names called by bare name. What each of them
+  refuses, every arithmetic, comparison and logical spelling including the chained comparison and the
+  operand `and` and `or` yield, a loaded collection's truth in a conditional expression, the dotted
+  read of a loaded key, and the mathematics names called by bare name. What each of them
   measures is not left to a reader to infer: the grammar's accepted forms are enumerated in the test
   tree, and that enumeration is paired against these rows in both directions, so a form no row measures
   fails the build and a row no form names fails it too.
@@ -906,20 +1084,21 @@ What is compared, exactly:
   over the one package name it takes in an attribute. Four more hold a command's word separation
   against xacro's: `include_find_tab_before_package` and `include_find_tab_after_package` over a tab
   beside a find's package in an include filename, and `find_command_tab_before_package` and
-  `arg_command_tab_before_name` over a tab after a command's name in an attribute. Six more hold an
-  argument's default to the declaration the expansion reaches first: the two `argument_redeclared_`
-  documents, `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro`,
-  `argument_declared_in_include_first` and `argument_default_reads_itself_before_redeclaration`, whose
-  default reads its own name before a later declaration. The last two stand alone:
+  `arg_command_tab_before_name` over a tab after a command's name in an attribute. Seven more hold an
+  argument to the declaration the expansion reaches first: the two `argument_redeclared_` documents,
+  `argument_declared_in_skipped_branch`, `argument_declared_in_uncalled_macro`,
+  `argument_declared_in_include_first`, `argument_default_reads_itself_before_redeclaration`, whose
+  default reads its own name before a later declaration, and `argument_above_declaration`, a use the
+  expansion reaches before any declaration, refused by meios and xacro alike. The last two stand alone:
   `property_forward_reference`, a property whose value reads one written below it, and
   `include_sole_block`, a call whose one child is an include binding a property, refused by meios and
-  xacro alike as leaving its block parameter without an element. Together these are ninety-seven
-  documents and four second drives, the hundred and one agreement probes the grammar record does not
+  xacro alike as leaving its block parameter without an element. Together these are ninety-eight
+  documents and four second drives, the hundred and two agreement probes the grammar record does not
   hold. meios's output is what the load path builds, under the caller arguments a consumer would hand
   it, written back out by the serializer the command line flattens with; the expansion alone is held to
-  the same render beside it. Two refusals agree only on their cause: xacro's own wording and meios's
-  diagnostic code, both named per document, and xacro's exception mapped to the code meios gives for
-  it, so a fixture missing from both or a refusal for an unrelated reason fails the run.
+  the same render beside it. Two refusals agree only on their cause: the diagnostic code meios gives,
+  named per document, against the code `tests/refusal_causes.h` maps xacro's exception to, so a fixture
+  missing from both or a refusal for an unrelated reason fails the run.
 
 Every comparison the run owes is named in a committed inventory, and a named comparison that produces
 no verdict fails the run before any pass or fail count is reported — a gate cannot go quiet by
@@ -961,16 +1140,16 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
 - **The pinned corpus documents**: the sixteen entry points above, each compared whole against its
   record and a fresh xacro render, the `document` rows of
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
-- **The expression cases**: one hundred and twenty-seven, the twenty-three minimized and one hundred
-  and four authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: one hundred and eighty-two agreement probes, the `agreement` rows of the
-  inventory and the documents the enumeration above names, eighty-one of them the grammar record's,
-  each held to a fresh xacro render. An expansion-only agreement probe compares a construct the robot
-  model does not carry on the whole canonical expansion. Beside them are the probes whose difference
-  the reviewed manifest `differential_divergences.cases` records, ninety-three rows of it: thirteen
-  document probes and thirteen expression probes listed in `tests/tools/oracle/differential_probes.py`,
-  and the grammar record's sixty-seven document probes, a group listed in
-  `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
+- **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
+  and ten authored cases above, which are the `expression` rows of the inventory.
+- **The committed probes**: two hundred and twenty-two agreement probes, the `agreement` rows of the
+  inventory, one hundred and two of them the documents the enumeration above names and one hundred and
+  twenty the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
+  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
+  rows of it: twelve document probes and eleven expression probes listed in
+  `tests/tools/oracle/differential_probes.py`, and the grammar record's thirty-nine document probes, a
+  group listed in `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
   cause: xacro's exception class and message stem, mapped through `tests/refusal_causes.h` to the code
   meios gives for that cause, and a xacro refusal no row maps fails the run. The expression cases and
   expression probes still compare a refusal by refusal alone, because they measure the `${}` surface,
@@ -1017,11 +1196,13 @@ of the reviewed manifest, a generated case, an expression case or a unit case, a
 pairing states is checked against it; a site no document reaches is paired with that evidence instead,
 and its standing stays open. A construct said to agree points only at a measurement on which both
 implementations agree, or at a unit case; a recorded difference points at a manifest or generated row,
-and is said to refuse here exactly where that row's column for meios reads `REFUSED`. Counting each
-construct by its least settled pairing, eighty-five are measured: thirty-nine agree, four of them
-warning sites a unit case carries alone, where xacro warns and meios does not; sixteen are recorded
-differences on which meios refuses; and thirty are recorded differences on which it renders something
-else. The seven constructs of the `${}` expression surface and the command-line driver are paired with
+and is said to refuse here exactly where that row's column for meios reads `REFUSED`; a reviewed
+difference points at a row the manifest keeps, whatever its columns read. Counting each construct by
+its least settled pairing, an open difference outranking a reviewed one and either outranking
+agreement, eighty-five are measured: fifty-six agree, four of them warning sites a unit case carries
+alone, since the comparison compares no warning, two of which meios raises and two it does not;
+thirteen have an open recorded difference on which meios renders something else; nine have open
+recorded differences only where meios refuses; and seven have reviewed differences alone. The seven constructs of the `${}` expression surface and the command-line driver are paired with
 the boundary rather than measured here. Five sites, four raise sites and one warning, are reached by no
 document under the pinned install; `grammar::unreached_sites` pairs each with the reason. The raise for
 a substitution the install cannot support is not among them: the pinned install ships no package index,
