@@ -2,7 +2,6 @@
 # pinned reference, each recorded as a divergence until the two sides agree.
 
 GRAMMAR_DOCUMENT_PROBES = ("include_find_answering_root_only",
-                           "macro_params_unicode_space_between",
                            "include_missing_element_before_parent",
                            "include_missing_element_before_parent_nested",
                            "include_find_missing_element_before_parent",
@@ -162,7 +161,8 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("element_name_not_text", "element_name_not_text", None),
                             ("attribute_set_on_parent", "attribute_set_on_parent", None),
                             ("attribute_under_block_element", "attribute_under_block_element", None),
-                            ("attribute_on_document_root", "attribute_on_document_root", None))
+                            ("attribute_on_document_root", "attribute_on_document_root", None),
+                            ("macro_params_unicode_space_between", "macro_params_unicode_space_between", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

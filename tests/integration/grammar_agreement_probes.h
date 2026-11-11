@@ -130,6 +130,7 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"attribute_set_on_parent", "attribute_set_on_parent", {}, std::nullopt, {}, {}, true},
         agreement_probe{"attribute_under_block_element", "attribute_under_block_element", {}, std::nullopt, {}, {}, true},
         agreement_probe{"attribute_on_document_root", "attribute_on_document_root", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"macro_params_unicode_space_between", "macro_params_unicode_space_between", {}},
 };
 
 }

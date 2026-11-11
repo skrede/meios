@@ -40,4 +40,12 @@ std::string_view python_stripped(std::string_view text)
     return begin == std::string_view::npos ? std::string_view{} : text.substr(begin, end - begin);
 }
 
+std::size_t python_space_at(std::string_view text, std::size_t at)
+{
+    if(at >= text.size())
+        return 0;
+    const utf8_point one = decode_utf8(text, at);
+    return space(one.value) ? one.length : 0;
+}
+
 }
