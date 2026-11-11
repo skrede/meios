@@ -266,6 +266,11 @@ property_padded_number	agreement
 property_signed_number	agreement
 property_unicode_digit	agreement
 macro_argument_literal_reading	agreement
+macro_without_name	agreement
+include_without_filename	agreement
+macro_named_call	agreement
+macro_name_with_dot	agreement
+macro_name_with_xacro_prefix	agreement
 element_empty_name	agreement
 attribute_empty_name	agreement
 insert_block_undefined	agreement

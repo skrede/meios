@@ -50,15 +50,10 @@ bool valid_property_name(expand_ctx &ctx, pugi::xml_node in, const std::string &
 
 }
 
-// The name is required and evaluated before anything else about the property is read, so a single
-// expression keeps its type and a name that is not text cannot key a table.
+// The name is evaluated before anything else about the property is read, so a single expression
+// keeps its type and a name that is not text cannot key a table.
 std::optional<std::string> property_name(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
-    if(!in.attribute("name"))
-    {
-        fail(ctx, in, diagnostic_code::xacro_structural_error, "<xacro:property> requires a name attribute");
-        return std::nullopt;
-    }
     const std::string authored = strip_authored_markers(in.attribute("name").value());
     bool ok                    = true;
     const value evaluated      = substitute_arg_value(ctx, in, authored, document, ok, attr_dom_index(in, "name"));

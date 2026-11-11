@@ -3,7 +3,7 @@
 # so a stem reaching the diagnostic seam through a module header compiles.
 set(meios_module_test_stems
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
-        xacro_condition xacro_literal_read xacro_macro_defaults xacro_macro_redeclared xacro_macro_call xacro_deferred xacro_namespace xacro_block xacro_block_rewalk xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
+        xacro_condition xacro_attribute_table xacro_literal_read xacro_macro_defaults xacro_macro_redeclared xacro_macro_call xacro_deferred xacro_namespace xacro_block xacro_block_rewalk xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
         xacro_include_spelling xacro_include_bytes xacro_include_resolution
         xacro_include_precedence xacro_include_identity xacro_include_target xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding
@@ -21,7 +21,7 @@ foreach(stem IN LISTS meios_module_test_stems)
             PRIVATE meios::core meios::model meios::xacro meios::io
                 Catch2::Catch2WithMain)
         if(stem STREQUAL "xacro_corpus" OR stem STREQUAL "xacro_structural"
-                OR stem STREQUAL "xacro_include_read")
+                OR stem STREQUAL "xacro_include_read" OR stem STREQUAL "xacro_attribute_table")
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         endif()
@@ -33,16 +33,18 @@ foreach(stem IN LISTS meios_module_test_stems)
             target_compile_definitions(${stem}_test PRIVATE
                 MEIOS_XACRO_PROBE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/xacro/probes")
         endif()
-        # The forward-scan helper, the include-path helpers, the path grammar and the yaml resolver are
-        # core-private, so these stems alone reach into meios-core/src; only forward-scan's helper takes
-        # pugixml handles, so only it links pugixml directly.
+        # The forward-scan helper, the include-path helpers, the path grammar, the yaml resolver and the
+        # xacro attribute table are core-private, so these stems alone reach into meios-core/src; only
+        # forward-scan's helper and the attribute check take pugixml handles, so only they link pugixml
+        # directly.
         if(stem STREQUAL "forward_scan" OR stem STREQUAL "xacro_include_target" OR stem STREQUAL "io_package_join"
+                OR stem STREQUAL "xacro_attribute_table"
                 OR stem STREQUAL "yaml_resource" OR stem STREQUAL "yaml_resource_containment"
                 OR stem STREQUAL "yaml_resource_followed" OR stem STREQUAL "yaml_grammar" OR stem STREQUAL "yaml_verdict")
             target_include_directories(${stem}_test PRIVATE
                 ${meios_SOURCE_DIR}/lib/meios-core/src)
         endif()
-        if(stem STREQUAL "forward_scan")
+        if(stem STREQUAL "forward_scan" OR stem STREQUAL "xacro_attribute_table")
             target_link_libraries(${stem}_test PRIVATE pugixml::pugixml)
         endif()
         if(stem STREQUAL "io_package_join")

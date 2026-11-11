@@ -6,6 +6,7 @@
 #include "meios/xacro/eval_scope.h"
 #include "meios/xacro/structural.h"
 
+#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
@@ -46,12 +47,29 @@ bool substitute_defaults(expand_ctx &ctx, const macro_def &def, pugi::xml_node c
     return true;
 }
 
+// The whole name is checked before a prefix is removed, so `xacro:a.b` refuses as dotted.
+bool valid_macro_name(expand_ctx &ctx, pugi::xml_node in, const std::string &name)
+{
+    if(name == "call")
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "a macro cannot be named 'call', which xacro:call takes");
+    if(name.find('.') != std::string::npos)
+        return fail(ctx, in, diagnostic_code::xacro_structural_error, "macro name '" + name + "' holds a '.', which separates a namespace from a name");
+    return true;
+}
+
 }
 
 bool define_macro(expand_ctx &ctx, pugi::xml_node in)
 {
+    std::string name = in.attribute("name").value();
+    if(!valid_macro_name(ctx, in, name))
+        return false;
+    if(name.starts_with("xacro:"))
+    {
+        ctx.log.log(level::warn, locate(ctx, in), "macro name '" + name + "' is defined as '" + name.substr(6) + '\'');
+        name.erase(0, 6);
+    }
     macro_def def;
-    const std::string name = in.attribute("name").value();
     // Such a list refuses when the definition is read, called or not.
     if(!parse_params(in.attribute("params").value(), def))
         return fail(ctx, in, diagnostic_code::xacro_structural_error, "macro '" + name + "' has a params attribute that holds only whitespace");

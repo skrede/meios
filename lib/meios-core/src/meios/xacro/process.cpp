@@ -1,5 +1,6 @@
 #include "macro_tables.h"
 #include "boolean_value.h"
+#include "xacro_attributes.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/value.h"
@@ -45,17 +46,17 @@ bool dispatch_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
 {
     std::string_view name = in.name();
     if(name == "xacro:property")
-        return define_property(ctx, in, document);
+        return check_attributes(ctx, in, name) && define_property(ctx, in, document);
     if(name == "xacro:macro")
-        return define_macro(ctx, in);
+        return check_attributes(ctx, in, name) && define_macro(ctx, in);
     if(name == "xacro:arg")
-        return declare_arg(ctx, in, document);
+        return check_attributes(ctx, in, name) && declare_arg(ctx, in, document);
     if(name == "xacro:include")
-        return expand_include(ctx, in, out, document);
+        return check_attributes(ctx, in, name) && expand_include(ctx, in, out, document);
     if(name == "xacro:if" || name == "xacro:unless")
-        return conditional(ctx, in, out, document);
+        return check_attributes(ctx, in, name) && conditional(ctx, in, out, document);
     if(name == "xacro:insert_block")
-        return insert_block(ctx, in, out, document);
+        return check_attributes(ctx, in, name) && insert_block(ctx, in, out, document);
     if(name.rfind("xacro:", 0) != 0)
         return emit_element(ctx, in, out, document);
     const std::optional<resolved_macro> found = resolve_macro(ctx.macros, ctx.scope, name.substr(6));

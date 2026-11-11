@@ -4,10 +4,13 @@
 
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/capturing_log_sink.h>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
+#include <utility>
 
 namespace
 {
@@ -137,4 +140,49 @@ TEST_CASE("a property of an unknown scope stays in the writing call's table", "[
     const expansion_result after = expand_inner(nested_writer("foo") + R"(<link name="o${z}"/>)");
     REQUIRE_FALSE(after.has_value());
     REQUIRE(after.error().code == meios::diagnostic_code::undefined_property);
+}
+
+namespace
+{
+
+struct heard_expansion
+{
+    expansion_result out;
+    std::vector<meios::captured_diagnostic> records;
+};
+
+heard_expansion expand_heard(const std::string &inner)
+{
+    meios::log_sink quiet;
+    meios::capturing_log_sink heard(quiet);
+    meios::source_stack sources{};
+    meios::eval_scope scope;
+    const std::string source = R"(<robot name="r" xmlns:xacro="http://www.ros.org/wiki/xacro">)" + inner + "</robot>";
+    expansion_result out = meios::expand(source, scope, sources, "inline.xacro", meios::expansion_limits{}, heard);
+    return {std::move(out), heard.records()};
+}
+
+}
+
+TEST_CASE("a macro named call or holding a dot refuses, prefixed or not", "[xacro][structural][macro]")
+{
+    for(const char *name : {"call", "a.b", "xacro:a.b"})
+    {
+        DYNAMIC_SECTION(name)
+        {
+            const expansion_result out = expand_inner(std::string(R"(<xacro:macro name=")") + name + R"("><link name="m"/></xacro:macro>)");
+            REQUIRE_FALSE(out.has_value());
+            CHECK(out.error().code == meios::diagnostic_code::xacro_structural_error);
+        }
+    }
+}
+
+TEST_CASE("a macro name opening with the xacro prefix warns and defines the rest of the name", "[xacro][structural][macro]")
+{
+    const heard_expansion heard = expand_heard(R"(<xacro:macro name="xacro:m"><link name="mp"/></xacro:macro><xacro:m/>)");
+    REQUIRE(heard.out.has_value());
+    CHECK(heard.out->document == rendered(R"(<link name="mp"/>)"));
+    REQUIRE(heard.records.size() == 1);
+    CHECK(heard.records.front().message == "macro name 'xacro:m' is defined as 'm'");
+    CHECK(heard.records.front().loc.line == 1);
 }

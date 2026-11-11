@@ -133,5 +133,5 @@ TEST_CASE("a property name outside ASCII that is not an NFKC-normal python ident
 TEST_CASE("a property without a name attribute refuses before anything else about it is read", "[xacro][scope][property]")
 {
     const expansion_result out = expand_body(R"(<xacro:property value="1" remove="${nope}"/><link name="l"/>)");
-    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "<xacro:property> requires a name attribute"));
+    REQUIRE(refuses_with(out, meios::diagnostic_code::xacro_structural_error, "<xacro:property> needs a name attribute"));
 }

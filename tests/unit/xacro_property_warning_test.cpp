@@ -85,14 +85,19 @@ bool refuses(const expansion_result &out, meios::diagnostic_code code)
 
 }
 
-// meios ignores an attribute a property does not declare without a warning, where xacro warns
-// about it.
-TEST_CASE("an attribute outside a property's attribute list raises no warning here", "[xacro][property][warning]")
+// An ignored attribute is authored content that reached nothing, so its warning is coded; a
+// namespace declaration is XML's own and never warns.
+TEST_CASE("an attribute outside a property's attribute list warns at the property", "[xacro][property][warning]")
 {
     std::vector<record> heard;
-    const expansion_result out = expand_heard(R"(<xacro:property name="p" value="1" bogus="x"/><link name="l${p}"/>)", heard);
+    const expansion_result out = expand_heard(R"(<xacro:property name="p" value="1" foo="x" xmlns:a="urn:a"/><link name="l${p}"/>)", heard);
     REQUIRE(renders_link(out, "l1"));
-    REQUIRE(warnings(heard) == 0);
+    REQUIRE(warnings(heard) == 1);
+    const record &warned = *std::ranges::find(heard, meios::level::warn, &record::lvl);
+    CHECK(warned.code == meios::diagnostic_code::unknown_attribute);
+    CHECK(warned.message == "<xacro:property> carries an attribute 'foo' it does not read");
+    REQUIRE(warned.where);
+    CHECK(warned.where->line == 1);
 }
 
 TEST_CASE("a property named pi shadows the built-in and warns that it redefines a global symbol", "[xacro][property][warning]")
