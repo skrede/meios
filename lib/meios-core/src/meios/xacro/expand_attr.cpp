@@ -1,3 +1,4 @@
+#include "literal_read.h"
 #include "structural_detail.h"
 #include "substitution_detail.h"
 
@@ -101,7 +102,7 @@ value substitute_attr_value(expand_ctx &ctx, pugi::xml_node in, std::string_view
                             const std::filesystem::path &document, bool &ok,
                             std::optional<std::size_t> attr_index)
 {
-    return substituted(ctx, in, raw, document, ctx.mode, ok, attr_index, classify);
+    return read_literal(substituted(ctx, in, raw, document, ctx.mode, ok, attr_index, as_written));
 }
 
 // An argument is bound in the substitution domain, where a written literal stays the characters

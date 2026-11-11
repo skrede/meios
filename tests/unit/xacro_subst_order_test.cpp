@@ -154,7 +154,7 @@ TEST_CASE("a diagnostic raised after a nested scan reports the outer span's own 
     meios::eval_scope scope;
     const std::string source =
         "<robot name=\"r\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">\n"
-        "  <xacro:property name=\"part\" value=\"'x'\"/>\n"
+        "  <xacro:property name=\"part\" value=\"''x''\" lazy_eval=\"false\"/>\n"
         "  <link name=\"pre ${${part} + missing}\"/>\n"
         "</robot>\n";
 

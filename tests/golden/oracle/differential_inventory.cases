@@ -261,6 +261,11 @@ unless_without_value	agreement
 conditional_underscore_digits	agreement
 conditional_unicode_digit	agreement
 conditional_not_a_number	agreement
+property_quoted_value	agreement
+property_padded_number	agreement
+property_signed_number	agreement
+property_unicode_digit	agreement
+macro_argument_literal_reading	agreement
 element_empty_name	agreement
 attribute_empty_name	agreement
 insert_block_undefined	agreement

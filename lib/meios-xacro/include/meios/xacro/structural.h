@@ -69,9 +69,9 @@ std::string canonical_xml(std::string_view xml);
 namespace detail
 {
 
-// Parses a raw property or macro-parameter string into a numeric or boolean value when it
-// reads as one, otherwise keeps it as a string. An argument does not come through here: it is
-// bound in the substitution domain, and the reading site classifies it.
+// Recovers a number or a boolean from text that crossed the substitution boundary, keeping any
+// other text as a string. A property or a macro argument binds through the literal reading
+// instead, which has its own rules for quotes, underscores and padding.
 value classify(std::string_view text);
 
 // Only the evaluator may mint a container marker, so a marker present in text an author wrote is a

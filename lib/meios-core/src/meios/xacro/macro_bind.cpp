@@ -1,4 +1,5 @@
 #include "macro_bind.h"
+#include "literal_read.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/structural.h"
@@ -32,8 +33,9 @@ bool bind_literal(expand_ctx &ctx, pugi::xml_node call, std::string_view raw,
     return ok;
 }
 
-// A `^` default inherits the enclosing value; `^|fallback` inherits it or the
-// fallback text; a bare `^` with no inherited value is a loud error, never literal.
+// A `^` default inherits the enclosing value, read as a literal again as any bound value is;
+// `^|fallback` inherits it or the fallback text; a bare `^` with no inherited value is a loud
+// error, never literal.
 bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
                   const std::string &def, const std::filesystem::path &document, value &bound)
 {
@@ -44,7 +46,7 @@ bool bind_default(expand_ctx &ctx, pugi::xml_node call, const std::string &name,
         return false;
     if(inherited.bound)
     {
-        bound = *inherited.bound;
+        bound = read_literal(*inherited.bound);
         return true;
     }
     if(def.rfind("^|", 0) == 0)

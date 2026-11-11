@@ -1,5 +1,6 @@
 #include "scope_chain.h"
 #include "eval_session.h"
+#include "literal_read.h"
 #include "deferred_read.h"
 #include "expand_context.h"
 #include "deferred_message.h"
@@ -88,13 +89,13 @@ std::optional<value> substitute_level(expand_ctx &ctx, const deferred_origin &fr
         const expected<substitution, expansion_error> mixed =
             substitute_refined(text, ctx.scope, ctx.sources, from.document, ctx.mode, ctx.backend, ctx.session, log,
                                at, from.host, from.origin.text, from.attr_index);
-        return mixed ? std::optional<value>(classify(mixed->text)) : std::nullopt;
+        return mixed ? std::optional<value>(read_literal(mixed->text)) : std::nullopt;
     }
     const expected<std::optional<value>, expansion_error> exact = substitute_exact(
         *inner, ctx.scope, ctx.sources, from.document, ctx.mode, ctx.backend, ctx.session, log, at);
     if(!exact)
         return std::nullopt;
-    return *exact ? **exact : classify(text);
+    return *exact ? read_literal(**exact) : read_literal(text);
 }
 
 // A refusal is located inside the definition's own text, but the active document stays the file

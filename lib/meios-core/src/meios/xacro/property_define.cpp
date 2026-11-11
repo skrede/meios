@@ -1,4 +1,5 @@
 #include "scope_chain.h"
+#include "literal_read.h"
 #include "block_entries.h"
 #include "boolean_value.h"
 #include "deferred_read.h"
@@ -7,7 +8,6 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
 #include "meios/xacro/eval_scope.h"
-#include "meios/xacro/value_kind.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
 
@@ -93,22 +93,23 @@ bool deferrable(pugi::xml_node in)
     return scope != "global" && scope != "parent";
 }
 
-// A lazy text becomes a number or a boolean when it reads as one, and only what stays a string is
-// deferred. A string with no '$' is stored as written, which is what evaluating it would give.
+// A lazy text is read as a literal, and only what stays a string is deferred, with its enclosing
+// quotes already removed. A string with no '$' is read a second time instead of being deferred,
+// since evaluating it gives the same text and a resolved value is read as a literal too.
 void define_lazy(expand_ctx &ctx, pugi::xml_node in, const char *attribute,
                  const std::filesystem::path &document, std::string_view name)
 {
     warn_global_symbol(ctx, in, name);
     const std::size_t table = chain_access::cursor(ctx.scope);
-    std::string authored = strip_authored_markers(in.attribute(attribute).value());
-    value literal = classify(authored);
-    if(literal.kind() != value_kind::string || authored.find('$') == std::string::npos)
+    value literal = read_literal(strip_authored_markers(in.attribute(attribute).value()));
+    std::optional<std::string> text = literal.text();
+    if(text && text->find('$') != std::string::npos)
     {
-        chain_access::define(ctx.scope, table, name, std::move(literal));
+        const std::size_t origin = record_origin(ctx, in, attribute, document, name);
+        chain_access::define_deferred(ctx.scope, table, name, std::move(*text), origin);
         return;
     }
-    const std::size_t origin = record_origin(ctx, in, attribute, document, name);
-    chain_access::define_deferred(ctx.scope, table, name, std::move(authored), origin);
+    chain_access::define(ctx.scope, table, name, text ? read_literal(*text) : std::move(literal));
 }
 
 bool store(expand_ctx &ctx, pugi::xml_node in, const char *attribute, const std::filesystem::path &document,
