@@ -1,8 +1,7 @@
 # The grammar record's document probes: constructs of xacro's own grammar measured against the
 # pinned reference, each recorded as a divergence until the two sides agree.
 
-GRAMMAR_DOCUMENT_PROBES = ("attribute_set_on_parent",
-                           "include_find_answering_root_only",
+GRAMMAR_DOCUMENT_PROBES = ("include_find_answering_root_only",
                            "macro_params_unicode_space_between",
                            "include_missing_element_before_parent",
                            "include_missing_element_before_parent_nested",
@@ -28,8 +27,6 @@ GRAMMAR_DOCUMENT_PROBES = ("attribute_set_on_parent",
                            "attribute_under_macro_body",
                            "attribute_under_included_root",
                            "attribute_under_block_wrapper",
-                           "attribute_under_block_element",
-                           "attribute_on_document_root",
                            "comment_evaluated_under_eval_comments",
                            "comment_before_xacro_element_removed",
                            "processing_instruction_kept",
@@ -42,7 +39,8 @@ GRAMMAR_DOCUMENT_PROBES = ("attribute_set_on_parent",
                            "sum_not_a_reference_global",
                            "include_namespace_reads_global_constant",
                            "include_optional_from_expression",
-                           "include_optional_nested_missing")
+                           "include_optional_nested_missing",
+                           "attribute_value_not_text")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -161,7 +159,10 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("element_renamed_to_macro_call", "element_renamed_to_macro_call", None),
                             ("element_renamed_to_property", "element_renamed_to_property", None),
                             ("call_unknown_macro", "call_unknown_macro", None),
-                            ("element_name_not_text", "element_name_not_text", None))
+                            ("element_name_not_text", "element_name_not_text", None),
+                            ("attribute_set_on_parent", "attribute_set_on_parent", None),
+                            ("attribute_under_block_element", "attribute_under_block_element", None),
+                            ("attribute_on_document_root", "attribute_on_document_root", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

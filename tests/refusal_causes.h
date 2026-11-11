@@ -83,6 +83,7 @@ inline constexpr refusal_cause refusal_causes[]{
         {"IndexError", "-", "list index out of range", meios::diagnostic_code::xacro_structural_error},
         {"AttributeError", "-", "'dict' object has no attribute '_setitem'", meios::diagnostic_code::xacro_structural_error},
         {"AttributeError", "-", "'int' object has no attribute 'startswith'", meios::diagnostic_code::xacro_structural_error},
+        {"TypeError", "-", "argument of type 'int' is not a container or iterable", meios::diagnostic_code::xacro_structural_error},
 };
 
 // Upstream's substitution wrapper leads its message with the wrapped class's representation, which the inner

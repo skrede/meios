@@ -127,6 +127,9 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"element_renamed_to_property", "element_renamed_to_property", {}},
         agreement_probe{"call_unknown_macro", "call_unknown_macro", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"element_name_not_text", "element_name_not_text", {}, meios::diagnostic_code::xacro_structural_error},
+        agreement_probe{"attribute_set_on_parent", "attribute_set_on_parent", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"attribute_under_block_element", "attribute_under_block_element", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"attribute_on_document_root", "attribute_on_document_root", {}, std::nullopt, {}, {}, true},
 };
 
 }

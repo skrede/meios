@@ -11,8 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 42> grammar_document_probes{
-        document_probe{false, "attribute_set_on_parent"},
+inline const std::array<document_probe, 40> grammar_document_probes{
         document_probe{
                 false, "include_find_answering_root_only", false, false, {}, false, {}, {"include_find_answering_root_only.d/r1", "include_find_answering_root_only.d/r2"}, false},
         document_probe{false, "macro_params_unicode_space_between"},
@@ -40,8 +39,6 @@ inline const std::array<document_probe, 42> grammar_document_probes{
         document_probe{false, "attribute_under_macro_body"},
         document_probe{false, "attribute_under_included_root"},
         document_probe{false, "attribute_under_block_wrapper"},
-        document_probe{false, "attribute_under_block_element"},
-        document_probe{false, "attribute_on_document_root"},
         document_probe{false, "comment_evaluated_under_eval_comments", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "comment_before_xacro_element_removed", false, false, {}, false, {}, {}, false, true},
         document_probe{false, "processing_instruction_kept", false, false, {}, false, {}, {}, false, true},
@@ -55,6 +52,7 @@ inline const std::array<document_probe, 42> grammar_document_probes{
         document_probe{false, "include_namespace_reads_global_constant"},
         document_probe{false, "include_optional_from_expression"},
         document_probe{false, "include_optional_nested_missing"},
+        document_probe{false, "attribute_value_not_text"},
 };
 
 #endif

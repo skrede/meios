@@ -369,3 +369,6 @@ element_renamed_to_macro_call	agreement
 element_renamed_to_property	agreement
 call_unknown_macro	agreement
 element_name_not_text	agreement
+attribute_set_on_parent	agreement
+attribute_under_block_element	agreement
+attribute_on_document_root	agreement

@@ -33,6 +33,7 @@ bool emit_element(expand_ctx &ctx, pugi::xml_node in, const std::string &name, p
         ++attr_index;
     }
     const lift_target children(ctx, element);
+    const emitting_scope current(ctx, emission{in, element, false});
     return process_children(ctx, in, element, document);
 }
 

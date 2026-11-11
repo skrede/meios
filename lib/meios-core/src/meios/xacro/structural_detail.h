@@ -96,6 +96,27 @@ bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, const dispa
 // macro in an attribute instead.
 bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
 bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
+// The text an attribute of the dispatched node evaluates to; empty for an attribute a rename consumed.
+std::string evaluated_text(expand_ctx &ctx, const dispatch_view &view, std::string_view attr, const std::filesystem::path &document, bool &ok);
+
+// Makes an element the one whose output the walk fills for as long as it lives.
+class emitting_scope
+{
+public:
+    emitting_scope(expand_ctx &ctx, emission current);
+    emitting_scope(const emitting_scope &)            = delete;
+    emitting_scope &operator=(const emitting_scope &) = delete;
+    ~emitting_scope();
+
+private:
+    expand_ctx &m_ctx;
+};
+
+bool set_attribute(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
+// An insertion of a parked block's content alone sets the attributes placed on the block on out.
+void carry_placed(expand_ctx &ctx, pugi::xml_node parked, pugi::xml_node out);
+// An insertion of a parked block whole notes the attributes placed on it away from their parent.
+void note_placed(expand_ctx &ctx, pugi::xml_node parked);
 
 }
 

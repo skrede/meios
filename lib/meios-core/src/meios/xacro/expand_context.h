@@ -67,6 +67,25 @@ private:
                const std::string &message, std::optional<operation_failure> cause);
 };
 
+// The element whose output the walk is filling: an emitted element, or a call's arguments being
+// bound into a parked root, which never reaches the output itself.
+struct emission
+{
+    pugi::xml_node in;
+    pugi::xml_node out;
+    bool binding;
+};
+
+// An attribute set on an element parked as a call's argument. Where it lands is decided when the
+// argument is inserted, since an insertion of only the element's content discards the element.
+struct placed_attribute
+{
+    pugi::xml_node element;
+    std::string name;
+    source_location where;
+    bool moved;
+};
+
 // Threads the whole expansion: name scope, package sources, both budget counters,
 // the macro tables, the include cycle stack and the blocks the calls bound. Parsed include
 // documents are parked in owned so macro bodies stay live across files.
@@ -105,6 +124,8 @@ struct expand_ctx
     bool optional_include;
     // The element a namespace declaration lifted out of an included root or a macro definition lands on.
     pugi::xml_node lift_onto;
+    std::vector<emission> emitting;
+    std::vector<placed_attribute> placed;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;

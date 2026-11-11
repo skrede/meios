@@ -21,13 +21,6 @@ namespace meios::detail
 namespace
 {
 
-std::string evaluated_name(expand_ctx &ctx, const dispatch_view &view, std::string_view attr,
-                           const std::filesystem::path &document, bool &ok)
-{
-    const std::string raw = strip_authored_markers(view_attribute(view, attr).value());
-    return strip_container_marker(substitute_attr(ctx, view.node, raw, document, ok, attr_dom_index(view.node, attr)));
-}
-
 std::string authored_tag(const dispatch_view &view)
 {
     return '<' + std::string(view.node.name()) + '>';
@@ -40,10 +33,16 @@ bool call_by_name(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out
     if(*view_attribute(view, "macro").value() == '\0')
         return fail(ctx, view.node, diagnostic_code::xacro_structural_error, authored_tag(view) + " names no macro in its macro attribute");
     bool ok = true;
-    const std::string name = evaluated_name(ctx, view, "macro", document, ok);
+    const std::string name = evaluated_text(ctx, view, "macro", document, ok);
     return ok && call_macro(ctx, renamed(view, "xacro:" + name, "macro"), out, document);
 }
 
+}
+
+std::string evaluated_text(expand_ctx &ctx, const dispatch_view &view, std::string_view attr, const std::filesystem::path &document, bool &ok)
+{
+    const std::string raw = strip_authored_markers(view_attribute(view, attr).value());
+    return strip_container_marker(substitute_attr(ctx, view.node, raw, document, ok, attr_dom_index(view.node, attr)));
 }
 
 bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
@@ -64,7 +63,7 @@ bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, 
 bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
 {
     bool ok = true;
-    const std::string name = evaluated_name(ctx, view, "xacro:name", document, ok);
+    const std::string name = evaluated_text(ctx, view, "xacro:name", document, ok);
     if(!ok)
         return false;
     if(name.empty())

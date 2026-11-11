@@ -41,9 +41,17 @@ bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
                 const std::filesystem::path &document)
 {
     if(!block.content_only)
-        return emit_element(ctx, block.node, block.node.name(), out, document);
+    {
+        if(!emit_element(ctx, block.node, block.node.name(), out, document))
+            return false;
+        note_placed(ctx, block.node);
+        return true;
+    }
     const lift_target dropped(ctx, {});
-    return evaluate_wrapper(ctx, block.node, document) && process_children(ctx, block.node, out, document);
+    if(!evaluate_wrapper(ctx, block.node, document))
+        return false;
+    carry_placed(ctx, block.node, out);
+    return process_children(ctx, block.node, out, document);
 }
 
 }

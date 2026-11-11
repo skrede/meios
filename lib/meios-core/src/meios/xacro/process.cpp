@@ -80,6 +80,8 @@ bool dispatch_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node
         return check_attributes(ctx, view) && insert_block(ctx, view.node, out, document);
     if(name == "xacro:element")
         return check_attributes(ctx, view) && rename_element(ctx, view, out, document);
+    if(name == "xacro:attribute")
+        return check_attributes(ctx, view) && set_attribute(ctx, view, out, document);
     if(!name.starts_with("xacro:"))
         return emit_element(ctx, view.node, view.name, out, document);
     return call_macro(ctx, view, out, document);
