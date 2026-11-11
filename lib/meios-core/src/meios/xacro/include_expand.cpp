@@ -1,6 +1,7 @@
 #include "include_locate.h"
 #include "include_routes.h"
 #include "include_target.h"
+#include "include_optional.h"
 #include "include_spelling.h"
 #include "structural_detail.h"
 
@@ -44,12 +45,15 @@ bool reenters(const expand_ctx &ctx, const std::filesystem::path &key)
     return false;
 }
 
+// A file too large or one that would not close was opened and read, so an optional include refuses it as any include does.
 bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key,
                     const text_read_failure &failure)
 {
-    return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, failure.cause,
-                "xacro:include could not read \"" + key.string() + "\": "
-                    + read_failure_reason(failure));
+    const std::string reason  = read_failure_reason(failure);
+    const std::string message = "xacro:include could not read \"" + key.string() + "\": " + reason;
+    if(failure.kind == text_read_failure_kind::close || failure.kind == text_read_failure_kind::too_large)
+        return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, failure.cause, message);
+    return missing_include(ctx, in, message, failure.cause, reason);
 }
 
 // The active document is the path the file was named by and the key is the file it located; a document a
@@ -61,6 +65,7 @@ bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked
     ctx.origins.push_back(emit_origin{ key, parked });
     std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(found.named));
     std::optional<served_document> served = std::exchange(ctx.served, std::move(found.served));
+    const optional_include_scope nested(ctx, false);
     bool ok = process_children(ctx, doc.first_child(), out, key);
     ctx.served = std::move(served);
     ctx.scope.set_active_document(std::move(enclosing));
@@ -98,6 +103,12 @@ std::optional<include_target> package_target(expand_ctx &ctx, pugi::xml_node in,
     if(!ok)
         return std::nullopt;
     return target;
+}
+
+std::optional<include_target> target_of(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
+{
+    const std::string_view raw = in.attribute("filename").value();
+    return raw.starts_with("package://") ? package_target(ctx, in, document, raw) : spell_include(ctx, in, raw, document);
 }
 
 bool route_include(expand_ctx &ctx, pugi::xml_node in, const include_target &target, pugi::xml_node out)
@@ -142,11 +153,14 @@ bool expand_include(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     const include_scope tables = include_table(ctx, in, document, ok);
     if(!ok)
         return false;
-    const std::string_view raw = in.attribute("filename").value();
-    const std::optional<include_target> target = raw.starts_with("package://") ? package_target(ctx, in, document, raw) : spell_include(ctx, in, raw, document);
+    const std::optional<bool> optional = include_optional(ctx, in, document);
+    if(!optional)
+        return false;
+    const std::optional<include_target> target = target_of(ctx, in, document);
     if(!target)
         return false;
     const include_tables current(ctx, tables);
+    const optional_include_scope marked(ctx, *optional);
     return route_include(ctx, in, *target, out);
 }
 

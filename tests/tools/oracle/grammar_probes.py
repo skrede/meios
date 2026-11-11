@@ -1,8 +1,7 @@
 # The grammar record's document probes: constructs of xacro's own grammar measured against the
 # pinned reference, each recorded as a divergence until the two sides agree.
 
-GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
-                           "macro_called_by_name_attribute",
+GRAMMAR_DOCUMENT_PROBES = ("macro_called_by_name_attribute",
                            "element_named_by_attribute",
                            "attribute_set_on_parent",
                            "root_target_namespace",
@@ -51,7 +50,9 @@ GRAMMAR_DOCUMENT_PROBES = ("include_optional_missing_file",
                            "property_chain_deeper_than_depth_ceiling",
                            "include_namespace_read_as_value",
                            "sum_not_a_reference_global",
-                           "include_namespace_reads_global_constant")
+                           "include_namespace_reads_global_constant",
+                           "include_optional_from_expression",
+                           "include_optional_nested_missing")
 
 # The grammar record's agreement probes, shaped as AGREEMENT_PROBES and rendered with it: constructs
 # both sides already render or refuse alike, each held to a fresh render so losing the agreement fails.
@@ -73,6 +74,8 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("macro_argument_literal_reading", "macro_argument_literal_reading", None),
                             ("macro_without_name", "macro_without_name", None),
                             ("include_without_filename", "include_without_filename", None),
+                            ("include_optional_missing_file", "include_optional_missing_file", None),
+                            ("include_optional_directory", "include_optional_directory", None),
                             ("macro_named_call", "macro_named_call", None),
                             ("macro_name_with_dot", "macro_name_with_dot", None),
                             ("macro_name_with_xacro_prefix", "macro_name_with_xacro_prefix", None),

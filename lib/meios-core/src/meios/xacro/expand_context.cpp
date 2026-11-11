@@ -58,7 +58,7 @@ expand_ctx::expand_ctx(eval_scope &s, source_stack &src, const expansion_limits 
                        const std::shared_ptr<evaluator_handle> &inject, log_sink &lg)
     : scope(s), sources(src), limits(lim), includes(inc), package_roots(roots), eval_limits(), session(eval_limits), observer(lg),
       log(observer), mode(policy), backend(inject), counters(), depth(0), macros(), blocks(),
-      include_stack(), served(), owned(), owned_text(), origins(), insert_site(), deferred(),
+      include_stack(), served(), optional_include(false), owned(), owned_text(), origins(), insert_site(), deferred(),
       terminal(), ok(true)
 {
 }

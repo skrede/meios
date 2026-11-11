@@ -77,7 +77,8 @@ if(TARGET xacro_namespace_test)
         ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_namespace_walk_test.cpp)
 endif()
 if(TARGET xacro_include_read_test)
-    target_sources(xacro_include_read_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_warning_test.cpp)
+    target_sources(xacro_include_read_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_warning_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_optional_test.cpp)
 endif()
 
 # Catch discovery transports properties as name/value pairs, so a platform-specific

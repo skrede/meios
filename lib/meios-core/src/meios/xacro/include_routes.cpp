@@ -2,6 +2,7 @@
 #include "include_locate.h"
 #include "include_routes.h"
 #include "include_target.h"
+#include "include_optional.h"
 
 #include "meios/io/resolved_asset.h"
 #include "meios/io/directory_source.h"
@@ -52,9 +53,8 @@ bool spelled_without_parent(const std::string &written)
 
 bool refuse_probe(expand_ctx &ctx, pugi::xml_node in, const std::string &spelling, const std::filesystem::path &looked, const operation_failure &cause)
 {
-    return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, cause,
-                "xacro:include could not look for \"" + spelling + "\" at \"" + looked.string() + "\": "
-                    + std::string(to_string(cause.operation)) + " failed: " + cause.native.message());
+    const std::string reason = std::string(to_string(cause.operation)) + " failed: " + cause.native.message();
+    return missing_include(ctx, in, "xacro:include could not look for \"" + spelling + "\" at \"" + looked.string() + "\": " + reason, cause, reason);
 }
 
 // The layer that served the document would not serve where the link points, so it carries no served record, and a followed link's answer is final.
@@ -64,8 +64,7 @@ bool include_outside(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::
     if(probe.cause)
         return refuse_probe(ctx, in, written, linked, *probe.cause);
     if(!probe.hit)
-        return fail(ctx, in, diagnostic_code::unresolved_include,
-                    "xacro:include could not resolve \"" + written + "\": followed a link to \"" + linked.string() + "\" and found nothing there");
+        return missing_include(ctx, in, "xacro:include could not resolve \"" + written + "\": followed a link to \"" + linked.string() + "\" and found nothing there");
     return enter_include(ctx, in, located_include{ *probe.hit, linked, std::nullopt }, out);
 }
 
@@ -92,8 +91,7 @@ bool include_served_climb(expand_ctx &ctx, pugi::xml_node in, const served_docum
                     "xacro:include target \"" + written + "\" climbs out of the package \"" + document.package + "\" that served the document that writes it");
     std::optional<resolved_asset> served = probe_served(ctx.sources, *sibling);
     if(!served)
-        return fail(ctx, in, diagnostic_code::unresolved_include,
-                    "xacro:include could not resolve \"" + written + "\": looked for it in the package \"" + sibling->package + "\" that served the document that writes it");
+        return missing_include(ctx, in, "xacro:include could not resolve \"" + written + "\": looked for it in the package \"" + sibling->package + "\" that served the document that writes it");
     const std::filesystem::path named = served_name(*served);
     return enter_include(ctx, in, located_include{ std::move(*served), named, std::move(*sibling) }, out);
 }
@@ -102,6 +100,8 @@ bool include_in_sources(expand_ctx &ctx, pugi::xml_node in, const std::string &p
                         const include_lookups &asked, pugi::xml_node out)
 {
     std::optional<served_hit> found = locate_served(ctx.sources, package, normalized, ctx.log);
+    if(!found && ctx.optional_include && missing_from_sources(ctx.sources, package, normalized))
+        return missing_include(ctx, in, unresolved_message(package, normalized, written, asked));
     if(!found)
         return fail(ctx, in, diagnostic_code::unresolved_include, unresolved_message(package, normalized, written, asked));
     const std::filesystem::path named = served_name(found->asset);
@@ -165,7 +165,7 @@ bool include_climbing(expand_ctx &ctx, pugi::xml_node in, const std::filesystem:
     if(probe.cause)
         return refuse_probe(ctx, in, written, joined, *probe.cause);
     if(!probe.hit)
-        return fail(ctx, in, diagnostic_code::unresolved_include, "xacro:include could not resolve \"" + written + "\": looked for it at \"" + joined.string() + '"');
+        return missing_include(ctx, in, "xacro:include could not resolve \"" + written + "\": looked for it at \"" + joined.string() + '"');
     return enter_include(ctx, in, located_include{ *probe.hit, joined, std::nullopt }, out);
 }
 

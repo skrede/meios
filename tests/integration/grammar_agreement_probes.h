@@ -28,6 +28,8 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"macro_argument_literal_reading", "macro_argument_literal_reading", {}},
         agreement_probe{"macro_without_name", "macro_without_name", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"include_without_filename", "include_without_filename", {}, meios::diagnostic_code::xacro_structural_error},
+        agreement_probe{"include_optional_missing_file", "include_optional_missing_file", {}},
+        agreement_probe{"include_optional_directory", "include_optional_directory", {}},
         agreement_probe{"macro_named_call", "macro_named_call", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"macro_name_with_dot", "macro_name_with_dot", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"macro_name_with_xacro_prefix", "macro_name_with_xacro_prefix", {}},

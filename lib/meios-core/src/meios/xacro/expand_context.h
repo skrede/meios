@@ -101,6 +101,8 @@ struct expand_ctx
     std::vector<std::filesystem::path> include_stack;
     // The layer that served the active document, if one did, and the request it answered.
     std::optional<served_document> served;
+    // Whether the include being routed may be skipped when its own file cannot be read.
+    bool optional_include;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;
