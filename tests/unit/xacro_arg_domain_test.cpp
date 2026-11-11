@@ -70,20 +70,15 @@ TEST_CASE("an argument's numeric spelling renders its trailing zero rather than 
                        R"XML(<robot name="probe"><link name="l" r="0.10"/></robot>)XML"));
 }
 
-// A use standing above its own declaration resolves: the forward scan is an acceptance of meios's
-// own, where xacro refuses the whole document for an undefined argument. What is asserted is
-// meios's render, not an agreement.
-TEST_CASE("a use above its own declaration renders the same spelling the declaration seeds",
+TEST_CASE("a use above its own declaration refuses rather than reading the declaration's spelling",
           "[xacro][arg][domain]")
 {
-    const std::string out = rendered(R"XML(  <link name="above_$(arg flag)"/>
+    const expansion_result out = refused(R"XML(  <link name="above_$(arg flag)"/>
   <self_collide>$(arg flag)</self_collide>
   <xacro:arg name="flag" default="false"/>)XML");
 
-    REQUIRE(out == meios::canonical_xml(R"XML(<robot name="probe">
-  <link name="above_false"/>
-  <self_collide>false</self_collide>
-</robot>)XML"));
+    REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
+    CHECK(out.error().loc.line == 3);
 }
 
 // A conditional's test is read from the substituted text and answered on true/false/1/0 before

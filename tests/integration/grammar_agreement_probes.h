@@ -31,6 +31,8 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"macro_named_call", "macro_named_call", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"macro_name_with_dot", "macro_name_with_dot", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"macro_name_with_xacro_prefix", "macro_name_with_xacro_prefix", {}},
+        agreement_probe{"argument_lent_from_false_conditional", "argument_lent_from_false_conditional", {}, meios::diagnostic_code::unresolved_arg},
+        agreement_probe{"argument_lent_from_uncalled_macro", "argument_lent_from_uncalled_macro", {}, meios::diagnostic_code::unresolved_arg},
         agreement_probe{"element_empty_name", "element_empty_name", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"attribute_empty_name", "attribute_empty_name", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"insert_block_undefined", "insert_block_undefined", {}, meios::diagnostic_code::xacro_structural_error},

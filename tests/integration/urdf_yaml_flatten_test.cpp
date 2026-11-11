@@ -378,7 +378,7 @@ TEST_CASE("the real UR description flattens its yaml under the python evaluator"
         return;
     }
     const std::string command = std::string(MEIOS_CLI_BINARY) + " flatten " + ur.string()
-        + " --package-path " + root.string() + " ur_type:=ur5e --eval python";
+        + " --package-path " + root.string() + " ur_type:=ur5e name:=ur --eval python";
     const shell_result out = run_cli(command);
     REQUIRE(out.output.find("name 'xacro' is not defined") == std::string::npos);
     REQUIRE(out.output.find("ConstructorError") == std::string::npos);

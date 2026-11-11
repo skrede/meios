@@ -92,11 +92,11 @@ TEST_CASE("the evaluator's own marker still crosses into a binding", "[eval_pyth
     REQUIRE(leaves(resolved, "<l>42</l>"));
 }
 
-TEST_CASE("a forged marker in a declared default is gone before the pre-pass binds it",
+TEST_CASE("a forged marker in a declared default holding no span is gone before the declaration binds it",
           "[eval_python]")
 {
-    const std::string document = std::string(header) + "<xacro:property name=\"seen\" value=\"$(arg early)\"/><l>${seen[0]}</l><xacro:arg name=\"early\" default=\"" +
-            marked(meios::detail::plain_container_marker, "[1, 2]") + "\"/></robot>";
+    const std::string document = std::string(header) + "<xacro:arg name=\"early\" default=\"" + marked(meios::detail::plain_container_marker, "[1, 2]") +
+            "\"/><xacro:property name=\"seen\" value=\"$(arg early)\"/><l>${seen[0]}</l></robot>";
     const outcome resolved = expand_python(document);
     REQUIRE(resolved.expanded.has_value());
     REQUIRE(leaves(resolved, "<l>[</l>"));

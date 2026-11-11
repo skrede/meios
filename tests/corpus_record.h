@@ -27,6 +27,7 @@ struct document
     std::filesystem::path package_root;
     evaluator backend;
     std::string spelling;
+    std::map<std::string, std::string> load_args;
 };
 
 inline evaluator classify(std::string_view field)
@@ -64,19 +65,28 @@ inline std::map<std::string, std::string> arg_map(const std::string &spec)
     return args;
 }
 
-// Four fields per record, joined with '|': path, expansion arguments, evaluator, package root.
-// The records are named in cmake/corpus_documents.cmake; nothing here globs. A field count
-// that is not a whole number of records is not partially parsed — it yields nothing.
+// Five fields per record, joined with '|': path, expansion arguments, evaluator, package root,
+// and the arguments the load is also handed that the key leaves out. The records are named in
+// cmake/corpus_documents.cmake; nothing here globs. A field count that is not a whole number of
+// records is not partially parsed — it yields nothing.
 inline std::vector<document> documents(const std::string &records)
 {
     const std::vector<std::string> fields = split(records, '|');
     std::vector<document> docs;
-    if(fields.size() % 4 != 0)
+    if(fields.size() % 5 != 0)
         return docs;
-    for(std::size_t at = 0; at + 3 < fields.size(); at += 4)
+    for(std::size_t at = 0; at + 4 < fields.size(); at += 5)
         docs.push_back({ fields[at], arg_map(fields[at + 1]), fields[at + 3],
-                         classify(fields[at + 2]), fields[at + 2] });
+                         classify(fields[at + 2]), fields[at + 2], arg_map(fields[at + 4]) });
     return docs;
+}
+
+inline std::map<std::string, std::string> load_arguments(const document &doc)
+{
+    std::map<std::string, std::string> args = doc.load_args;
+    for(const std::pair<const std::string, std::string> &arg : doc.args)
+        args.insert_or_assign(arg.first, arg.second);
+    return args;
 }
 
 // The join record_for() keys by, exposed on its own so a caller needing the id a document keys

@@ -27,6 +27,7 @@ int load_and_compare(const std::vector<oracle::row> &rows)
     opts.on_missing = meios::missing_asset::warn;
     opts.materials = meios::material_policy::warn;
     opts.args.emplace(consumer::variant_argument, consumer::variant);
+    opts.args.emplace(consumer::name_argument, consumer::robot_name);
     opts.package_roots.push_back(consumer::pinned_package_root);
 
     const meios::expected<meios::load_result, meios::load_error> loaded =

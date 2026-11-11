@@ -66,6 +66,8 @@ std::string declared(const char *fallback)
 
 const std::string used = "<link name=\"l_$(arg a)\"/>\n";
 
+const std::string required = "<xacro:arg name=\"a\"/>\n";
+
 const std::string property_x = "<xacro:property name=\"x\" value=\"vx\"/>\n";
 
 }
@@ -102,16 +104,12 @@ TEST_CASE("a caller's argument leaves the declaration's default unread", "[xacro
     require_link(out->document, "l_foo");
 }
 
-TEST_CASE("a default that lexes to itself is still lent to a use above its declaration",
+TEST_CASE("a use above its declaration refuses whatever the default holds, and a use below reads it",
           "[xacro][arg][declaration]")
 {
-    require_link(flattened(document(declared("$x") + used)), "l_$x");
-    require_link(flattened(document(used + declared("$x"))), "l_$x");
-}
-
-TEST_CASE("a use above a default holding a stray double dollar refuses as unset", "[xacro][arg][declaration]")
-{
+    require_refused(refused(used + declared("$x")), diagnostic_code::unresolved_arg);
     require_refused(refused(used + declared("a$$x")), diagnostic_code::unresolved_arg);
+    require_link(flattened(document(declared("$x") + used)), "l_$x");
 }
 
 TEST_CASE("a later declaration does not stand in for the first one the expansion reaches",
@@ -131,6 +129,11 @@ TEST_CASE("a declaration the expansion never reaches binds nothing", "[xacro][ar
     const std::string uncalled = "<xacro:macro name=\"m\">" + declared("x") + "</xacro:macro>\n";
     require_link(flattened(document(skipped + declared("y") + used)), "l_y");
     require_link(flattened(document(uncalled + declared("y") + used)), "l_y");
+    for(const std::string &unreached : { skipped, uncalled })
+    {
+        require_refused(refused(unreached + used), diagnostic_code::unresolved_arg);
+        require_refused(refused(used + unreached), diagnostic_code::unresolved_arg);
+    }
 }
 
 TEST_CASE("a declaration in an include reached first binds before the including document's own",
@@ -152,9 +155,32 @@ TEST_CASE("a declaration in a macro body binds on the first call only", "[xacro]
     require_link(rendered, "two_x");
 }
 
-TEST_CASE("a reached declaration reads its own default with no lent value bound", "[xacro][arg][declaration]")
+TEST_CASE("a default reading its own argument refuses, since nothing has bound it yet", "[xacro][arg][declaration]")
 {
     require_refused(refused(declared("$(arg a)y") + declared("x") + used), diagnostic_code::unresolved_arg);
+}
+
+TEST_CASE("of two reached declarations the first binds", "[xacro][arg][declaration]")
+{
     require_link(flattened(document(declared("y") + declared("x") + used)), "l_y");
     require_link(flattened(document(declared("x") + used)), "l_x");
+}
+
+TEST_CASE("a declaration without a default is a required argument whose unsupplied use refuses naming it",
+          "[xacro][arg][declaration]")
+{
+    const expansion_result out = refused(required + used);
+    require_refused(out, diagnostic_code::unresolved_arg);
+    CHECK(out.error().loc.line == 3);
+    CHECK(out.error().message.find("$(arg a)") != std::string::npos);
+    CHECK(out.error().message.find("no caller supplied it") != std::string::npos);
+    CHECK(out.error().message.find("no declaration the expansion has reached gives it a default") != std::string::npos);
+}
+
+TEST_CASE("a required argument renders where a caller supplies it or nothing uses it", "[xacro][arg][declaration]")
+{
+    const expansion_result supplied = expand_with_caller(required + used, "v");
+    REQUIRE(supplied.has_value());
+    require_link(supplied->document, "l_v");
+    require_link(flattened(document(required + "<link name=\"l\"/>\n")), "l");
 }

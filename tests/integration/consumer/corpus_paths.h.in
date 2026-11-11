@@ -9,6 +9,8 @@ inline constexpr const char *pinned_package_root = "@MEIOS_CONSUMER_UR3E_PACKAGE
 inline constexpr const char *pinned_record = "@MEIOS_CONSUMER_UR3E_RECORD@";
 inline constexpr const char *variant_argument = "ur_type";
 inline constexpr const char *variant = "@MEIOS_CONSUMER_UR_VARIANT@";
+inline constexpr const char *name_argument = "name";
+inline constexpr const char *robot_name = "ur";
 
 }
 

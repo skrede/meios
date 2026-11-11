@@ -8,9 +8,9 @@ namespace grammar
 
 inline constexpr pairing site_pairings[] = {
         {"raise.undefined_substitution_argument", carrier::agreement, "argument_command_reads_no_property argument_default_reads_itself_before_redeclaration", standing::agrees},
+        {"raise.undefined_substitution_argument", carrier::agreement, "argument_above_declaration argument_lent_from_false_conditional argument_lent_from_uncalled_macro",
+         standing::agrees},
         {"raise.undefined_substitution_argument", carrier::generated, "span_001 span_005", standing::agrees},
-        {"raise.undefined_substitution_argument", carrier::manifest, "argument_above_declaration argument_lent_from_false_conditional argument_lent_from_uncalled_macro",
-         standing::open},
         {"raise.xacroexception_eval_extension", carrier::agreement, "env_variable_unset eval_reads_no_property", standing::agrees},
         {"raise.circular_variable_definition", carrier::agreement, "property_circular_definition property_self_reference", standing::agrees},
         {"raise.name", carrier::agreement, "namespace_replaced_by_second_include", standing::agrees},

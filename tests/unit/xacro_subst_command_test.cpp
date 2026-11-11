@@ -131,7 +131,7 @@ TEST_CASE("substitution command dispatch resolves find, arg, eval and dirname",
         REQUIRE_FALSE(out.has_value());
         REQUIRE(out.error().code == meios::diagnostic_code::unresolved_arg);
         REQUIRE(locates_a_file(out));
-        REQUIRE(any_contains(records, "unset and has no default"));
+        REQUIRE(any_contains(records, "$(arg height) has no value here: no caller supplied it"));
     }
 
     SECTION("a span inside an argument command is resolved first and its refusal carried outward")

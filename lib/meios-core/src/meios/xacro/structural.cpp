@@ -25,15 +25,13 @@ namespace meios
 namespace
 {
 
-void seed_document(detail::expand_ctx &ctx, std::string_view source,
-                   const std::filesystem::path &document, pugi::xml_document &doc)
+void seed_document(detail::expand_ctx &ctx, std::string_view source, const std::filesystem::path &document)
 {
     std::error_code canon_ec;
     std::filesystem::path canonical_key = std::filesystem::weakly_canonical(document, canon_ec);
     ctx.include_stack.push_back(canon_ec ? document : canonical_key);
     ctx.scope.set_active_document(document);
     ctx.origins.push_back(detail::emit_origin{ document, source });
-    detail::seed_declared_args(ctx, doc);
 }
 
 unexpected<expansion_error> refuse(const detail::expand_ctx &ctx,
@@ -71,7 +69,7 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
     pugi::xml_parse_result parsed = doc.load_buffer(source.data(), source.size());
     if(!parsed)
         return refuse_parse(ctx, source, document, parsed);
-    seed_document(ctx, source, document, doc);
+    seed_document(ctx, source, document);
     pugi::xml_document result;
     for(pugi::xml_node child : doc.children())
         if(!detail::process_node(ctx, child, result, document))

@@ -7,8 +7,9 @@ include_guard(GLOBAL)
 # A glob over ".urdf" made the tier look broader than it was, and pointing it at the
 # macro extension instead loads fragments as documents: twenty-one of them carry a
 # <robot> root with no name and no links, so every refusal would be a false one.
-# A record is four fields — absolute path, space-separated key=value expansion
-# arguments, the evaluator the document needs, and a package root or nothing — and
+# A record is five fields — absolute path, space-separated key=value expansion
+# arguments, the evaluator the document needs, a package root or nothing, and further
+# key=value arguments the load is also handed but the record's key leaves out — and
 # the records are joined with the "|" the resource paths already travel under.
 # The evaluator vocabulary is closed at three spellings, of which the corpus names two:
 # core for a document that needs no expression evaluation, and native for one the
@@ -17,7 +18,8 @@ include_guard(GLOBAL)
 # through to a default backend.
 set(MEIOS_CORPUS_DOCUMENTS "")
 macro(meios_corpus_document _path _args _eval _root)
-    list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}")
+    set(_load "${ARGN}")
+    list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}" "${_load}")
 endmacro()
 
 if(MEIOS_CORPUS_BREADTH)
@@ -42,16 +44,19 @@ meios_corpus_document("${MEIOS_CORPUS_KUKA_DIR}/kuka_kr6_support/urdf/kr6r900six
 # limit element carrying no position keys — a path ur5e cannot reach. safety_limits guards
 # one <safety_controller> element per joint and force_abs_paths changes only mesh-URI
 # spelling, so each branch keeps every row plain ur5e's record already covers.
+# The root element reads $(arg name) above the declaration that defaults it, and an argument binds
+# only where the expansion reaches its declaration, so the load is handed the name as upstream is.
+# It is that default's own value rather than a variant, so the key leaves it out.
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    "ur_type=ur5e" native "${MEIOS_CORPUS_PACKAGE_ROOT}" "name=ur")
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    "ur_type=ur3e" native "${MEIOS_CORPUS_PACKAGE_ROOT}" "name=ur")
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur7e" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    "ur_type=ur7e" native "${MEIOS_CORPUS_PACKAGE_ROOT}" "name=ur")
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e safety_limits=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    "ur_type=ur5e safety_limits=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}" "name=ur")
 meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur.urdf.xacro"
-    "ur_type=ur5e force_abs_paths=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}")
+    "ur_type=ur5e force_abs_paths=true" native "${MEIOS_CORPUS_PACKAGE_ROOT}" "name=ur")
 
 # Both of its xacro:arg declarations default, so the entry point loads with no key=value
 # override at all.
@@ -110,4 +115,4 @@ meios_corpus_document("${MEIOS_CORPUS_PACKAGE_ROOT}/ur_description/urdf/ur_mocke
 meios_corpus_document("${MEIOS_CORPUS_MERGED_DIR}/gantry.urdf.xacro" "" native "")
 
 list(LENGTH MEIOS_CORPUS_DOCUMENTS _corpus_fields)
-math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 4")
+math(EXPR MEIOS_CORPUS_DOCUMENT_COUNT "${_corpus_fields} / 5")

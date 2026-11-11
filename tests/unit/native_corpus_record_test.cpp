@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <map>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -11,17 +12,18 @@ namespace
 {
 
 const std::string records =
-    "/corpus/a.urdf||core|"
-    "|/corpus/b.xacro|ur_type=ur5e name=ur|python|/corpus/roots"
-    "|/corpus/c.xacro|prefix=arm_|native|/corpus/roots"
-    "|/corpus/d.xacro||lua|/corpus/roots";
+    "/corpus/a.urdf||core||"
+    "|/corpus/b.xacro|ur_type=ur5e name=ur|python|/corpus/roots|"
+    "|/corpus/c.xacro|prefix=arm_|native|/corpus/roots|"
+    "|/corpus/d.xacro||lua|/corpus/roots|"
+    "|/corpus/e.xacro|ur_type=ur3e|native|/corpus/roots|name=ur";
 
 }
 
 TEST_CASE("a corpus record selects the evaluator its document needs", "[corpus]")
 {
     const std::vector<corpus::document> docs = corpus::documents(records);
-    REQUIRE(docs.size() == 4);
+    REQUIRE(docs.size() == 5);
     CHECK(docs[0].backend == corpus::evaluator::core);
     CHECK(docs[1].backend == corpus::evaluator::python);
     CHECK(docs[2].backend == corpus::evaluator::native);
@@ -32,7 +34,7 @@ TEST_CASE("a corpus record selects the evaluator its document needs", "[corpus]"
 TEST_CASE("a corpus record carries its expansion arguments and package root", "[corpus]")
 {
     const std::vector<corpus::document> docs = corpus::documents(records);
-    REQUIRE(docs.size() == 4);
+    REQUIRE(docs.size() == 5);
     CHECK(docs[0].path == "/corpus/a.urdf");
     CHECK(docs[0].args.empty());
     CHECK(docs[0].package_root.empty());
@@ -43,10 +45,21 @@ TEST_CASE("a corpus record carries its expansion arguments and package root", "[
     CHECK(docs[2].args.at("prefix") == "arm_");
 }
 
+TEST_CASE("a corpus record's further arguments reach the load and stay out of the key", "[corpus]")
+{
+    const std::vector<corpus::document> docs = corpus::documents(records);
+    REQUIRE(docs.size() == 5);
+    CHECK(corpus::document_key(docs[4]) == "ur_type=ur3e");
+    const std::map<std::string, std::string> loaded = corpus::load_arguments(docs[4]);
+    CHECK(loaded.size() == 2);
+    CHECK(loaded.at("name") == "ur");
+    CHECK(loaded.at("ur_type") == "ur3e");
+}
+
 TEST_CASE("a record list that is not a whole number of records parses to nothing", "[corpus]")
 {
-    CHECK(corpus::documents("/corpus/a.urdf||core").empty());
-    CHECK(corpus::documents("/corpus/a.urdf||core||/corpus/b.xacro||native").empty());
+    CHECK(corpus::documents("/corpus/a.urdf||core|").empty());
+    CHECK(corpus::documents("/corpus/a.urdf||core|||/corpus/b.xacro||native").empty());
     CHECK(corpus::documents("").empty());
 }
 
@@ -60,11 +73,13 @@ TEST_CASE("the pinned expression-valued description is recorded for the built-in
     std::size_t pinned = 0;
     for(const std::vector<std::string> &record : found)
     {
-        REQUIRE(record.size() == 4);
+        REQUIRE((record.size() == 4 || record.size() == 5));
         if(record[0].find("ur.urdf.xacro") == std::string::npos)
             continue;
         INFO("recorded for " << record[1] << " as " << record[2]);
         CHECK(record[2] == "native");
+        REQUIRE(record.size() == 5);
+        CHECK(record[4] == "name=ur");
         ++pinned;
     }
     CHECK(pinned == 5);
@@ -75,7 +90,7 @@ TEST_CASE("no corpus record asks for the optional evaluator", "[corpus]")
     const std::string text = corpus::listfile_text("corpus_documents.cmake");
     for(const std::vector<std::string> &record : corpus::recorded_documents(text))
     {
-        REQUIRE(record.size() == 4);
+        REQUIRE((record.size() == 4 || record.size() == 5));
         INFO("record for " << record[0] << " naming " << record[2]);
         CHECK(corpus::classify(record[2]) != corpus::evaluator::unknown);
         CHECK(corpus::classify(record[2]) != corpus::evaluator::python);

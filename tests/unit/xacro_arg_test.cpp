@@ -15,17 +15,41 @@ TEST_CASE("a declaration seen before its use resolves the default", "[xacro][arg
     REQUIRE(flattened(doc) == expected);
 }
 
-TEST_CASE("a use above its own declaration still resolves the default", "[xacro][arg]")
+TEST_CASE("a use above its own declaration refuses at the use, naming the argument", "[xacro][arg]")
 {
     const std::string_view doc =
         R"XML(<?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg n)">
-  <xacro:arg name="n" default="dval"/>
-  <link name="root"/>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="r">
+  <link name="above_$(arg flag)"/>
+  <xacro:arg name="flag" default="false"/>
 </robot>)XML";
-    const std::string expected = meios::canonical_xml(
-        R"XML(<robot name="dval"><link name="root"/></robot>)XML");
-    REQUIRE(flattened(doc) == expected);
+    recorder log;
+    const expansion_result out = run(doc, log);
+    REQUIRE_FALSE(out.has_value());
+    CHECK(out.error().code == meios::diagnostic_code::unresolved_arg);
+    CHECK(out.error().loc.line == 3);
+    CHECK(out.error().message.find("flag") != std::string::npos);
+}
+
+TEST_CASE("a use above its own declaration reads a caller's argument", "[xacro][arg]")
+{
+    const std::string_view doc =
+        R"XML(<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="r">
+  <link name="above_$(arg flag)"/>
+  <xacro:arg name="flag" default="false"/>
+</robot>)XML";
+    recorder log;
+    meios::source_stack sources;
+    meios::eval_scope scope;
+    scope.arguments().set("flag", meios::value{std::string("true")});
+    meios::log_sink_f sink{ std::ref(log) };
+    const expansion_result out =
+        meios::expand(doc, scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
+    REQUIRE(out.has_value());
+    REQUIRE(log.errors == 0);
+    REQUIRE(meios::canonical_xml(out->document) ==
+            meios::canonical_xml(R"XML(<robot name="r"><link name="above_true"/></robot>)XML"));
 }
 
 TEST_CASE("a caller override beats the declared default while others keep theirs", "[xacro][arg]")

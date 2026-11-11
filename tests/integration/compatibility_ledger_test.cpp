@@ -27,7 +27,7 @@ std::vector<std::string> pinned_keys()
     for(const std::vector<std::string> &record :
         corpus::recorded_documents(corpus::listfile_text("corpus_documents.cmake")))
     {
-        REQUIRE(record.size() == 4);
+        REQUIRE((record.size() == 4 || record.size() == 5));
         const corpus::document doc{ record[0], corpus::arg_map(record[1]), record[3],
                                     corpus::classify(record[2]), record[2] };
         if(doc.backend == corpus::evaluator::native)

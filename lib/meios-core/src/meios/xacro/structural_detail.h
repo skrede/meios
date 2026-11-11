@@ -14,8 +14,6 @@
 namespace meios::detail
 {
 
-void seed_declared_args(expand_ctx &ctx, pugi::xml_node node);
-
 std::optional<std::size_t> attr_dom_index(pugi::xml_node in, std::string_view name);
 
 std::string substitute_attr(expand_ctx &ctx, pugi::xml_node in, std::string_view raw,

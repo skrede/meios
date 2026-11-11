@@ -79,7 +79,8 @@ std::optional<std::string> cmd_arg(subst_ctx &ctx, std::string_view rest)
     if(bound)
         return bound_arg(ctx, parts.first, *bound);
     return fail(ctx, diagnostic_code::unresolved_arg,
-                "$(arg " + std::string(parts.first) + ") is unset and has no default");
+                "$(arg " + std::string(parts.first) + ") has no value here: no caller supplied it, "
+                "and no declaration the expansion has reached gives it a default");
 }
 
 std::optional<std::string> cmd_env(subst_ctx &ctx, std::string_view rest)

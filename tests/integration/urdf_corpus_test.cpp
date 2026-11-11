@@ -100,7 +100,7 @@ meios::load_options options_for(const corpus::document &doc)
     meios::load_options opts;
     opts.on_missing = meios::missing_asset::warn;
     opts.materials = meios::material_policy::warn;
-    opts.args = doc.args;
+    opts.args = corpus::load_arguments(doc);
     if(!doc.package_root.empty())
         opts.package_roots.push_back(doc.package_root);
 #ifdef MEIOS_CORPUS_EVAL_PYTHON
