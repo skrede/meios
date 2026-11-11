@@ -1,4 +1,5 @@
 #include "deferred_read.h"
+#include "namespace_lift.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/structural.h"
@@ -15,6 +16,7 @@
 #include <memory>
 #include <vector>
 #include <sstream>
+#include <optional>
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -51,6 +53,21 @@ unexpected<expansion_error> refuse_parse(detail::expand_ctx &ctx, std::string_vi
     return refuse(ctx, document);
 }
 
+bool walk_document(detail::expand_ctx &ctx, const pugi::xml_document &doc, pugi::xml_document &result, const std::filesystem::path &document)
+{
+    bool ok                                 = true;
+    const pugi::xml_node root               = doc.document_element();
+    const std::optional<std::string> target = detail::target_namespace(ctx, root, root.attribute("xacro:targetNamespace"), document, ok);
+    if(!ok)
+        return false;
+    for(pugi::xml_node child : doc.children())
+        if(!detail::process_node(ctx, child, result, document))
+            return false;
+    if(target && result.document_element())
+        detail::declare_default_namespace(result.document_element(), *target);
+    return ctx.ok;
+}
+
 }
 
 // pugixml's default parse flags never load a DTD or resolve external entities, so
@@ -71,10 +88,7 @@ expected<expansion, expansion_error> expand(std::string_view source, eval_scope 
         return refuse_parse(ctx, source, document, parsed);
     seed_document(ctx, source, document);
     pugi::xml_document result;
-    for(pugi::xml_node child : doc.children())
-        if(!detail::process_node(ctx, child, result, document))
-            return refuse(ctx, document);
-    if(!ctx.ok)
+    if(!walk_document(ctx, doc, result, document))
         return refuse(ctx, document);
     std::ostringstream out;
     result.save(out, "", pugi::format_raw);

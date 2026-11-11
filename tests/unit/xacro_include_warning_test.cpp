@@ -50,9 +50,7 @@ TEST_CASE("an include's child elements are ignored with no warning here", "[xacr
     REQUIRE(warnings(heard) == 0);
 }
 
-// The outer declaration of a redeclared prefix is kept, and meios does not warn about the
-// redeclaration, where xacro does.
-TEST_CASE("an include redeclaring a namespace prefix raises no warning here", "[xacro][include][warning]")
+TEST_CASE("an include redeclaring a namespace prefix with another value keeps the outer one and warns", "[xacro][include][warning]")
 {
     std::vector<xacro_probe::captured> heard;
     const char *top            = R"(<robot name="probe" xmlns:foo="urn:a" xmlns:xacro="http://www.ros.org/wiki/xacro"><xacro:include filename="inc.xacro"/></robot>)";
@@ -60,5 +58,5 @@ TEST_CASE("an include redeclaring a namespace prefix raises no warning here", "[
     const expansion_result out = expand_beside(top, included, heard);
     REQUIRE(out.has_value());
     REQUIRE(meios::canonical_xml(out->document) == R"(<robot name="probe" xmlns:foo="urn:a"><link name="i"></link></robot>)");
-    REQUIRE(warnings(heard) == 0);
+    REQUIRE(warnings(heard) == 1);
 }

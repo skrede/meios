@@ -1,5 +1,6 @@
 #include "scope_chain.h"
 #include "block_entries.h"
+#include "namespace_lift.h"
 #include "structural_detail.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
@@ -12,7 +13,6 @@
 #include <utility>
 #include <optional>
 #include <filesystem>
-#include <string_view>
 
 namespace meios::detail
 {
@@ -28,7 +28,7 @@ bool evaluate_wrapper(expand_ctx &ctx, pugi::xml_node in, const std::filesystem:
     for(pugi::xml_attribute attr : in.attributes())
     {
         bool ok = true;
-        if(std::string_view(attr.name()) != "xmlns:xacro")
+        if(!xacro_namespace_attribute(attr.name()))
             substitute_attr(ctx, in, attr.value(), document, ok, attr_index);
         if(!ok)
             return false;
@@ -42,6 +42,7 @@ bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
 {
     if(!block.content_only)
         return emit_element(ctx, block.node, out, document);
+    const lift_target dropped(ctx, {});
     return evaluate_wrapper(ctx, block.node, document) && process_children(ctx, block.node, out, document);
 }
 

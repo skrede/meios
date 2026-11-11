@@ -103,6 +103,8 @@ struct expand_ctx
     std::optional<served_document> served;
     // Whether the include being routed may be skipped when its own file cannot be read.
     bool optional_include;
+    // The element a namespace declaration lifted out of an included root or a macro definition lands on.
+    pugi::xml_node lift_onto;
     std::vector<std::unique_ptr<pugi::xml_document>> owned;
     std::vector<std::unique_ptr<std::string>> owned_text;
     std::vector<emit_origin> origins;

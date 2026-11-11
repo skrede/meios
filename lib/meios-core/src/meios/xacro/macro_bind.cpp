@@ -1,5 +1,6 @@
 #include "macro_bind.h"
 #include "literal_read.h"
+#include "namespace_lift.h"
 #include "structural_detail.h"
 
 #include "meios/xacro/structural.h"
@@ -105,6 +106,7 @@ bool bind_blocks(expand_ctx &ctx, const macro_def &def, pugi::xml_node call,
 {
     const emit_origin origin = ctx.origins.empty() ? emit_origin{ document, {} } : ctx.origins.back();
     pugi::xml_node root = ctx.park().append_child("blocks");
+    const lift_target dropped(ctx, {});
     if(!process_children(ctx, call, root, document))
         return false;
     const std::vector<pugi::xml_node> kids = element_children(root);

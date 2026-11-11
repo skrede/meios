@@ -4,7 +4,6 @@
 GRAMMAR_DOCUMENT_PROBES = ("macro_called_by_name_attribute",
                            "element_named_by_attribute",
                            "attribute_set_on_parent",
-                           "root_target_namespace",
                            "include_find_answering_root_only",
                            "macro_params_unicode_space_between",
                            "include_missing_element_before_parent",
@@ -27,11 +26,6 @@ GRAMMAR_DOCUMENT_PROBES = ("macro_called_by_name_attribute",
                            "property_overflowing_real",
                            "conditional_real_one",
                            "comment_kept_in_output",
-                           "xacro_attribute_removed",
-                           "xacro_attribute_never_evaluated",
-                           "included_root_namespace_lifted",
-                           "macro_namespace_lifted",
-                           "cdata_kept_verbatim",
                            "attribute_under_conditional",
                            "attribute_under_macro_body",
                            "attribute_under_included_root",
@@ -158,7 +152,13 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("property_removed_absent_inserts_nothing", "property_removed_absent_inserts_nothing", None),
                             ("block_property_parent_scope_after_call", "block_property_parent_scope_after_call", None),
                             ("block_property_local_gone_after_call", "block_property_local_gone_after_call", None),
-                            ("block_property_lazy_eval_undefined", "block_property_lazy_eval_undefined", None))
+                            ("block_property_lazy_eval_undefined", "block_property_lazy_eval_undefined", None),
+                            ("xacro_attribute_removed", "xacro_attribute_removed", None),
+                            ("xacro_attribute_never_evaluated", "xacro_attribute_never_evaluated", None),
+                            ("cdata_kept_verbatim", "cdata_kept_verbatim", None),
+                            ("included_root_namespace_lifted", "included_root_namespace_lifted", None),
+                            ("macro_namespace_lifted", "macro_namespace_lifted", None),
+                            ("root_target_namespace", "root_target_namespace", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

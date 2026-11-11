@@ -1,5 +1,6 @@
 #include "macro_tables.h"
 #include "boolean_value.h"
+#include "namespace_lift.h"
 #include "xacro_attributes.h"
 #include "structural_detail.h"
 
@@ -36,8 +37,25 @@ bool conditional(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     if(!truth)
         return fail(ctx, in, diagnostic_code::xacro_structural_error,
                     std::string(tag) + " value=\"" + authored + "\" evaluates to \"" + read.text().value_or("") + "\", which is not a boolean");
-    if(*truth == (tag == "xacro:if"))
-        return process_children(ctx, in, out, document);
+    if(*truth != (tag == "xacro:if"))
+        return true;
+    const lift_target dropped(ctx, {});
+    return process_children(ctx, in, out, document);
+}
+
+bool copy_text(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out, const std::filesystem::path &document)
+{
+    std::string text;
+    if(in.type() == pugi::node_cdata)
+        text = strip_authored_markers(in.value());
+    else
+    {
+        bool ok = true;
+        text = strip_container_marker(substitute_attr(ctx, in, in.value(), document, ok));
+        if(!ok)
+            return false;
+    }
+    out.append_child(in.type()).set_value(text.c_str());
     return true;
 }
 
@@ -90,14 +108,7 @@ bool process_node(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         return false;
     pugi::xml_node_type kind = in.type();
     if(kind == pugi::node_pcdata || kind == pugi::node_cdata)
-    {
-        bool ok = true;
-        std::string text = strip_container_marker(substitute_attr(ctx, in, in.value(), document, ok));
-        if(!ok)
-            return false;
-        out.append_child(kind).set_value(text.c_str());
-        return true;
-    }
+        return copy_text(ctx, in, out, document);
     if(kind != pugi::node_element)
         return true;
     return dispatch_element(ctx, in, out, document);

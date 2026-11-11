@@ -1,6 +1,7 @@
 #include "include_locate.h"
 #include "include_routes.h"
 #include "include_target.h"
+#include "namespace_lift.h"
 #include "include_optional.h"
 #include "include_spelling.h"
 #include "structural_detail.h"
@@ -66,7 +67,8 @@ bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked
     std::filesystem::path enclosing = ctx.scope.set_active_document(std::move(found.named));
     std::optional<served_document> served = std::exchange(ctx.served, std::move(found.served));
     const optional_include_scope nested(ctx, false);
-    bool ok = process_children(ctx, doc.first_child(), out, key);
+    const pugi::xml_node root = doc.document_element();
+    bool ok = lift_namespaces(ctx, root, key) && process_children(ctx, root, out, key);
     ctx.served = std::move(served);
     ctx.scope.set_active_document(std::move(enclosing));
     ctx.origins.pop_back();

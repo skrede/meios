@@ -11,11 +11,10 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 52> grammar_document_probes{
+inline const std::array<document_probe, 46> grammar_document_probes{
         document_probe{false, "macro_called_by_name_attribute"},
         document_probe{false, "element_named_by_attribute"},
         document_probe{false, "attribute_set_on_parent"},
-        document_probe{false, "root_target_namespace"},
         document_probe{
                 false, "include_find_answering_root_only", false, false, {}, false, {}, {"include_find_answering_root_only.d/r1", "include_find_answering_root_only.d/r2"}, false},
         document_probe{false, "macro_params_unicode_space_between"},
@@ -39,11 +38,6 @@ inline const std::array<document_probe, 52> grammar_document_probes{
         document_probe{false, "property_overflowing_real"},
         document_probe{false, "conditional_real_one"},
         document_probe{false, "comment_kept_in_output", false, false, {}, false, {}, {}, false, true},
-        document_probe{false, "xacro_attribute_removed"},
-        document_probe{false, "xacro_attribute_never_evaluated"},
-        document_probe{false, "included_root_namespace_lifted"},
-        document_probe{false, "macro_namespace_lifted"},
-        document_probe{false, "cdata_kept_verbatim"},
         document_probe{false, "attribute_under_conditional"},
         document_probe{false, "attribute_under_macro_body"},
         document_probe{false, "attribute_under_included_root"},

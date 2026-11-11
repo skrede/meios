@@ -1,3 +1,4 @@
+#include "namespace_lift.h"
 #include "structural_detail.h"
 
 #include <pugixml.hpp>
@@ -5,7 +6,6 @@
 #include <string>
 #include <cstddef>
 #include <filesystem>
-#include <string_view>
 
 namespace meios::detail
 {
@@ -19,7 +19,7 @@ bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
     std::size_t attr_index = 0;
     for(pugi::xml_attribute attr : in.attributes())
     {
-        if(std::string_view(attr.name()) == "xmlns:xacro")
+        if(xacro_namespace_attribute(attr.name()))
         {
             ++attr_index;
             continue;
@@ -32,6 +32,7 @@ bool emit_element(expand_ctx &ctx, pugi::xml_node in, pugi::xml_node out,
         element.append_attribute(attr.name()).set_value(value.c_str());
         ++attr_index;
     }
+    const lift_target children(ctx, element);
     return process_children(ctx, in, element, document);
 }
 

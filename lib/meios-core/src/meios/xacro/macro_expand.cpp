@@ -1,5 +1,6 @@
 #include "macro_bind.h"
 #include "scope_chain.h"
+#include "namespace_lift.h"
 #include "invocation_frame.h"
 #include "structural_detail.h"
 
@@ -98,7 +99,7 @@ bool instantiate_macro(expand_ctx &ctx, const resolved_macro &found, pugi::xml_n
     if(!substitute_defaults(ctx, def, call, document))
         return false;
     ctx.origins.push_back(def.origin);
-    const bool ok = process_children(ctx, def.body, out, document);
+    const bool ok = lift_namespaces(ctx, def.body, document) && process_children(ctx, def.body, out, document);
     ctx.origins.pop_back();
     return ok;
 }

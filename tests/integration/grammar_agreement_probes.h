@@ -114,6 +114,12 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"block_property_parent_scope_after_call", "block_property_parent_scope_after_call", {}},
         agreement_probe{"block_property_local_gone_after_call", "block_property_local_gone_after_call", {}, meios::diagnostic_code::xacro_structural_error},
         agreement_probe{"block_property_lazy_eval_undefined", "block_property_lazy_eval_undefined", {}, meios::diagnostic_code::undefined_property},
+        agreement_probe{"xacro_attribute_removed", "xacro_attribute_removed", {}},
+        agreement_probe{"xacro_attribute_never_evaluated", "xacro_attribute_never_evaluated", {}},
+        agreement_probe{"cdata_kept_verbatim", "cdata_kept_verbatim", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"included_root_namespace_lifted", "included_root_namespace_lifted", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"macro_namespace_lifted", "macro_namespace_lifted", {}, std::nullopt, {}, {}, true},
+        agreement_probe{"root_target_namespace", "root_target_namespace", {}, std::nullopt, {}, {}, true},
 };
 
 }
