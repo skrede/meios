@@ -54,7 +54,9 @@ void require_structural_refusal(const expansion_result &out, std::int32_t line)
 
 std::size_t unknown_attribute_warnings(const heard_expansion &heard)
 {
-    return static_cast<std::size_t>(std::ranges::count(heard.records, diagnostic_code::unknown_attribute, &meios::captured_diagnostic::code));
+    return static_cast<std::size_t>(std::ranges::count_if(heard.records, [](const meios::captured_diagnostic &one) {
+        return one.code == diagnostic_code::unspecified && one.message.find("> carries an attribute '") != std::string::npos;
+    }));
 }
 
 std::string record_id(std::string_view tag)
@@ -123,8 +125,8 @@ TEST_CASE("each unknown attribute warns once, in document order, after the requi
     const heard_expansion heard = expand_heard(R"(<xacro:macro name="m" doc="d" foo="f"><link name="m"/></xacro:macro><xacro:m/>)");
     REQUIRE(heard.out.has_value());
     REQUIRE(unknown_attribute_warnings(heard) == 2);
-    CHECK(heard.records[0].message == "<xacro:macro> carries an attribute 'doc' it does not read");
-    CHECK(heard.records[1].message == "<xacro:macro> carries an attribute 'foo' it does not read");
+    CHECK(heard.records[0].message == "<xacro:macro> carries an attribute 'doc' it evaluates on each call but does not use");
+    CHECK(heard.records[1].message == "<xacro:macro> carries an attribute 'foo' it evaluates on each call but does not use");
     const heard_expansion missing = expand_heard(R"(<xacro:macro params="" doc="d"/><link name="l"/>)");
     require_structural_refusal(missing.out, 2);
     CHECK(unknown_attribute_warnings(missing) == 0);

@@ -64,6 +64,14 @@ bool known(const attribute_row &row, std::string_view name, const dispatch_view 
     return consumed(view, name) || name.starts_with("xmlns:") || listed(row.required, name) || listed(row.optional, name);
 }
 
+// A macro definition's other attributes are evaluated on every call, so a failing one refuses, but
+// their values reach nothing.
+std::string unused_attribute(const dispatch_view &view, std::string_view name)
+{
+    const char *fate = view.name == "xacro:macro" ? "' it evaluates on each call but does not use" : "' it does not read";
+    return '<' + view.name + "> carries an attribute '" + std::string(name) + fate;
+}
+
 }
 
 std::span<const attribute_row> attribute_rows()
@@ -83,8 +91,7 @@ bool check_attributes(expand_ctx &ctx, const dispatch_view &view)
         return true;
     for(pugi::xml_attribute attr : view.node.attributes())
         if(!known(*row, attr.name(), view))
-            ctx.log.log(level::warn, diagnostic_code::unknown_attribute, locate(ctx, view.node),
-                        '<' + view.name + "> carries an attribute '" + attr.name() + "' it does not read");
+            ctx.log.log(level::warn, locate(ctx, view.node), unused_attribute(view, attr.name()));
     return true;
 }
 

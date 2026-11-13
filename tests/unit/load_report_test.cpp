@@ -75,6 +75,24 @@ TEST_CASE("a document the reader could not read whole still reports a valid topo
     REQUIRE(meios::has(result->claims, meios::completeness::deployment_complete));
 }
 
+TEST_CASE("a load keeps every claim beside the warning for an attribute a xacro element does not read",
+          "[urdf][xacro][load_failure]")
+{
+    meios::load_options opts;
+    const meios::expected<meios::load_result, meios::load_error> result =
+        meios::load(fixture("attribute_not_read.xacro"), opts);
+
+    REQUIRE(result.has_value());
+    REQUIRE(result->diagnostics.size() == 1);
+    const meios::captured_diagnostic &warned = result->diagnostics.front();
+    CHECK(warned.code == meios::diagnostic_code::unspecified);
+    CHECK(warned.loc.line == 3);
+    CHECK(warned.message.find("'doc'") != std::string::npos);
+    REQUIRE(meios::has(result->claims, meios::completeness::parsed));
+    REQUIRE(meios::has(result->claims, meios::completeness::topology_valid));
+    REQUIRE(meios::has(result->claims, meios::completeness::deployment_complete));
+}
+
 TEST_CASE("a clean description returns all three completeness claims", "[urdf][load_failure]")
 {
     meios::load_options opts;

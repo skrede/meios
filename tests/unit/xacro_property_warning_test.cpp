@@ -85,7 +85,7 @@ bool refuses(const expansion_result &out, meios::diagnostic_code code)
 
 }
 
-// An ignored attribute is authored content that reached nothing, so its warning is coded; a
+// An ignored attribute warns without a code, so a load whose document renders keeps its claims; a
 // namespace declaration is XML's own and never warns.
 TEST_CASE("an attribute outside a property's attribute list warns at the property", "[xacro][property][warning]")
 {
@@ -94,7 +94,7 @@ TEST_CASE("an attribute outside a property's attribute list warns at the propert
     REQUIRE(renders_link(out, "l1"));
     REQUIRE(warnings(heard) == 1);
     const record &warned = *std::ranges::find(heard, meios::level::warn, &record::lvl);
-    CHECK(warned.code == meios::diagnostic_code::unknown_attribute);
+    CHECK_FALSE(warned.code);
     CHECK(warned.message == "<xacro:property> carries an attribute 'foo' it does not read");
     REQUIRE(warned.where);
     CHECK(warned.where->line == 1);

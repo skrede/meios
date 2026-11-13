@@ -573,10 +573,12 @@ is a required argument; `xacro:insert_block` requires `name`; `xacro:if` and `xa
 requires `name` and `value`. An element missing a required attribute refuses under
 `xacro_structural_error` at its `file:line` before anything else about it is read, naming the element
 and the attribute, as `<xacro:macro> needs a name attribute` does; an attribute written empty is
-present, not missing. An attribute one of the first seven elements does not read warns at that element
-under `unknown_attribute`, once per attribute in document order, as `<xacro:if> carries an attribute
-'doc' it does not read` does; a namespace declaration, `xmlns:` and a prefix, never warns. That code
-withdraws the load's `parsed` claim, as an attribute the URDF reader does not know does. `xacro:call`,
+present, not missing. An attribute one of the first seven elements does not use warns at that element,
+once per attribute in document order, as `<xacro:if> carries an attribute 'doc' it does not read` does;
+a macro definition evaluates such an attribute on each call, so its warning reads `<xacro:macro>
+carries an attribute 'doc' it evaluates on each call but does not use`. A namespace declaration,
+`xmlns:` and a prefix, never warns. The warning carries no code, so a load whose document renders keeps
+its `parsed` claim. `xacro:call`,
 `xacro:element` and `xacro:attribute` warn about nothing, since their other attributes are a macro's
 parameters, the renamed element's own attributes, or nothing they read. An `xacro:arg` whose `name` is
 written empty is a declaration like any other: its `default` is evaluated, so a default that fails
@@ -790,8 +792,9 @@ a package no source holds and a find naming none, a file too large to read, and 
 parse. A layer that serves only bytes cannot say whether it holds a package, so a missing
 `package://` file only such a layer could serve refuses under `optional` too. The mark covers the
 include's own file and nothing it reads: an include missing inside a file an optional include read
-refuses as any include does. xacro also skips that nested failure and renders the document without
-what the included file held, and it refuses an `optional` written as an expression; [known
+refuses as any include does, deliberately, since that miss is a mistake in a file that was read.
+xacro also skips that nested failure and renders the document without what the included file held,
+and it refuses an `optional` written as an expression; [known
 limitations](known-limitations.md#expression-evaluation) lists both differences. The
 `include_optional_missing_file` and `include_optional_directory` agreement probes hold the skip against
 a fresh xacro render, beside the `xacro_include_read` cases, which pin the refusals and the note.
