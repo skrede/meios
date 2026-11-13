@@ -98,6 +98,8 @@ bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, 
 bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document);
 // The text an attribute of the dispatched node evaluates to; empty for an attribute a rename consumed.
 std::string evaluated_text(expand_ctx &ctx, const dispatch_view &view, std::string_view attr, const std::filesystem::path &document, bool &ok);
+// White space around the evaluated name is removed with a warning; an empty or non-XML name refuses.
+std::string evaluated_name(expand_ctx &ctx, const dispatch_view &view, std::string_view attr, const std::filesystem::path &document, bool &ok);
 
 // Makes an element the one whose output the walk fills for as long as it lives.
 class emitting_scope

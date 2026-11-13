@@ -3,8 +3,6 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/structural.h"
 
-#include "meios/diagnostic/diagnostic_code.h"
-
 #include <pugixml.hpp>
 
 #include <string>
@@ -19,8 +17,6 @@ namespace meios::detail
 bool declare_arg(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &document)
 {
     std::string_view name = in.attribute("name").value();
-    if(name.empty())
-        return fail(ctx, in, diagnostic_code::xacro_structural_error, "<xacro:arg> has an empty name");
     pugi::xml_attribute fallback = in.attribute("default");
     if(!fallback)
         return true;

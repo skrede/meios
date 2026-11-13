@@ -58,4 +58,13 @@ bool is_xml_name(std::string_view text)
     return !text.empty();
 }
 
+std::string_view trim_xml_space(std::string_view text)
+{
+    constexpr std::string_view space = " \t\r\n";
+    const std::size_t first = text.find_first_not_of(space);
+    if(first == std::string_view::npos)
+        return {};
+    return text.substr(first, text.find_last_not_of(space) - first + 1);
+}
+
 }

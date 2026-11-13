@@ -4,12 +4,14 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 using attribute_place::heard;
 using attribute_place::render;
 using attribute_place::refused;
 using attribute_place::at_level;
 using attribute_place::placed_on_link;
+using attribute_place::require_one_trim_warning;
 
 TEST_CASE("xacro:attribute sets an attribute on the element that holds it", "[xacro][attribute]")
 {
@@ -47,7 +49,7 @@ TEST_CASE("xacro:attribute evaluates its name and its value as text", "[xacro][a
 TEST_CASE("xacro:attribute refuses a name that is empty or not an XML name", "[xacro][attribute]")
 {
     refused(R"(<link name="l"><xacro:attribute name="" value="1"/></link>)");
-    const std::vector<std::string> not_names{"a b", "1", " a", "a&gt;&lt;x", "${1}", "${''}"};
+    const std::vector<std::string> not_names{"a b", " a b ", "1", " ", "\xc2\xa0" "a", "a&gt;&lt;x", "${1}", "${''}"};
     for(const std::string &name : not_names)
     {
         const meios::expansion_error error = refused("<link name=\"l\">\n<xacro:attribute name=\"" + name + "\" value=\"1\"/></link>");
@@ -55,6 +57,22 @@ TEST_CASE("xacro:attribute refuses a name that is empty or not an XML name", "[x
     }
     REQUIRE(refused(R"(<link name="l"><xacro:attribute name="a b" value="1"/></link>)").message.find("'a b'") != std::string::npos);
     refused(R"(<link name="l"><xacro:attribute name="a"/></link>)");
+}
+
+TEST_CASE("xacro:attribute removes the whitespace around its evaluated name and warns", "[xacro][attribute]")
+{
+    const std::vector<std::pair<std::string, std::string>> padded{
+            {" a ", " a "}, {" a", " a"}, {"a ", "a "}, {"&#9;a", "\ta"}, {"a&#13;&#10;", "a\r\n"}, {"${' a'}", " a"}};
+    for(const auto &[written, evaluated] : padded)
+    {
+        CAPTURE(written);
+        std::vector<heard> records;
+        REQUIRE(render("<link name=\"l\">\n<xacro:attribute name=\"" + written + "\" value=\"1\"/></link>", records) == placed_on_link);
+        require_one_trim_warning(records, 3, evaluated, "a");
+    }
+    std::vector<heard> records;
+    REQUIRE(render(R"(<link name="l"><xacro:attribute name="a" value="1"/></link>)", records) == placed_on_link);
+    REQUIRE(records.empty());
 }
 
 TEST_CASE("xacro:element renamed to xacro:attribute sets the attribute", "[xacro][attribute]")

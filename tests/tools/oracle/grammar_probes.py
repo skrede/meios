@@ -165,7 +165,10 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("macro_params_unicode_space_between", "macro_params_unicode_space_between", None),
                             ("property_wide_integer_forwarded", "property_wide_integer_forwarded", None),
                             ("property_wide_integer_forwarded_eager", "property_wide_integer_forwarded_eager", None),
-                            ("macro_argument_wide_integer_forwarded", "macro_argument_wide_integer_forwarded", None))
+                            ("macro_argument_wide_integer_forwarded", "macro_argument_wide_integer_forwarded", None),
+                            ("attribute_padded_name", "attribute_padded_name", None),
+                            ("element_padded_name", "element_padded_name", None),
+                            ("argument_empty_name", "argument_empty_name", None))
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

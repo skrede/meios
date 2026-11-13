@@ -579,7 +579,9 @@ under `unknown_attribute`, once per attribute in document order, as `<xacro:if> 
 withdraws the load's `parsed` claim, as an attribute the URDF reader does not know does. `xacro:call`,
 `xacro:element` and `xacro:attribute` warn about nothing, since their other attributes are a macro's
 parameters, the renamed element's own attributes, or nothing they read. An `xacro:arg` whose `name` is
-empty refuses, `<xacro:arg> has an empty name`, where xacro renders the document. The
+written empty is a declaration like any other: its `default` is evaluated, so a default that fails
+refuses, and the value is bound under the empty name, which no `$(arg)` can read; the
+`argument_empty_name` agreement probe holds this against a fresh xacro render. The
 `macro_without_name`, `include_without_filename`, `property_without_name`,
 `conditional_without_value` and `unless_without_value` agreement probes hold the refusals against a
 fresh xacro render, beside the `xacro_attribute_table` cases, one of which pairs the table with the
@@ -610,17 +612,25 @@ if that name had been written: a plain element, a conditional, a property, an ar
 definition, a macro call, an `xacro:call`, and an `xacro:element`, which then refuses for want of its
 own `xacro:name`. `xacro:name` takes no part in what the renamed element reads; its other attributes
 are evaluated once, where the new name's branch evaluates them, and every diagnostic it raises
-carries the element's own `file:line`. An evaluated name, here and for `xacro:attribute` below, must
-be a name by the Name production of XML 1.0 (fifth edition, section 2.3); one that is not refuses under
-`xacro_structural_error`, naming the text, as `<xacro:element> evaluates its xacro:name to 'a><x',
-which is not an XML name` does, so evaluated text cannot write markup into the output, and an empty one
-refuses too. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text into
-its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML, and a name
-with a leading space, ` a`, yields one an XML reader reads back as `a`; here each refuses. The
-`element_empty_name`, `element_named_by_attribute`, `element_renamed_to_conditional`,
-`element_renamed_to_macro_call`, `element_renamed_to_property` and `element_name_not_text` agreement
-probes hold these against a fresh xacro render, beside the `xacro_element_construct` cases, which pin
-the shapes whose xacro output cannot be read back.
+carries the element's own `file:line`. An evaluated name, here and for `xacro:attribute` below, first
+loses the XML white space at either end — space, tab, carriage return and line feed, nothing else —
+and when any was removed, one located `level::warn` note with no diagnostic code names the evaluated
+text and the name used, as `<xacro:element> evaluates its xacro:name to 'link ' and uses 'link',
+without the white space around it` does, so a load that renders with it keeps its claims. A padded name
+that strips to the name of an xacro element is handled as that element, so `xacro:name="xacro:if "` is
+a conditional, where xacro refuses. What is left must be a name by the Name production of XML 1.0
+(fifth edition, section 2.3); one that is not refuses under `xacro_structural_error`, naming the text,
+as `<xacro:element> evaluates its xacro:name to 'a><x', which is not an XML name` does, so evaluated
+text cannot write markup into the output, and an empty one, a name of white space alone among them,
+refuses too. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
+into its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML; here
+each refuses, white space inside a name included. The `element_empty_name`,
+`element_named_by_attribute`, `element_renamed_to_conditional`, `element_renamed_to_macro_call`,
+`element_renamed_to_property`, `element_name_not_text` and `element_padded_name` agreement probes, and
+`attribute_padded_name` for `xacro:attribute`, hold these against a fresh xacro render, beside the
+`xacro_element_construct` and `xacro_attribute_place` cases, which pin the shapes whose xacro output
+cannot be read back, an element name led by a space and an attribute name of white space alone
+among them.
 
 **`xacro:attribute` sets an attribute on the element its content lands in.** `<xacro:attribute
 name="type" value="t"/>` evaluates `name` and `value` as text and sets the attribute on the element
@@ -637,7 +647,7 @@ limitations](known-limitations.md#expression-evaluation) lists both differences.
 among a macro call's arguments, or where the content lands in no output element, it sets nothing and
 warns, `attribute 'a' is written where no element receives it, so it is not set`, and xacro sets
 nothing there either. The `attribute_empty_name`, `attribute_set_on_parent`,
-`attribute_under_block_element` and `attribute_on_document_root` agreement probes hold the placement on
+`attribute_under_block_element`, `attribute_on_document_root` and `attribute_padded_name` agreement probes hold the placement on
 an element the output keeps against a fresh xacro render, beside the `xacro_attribute_place` cases.
 
 **An attribute in the xacro namespace is removed unread, and character data is kept as written.** An
@@ -1146,9 +1156,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and twenty-five agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and twenty-eight agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  twenty-three the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  twenty-six the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

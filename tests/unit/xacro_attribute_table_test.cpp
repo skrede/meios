@@ -147,14 +147,19 @@ TEST_CASE("an include without a filename refuses at the include before any file 
     CHECK(out.error().message == "<xacro:include> needs a filename attribute");
 }
 
-TEST_CASE("an argument declaration refuses without a name and with an empty one, and binds nothing without a default", "[xacro][attributes]")
+TEST_CASE("an argument declaration refuses without a name, binds an empty name, and binds nothing without a default", "[xacro][attributes]")
 {
     const expansion_result absent = expand_heard(R"(<xacro:arg default="1"/><link name="l"/>)").out;
     require_structural_refusal(absent, 2);
     CHECK(absent.error().message == "<xacro:arg> needs a name attribute");
-    const expansion_result empty = expand_heard(R"(<xacro:arg name="" default="1"/><link name="l"/>)").out;
-    require_structural_refusal(empty, 2);
-    CHECK(empty.error().message == "<xacro:arg> has an empty name");
+    const heard_expansion empty = expand_heard(R"(<xacro:arg name="" default="1"/><link name="l"/>)");
+    REQUIRE(empty.out.has_value());
+    CHECK(meios::canonical_xml(empty.out->document) == R"(<robot name="probe"><link name="l"></link></robot>)");
+    CHECK(empty.records.empty());
+    const expansion_result failing = expand_heard(R"(<xacro:arg name="" default="${nope}"/><link name="l"/>)").out;
+    REQUIRE_FALSE(failing.has_value());
+    CHECK(failing.error().code == diagnostic_code::undefined_property);
+    REQUIRE(expand_heard(R"(<xacro:arg name=""/><link name="l"/>)").out.has_value());
     const heard_expansion bare = expand_heard(R"(<xacro:arg name="a"/><link name="l"/>)");
     REQUIRE(bare.out.has_value());
     CHECK(bare.records.empty());

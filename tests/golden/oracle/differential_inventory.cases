@@ -376,3 +376,6 @@ macro_params_unicode_space_between	agreement
 property_wide_integer_forwarded	agreement
 property_wide_integer_forwarded_eager	agreement
 macro_argument_wide_integer_forwarded	agreement
+attribute_padded_name	agreement
+element_padded_name	agreement
+argument_empty_name	agreement

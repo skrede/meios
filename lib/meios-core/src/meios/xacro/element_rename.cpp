@@ -6,6 +6,7 @@
 
 #include "meios/xacro/structural.h"
 
+#include "meios/diagnostic/level.h"
 #include "meios/diagnostic/diagnostic_code.h"
 
 #include <pugixml.hpp>
@@ -45,6 +46,23 @@ std::string evaluated_text(expand_ctx &ctx, const dispatch_view &view, std::stri
     return strip_container_marker(substitute_attr(ctx, view.node, raw, document, ok, attr_dom_index(view.node, attr)));
 }
 
+// Only a name reaches the output, so evaluated text can never open, close or attribute an element.
+std::string evaluated_name(expand_ctx &ctx, const dispatch_view &view, std::string_view attr, const std::filesystem::path &document, bool &ok)
+{
+    const std::string text = evaluated_text(ctx, view, attr, document, ok);
+    if(!ok)
+        return {};
+    const std::string name(trim_xml_space(text));
+    const std::string head = '<' + view.name + "> evaluates its " + std::string(attr) + " to ";
+    if(name.empty())
+        ok = fail(ctx, view.node, diagnostic_code::xacro_structural_error, head + "an empty name");
+    else if(!is_xml_name(name))
+        ok = fail(ctx, view.node, diagnostic_code::xacro_structural_error, head + '\'' + name + "', which is not an XML name");
+    else if(name.size() != text.size())
+        ctx.log.log(level::warn, locate(ctx, view.node), head + '\'' + text + "' and uses '" + name + "', without the white space around it");
+    return name;
+}
+
 bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
 {
     if(view.name == "xacro:call")
@@ -59,19 +77,11 @@ bool call_macro(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, 
                 authored_tag(view) + " names '" + std::string(macro) + "', which is not a macro in scope");
 }
 
-// Only a name reaches the output, so evaluated text can never open, close or attribute an element.
 bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
 {
     bool ok = true;
-    const std::string name = evaluated_text(ctx, view, "xacro:name", document, ok);
-    if(!ok)
-        return false;
-    if(name.empty())
-        return fail(ctx, view.node, diagnostic_code::xacro_structural_error, authored_tag(view) + " evaluates its xacro:name to an empty name");
-    if(!is_xml_name(name))
-        return fail(ctx, view.node, diagnostic_code::xacro_structural_error,
-                    authored_tag(view) + " evaluates its xacro:name to '" + name + "', which is not an XML name");
-    return dispatch_element(ctx, renamed(view, name, "xacro:name"), out, document);
+    const std::string name = evaluated_name(ctx, view, "xacro:name", document, ok);
+    return ok && dispatch_element(ctx, renamed(view, name, "xacro:name"), out, document);
 }
 
 }

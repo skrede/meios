@@ -1,9 +1,7 @@
-#include "xml_name.h"
 #include "dispatch_view.h"
 #include "structural_detail.h"
 
 #include "meios/diagnostic/level.h"
-#include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
 
 #include <pugixml.hpp>
@@ -73,15 +71,10 @@ emitting_scope::~emitting_scope()
 bool set_attribute(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
 {
     bool ok = true;
-    const std::string name  = evaluated_text(ctx, view, "name", document, ok);
+    const std::string name  = evaluated_name(ctx, view, "name", document, ok);
     const std::string value = ok ? evaluated_text(ctx, view, "value", document, ok) : std::string();
     if(!ok)
         return false;
-    if(name.empty())
-        return fail(ctx, view.node, diagnostic_code::xacro_structural_error, '<' + view.name + "> evaluates its name to an empty name");
-    if(!is_xml_name(name))
-        return fail(ctx, view.node, diagnostic_code::xacro_structural_error,
-                    '<' + view.name + "> evaluates its name to '" + name + "', which is not an XML name");
     const bool moved = ctx.emitting.empty() || ctx.emitting.back().in != view.node.parent();
     place(ctx, out, name, value, locate(ctx, view.node), moved);
     return true;

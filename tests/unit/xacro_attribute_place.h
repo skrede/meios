@@ -16,6 +16,7 @@
 #include <vector>
 #include <cstdint>
 #include <utility>
+#include <optional>
 
 namespace attribute_place
 {
@@ -25,6 +26,7 @@ struct heard
     meios::level lvl;
     int32_t line;
     std::string message;
+    std::optional<meios::diagnostic_code> code;
 };
 
 struct listener
@@ -33,12 +35,17 @@ struct listener
 
     void operator()(meios::level lvl, const std::string &message)
     {
-        sink.push_back({lvl, 0, message});
+        sink.push_back({lvl, 0, message, std::nullopt});
     }
 
     void operator()(meios::level lvl, const meios::source_location &at, const std::string &message)
     {
-        sink.push_back({lvl, at.line, message});
+        sink.push_back({lvl, at.line, message, std::nullopt});
+    }
+
+    void operator()(meios::level lvl, meios::diagnostic_code code, const meios::source_location &at, const std::string &message)
+    {
+        sink.push_back({lvl, at.line, message, code});
     }
 };
 
@@ -81,6 +88,16 @@ inline std::vector<heard> at_level(const std::vector<heard> &records, meios::lev
 inline bool names(const heard &one, const std::string &text)
 {
     return one.message.find(text) != std::string::npos;
+}
+
+inline void require_one_trim_warning(const std::vector<heard> &records, int32_t line, const std::string &evaluated, const std::string &used)
+{
+    const std::vector<heard> warnings = at_level(records, meios::level::warn);
+    REQUIRE(warnings.size() == 1);
+    REQUIRE(warnings[0].line == line);
+    REQUIRE_FALSE(warnings[0].code.has_value());
+    REQUIRE(names(warnings[0], '\'' + evaluated + '\''));
+    REQUIRE(names(warnings[0], '\'' + used + '\''));
 }
 
 inline meios::expansion_error refused(const std::string &body)

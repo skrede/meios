@@ -1,11 +1,15 @@
+#include "xacro_attribute_place.h"
 #include "xacro_element_construct.h"
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 
 using element_construct::refused;
 using element_construct::render;
+using attribute_place::heard;
+using attribute_place::require_one_trim_warning;
 
 namespace
 {
@@ -103,7 +107,7 @@ TEST_CASE("xacro:element renamed into xacro:element refuses for the xacro:name i
 
 TEST_CASE("xacro:element refuses an evaluated name that is not an XML name, naming the text", "[xacro][element]")
 {
-    for(const std::string written : {"${1}", "a b", "a&gt;&lt;x", "1x", "${''}", "-a", "a\xc3"})
+    for(const std::string written : {"${1}", "a b", " a b ", "a&gt;&lt;x", "1x", "${''}", " ", "-a", "a\xc3"})
     {
         CAPTURE(written);
         const meios::expansion_error bad = refused("\n<xacro:element xacro:name=\"" + written + "\"/>");
@@ -111,6 +115,22 @@ TEST_CASE("xacro:element refuses an evaluated name that is not an XML name, nami
     }
     REQUIRE(refused(R"(<xacro:element xacro:name="a&gt;&lt;x"/>)").message.find("'a><x'") != std::string::npos);
     REQUIRE(refused(R"(<xacro:element xacro:name="${1}"/>)").message.find("'1'") != std::string::npos);
+}
+
+TEST_CASE("xacro:element removes the whitespace around its evaluated name and warns", "[xacro][element]")
+{
+    for(const std::string written : {"link ", " link", "link&#9;"})
+    {
+        CAPTURE(written);
+        std::vector<heard> records;
+        REQUIRE(attribute_place::render("\n<xacro:element xacro:name=\"" + written + "\" name=\"l\"/>", records)
+                == R"(<robot name="p"><link name="l"></link></robot>)");
+        require_one_trim_warning(records, 3, written == "link&#9;" ? "link\t" : written, "link");
+    }
+    std::vector<heard> records;
+    REQUIRE(attribute_place::render(R"(<xacro:element xacro:name="xacro:if " value="1"><link name="t"/></xacro:element>)", records)
+            == R"(<robot name="p"><link name="t"></link></robot>)");
+    require_one_trim_warning(records, 2, "xacro:if ", "xacro:if");
 }
 
 TEST_CASE("xacro:element accepts any XML name, a non-ASCII or a prefixed one among them", "[xacro][element]")
