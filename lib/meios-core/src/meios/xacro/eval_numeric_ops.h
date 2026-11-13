@@ -14,9 +14,8 @@
 namespace meios::detail
 {
 
-// Each of these routes an operand with no arithmetic meaning to parser::fail, so the
-// precedence levels above them read the same as they did over a three-alternative scalar
-// while a string, a sequence or a mapping now fails typed instead of falling through.
+// need_int and need_double route an operand with no arithmetic meaning, a string, a sequence or a
+// mapping included, to parser::fail; need_truth answers the truth every value kind has.
 std::int64_t need_int(parser &p, const value &v);
 double need_double(parser &p, const value &v);
 bool need_truth(parser &p, const value &v);

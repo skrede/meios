@@ -95,3 +95,13 @@ TEST_CASE("every permitted result type renders exactly as it did before the set 
         CHECK(leaves(resolved, row.second));
     }
 }
+
+TEST_CASE("a property bound to a wide integer result renders its digits when read back", "[eval_python]")
+{
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const std::string source =
+        std::string(header) + R"(<xacro:property name="c" value="${2**70}"/><l>c_${c}</l></robot>)";
+    const outcome resolved = run(source, meios::eval_policy::fail, handle);
+    REQUIRE(resolved.expanded.has_value());
+    CHECK(leaves(resolved, "<l>c_1180591620717411303424</l>"));
+}

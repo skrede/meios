@@ -53,6 +53,13 @@ std::string bracketed(const std::string &authored, const std::string &lazy)
     return R"(<xacro:property name="p" value=")" + authored + "\"" + lazy + R"(/><link name="[${p}]"/>)";
 }
 
+const std::string wide = "99999999999999999999";
+
+std::string wide_bound(const std::string &digits)
+{
+    return R"(<xacro:property name="b" value=")" + digits + "\"/>";
+}
+
 }
 
 TEST_CASE("a lazy property written in single quotes binds the text between them", "[xacro][literal]")
@@ -127,6 +134,36 @@ TEST_CASE("an integer beyond 64 bits keeps its digits and refuses arithmetic", "
     const std::string big = R"(<xacro:property name="b" value="99999999999999999999"/>)";
     CHECK(renders(big + R"(<link name="[${b}]"/>)", "[99999999999999999999]"));
     CHECK_FALSE(expand_body(big + R"(<link name="${b + 1}"/>)").has_value());
+}
+
+TEST_CASE("a lazy property forwarding a wide integer renders its digits", "[xacro][literal]")
+{
+    for(const std::string &digits : { wide, "-" + wide })
+    {
+        CAPTURE(digits);
+        CHECK(renders(wide_bound(digits) + R"(<xacro:property name="c" value="${b}"/><link name="c_${c}"/>)",
+                      "c_" + digits));
+    }
+}
+
+TEST_CASE("an eager property and a macro argument forwarding a wide integer render its digits",
+          "[xacro][literal]")
+{
+    const std::string bound = wide_bound(wide);
+    CHECK(renders(bound + R"(<xacro:property name="c" value="${b}" lazy_eval="false"/><link name="c_${c}"/>)",
+                  "c_" + wide));
+    CHECK(renders(bound + R"(<xacro:macro name="m" params="a"><link name="m_${a}"/></xacro:macro>)"
+                  R"(<xacro:m a="${b}"/>)",
+                  "m_" + wide));
+    CHECK(renders(bound + R"(<xacro:macro name="m" params="a:=${b}"><link name="m_${a}"/></xacro:macro><xacro:m/>)",
+                  "m_" + wide));
+}
+
+TEST_CASE("arithmetic on a forwarded wide integer refuses", "[xacro][literal]")
+{
+    const std::string forwarded = wide_bound(wide) + R"(<xacro:property name="c" value="${b}"/>)";
+    CHECK_FALSE(expand_body(forwarded + R"(<link name="${c + 1}"/>)").has_value());
+    CHECK_FALSE(expand_body(forwarded + R"(<link name="${c * 2}"/>)").has_value());
 }
 
 TEST_CASE("a real beyond the double range and an infinity spelling keep their text", "[xacro][literal]")

@@ -131,6 +131,9 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"attribute_under_block_element", "attribute_under_block_element", {}, std::nullopt, {}, {}, true},
         agreement_probe{"attribute_on_document_root", "attribute_on_document_root", {}, std::nullopt, {}, {}, true},
         agreement_probe{"macro_params_unicode_space_between", "macro_params_unicode_space_between", {}},
+        agreement_probe{"property_wide_integer_forwarded", "property_wide_integer_forwarded", {}},
+        agreement_probe{"property_wide_integer_forwarded_eager", "property_wide_integer_forwarded_eager", {}},
+        agreement_probe{"macro_argument_wide_integer_forwarded", "macro_argument_wide_integer_forwarded", {}},
 };
 
 }
