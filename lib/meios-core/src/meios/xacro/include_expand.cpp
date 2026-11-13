@@ -68,7 +68,7 @@ bool descend(expand_ctx &ctx, pugi::xml_document &doc, const std::string &parked
     std::optional<served_document> served = std::exchange(ctx.served, std::move(found.served));
     const optional_include_scope nested(ctx, false);
     const pugi::xml_node root = doc.document_element();
-    bool ok = lift_namespaces(ctx, root, key) && process_children(ctx, root, out, key);
+    bool ok = read_wrapper_attributes(ctx, root, key) && process_children(ctx, root, out, key);
     ctx.served = std::move(served);
     ctx.scope.set_active_document(std::move(enclosing));
     ctx.origins.pop_back();

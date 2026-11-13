@@ -29,7 +29,8 @@ bool emit_element(expand_ctx &ctx, pugi::xml_node in, const std::string &name, p
             strip_container_marker(substitute_attr(ctx, in, attr.value(), document, ok, attr_index));
         if(!ok)
             return false;
-        element.append_attribute(attr.name()).set_value(value.c_str());
+        if(!xacro_namespace_declaration(attr.name()))
+            element.append_attribute(attr.name()).set_value(value.c_str());
         ++attr_index;
     }
     const lift_target children(ctx, element);

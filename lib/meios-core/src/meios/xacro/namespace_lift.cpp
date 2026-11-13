@@ -35,7 +35,12 @@ void lift_one(expand_ctx &ctx, pugi::xml_node from, const char *name, const std:
 
 bool xacro_namespace_attribute(std::string_view name)
 {
-    return name.starts_with("xacro:") || name == "xmlns:xacro";
+    return name.starts_with("xacro:");
+}
+
+bool xacro_namespace_declaration(std::string_view name)
+{
+    return name == "xmlns:xacro";
 }
 
 lift_target::lift_target(expand_ctx &ctx, pugi::xml_node onto)
@@ -50,19 +55,20 @@ lift_target::~lift_target()
     m_ctx.lift_onto = m_enclosing;
 }
 
-bool lift_namespaces(expand_ctx &ctx, pugi::xml_node from, const std::filesystem::path &document)
+bool read_wrapper_attributes(expand_ctx &ctx, pugi::xml_node from, const std::filesystem::path &document, std::string_view evaluated_elsewhere)
 {
     std::size_t attr_index = 0;
     for(pugi::xml_attribute attr : from.attributes())
     {
         const std::string_view name = attr.name();
-        if(name.starts_with("xmlns:") && !xacro_namespace_attribute(name))
+        if(!xacro_namespace_attribute(name) && name != evaluated_elsewhere)
         {
             bool ok                 = true;
             const std::string value = strip_container_marker(substitute_attr(ctx, from, attr.value(), document, ok, attr_index));
             if(!ok)
                 return false;
-            lift_one(ctx, from, attr.name(), value);
+            if(name.starts_with("xmlns:") && !xacro_namespace_declaration(name))
+                lift_one(ctx, from, attr.name(), value);
         }
         ++attr_index;
     }

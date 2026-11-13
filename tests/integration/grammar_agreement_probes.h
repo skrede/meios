@@ -137,6 +137,11 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"attribute_padded_name", "attribute_padded_name", {}, std::nullopt, {}, {}, true},
         agreement_probe{"element_padded_name", "element_padded_name", {}},
         agreement_probe{"argument_empty_name", "argument_empty_name", {}},
+        agreement_probe{"included_root_attribute_evaluated", "included_root_attribute_evaluated", {}, meios::diagnostic_code::undefined_property},
+        agreement_probe{"included_root_attribute_before_content", "included_root_attribute_before_content", {}, meios::diagnostic_code::undefined_property},
+        agreement_probe{"macro_definition_attribute_evaluated", "macro_definition_attribute_evaluated", {}, meios::diagnostic_code::undefined_property},
+        agreement_probe{"macro_definition_attribute_uncalled", "macro_definition_attribute_uncalled", {}},
+        agreement_probe{"xacro_namespace_declaration_evaluated", "xacro_namespace_declaration_evaluated", {}, meios::diagnostic_code::undefined_property},
 };
 
 }

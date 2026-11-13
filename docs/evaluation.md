@@ -650,34 +650,43 @@ nothing there either. The `attribute_empty_name`, `attribute_set_on_parent`,
 `attribute_under_block_element`, `attribute_on_document_root` and `attribute_padded_name` agreement probes hold the placement on
 an element the output keeps against a fresh xacro render, beside the `xacro_attribute_place` cases.
 
-**An attribute in the xacro namespace is removed unread, and character data is kept as written.** An
-output element's attributes whose names carry the `xacro:` prefix are dropped before any attribute is
-evaluated, so `<link xacro:foo="${nope}" name="l"/>` renders `<link name="l"/>` and refuses nothing,
-and a `**` block's wrapper drops them the same way. A `<![CDATA[…]]>` section is copied into the output
+**An attribute in the xacro namespace is removed unread, the xacro namespace declaration is evaluated
+and left out, and character data is kept as written.** An output element's attributes whose names
+carry the `xacro:` prefix are dropped before any attribute is evaluated, so `<link xacro:foo="${nope}"
+name="l"/>` renders `<link name="l"/>` and refuses nothing, and a `**` block's wrapper drops them the
+same way. `xmlns:xacro` is evaluated like any other attribute of the element holding it, whether an
+output element, the top document's root, a block's element or wrapper, an included root or a macro
+definition, so `<link name="l" xmlns:xacro="${nope}"/>` refuses under `undefined_property`; its result
+is then left out of the output and never lifted. A `<![CDATA[…]]>` section is copied into the output
 as character data without substitution, so `<![CDATA[${x}]]>` keeps `${x}`, and an undefined name or
 an unset argument inside one refuses nothing. The `xacro_attribute_removed`,
-`xacro_attribute_never_evaluated` and `cdata_kept_verbatim` agreement probes hold these against a fresh
-xacro render, beside the `xacro_output_shape` cases.
+`xacro_attribute_never_evaluated`, `xacro_namespace_declaration_evaluated` and `cdata_kept_verbatim`
+agreement probes hold these against a fresh xacro render, beside the `xacro_output_shape` cases.
 
-**The namespace declarations of an included root and of a macro definition are lifted onto the element
-their content lands in.** After an included document expands, each `xmlns:` declaration on its root
-other than `xmlns:xacro` is evaluated in the including scope and set on the element the include's
-content lands in; after a macro body expands, each `xmlns:` declaration on the definition element is
-set on the element the call's content lands in. A prefix that element already declares with the same
-value is left alone. One it declares with another value keeps its value, and one located warning names
-the prefix and both values: `namespace prefix 'foo' is already bound to "urn:f" on <robot>, so its
-declaration as "urn:g" here is not lifted`. A declaration whose content lands directly under a
-conditional or in a `**` block's content is dropped, which xacro does too, and one whose content lands in
-a `*` block's element is kept there. Only the namespace declarations of an included root or a
-macro definition are evaluated: their other attributes are not read here, and xacro evaluates them and
-refuses one that fails, such as `name="${nope}"`; an element's `xmlns:xacro` is skipped unread, where
-xacro evaluates it. `xacro:targetNamespace` on the top document's root is evaluated and sets the output
-root's default namespace, `xmlns`, over one written there, and is itself removed with the other `xacro:`
-attributes; an empty value leaves the root as written, and on an included document's root it has no
-effect. The `included_root_namespace_lifted`, `macro_namespace_lifted` and `root_target_namespace`
-agreement probes hold these against a fresh xacro render, beside the `xacro_output_shape` and
-`xacro_include_read` cases; a unit case built from measured xacro renders, and no probe, holds the
-dropped declarations.
+**The attributes of an included root and of a macro definition are evaluated, and their namespace
+declarations are lifted onto the element their content lands in.** An included document's root is
+read before its content, in the scope the include reads into: every attribute other than an `xacro:`
+one is evaluated, so a root `name="${p}"` refuses where only the included content defines `p` and
+renders where the includer defined `p` first. A macro definition is read on each call, with the
+call's parameters bound and before its body: every attribute other than an `xacro:` one and `params`,
+whose defaults each call evaluates already, is evaluated, so `doc="${p}"` over a parameter `p`
+renders, and `doc="${nope}"` refuses where the macro is called and nowhere else. An attribute that
+fails to evaluate refuses the load under its failure's code, located in the document holding it. The
+results are discarded, except that each `xmlns:` declaration other than `xmlns:xacro` is set on the
+element the include's or the call's content lands in. A prefix that element already declares with the
+same value is left alone. One it declares with another value keeps its value, and one located warning
+names the prefix and both values: `namespace prefix 'foo' is already bound to "urn:f" on <robot>, so
+its declaration as "urn:g" here is not lifted`. A declaration whose content lands directly under a
+conditional or in a `**` block's content is dropped, which xacro does too, and one whose content lands
+in a `*` block's element is kept there. `xacro:targetNamespace` on the top document's root is
+evaluated and sets the output root's default namespace, `xmlns`, over one written there, and is itself
+removed with the other `xacro:` attributes; an empty value leaves the root as written, and on an
+included document's root it has no effect. The `included_root_namespace_lifted`,
+`macro_namespace_lifted`, `root_target_namespace`, `included_root_attribute_evaluated`,
+`included_root_attribute_before_content`, `macro_definition_attribute_evaluated` and
+`macro_definition_attribute_uncalled` agreement probes hold these against a fresh xacro render, beside
+the `xacro_output_shape` and `xacro_include_read` cases; a unit case built from measured xacro renders,
+and no probe, holds the dropped declarations.
 
 **An include filename is substituted whole and then read as a path.** Every include filename but a
 `package://` one is substituted as text, left to right with the one-token lookahead above, and each
@@ -1156,9 +1165,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and twenty-eight agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and thirty-three agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  twenty-six the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  thirty-one the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

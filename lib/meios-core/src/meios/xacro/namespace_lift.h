@@ -13,9 +13,12 @@
 namespace meios::detail
 {
 
-// An attribute in the xacro namespace, or the declaration of that namespace, never reaches the
-// output and is never evaluated.
+// An attribute in the xacro namespace never reaches the output and is never evaluated.
 bool xacro_namespace_attribute(std::string_view name);
+
+// The declaration of the xacro namespace is evaluated like any attribute of the element holding it,
+// so a failing one refuses, but it is never written to the output nor lifted.
+bool xacro_namespace_declaration(std::string_view name);
 
 // Makes onto the element that declarations lifted out of an included root or a macro definition
 // land on, and the enclosing one current again on whichever path the walk returns. An empty handle
@@ -33,10 +36,13 @@ private:
     pugi::xml_node m_enclosing;
 };
 
-// Evaluates every namespace declaration from carries, except the xacro one, and sets each on the
-// current lift target. A prefix the target already binds to another value keeps that value, and the
-// conflict is logged as a warning located at from. False where a declaration refused to evaluate.
-bool lift_namespaces(expand_ctx &ctx, pugi::xml_node from, const std::filesystem::path &document);
+// Reads the attributes of an included root or a macro definition, an element the output drops: each
+// one, in document order, is evaluated and its result discarded, except one in the xacro namespace
+// and the one named evaluated_elsewhere (a definition's params, whose defaults every call evaluates
+// already). Each namespace declaration other than the xacro one is then set on the current lift
+// target; a prefix the target already binds to another value keeps that value, and the conflict is
+// logged as a warning located at from. False where an attribute refused to evaluate.
+bool read_wrapper_attributes(expand_ctx &ctx, pugi::xml_node from, const std::filesystem::path &document, std::string_view evaluated_elsewhere = {});
 
 // The evaluated target namespace written on the top document's root, absent where the attribute is
 // absent or written empty. It is read before anything under the root, as the root's own attributes are.
