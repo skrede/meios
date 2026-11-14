@@ -1,13 +1,12 @@
+#include "literal_read.h"
 #include "python_space.h"
 #include "python_number.h"
 #include "argument_conversion.h"
 
 #include "meios/xacro/value.h"
-#include "meios/xacro/detail/numeric.h"
 
 #include <cctype>
 #include <string>
-#include <cstdint>
 #include <optional>
 #include <algorithm>
 #include <string_view>
@@ -23,9 +22,7 @@ std::optional<value> integer_spelling(std::string_view text)
     const std::optional<std::string> digits = python_int(text);
     if(!digits)
         return value{std::string(text)};
-    bool ok                   = false;
-    const std::int64_t number = parse_int(*digits, ok);
-    return ok ? std::optional<value>(value{number}) : std::nullopt;
+    return integer_literal(*digits);
 }
 
 std::optional<value> real_spelling(std::string_view text)

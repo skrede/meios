@@ -43,6 +43,8 @@ value math_abs(parser &p, const value &v)
 {
     if(v.kind() == value_kind::real)
         return real_result(p, std::fabs(*v.real()));
+    if(is_integral(v))
+        return integer_abs(p, v);
     return int_result(p, checked_abs(need_int(p, v)), "absolute value");
 }
 

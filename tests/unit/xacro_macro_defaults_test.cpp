@@ -101,7 +101,7 @@ TEST_CASE("an overridden default crossing an evaluator ceiling refuses rather th
           "[xacro][structural][macro]")
 {
     meios::log_sink silent;
-    const expansion_result out = call_with("p:=${1000000000001**1}", R"(p="given")", silent);
+    const expansion_result out = call_with("p:=${1000000000001.0**1}", R"(p="given")", silent);
     REQUIRE_FALSE(out.has_value());
     REQUIRE(out.error().message.find("numeric magnitude") != std::string::npos);
 }

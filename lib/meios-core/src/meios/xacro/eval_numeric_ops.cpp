@@ -116,12 +116,14 @@ value negate(parser &p, const value &v)
 {
     if(v.kind() == value_kind::real)
         return real_result(p, -*v.real());
+    if(is_integral(v))
+        return integer_negate(p, v);
     return int_result(p, checked_negate(need_int(p, v)), "negation");
 }
 
 value unary_pos(parser &p, const value &v)
 {
-    if(v.kind() == value_kind::real)
+    if(v.kind() == value_kind::real || v.kind() == value_kind::wide_integer)
         return v;
     return value{ need_int(p, v) };
 }
@@ -131,13 +133,8 @@ value add_sub_mul(parser &p, const value &a, const value &b, token_kind op)
     if(op == token_kind::plus
        && (a.kind() == value_kind::string || b.kind() == value_kind::string))
         return concatenate(p, a, b);
-    if(is_int(a) && is_int(b))
-    {
-        std::int64_t x = need_int(p, a), y = need_int(p, b);
-        if(op == token_kind::plus)  return int_result(p, checked_add(x, y), "addition");
-        if(op == token_kind::minus) return int_result(p, checked_sub(x, y), "subtraction");
-        return int_result(p, checked_mul(x, y), "multiplication");
-    }
+    if(is_integral(a) && is_integral(b))
+        return integer_arithmetic(p, a, b, op);
     double x = need_double(p, a), y = need_double(p, b);
     if(op == token_kind::plus)  return real_result(p, x + y);
     if(op == token_kind::minus) return real_result(p, x - y);
@@ -184,14 +181,10 @@ value modulo(parser &p, const value &a, const value &b)
 
 value power(parser &p, const value &a, const value &b)
 {
+    if(integral_power(a, b))
+        return integer_power(p, a, b);
     if(!admits_power(p, a, b))
         return value{};
-    if(is_int(a) && is_int(b) && need_int(p, b) >= 0)
-    {
-        const std::optional<std::int64_t> made = checked_power(need_int(p, a), need_int(p, b));
-        if(!made) return p.fail("integer power overflow");
-        return value{ *made };
-    }
     return real_result(p, std::pow(need_double(p, a), need_double(p, b)));
 }
 

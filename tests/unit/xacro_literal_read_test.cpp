@@ -129,11 +129,11 @@ TEST_CASE("a deferred property is read as a literal once resolved", "[xacro][lit
                   "[v]"));
 }
 
-TEST_CASE("an integer beyond 64 bits keeps its digits and refuses arithmetic", "[xacro][literal]")
+TEST_CASE("an integer beyond 64 bits keeps its digits and computes exactly", "[xacro][literal]")
 {
     const std::string big = R"(<xacro:property name="b" value="99999999999999999999"/>)";
     CHECK(renders(big + R"(<link name="[${b}]"/>)", "[99999999999999999999]"));
-    CHECK_FALSE(expand_body(big + R"(<link name="${b + 1}"/>)").has_value());
+    CHECK(renders(big + R"(<link name="[${b + 1}]"/>)", "[100000000000000000000]"));
 }
 
 TEST_CASE("a lazy property forwarding a wide integer renders its digits", "[xacro][literal]")
@@ -159,11 +159,11 @@ TEST_CASE("an eager property and a macro argument forwarding a wide integer rend
                   "m_" + wide));
 }
 
-TEST_CASE("arithmetic on a forwarded wide integer refuses", "[xacro][literal]")
+TEST_CASE("arithmetic on a forwarded wide integer computes exactly", "[xacro][literal]")
 {
     const std::string forwarded = wide_bound(wide) + R"(<xacro:property name="c" value="${b}"/>)";
-    CHECK_FALSE(expand_body(forwarded + R"(<link name="${c + 1}"/>)").has_value());
-    CHECK_FALSE(expand_body(forwarded + R"(<link name="${c * 2}"/>)").has_value());
+    CHECK(renders(forwarded + R"(<link name="[${c + 1}]"/>)", "[100000000000000000000]"));
+    CHECK(renders(forwarded + R"(<link name="[${c * 2}]"/>)", "[199999999999999999998]"));
 }
 
 TEST_CASE("a real beyond the double range and an infinity spelling keep their text", "[xacro][literal]")

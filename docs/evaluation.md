@@ -29,9 +29,12 @@ description needing Python behavior the grammar does not carry; it has
 
 - Arithmetic: `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-`. Integer arithmetic stays
   integer — `2 + 3` is `5`, not `5.0` — while `/` is always true division, so `4 / 2` is `2.0`.
-  Every integer operation is range-checked and every real result must be finite, so a crossed range,
-  a division by zero and a non-finite result are all loud failures rather than a wrapped value or an
-  `inf` reaching your document.
+  Addition, subtraction, multiplication, exponentiation, a unary sign and `abs` compute exactly on
+  integers of any size up to 4300 digits, a result past 64 bits included, so `${2 ** 70}` is
+  `1180591620717411303424`; a result with more digits refuses, a power before it is computed. Every
+  real result must be finite, and a division by zero and a non-finite result are loud failures rather
+  than a wrapped value or an `inf` reaching your document. A division, a remainder, a real operand or
+  a negative exponent beside an integer wider than 64 bits refuses under the built-in evaluator.
 - Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
   reads as both comparisons rather than as a comparison against a boolean. Comparing two numbers is
   exact, so `${9007199254740993 == 9007199254740992}` is `False`, and an integer wider than 64 bits is
@@ -95,8 +98,9 @@ integer of that size whether it is read by name, forwarded by a value that is on
 (`c="${b}"`, a macro argument `a="${b}"`) or written inside an expression, so
 `${99999999999999999999}` renders `99999999999999999999`. An integer too wide for 64 bits therefore
 renders as written, compares exactly with any number and is true wherever a truth is read; it equals
-no string, arithmetic on it refuses under the built-in evaluator, as a sign and `abs` on it do, under
-`unsupported_expression`, and as a sequence index it refuses as outside the sequence. A literal of
+no string, it adds, subtracts, multiplies, raises to a power and takes a sign and `abs` exactly, and as
+a sequence index it refuses as outside the sequence; the arithmetic bullet of
+[what evaluates](#what-evaluates) names what still refuses beside it. A literal of
 more than 4300 digits refuses, naming that ceiling, and a bound value of more digits stays text.
 Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
@@ -113,9 +117,12 @@ does. An argument and a boolean attribute are not read this way; both are descri
 `property_quoted_value`, `property_padded_number`, `property_signed_number`, `property_unicode_digit`,
 `macro_argument_literal_reading`, `property_wide_integer_forwarded`,
 `property_wide_integer_forwarded_eager`, `macro_argument_wide_integer_forwarded`,
-`integer_literal_wide`, `wide_integer_compared`, `wide_integer_condition` and
-`wide_integer_compared_with_real` agreement probes hold this against a fresh xacro render, beside the
-`xacro_literal_read`, `xacro_wide_integer`, `native_wide_integer` and `native_exact_compare` cases.
+`integer_literal_wide`, `wide_integer_compared`, `wide_integer_condition`,
+`wide_integer_compared_with_real`, `wide_integer_negated`, `wide_integer_added`,
+`wide_integer_doubled`, `wide_integer_read_by_name_added`, `integer_power_beyond_64_bits` and
+`wide_integer_squared` agreement probes hold this against a fresh xacro render, beside the
+`xacro_literal_read`, `xacro_wide_integer`, `native_wide_integer`, `native_exact_compare` and
+`native_big_integer` cases.
 
 **A property's value is evaluated at its first read, in the table that defined it.** The text written
 in `value` or `default` is stored where the property is written, and the first expression that reads
@@ -272,7 +279,7 @@ decided by the failure's kind, and there are exactly four:
 | Kind | What produces it | Terminal |
 |------|------------------|----------|
 | `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a member of a string other than the named split, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string beyond adding two of them | no: a lenient policy may leave the span verbatim |
-| `error` | a genuine fault — an undefined name, a missing key, division by zero, a crossed integer range, a non-finite result, malformed syntax | yes, under every policy |
+| `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer result of more than 4300 digits, a floor division, remainder or rounding outside the 64-bit range, a non-finite result, malformed syntax | yes, under every policy |
 | `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
@@ -344,10 +351,11 @@ wrong-kind subscript key is an `error` and terminal under every policy.
 nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 000), tokens lexed
 (1 000 000), evaluation steps (10 000 000) and elements built into a collection the grammar
 produces (100 000) over the whole load; and, for any one expression, its nesting depth (188), its
-token count (10 000), the magnitude of an exponentiation's operands (1 000 000 000 000) and the
-length in bytes of a string it produces (1 000 000). Six of them accumulate across every expression
-in one load rather than resetting per expression, so a document cannot spend a bounded budget an
-unbounded number of times; the other five are high-water marks instead, because what they bound is
+token count (10 000), the magnitude of an exponentiation's real operands (1 000 000 000 000) and the
+length in bytes of a string it produces (1 000 000). An integer raised to a non-negative integer
+exponent is bounded instead by its 4300-digit result, refused before the work. Six of them
+accumulate across every expression in one load rather than resetting per expression, so a document
+cannot spend a bounded budget an unbounded number of times; the other five are high-water marks instead, because what they bound is
 the most any one expression reaches and not how often it is reached. A ceiling requested as zero is
 refused and takes its default, so there is no spelling that means unbounded. Crossing one is
 terminal and stops the load at the position that crossed it: a load continuing past its own ceiling
@@ -1177,9 +1185,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and thirty-seven agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and forty-three agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  thirty-five the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  forty-one the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

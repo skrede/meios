@@ -34,16 +34,15 @@ bool admits_element(parser &p)
     return p.refuse_exhausted();
 }
 
-// An operand with no arithmetic meaning is admitted here and refuses below, where the diagnostic
-// names its kind rather than a ceiling it never reached.
+// Only a real operand is bounded: an integer operand of a power computed as a real costs no more
+// than the one std::pow call. An operand with no arithmetic meaning is admitted here and refuses
+// below, where the diagnostic names its kind rather than a ceiling it never reached.
 bool admits_power(parser &p, const value &a, const value &b)
 {
-    const std::optional<double> base = as_double(a);
-    const std::optional<double> exponent = as_double(b);
-    if(!base || !exponent)
-        return true;
-    if(p.session.admits_numeric_magnitude(std::fabs(*base), p.log, p.anchor)
-       && p.session.admits_numeric_magnitude(std::fabs(*exponent), p.log, p.anchor))
+    const std::optional<double> base = a.real();
+    const std::optional<double> exponent = b.real();
+    if((!base || p.session.admits_numeric_magnitude(std::fabs(*base), p.log, p.anchor))
+       && (!exponent || p.session.admits_numeric_magnitude(std::fabs(*exponent), p.log, p.anchor)))
         return true;
     return p.refuse_exhausted();
 }

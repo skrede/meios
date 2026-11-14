@@ -134,4 +134,10 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("integer_literal_wide", "integer_literal_wide", None),
                             ("wide_integer_compared", "wide_integer_compared", None),
                             ("wide_integer_condition", "wide_integer_condition", None),
-                            ("wide_integer_compared_with_real", "wide_integer_compared_with_real", None))
+                            ("wide_integer_compared_with_real", "wide_integer_compared_with_real", None),
+                            ("wide_integer_negated", "wide_integer_negated", None),
+                            ("wide_integer_added", "wide_integer_added", None),
+                            ("wide_integer_doubled", "wide_integer_doubled", None),
+                            ("wide_integer_read_by_name_added", "wide_integer_read_by_name_added", None),
+                            ("integer_power_beyond_64_bits", "integer_power_beyond_64_bits", None),
+                            ("wide_integer_squared", "wide_integer_squared", None))

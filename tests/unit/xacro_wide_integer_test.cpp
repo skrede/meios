@@ -91,7 +91,27 @@ TEST_CASE("a comparison of a forwarded wide integer reads as the lazy attribute 
     CHECK_FALSE(expand_body(lazily_forwarded(wide) + eager + R"(<link name="l_${p}"/>)").has_value());
 }
 
-TEST_CASE("arithmetic on a forwarded wide integer still refuses under the built-in evaluator", "[xacro][wide]")
+TEST_CASE("a forwarded wide integer adds and subtracts exactly, back to a 64-bit integer where it fits", "[xacro][wide]")
 {
-    CHECK_FALSE(expand_body(lazily_forwarded(wide) + R"(<link name="l_${c + 1}"/>)").has_value());
+    for(std::size_t way = 0; way < forwarders.size(); ++way)
+    {
+        INFO(forwarders[way].first);
+        CHECK(renders(forwarded(way, R"(<link name="l_${c + 1}"/>)"), "l_100000000000000000000"));
+        CHECK(renders(forwarded(way, R"(<link name="l_${c - b}"/>)"), "l_0"));
+    }
+}
+
+TEST_CASE("a wide integer read by name or forwarded negates, multiplies and raises exactly", "[xacro][wide]")
+{
+    const std::pair<const char *, const char *> measured[] = {
+            {"${-c}", "-99999999999999999999"}, {"${+c}", "99999999999999999999"}, {"${--c}", "99999999999999999999"},
+            {"${c * 2}", "199999999999999999998"}, {"${c * c}", "9999999999999999999800000000000000000001"},
+            {"${c ** 2}", "9999999999999999999800000000000000000001"}, {"${b + 1}", "100000000000000000000"},
+            {"${c - 1}", "99999999999999999998"}, {"${2 ** 70}", "1180591620717411303424"},
+    };
+    for(const auto &[expression, digits] : measured)
+    {
+        INFO(expression);
+        CHECK(renders(lazily_forwarded(wide) + R"(<link name="l_)" + expression + R"("/>)", std::string("l_") + digits));
+    }
 }

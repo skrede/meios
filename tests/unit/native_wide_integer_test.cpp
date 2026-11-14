@@ -146,11 +146,32 @@ TEST_CASE("an integer literal holds at most the digit ceiling and a longer one r
     CHECK(out.log.messages[0].find("99999") == std::string::npos);
 }
 
-TEST_CASE("arithmetic, a sign and abs on a wide integer refuse as unsupported", "[xacro][wide]")
+TEST_CASE("a sign, abs, a sum, a product and an integral power of a wide integer are exact", "[xacro][wide]")
 {
-    for(const std::string &expression : { wide_digits + " + 1", wide_digits + " * 2", "-" + wide_digits, "+" + wide_digits,
-                                          "abs(" + wide_digits + ")", wide_digits + " ** 2", wide_digits + " // 7",
-                                          "floor(" + wide_digits + ")" })
+    CHECK(rendered("-" + wide_digits) == "-" + wide_digits);
+    CHECK(rendered("+" + wide_digits) == wide_digits);
+    CHECK(rendered("--" + wide_digits) == wide_digits);
+    CHECK(rendered("abs(-" + wide_digits + ")") == wide_digits);
+    CHECK(rendered(wide_digits + " + 1") == "100000000000000000000");
+    CHECK(rendered(wide_digits + " * 2") == "199999999999999999998");
+    CHECK(rendered(wide_digits + " ** 2") == "9999999999999999999800000000000000000001");
+}
+
+TEST_CASE("an exact result inside 64 bits is an integer again", "[xacro][wide]")
+{
+    for(const std::string &expression : std::vector<std::string>{ wide_digits + " - " + wide_digits, "-(9223372036854775807 + 1)", "-2 ** 63", "(-2) ** 63" })
+    {
+        CAPTURE(expression);
+        const outcome out = evaluate(expression);
+        CHECK((out.failure == meios::eval_failure_kind::none && out.result.kind() == value_kind::integer));
+    }
+    CHECK(evaluate("9223372036854775807 + 1").result.kind() == value_kind::wide_integer);
+}
+
+TEST_CASE("a division, a remainder, a real operand and a power computed as a real refuse beside a wide integer", "[xacro][wide]")
+{
+    for(const std::string &expression : { wide_digits + " / 3", wide_digits + " // 7", wide_digits + " % 7", wide_digits + " * 0.5",
+                                          wide_digits + " ** 0.5", wide_digits + " ** -1", "floor(" + wide_digits + ")" })
     {
         DYNAMIC_SECTION(expression)
         {

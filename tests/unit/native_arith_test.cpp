@@ -15,14 +15,10 @@ constexpr const char *most_negative = "(-9223372036854775807 - 1)";
 constexpr const char *outside_range = "outside the range";
 }
 
-TEST_CASE("a product past the representable range refuses instead of wrapping", "[native][arith]")
+TEST_CASE("a product past 64 bits is the exact integer instead of wrapping", "[native][arith]")
 {
-    const arith::outcome ran = arith::evaluate("9223372036854775807 * 2");
-
-    CHECK(ran.failed);
-    REQUIRE(ran.messages.size() == 1);
-    CHECK(ran.messages.front().find(outside_range) != std::string::npos);
-    CHECK(arith::evaluate("4611686018427387904 * -4").failed);
+    CHECK(arith::evaluate("9223372036854775807 * 2").rendered == "18446744073709551614");
+    CHECK(arith::evaluate("4611686018427387904 * -4").rendered == "-18446744073709551616");
 }
 
 TEST_CASE("the most negative integer over minus one refuses instead of aborting", "[native][arith]")
@@ -37,35 +33,28 @@ TEST_CASE("the most negative integer over minus one refuses instead of aborting"
     CHECK(remainder.messages.size() == 1);
 }
 
-TEST_CASE("negating and taking the size of the most negative integer refuse", "[native][arith]")
+TEST_CASE("negating and taking the size of the most negative integer give the exact integer", "[native][arith]")
 {
-    const arith::outcome negated = arith::evaluate(std::string("-") + most_negative);
-    const arith::outcome sized = arith::evaluate(std::string("abs(") + most_negative + ")");
-
-    CHECK(negated.failed);
-    CHECK(negated.messages.size() == 1);
-    CHECK(sized.failed);
-    REQUIRE(sized.messages.size() == 1);
-    CHECK(sized.messages.front().find(outside_range) != std::string::npos);
+    CHECK(arith::evaluate(std::string("-") + most_negative).rendered == "9223372036854775808");
+    CHECK(arith::evaluate(std::string("abs(") + most_negative + ")").rendered == "9223372036854775808");
+    CHECK(arith::evaluate("-(9223372036854775807 + 1)").rendered == "-9223372036854775808");
 }
 
-TEST_CASE("adding and subtracting past either end refuse", "[native][arith]")
+TEST_CASE("adding and subtracting past either end give the exact integer", "[native][arith]")
 {
-    CHECK(arith::evaluate("9223372036854775807 + 1").failed);
-    CHECK(arith::evaluate(std::string(most_negative) + " - 1").failed);
-    CHECK(arith::evaluate(std::string(most_negative) + " + -1").failed);
-    CHECK(arith::evaluate("9223372036854775807 - -1").failed);
+    CHECK(arith::evaluate("9223372036854775807 + 1").rendered == "9223372036854775808");
+    CHECK(arith::evaluate(std::string(most_negative) + " - 1").rendered == "-9223372036854775809");
+    CHECK(arith::evaluate(std::string(most_negative) + " + -1").rendered == "-9223372036854775809");
+    CHECK(arith::evaluate("9223372036854775807 - -1").rendered == "9223372036854775808");
 }
 
-TEST_CASE("exponentiation refuses past the range with the message it always used",
-          "[native][arith]")
+TEST_CASE("exponentiation past 64 bits gives the exact integer", "[native][arith]")
 {
-    const arith::outcome raised = arith::evaluate("3 ** 60");
-
-    CHECK(raised.failed);
-    REQUIRE(raised.messages.size() == 1);
-    CHECK(raised.messages.front().find("integer power overflow") != std::string::npos);
+    CHECK(arith::evaluate("3 ** 60").rendered == "42391158275216203514294433201");
     CHECK(arith::evaluate("2 ** 62").rendered == "4611686018427387904");
+    CHECK(arith::evaluate("2 ** 63").rendered == "9223372036854775808");
+    CHECK(arith::evaluate("-2 ** 63").rendered == "-9223372036854775808");
+    CHECK(arith::evaluate("(-2) ** 63").rendered == "-9223372036854775808");
 }
 
 TEST_CASE("arithmetic inside the representable range is unchanged", "[native][arith]")
@@ -76,17 +65,17 @@ TEST_CASE("arithmetic inside the representable range is unchanged", "[native][ar
     CHECK(arith::evaluate("-7 // 2").rendered == "-4");
     CHECK(arith::evaluate("-7 % 3").rendered == "2");
     CHECK(arith::evaluate("abs(-9)").rendered == "9");
+    CHECK(arith::evaluate("2 ** -1").rendered == "0.5");
     CHECK(arith::evaluate(most_negative).rendered == "-9223372036854775808");
     CHECK(arith::evaluate(std::string(most_negative) + " // 2").rendered == "-4611686018427387904");
 }
 
-TEST_CASE("a whole load carrying an overflowing product fails cleanly", "[native][arith]")
+TEST_CASE("a whole load carrying a product past 64 bits renders the exact integer", "[native][arith]")
 {
     const arith::loaded ran = arith::expand("9223372036854775807 * 2");
 
-    CHECK_FALSE(ran.expanded);
-    REQUIRE_FALSE(ran.messages.empty());
-    CHECK(ran.messages.front().find(outside_range) != std::string::npos);
+    REQUIRE(ran.expanded);
+    CHECK(ran.text.find("radius=\"18446744073709551614\"") != std::string::npos);
     CHECK(arith::expand("2 * 3").expanded);
 }
 

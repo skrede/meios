@@ -119,6 +119,8 @@ inline constexpr pairing element_pairings[] = {
         {"token.expr", carrier::agreement, "xacro_attribute_never_evaluated", standing::agrees},
         {"token.expr", carrier::agreement, "integer_literal_wide", standing::agrees},
         {"token.expr", carrier::agreement, "wide_integer_compared wide_integer_compared_with_real", standing::agrees},
+        {"token.expr", carrier::agreement, "wide_integer_negated wide_integer_added wide_integer_doubled", standing::agrees},
+        {"token.expr", carrier::agreement, "wide_integer_read_by_name_added integer_power_beyond_64_bits wide_integer_squared", standing::agrees},
         {"token.expr", carrier::manifest, "sum_not_a_reference_global", standing::refuses_listed},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.extension", carrier::agreement, "command_nested_in_default include_find_composed", standing::agrees},

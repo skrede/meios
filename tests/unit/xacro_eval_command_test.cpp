@@ -85,9 +85,17 @@ TEST_CASE("the evaluation command ends at its first closing parenthesis", "[xacr
 
 TEST_CASE("an argument the evaluation command reads and cannot carry refuses by name", "[xacro][eval_command]")
 {
-    const meios::expansion_error error = refusal(document_of(R"XML(<xacro:arg name="q" default="99999999999999999999"/><link name="$(eval q + 1)"/>)XML"));
+    const meios::expansion_error error = refusal(document_of(R"XML(<xacro:arg name="q" default="1.0e400"/><link name="$(eval q + 1)"/>)XML"));
     REQUIRE(error.code == meios::diagnostic_code::expression_error);
     REQUIRE(error.message.find("'q'") != std::string::npos);
+}
+
+TEST_CASE("the evaluation command reads an argument's integer wider than 64 bits", "[xacro][eval_command]")
+{
+    const std::string q = R"XML(<xacro:arg name="q" default="99999999999999999999"/>)XML";
+    CHECK(flattened(document_of(q + R"XML(<link name="$(eval q)"/>)XML")) == single_link("99999999999999999999"));
+    CHECK(flattened(document_of(q + R"XML(<link name="$(eval q + 1)"/>)XML")) == single_link("100000000000000000000"));
+    CHECK(flattened(document_of(q + R"XML(<link name="$(eval q &gt; 0)"/>)XML")) == single_link("True"));
 }
 
 TEST_CASE("an argument the evaluation command does not read is never converted", "[xacro][eval_command]")

@@ -43,23 +43,26 @@ TEST_CASE("the numeric ceiling refuses a base or an exponent past it", "[native]
 {
     const meios::evaluator_limits bounded = numeric(1000);
 
-    CHECK(once("1 ** 1000", bounded).rendered == "1");
-    CHECK(once("1000 ** 1", bounded).rendered == "1000");
-    CHECK(once("1 ** 1001", bounded).refused_on("numeric magnitude"));
-    CHECK(once("1001 ** 1", bounded).refused_on("numeric magnitude"));
+    CHECK(once("1.0 ** 1000.0", bounded).rendered == "1.0");
+    CHECK(once("1000.0 ** 1", bounded).rendered == "1000.0");
+    CHECK(once("1.0 ** 1001.0", bounded).refused_on("numeric magnitude"));
+    CHECK(once("1001.0 ** 1", bounded).refused_on("numeric magnitude"));
+    CHECK(once("1 ** 1001", bounded).rendered == "1");
+    CHECK(once("1001 ** 1", bounded).rendered == "1001");
 }
 
-// The new check runs before the work; the overflow refusal that already existed runs on the
-// result. An exponentiation inside the ceiling must still reach the second one.
-TEST_CASE("an exponentiation inside the numeric ceiling still refuses on overflow",
-          "[native][ceilings]")
+TEST_CASE("an integral power is bounded by its digits and not by the numeric ceiling", "[native][ceilings]")
 {
-    const ceiling::outcome overflowed = once("9 ** 1000", numeric(1000));
+    CHECK(once("9 ** 1000", numeric(1000)).rendered.size() == 955);
 
-    CHECK(overflowed.failed);
-    CHECK(overflowed.kind == meios::eval_failure_kind::error);
-    REQUIRE(overflowed.messages.size() == 1);
-    CHECK(overflowed.messages.front().find("integer power overflow") != std::string::npos);
+    const meios::evaluator_limits defaults;
+    CHECK(once("2 ** 14284", defaults).rendered.size() == 4300);
+    const ceiling::outcome past = once("2 ** 14285", defaults);
+    CHECK(past.kind == meios::eval_failure_kind::error);
+    REQUIRE(past.messages.size() == 1);
+    CHECK(past.messages.front().find("4300") != std::string::npos);
+    CHECK(once("9 ** 99999999999", defaults).kind == meios::eval_failure_kind::error);
+    CHECK(once("10 ** 10 ** 10", defaults).kind == meios::eval_failure_kind::error);
 }
 
 // A magnitude just above the bound would be admitted if the operand were narrowed to a whole
@@ -152,7 +155,7 @@ TEST_CASE("each new ceiling is terminal under every evaluation policy", "[native
         meios::detail::eval_session over_length(length);
         meios::detail::eval_session over_fields(fields);
 
-        CHECK_FALSE(ceiling::substitute("v ${1 ** 1001}", policy, over_magnitude).survived);
+        CHECK_FALSE(ceiling::substitute("v ${1.0 ** 1001.0}", policy, over_magnitude).survived);
         CHECK_FALSE(ceiling::substitute("v ${1+1+1+1+1}", policy, over_width).survived);
         CHECK_FALSE(ceiling::substitute("v ${'ab' + 'cde'}", policy, over_length).survived);
         CHECK_FALSE(ceiling::substitute("v ${'a,b,c'.split(',')[0]}", policy, over_fields).survived);
@@ -176,8 +179,12 @@ TEST_CASE("a load that crosses nothing counts only the axes it exercised", "[nat
     CHECK(joined.counters.numeric_magnitude == 0);
     CHECK(joined.counters.yaml_nodes == 0);
 
-    CHECK(ceiling::evaluate("2 ** 3", raised).rendered == "8");
+    CHECK(ceiling::evaluate("2.0 ** 3.0", raised).rendered == "8.0");
     CHECK(raised.counters.numeric_magnitude == 3);
     CHECK(raised.counters.string_length == 0);
     CHECK(raised.counters.bytes == 0);
+
+    meios::detail::eval_session integral(defaults);
+    CHECK(ceiling::evaluate("2 ** 3", integral).rendered == "8");
+    CHECK(integral.counters.numeric_magnitude == 0);
 }
