@@ -710,7 +710,7 @@ scope at the top, since every table has a parent there; each is paired with that
 measurement, and its standing stays open. Of the four warning sites a unit case alone carries, two are
 raised here. An attribute that a property, an argument, a macro, an include, a block insertion or a
 conditional does not use warns at that element, and the warning is raised without a code, like the
-other warnings the expansion raises, so a load whose document renders keeps its claims; and an include redeclaring a namespace prefix with another value keeps the
+other warnings of the structural constructs, so a load whose document renders keeps its claims; and an include redeclaring a namespace prefix with another value keeps the
 outer value and warns. The other two are not raised here: an include's child elements are ignored
 without a warning, and a `default` written beside a `scope` binds without one. A macro name written with
 the `xacro:` prefix warns and defines the rest of the name, which the `macro_name_with_xacro_prefix`

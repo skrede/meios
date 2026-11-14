@@ -1,5 +1,6 @@
 #include "oracle_records.h"
 
+#include "meios/xacro/xml_name.h"
 #include "meios/xacro/xacro_attributes.h"
 
 #include <meios/xacro.h>
@@ -130,6 +131,23 @@ TEST_CASE("each unknown attribute warns once, in document order, after the requi
     const heard_expansion missing = expand_heard(R"(<xacro:macro params="" doc="d"/><link name="l"/>)");
     require_structural_refusal(missing.out, 2);
     CHECK(unknown_attribute_warnings(missing) == 0);
+}
+
+TEST_CASE("an xacro-namespace attribute on a macro definition is never read and warns as not read", "[xacro][attributes]")
+{
+    const heard_expansion heard = expand_heard(R"(<xacro:macro name="m" params="p" xacro:doc="${nope}"><link name="m"/></xacro:macro><xacro:m p="1"/>)");
+    REQUIRE(heard.out.has_value());
+    CHECK(heard.out->document.find(R"(<link name="m"/>)") != std::string::npos);
+    REQUIRE(unknown_attribute_warnings(heard) == 1);
+    CHECK(heard.records.front().message == "<xacro:macro> carries an attribute 'xacro:doc' it does not read");
+}
+
+TEST_CASE("quoted text has its control characters written visibly and every other byte as it is", "[xacro][attributes]")
+{
+    CHECK(meios::detail::escaped_controls("\ta\r\n") == R"(\ta\r\n)");
+    CHECK(meios::detail::escaped_controls(std::string_view("\x00\x01\x1f\x7f", 4)) == R"(\x00\x01\x1f\x7f)");
+    CHECK(meios::detail::escaped_controls(" a\\b \xc3\xa9") == " a\\b \xc3\xa9");
+    CHECK(meios::detail::escaped_controls("").empty());
 }
 
 TEST_CASE("a call, an element and an attribute read their other attributes and never warn", "[xacro][attributes]")

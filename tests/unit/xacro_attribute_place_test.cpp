@@ -62,7 +62,7 @@ TEST_CASE("xacro:attribute refuses a name that is empty or not an XML name", "[x
 TEST_CASE("xacro:attribute removes the whitespace around its evaluated name and warns", "[xacro][attribute]")
 {
     const std::vector<std::pair<std::string, std::string>> padded{
-            {" a ", " a "}, {" a", " a"}, {"a ", "a "}, {"&#9;a", "\ta"}, {"a&#13;&#10;", "a\r\n"}, {"${' a'}", " a"}};
+            {" a ", " a "}, {" a", " a"}, {"a ", "a "}, {"&#9;a", R"(\ta)"}, {"a&#13;&#10;", R"(a\r\n)"}, {"${' a'}", " a"}};
     for(const auto &[written, evaluated] : padded)
     {
         CAPTURE(written);

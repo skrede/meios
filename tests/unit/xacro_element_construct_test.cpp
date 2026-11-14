@@ -125,7 +125,7 @@ TEST_CASE("xacro:element removes the whitespace around its evaluated name and wa
         std::vector<heard> records;
         REQUIRE(attribute_place::render("\n<xacro:element xacro:name=\"" + written + "\" name=\"l\"/>", records)
                 == R"(<robot name="p"><link name="l"></link></robot>)");
-        require_one_trim_warning(records, 3, written == "link&#9;" ? "link\t" : written, "link");
+        require_one_trim_warning(records, 3, written == "link&#9;" ? R"(link\t)" : written, "link");
     }
     std::vector<heard> records;
     REQUIRE(attribute_place::render(R"(<xacro:element xacro:name="xacro:if " value="1"><link name="t"/></xacro:element>)", records)

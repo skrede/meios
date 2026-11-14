@@ -1,4 +1,5 @@
 #include "xacro_attributes.h"
+#include "namespace_lift.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -64,12 +65,14 @@ bool known(const attribute_row &row, std::string_view name, const dispatch_view 
     return consumed(view, name) || name.starts_with("xmlns:") || listed(row.required, name) || listed(row.optional, name);
 }
 
-// A macro definition's other attributes are evaluated on every call, so a failing one refuses, but
-// their values reach nothing.
+// A macro definition evaluates its other attributes on each call, so a failing one refuses though
+// its value reaches nothing; one in the xacro namespace is skipped unread there as everywhere.
 std::string unused_attribute(const dispatch_view &view, std::string_view name)
 {
-    const char *fate = view.name == "xacro:macro" ? "' it evaluates on each call but does not use" : "' it does not read";
-    return '<' + view.name + "> carries an attribute '" + std::string(name) + fate;
+    const bool evaluated        = view.name == "xacro:macro" && !xacro_namespace_attribute(name);
+    const std::string_view fate = evaluated ? "' it evaluates on each call but does not use" : "' it does not read";
+    std::string message         = '<' + view.name + "> carries an attribute '" + std::string(name);
+    return message.append(fate);
 }
 
 }

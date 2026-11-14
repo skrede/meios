@@ -599,7 +599,9 @@ and the attribute, as `<xacro:macro> needs a name attribute` does; an attribute 
 present, not missing. An attribute one of the first seven elements does not use warns at that element,
 once per attribute in document order, as `<xacro:if> carries an attribute 'doc' it does not read` does;
 a macro definition evaluates such an attribute on each call, so its warning reads `<xacro:macro>
-carries an attribute 'doc' it evaluates on each call but does not use`. A namespace declaration,
+carries an attribute 'doc' it evaluates on each call but does not use`, except one in the xacro
+namespace, which it never reads, as `<xacro:macro> carries an attribute 'xacro:doc' it does not read`
+says. A namespace declaration,
 `xmlns:` and a prefix, never warns. The warning carries no code, so a load whose document renders keeps
 its `parsed` claim. `xacro:call`,
 `xacro:element` and `xacro:attribute` warn about nothing, since their other attributes are a macro's
@@ -641,7 +643,9 @@ carries the element's own `file:line`. An evaluated name, here and for `xacro:at
 loses the XML white space at either end — space, tab, carriage return and line feed, nothing else —
 and when any was removed, one located `level::warn` note with no diagnostic code names the evaluated
 text and the name used, as `<xacro:element> evaluates its xacro:name to 'link ' and uses 'link',
-without the white space around it` does, so a load that renders with it keeps its claims. A padded name
+without the white space around it` does, so a load that renders with it keeps its claims. In the
+quoted evaluated text a tab, a carriage return or a line feed is written `\t`, `\r` or `\n`, and any
+other control character as `\x` and two hex digits, so the record stays on one line. A padded name
 that strips to the name of an xacro element is handled as that element, so `xacro:name="xacro:if "` is
 a conditional, where xacro refuses. What is left must be a name by the Name production of XML 1.0
 (fifth edition, section 2.3); one that is not refuses under `xacro_structural_error`, naming the text,

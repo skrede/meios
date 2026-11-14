@@ -3,7 +3,9 @@
 #include "meios/detail/utf8.h"
 
 #include <array>
+#include <string>
 #include <cstddef>
+#include <cstdint>
 #include <algorithm>
 #include <string_view>
 
@@ -41,6 +43,18 @@ bool name_start(char32_t point)
     return within(start_spans, point) || (point >= 0x10000 && point <= 0xEFFFF);
 }
 
+std::string visible(std::uint8_t byte)
+{
+    if(byte == '\t')
+        return "\\t";
+    if(byte == '\r')
+        return "\\r";
+    if(byte == '\n')
+        return "\\n";
+    constexpr std::string_view hex = "0123456789abcdef";
+    return {'\\', 'x', hex[byte >> 4], hex[byte & 0xF]};
+}
+
 }
 
 bool is_xml_name(std::string_view text)
@@ -65,6 +79,20 @@ std::string_view trim_xml_space(std::string_view text)
     if(first == std::string_view::npos)
         return {};
     return text.substr(first, text.find_last_not_of(space) - first + 1);
+}
+
+std::string escaped_controls(std::string_view text)
+{
+    std::string out;
+    for(const char one : text)
+    {
+        const auto byte = static_cast<std::uint8_t>(one);
+        if(byte < 0x20 || byte == 0x7F)
+            out += visible(byte);
+        else
+            out += one;
+    }
+    return out;
 }
 
 }
