@@ -115,3 +115,23 @@ TEST_CASE("a wide integer read by name or forwarded negates, multiplies and rais
         CHECK(renders(lazily_forwarded(wide) + R"(<link name="l_)" + expression + R"("/>)", std::string("l_") + digits));
     }
 }
+
+TEST_CASE("a forwarded wide integer divides by floor division toward negative infinity", "[xacro][wide]")
+{
+    const std::string link = R"(<link name="l_${c // 7}_${-c // 7}_${c // -7}"/>)";
+    CHECK(renders(lazily_forwarded(wide) + link, "l_14285714285714285714_-14285714285714285715_-14285714285714285715"));
+}
+
+TEST_CASE("a forwarded wide integer takes a remainder, divides and reads as the nearest real beside a real", "[xacro][wide]")
+{
+    const std::pair<const char *, const char *> measured[] = {
+            {"${c % 7}_${-c % 7}_${c % -7}", "1_6_-6"}, {"${c // c}", "1"}, {"${c / c}", "1.0"}, {"${floor(c)}", "99999999999999999999"},
+            {"${c / 3}_${-c / 7}_${7 / c}", "3.333333333333333e+19_-1.4285714285714287e+19_7e-20"}, {"${c * 0.5}", "5e+19"},
+            {"${c + 1.5}_${c // 2.5}_${c % 2.5}", "1e+20_4e+19_0.0"}, {"${c ** 0.5}_${c ** -1}", "10000000000.0_1e-20"},
+    };
+    for(const auto &[expression, render] : measured)
+    {
+        INFO(expression);
+        CHECK(renders(lazily_forwarded(wide) + R"(<link name="l_)" + expression + R"("/>)", std::string("l_") + render));
+    }
+}

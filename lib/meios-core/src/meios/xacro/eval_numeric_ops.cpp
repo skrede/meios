@@ -4,7 +4,8 @@
 
 #include "meios/xacro/value.h"
 #include "meios/xacro/value_render.h"
-#include "meios/xacro/detail/numeric.h"
+
+#include "meios/xacro/detail/wide_integer.h"
 
 #include "meios/detail/article.h"
 
@@ -12,7 +13,6 @@
 #include <string>
 #include <cstdint>
 #include <optional>
-#include <string_view>
 
 namespace meios::detail
 {
@@ -22,13 +22,10 @@ namespace
 
 // Concatenation is the one arithmetic meaning a string carries here; repetition by an integer is
 // the meaning that stays outside the measured surface, so a string reaching any other operator
-// refuses as unsupported and a lenient policy may still retain the span. An integer outside the
-// 64-bit range has a meaning in Python this evaluator does not compute, so it refuses the same way.
-// Every other kind reaching here has no arithmetic meaning in Python, which makes it a genuine fault.
+// refuses as unsupported and a lenient policy may still retain the span. Every other kind reaching
+// here has no arithmetic meaning in Python, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
-    if(v.kind() == value_kind::wide_integer)
-        return p.fail_unsupported("an integer operand outside the 64-bit range has no numeric meaning here — use eval-python");
     const std::string message = with_article(kind_name(v.kind())) + " operand has no arithmetic meaning here";
     if(v.kind() == value_kind::string)
         return p.fail_unsupported(message + " — use eval-python");
@@ -51,32 +48,12 @@ value concatenate(parser &p, const value &a, const value &b)
 
 }
 
-value int_result(parser &p, std::optional<std::int64_t> made, std::string_view operation)
-{
-    if(made)
-        return value{ *made };
-    return p.fail(std::string(operation)
-                  + " produced a result outside the range of integers this evaluator represents");
-}
-
-value int_from_real(parser &p, double number)
-{
-    const std::optional<std::int64_t> made = int_from_double(number);
-    if(made)
-        return value{ *made };
-    return p.fail(print_double(number)
-                  + " is outside the range of integers this evaluator represents");
-}
-
 std::int64_t need_int(parser &p, const value &v)
 {
     std::optional<std::int64_t> number = as_int(v);
     if(number)
         return *number;
-    if(v.kind() == value_kind::real)
-        int_from_real(p, *v.real());
-    else
-        refuse_kind(p, v);
+    refuse_kind(p, v);
     return 0;
 }
 
@@ -85,7 +62,10 @@ double need_double(parser &p, const value &v)
     std::optional<double> number = as_double(v);
     if(number)
         return *number;
-    refuse_kind(p, v);
+    if(const std::optional<wide_integer> wide = v.wide())
+        p.fail("an integer of " + std::to_string(wide->spelling().size() - (wide->negative() ? 1 : 0)) + " digits is too large for a real");
+    else
+        refuse_kind(p, v);
     return 0.0;
 }
 
@@ -118,7 +98,7 @@ value negate(parser &p, const value &v)
         return real_result(p, -*v.real());
     if(is_integral(v))
         return integer_negate(p, v);
-    return int_result(p, checked_negate(need_int(p, v)), "negation");
+    return value{ need_int(p, v) };
 }
 
 value unary_pos(parser &p, const value &v)
@@ -143,6 +123,8 @@ value add_sub_mul(parser &p, const value &a, const value &b, token_kind op)
 
 value divide(parser &p, const value &a, const value &b)
 {
+    if(is_integral(a) && is_integral(b))
+        return integer_divide(p, a, b);
     double y = need_double(p, b);
     if(y == 0.0)
         return p.fail("the divisor of '/' is zero");
@@ -151,12 +133,8 @@ value divide(parser &p, const value &a, const value &b)
 
 value floor_divide(parser &p, const value &a, const value &b)
 {
-    if(is_int(a) && is_int(b))
-    {
-        if(need_int(p, b) == 0)
-            return p.fail("the divisor of '//' is zero");
-        return int_result(p, checked_floordiv(need_int(p, a), need_int(p, b)), "floor division");
-    }
+    if(is_integral(a) && is_integral(b))
+        return integer_floor_divide(p, a, b);
     double y = need_double(p, b);
     if(y == 0.0)
         return p.fail("the divisor of '//' is zero");
@@ -165,12 +143,8 @@ value floor_divide(parser &p, const value &a, const value &b)
 
 value modulo(parser &p, const value &a, const value &b)
 {
-    if(is_int(a) && is_int(b))
-    {
-        if(need_int(p, b) == 0)
-            return p.fail("the divisor of '%' is zero");
-        return int_result(p, checked_mod(need_int(p, a), need_int(p, b)), "remainder");
-    }
+    if(is_integral(a) && is_integral(b))
+        return integer_modulo(p, a, b);
     double y = need_double(p, b);
     if(y == 0.0)
         return p.fail("the divisor of '%' is zero");

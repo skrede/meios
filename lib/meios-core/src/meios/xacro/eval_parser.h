@@ -10,6 +10,9 @@
 #include "meios/xacro/core_evaluator.h"
 #include "meios/xacro/scope_namespace.h"
 
+#include "meios/xacro/detail/numeric.h"
+#include "meios/xacro/detail/wide_integer.h"
+
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
 #include "meios/diagnostic/source_location.h"
@@ -111,12 +114,19 @@ inline std::optional<std::int64_t> as_int(const value &v)
     return std::nullopt;
 }
 
+// A wide integer reads as the real nearest it, ties to even, and as nothing past the double range.
 inline std::optional<double> as_double(const value &v)
 {
     if(std::optional<bool> flag = v.boolean())
         return *flag ? 1.0 : 0.0;
     if(std::optional<std::int64_t> number = v.integer())
         return static_cast<double>(*number);
+    if(const std::optional<wide_integer> wide = v.wide())
+    {
+        bool read = false;
+        const double nearest = parse_double(wide->spelling(), read);
+        return read ? std::optional<double>(nearest) : std::nullopt;
+    }
     return v.real();
 }
 

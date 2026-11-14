@@ -12,7 +12,6 @@
 namespace
 {
 constexpr const char *most_negative = "(-9223372036854775807 - 1)";
-constexpr const char *outside_range = "outside the range";
 }
 
 TEST_CASE("a product past 64 bits is the exact integer instead of wrapping", "[native][arith]")
@@ -21,16 +20,10 @@ TEST_CASE("a product past 64 bits is the exact integer instead of wrapping", "[n
     CHECK(arith::evaluate("4611686018427387904 * -4").rendered == "-18446744073709551616");
 }
 
-TEST_CASE("the most negative integer over minus one refuses instead of aborting", "[native][arith]")
+TEST_CASE("the most negative integer over minus one gives the exact quotient and a zero remainder", "[native][arith]")
 {
-    const arith::outcome divided = arith::evaluate(std::string(most_negative) + " // -1");
-    const arith::outcome remainder = arith::evaluate(std::string(most_negative) + " % -1");
-
-    CHECK(divided.failed);
-    REQUIRE(divided.messages.size() == 1);
-    CHECK(divided.messages.front().find(outside_range) != std::string::npos);
-    CHECK(remainder.failed);
-    CHECK(remainder.messages.size() == 1);
+    CHECK(arith::evaluate(std::string(most_negative) + " // -1").rendered == "9223372036854775808");
+    CHECK(arith::evaluate(std::string(most_negative) + " % -1").rendered == "0");
 }
 
 TEST_CASE("negating and taking the size of the most negative integer give the exact integer", "[native][arith]")
@@ -79,16 +72,17 @@ TEST_CASE("a whole load carrying a product past 64 bits renders the exact intege
     CHECK(arith::expand("2 * 3").expanded);
 }
 
-TEST_CASE("rounding a value too large to be an integer refuses and names it", "[native][arith]")
+TEST_CASE("rounding answers an integer unchanged and a real as the exact integer it rounds to, of any size", "[native][arith]")
 {
-    const arith::outcome rounded = arith::evaluate("floor(1e300)");
-
-    CHECK(rounded.failed);
-    REQUIRE(rounded.messages.size() == 1);
-    CHECK(rounded.messages.front().find("1e+300") != std::string::npos);
-    CHECK(rounded.messages.front().find(outside_range) != std::string::npos);
-    CHECK(arith::evaluate("ceil(-1e300)").failed);
-    CHECK(arith::evaluate("floor(9223372036854775808.0)").failed);
+    CHECK(arith::evaluate("floor(99999999999999999999)").rendered == "99999999999999999999");
+    CHECK(arith::evaluate("floor(9007199254740993)").rendered == "9007199254740993");
+    CHECK(arith::evaluate("ceil(True)").rendered == "1");
+    CHECK(arith::evaluate("floor(1e30)").rendered == "1000000000000000019884624838656");
+    const std::string largest = arith::evaluate("floor(1e300)").rendered;
+    CHECK(largest.size() == 301);
+    CHECK(largest.starts_with("1000000000000000052504760255204420248704468581108159154915854115511802457988908195786371375080447864"));
+    CHECK(arith::evaluate("ceil(-1e300)").rendered == "-" + largest);
+    CHECK(arith::evaluate("floor(9223372036854775808.0)").rendered == "9223372036854775808");
 }
 
 TEST_CASE("rounding inside the range is unchanged, extremes included", "[native][arith]")
@@ -126,7 +120,9 @@ TEST_CASE("two strings add where every other operator on a string still refuses"
 
 TEST_CASE("a zero divisor refuses naming its operator", "[native][arith]")
 {
-    const std::pair<std::string_view, std::string_view> divisions[] = {{"1 / 0", "/"}, {"1.0 / 0", "/"}, {"7 // 0", "//"}, {"7.0 // 0", "//"}, {"7 % 0", "%"}, {"7.0 % 0.0", "%"}};
+    const std::pair<std::string_view, std::string_view> divisions[] = {
+            {"1 / 0", "/"}, {"1.0 / 0", "/"}, {"7 // 0", "//"}, {"7.0 // 0", "//"}, {"7 % 0", "%"}, {"7.0 % 0.0", "%"},
+            {"99999999999999999999 / 0", "/"}, {"99999999999999999999 // False", "//"}, {"-99999999999999999999 % 0", "%"}};
     for(const auto &[expression, op] : divisions)
     {
         INFO(expression);

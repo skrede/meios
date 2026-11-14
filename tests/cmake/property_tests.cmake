@@ -10,7 +10,18 @@ if(MEIOS_BUILD_PROPERTY_TESTS)
         catch_discover_tests(xacro_eval_prop)
     endif()
 
-    set(xacro_policy_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_policy_prop.cpp)
+    set(wide_integer_prop_src ${CMAKE_CURRENT_SOURCE_DIR}/property/wide_integer_prop.cpp)
+    if(EXISTS ${wide_integer_prop_src})
+        add_executable(wide_integer_prop ${wide_integer_prop_src})
+        target_link_libraries(wide_integer_prop
+            PRIVATE meios::core meios::model meios::xacro
+                rapidcheck rapidcheck_catch Catch2::Catch2WithMain)
+        meios_enable_coverage(wide_integer_prop)
+        meios_warnings(wide_integer_prop)
+        catch_discover_tests(wide_integer_prop TEST_PREFIX "wide_integer_prop.")
+    endif()
+
+    set(xacro_policy_prop_src${CMAKE_CURRENT_SOURCE_DIR}/property/xacro_policy_prop.cpp)
     if(EXISTS ${xacro_policy_prop_src})
         add_executable(xacro_policy_prop ${xacro_policy_prop_src})
         target_link_libraries(xacro_policy_prop

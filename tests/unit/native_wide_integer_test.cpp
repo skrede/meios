@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <optional>
 #include <functional>
 #include <string_view>
@@ -168,18 +169,17 @@ TEST_CASE("an exact result inside 64 bits is an integer again", "[xacro][wide]")
     CHECK(evaluate("9223372036854775807 + 1").result.kind() == value_kind::wide_integer);
 }
 
-TEST_CASE("a division, a remainder, a real operand and a power computed as a real refuse beside a wide integer", "[xacro][wide]")
+TEST_CASE("a wide integer divides, takes a remainder and rounds exactly", "[xacro][wide]")
 {
-    for(const std::string &expression : { wide_digits + " / 3", wide_digits + " // 7", wide_digits + " % 7", wide_digits + " * 0.5",
-                                          wide_digits + " ** 0.5", wide_digits + " ** -1", "floor(" + wide_digits + ")" })
+    const std::string w = wide_digits;
+    const std::pair<std::string, std::string> measured[] = {
+            {w + " % 7", "1"}, {"-" + w + " % 7", "6"}, {w + " % -7", "-6"}, {w + " // " + w, "1"}, {"-" + w + " // 7", "-14285714285714285715"},
+            {w + " / 3", "3.333333333333333e+19"}, {"-" + w + " / 7", "-1.4285714285714287e+19"}, {"7 / " + w, "7e-20"}, {w + " / " + w, "1.0"},
+            {"floor(" + w + ")", w}, {"ceil(-" + w + ")", "-" + w}};
+    for(const auto &[expression, render] : measured)
     {
-        DYNAMIC_SECTION(expression)
-        {
-            const outcome out = evaluate(expression);
-            CHECK(out.failure == meios::eval_failure_kind::unsupported);
-            REQUIRE(out.log.messages.size() == 1);
-            CHECK(out.log.messages[0].find("outside the 64-bit range") != std::string::npos);
-        }
+        CAPTURE(expression);
+        CHECK(rendered(expression) == render);
     }
 }
 

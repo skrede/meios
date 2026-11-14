@@ -89,7 +89,16 @@ void scale_and_add(limbs &magnitude, std::uint32_t factor, std::uint32_t addend)
         magnitude.push_back(static_cast<std::uint32_t>(carry));
 }
 
-std::uint32_t divide_in_place(limbs &magnitude, std::uint32_t divisor)
+std::uint32_t chunk_value(std::string_view digits)
+{
+    std::uint32_t value = 0;
+    std::from_chars(digits.data(), digits.data() + digits.size(), value);
+    return value;
+}
+
+}
+
+std::uint32_t big_integer::divide_in_place(limbs &magnitude, std::uint32_t divisor)
 {
     std::uint64_t remainder = 0;
     for(std::size_t i = magnitude.size(); i-- > 0;)
@@ -100,15 +109,6 @@ std::uint32_t divide_in_place(limbs &magnitude, std::uint32_t divisor)
     }
     magnitude = trimmed(std::move(magnitude));
     return static_cast<std::uint32_t>(remainder);
-}
-
-std::uint32_t chunk_value(std::string_view digits)
-{
-    std::uint32_t value = 0;
-    std::from_chars(digits.data(), digits.data() + digits.size(), value);
-    return value;
-}
-
 }
 
 big_integer::big_integer(std::int64_t number)

@@ -24,13 +24,6 @@ namespace meios::detail
 namespace
 {
 
-big_integer exact(const value &v)
-{
-    if(const std::optional<wide_integer> wide = v.wide())
-        return *big_integer::from_spelling(wide->spelling());
-    return big_integer{ *as_int(v) };
-}
-
 std::optional<std::int64_t> checked(std::int64_t a, std::int64_t b, token_kind op)
 {
     if(op == token_kind::plus)
@@ -79,6 +72,13 @@ value closed_power(const big_integer &base, const wide_integer &exponent)
 
 }
 
+big_integer big_integer_of(const value &v)
+{
+    if(const std::optional<wide_integer> wide = v.wide())
+        return *big_integer::from_spelling(wide->spelling());
+    return big_integer{ *as_int(v) };
+}
+
 bool is_integral(const value &v)
 {
     return is_int(v) || v.kind() == value_kind::wide_integer;
@@ -107,10 +107,10 @@ value integer_arithmetic(parser &p, const value &a, const value &b, token_kind o
         if(const std::optional<std::int64_t> made = checked(*x, *y, op))
             return value{ *made };
     if(op == token_kind::plus)
-        return integer_result(p, exact(a) + exact(b), "addition");
+        return integer_result(p, big_integer_of(a) + big_integer_of(b), "addition");
     if(op == token_kind::minus)
-        return integer_result(p, exact(a) - exact(b), "subtraction");
-    return integer_result(p, exact(a) * exact(b), "multiplication");
+        return integer_result(p, big_integer_of(a) - big_integer_of(b), "subtraction");
+    return integer_result(p, big_integer_of(a) * big_integer_of(b), "multiplication");
 }
 
 value integer_negate(parser &p, const value &v)
@@ -118,7 +118,7 @@ value integer_negate(parser &p, const value &v)
     if(const std::optional<std::int64_t> x = as_int(v))
         if(const std::optional<std::int64_t> made = checked_negate(*x))
             return value{ *made };
-    return integer_result(p, -exact(v), "negation");
+    return integer_result(p, -big_integer_of(v), "negation");
 }
 
 value integer_abs(parser &p, const value &v)
@@ -126,7 +126,7 @@ value integer_abs(parser &p, const value &v)
     if(const std::optional<std::int64_t> x = as_int(v))
         if(const std::optional<std::int64_t> made = checked_abs(*x))
             return value{ *made };
-    return integer_result(p, abs(exact(v)), "absolute value");
+    return integer_result(p, abs(big_integer_of(v)), "absolute value");
 }
 
 bool integral_power(const value &base, const value &exponent)
@@ -143,7 +143,7 @@ value integer_power(parser &p, const value &a, const value &b)
     if(base && exponent)
         if(const std::optional<std::int64_t> made = checked_power(*base, *exponent))
             return value{ *made };
-    const big_integer exact_base = exact(a);
+    const big_integer exact_base = big_integer_of(a);
     if(!exponent && exact_base.bit_length() <= 1)
         return closed_power(exact_base, *b.wide());
     if(!exponent || certainly_too_long(a, *exponent))

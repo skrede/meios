@@ -152,6 +152,13 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"wide_integer_read_by_name_added", "wide_integer_read_by_name_added", {}},
         agreement_probe{"integer_power_beyond_64_bits", "integer_power_beyond_64_bits", {}},
         agreement_probe{"wide_integer_squared", "wide_integer_squared", {}},
+        agreement_probe{"wide_integer_floor_division", "wide_integer_floor_division", {}},
+        agreement_probe{"wide_integer_modulo", "wide_integer_modulo", {}},
+        agreement_probe{"wide_integer_halved", "wide_integer_halved", {}},
+        agreement_probe{"wide_integer_divided", "wide_integer_divided", {}},
+        agreement_probe{"wide_integer_beside_real", "wide_integer_beside_real", {}},
+        agreement_probe{"wide_integer_real_power", "wide_integer_real_power", {}},
+        agreement_probe{"real_floored_beyond_64_bits", "real_floored_beyond_64_bits", {}},
 };
 
 }

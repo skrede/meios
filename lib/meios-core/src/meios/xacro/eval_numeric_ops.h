@@ -17,7 +17,8 @@ namespace meios::detail
 class big_integer;
 
 // need_int and need_double route an operand with no arithmetic meaning, a string, a sequence or a
-// mapping included, to parser::fail; need_truth answers the truth every value kind has.
+// mapping included, to parser::fail, and need_double an integer too large for a real; need_truth
+// answers the truth every value kind has.
 std::int64_t need_int(parser &p, const value &v);
 double need_double(parser &p, const value &v);
 bool need_truth(parser &p, const value &v);
@@ -52,6 +53,7 @@ std::optional<std::int64_t> checked_power(std::int64_t base, std::int64_t expone
 
 // A boolean, an integer of 64 bits and a wide integer are integral; a boolean reads as 0 or 1.
 bool is_integral(const value &v);
+big_integer big_integer_of(const value &v);
 
 // Every integer result passes here: an integer where it fits 64 bits, otherwise a wide integer
 // charged its digits as a produced string is charged, and past the digit ceiling a refusal.
@@ -66,8 +68,10 @@ value integer_abs(parser &p, const value &v);
 bool integral_power(const value &base, const value &exponent);
 value integer_power(parser &p, const value &a, const value &b);
 
-value int_from_real(parser &p, double number);
-value int_result(parser &p, std::optional<std::int64_t> made, std::string_view operation);
+// A zero divisor refuses naming its operator; '/' answers the quotient rounded once.
+value integer_floor_divide(parser &p, const value &a, const value &b);
+value integer_modulo(parser &p, const value &a, const value &b);
+value integer_divide(parser &p, const value &a, const value &b);
 
 value negate(parser &p, const value &v);
 value unary_pos(parser &p, const value &v);

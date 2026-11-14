@@ -124,3 +124,58 @@ TEST_CASE("an arbitrary-precision integer raises to a non-negative power", "[nat
         CHECK(spelled(pow(big(base), 0)) == "1");
     CHECK(spelled(pow(big("0"), 5)) == "0");
 }
+
+namespace
+{
+
+void check_division(std::string_view dividend, std::string_view divisor, std::string_view quotient, std::string_view remainder)
+{
+    CAPTURE(dividend, divisor);
+    const auto [q, r] = floor_divmod(big(dividend), big(divisor));
+    CHECK(spelled(q) == quotient);
+    CHECK(spelled(r) == remainder);
+    CHECK(q * big(divisor) + r == big(dividend));
+    CHECK(abs(r) < abs(big(divisor)));
+    CHECK((r == big("0") || r.negative() == big(divisor).negative()));
+}
+
+}
+
+TEST_CASE("arbitrary-precision floor division rounds toward negative infinity over every sign pair", "[native][big_integer]")
+{
+    const std::string n = "1000000000000000000000000000000";
+    check_division(n, "7", "142857142857142857142857142857", "1");
+    check_division("-" + n, "7", "-142857142857142857142857142858", "6");
+    check_division(n, "-7", "-142857142857142857142857142858", "-6");
+    check_division("-" + n, "-7", "142857142857142857142857142857", "-1");
+    check_division("-9223372036854775808", "-1", "9223372036854775808", "0");
+    check_division("5", "1180591620717411303424", "0", "5");
+    check_division("-5", "1180591620717411303424", "-1", "1180591620717411303419");
+    check_division("0", "-" + wide, "0", "0");
+}
+
+TEST_CASE("arbitrary-precision floor division over a divisor of several limbs", "[native][big_integer]")
+{
+    const std::string n = "340282366920938463463374607431768211461", d = "18446744073709551619";
+    check_division(n, d, "18446744073709551613", "14");
+    check_division("-" + n, d, "-18446744073709551614", "18446744073709551605");
+    check_division(n, "-" + d, "-18446744073709551614", "-18446744073709551605");
+    check_division("-" + n, "-" + d, "18446744073709551613", "-14");
+}
+
+TEST_CASE("arbitrary-precision floor division adds the divisor back when an estimate is one too large", "[native][big_integer]")
+{
+    const std::string n = "79228162514264337593543950336", d = "18446744073709551617";
+    check_division(n, d, "4294967295", "18446744069414584321");
+    check_division("-" + n, d, "-4294967296", "4294967296");
+    check_division(n, "-" + d, "-4294967296", "-4294967296");
+}
+
+TEST_CASE("arbitrary-precision floor division corrects an estimate twice by the divisor's second limb", "[native][big_integer]")
+{
+    check_division("604444463063240877801472", "140739635838975", "4294770690", "140737488158722");
+    check_division("-604444463063240877801472", "140739635838975", "-4294770691", "2147680253");
+    const std::string n = "2596069201104899549927654620659712", d = "604472133179347147161600";
+    check_division(n, d, "4294770690", "604462908962898247155712");
+    check_division(n, "-" + d, "-4294770691", "-9224216448900005888");
+}

@@ -14,12 +14,13 @@ read an auxiliary document, is built by default too, so the plain `load()` call 
 with nothing installed beyond a compiler and CMake. The two libraries it needs, pugixml and yaml-cpp,
 are each found on the system or fetched at configure time.
 
-What it evaluates is a fixed, closed grammar rather than a language: range-checked arithmetic over
-integers and reals, the addition of two strings, comparison, boolean logic, membership against a
-mapping's keys and against a string's text, subscripting into a mapping and into a sequence, one
-named string operation, a keyword-argument mapping constructor, a dotted read of a name an include
-namespace holds or of a key in a document this evaluator loaded, a fixed set of mathematics
-functions, and one namespaced call that reads an auxiliary document. A construct outside that grammar
+What it evaluates is a fixed, closed grammar rather than a language: arithmetic that is exact over
+integers of any size up to 4300 digits and stays finite over reals, the addition of two strings,
+comparison, boolean logic, membership against a mapping's keys and against a string's text,
+subscripting into a mapping and into a sequence, one named string operation, a keyword-argument
+mapping constructor, a dotted read of a name an include namespace holds or of a key in a document
+this evaluator loaded, a fixed set of mathematics functions, and one namespaced call that reads an
+auxiliary document. A construct outside that grammar
 is refused with a located diagnostic naming what it met — never evaluated, and never quietly
 approximated. `meios::eval-python` is a separate, opt-in backend for a trusted
 description needing Python behavior the grammar does not carry; it has
@@ -29,12 +30,15 @@ description needing Python behavior the grammar does not carry; it has
 
 - Arithmetic: `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-`. Integer arithmetic stays
   integer — `2 + 3` is `5`, not `5.0` — while `/` is always true division, so `4 / 2` is `2.0`.
-  Addition, subtraction, multiplication, exponentiation, a unary sign and `abs` compute exactly on
-  integers of any size up to 4300 digits, a result past 64 bits included, so `${2 ** 70}` is
-  `1180591620717411303424`; a result with more digits refuses, a power before it is computed. Every
-  real result must be finite, and a division by zero and a non-finite result are loud failures rather
-  than a wrapped value or an `inf` reaching your document. A division, a remainder, a real operand or
-  a negative exponent beside an integer wider than 64 bits refuses under the built-in evaluator.
+  Every operation computes exactly on integers of any size up to 4300 digits, a result past 64 bits
+  included, so `${2 ** 70}` is `1180591620717411303424`; a result with more digits refuses, a power
+  before it is computed. `/` is true division, rounded once, for integers of any size, so
+  `${2 ** 70 / 3}` is `3.935305402391371e+20`. `//` and `%` round toward negative infinity, the
+  remainder taking the divisor's sign, so `${-7 // 2}` is `-4` and `${7 % -2}` is `-1`. An integer
+  beside a real is read as the nearest real, so `${99999999999999999999 * 0.5}` is `5e+19`, and one
+  too large for a real refuses, as a quotient too large for a real does. Every real result must be
+  finite, and a division by zero and a non-finite result are loud failures rather than a wrapped value
+  or an `inf` reaching your document.
 - Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
   reads as both comparisons rather than as a comparison against a boolean. Comparing two numbers is
   exact, so `${9007199254740993 == 9007199254740992}` is `False`, and an integer wider than 64 bits is
@@ -98,10 +102,9 @@ integer of that size whether it is read by name, forwarded by a value that is on
 (`c="${b}"`, a macro argument `a="${b}"`) or written inside an expression, so
 `${99999999999999999999}` renders `99999999999999999999`. An integer too wide for 64 bits therefore
 renders as written, compares exactly with any number and is true wherever a truth is read; it equals
-no string, it adds, subtracts, multiplies, raises to a power and takes a sign and `abs` exactly, and as
-a sequence index it refuses as outside the sequence; the arithmetic bullet of
-[what evaluates](#what-evaluates) names what still refuses beside it. A literal of
-more than 4300 digits refuses, naming that ceiling, and a bound value of more digits stays text.
+no string, it takes part in every operation as any integer does, exactly, and as a sequence index it
+refuses as outside the sequence. A literal of more than 4300 digits refuses, naming that ceiling, and a
+bound value of more digits stays text.
 Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
 `1180591620717411303424`. A value `float()` reads as infinity, `1e400` or `INFINITY`,
@@ -119,10 +122,12 @@ does. An argument and a boolean attribute are not read this way; both are descri
 `property_wide_integer_forwarded_eager`, `macro_argument_wide_integer_forwarded`,
 `integer_literal_wide`, `wide_integer_compared`, `wide_integer_condition`,
 `wide_integer_compared_with_real`, `wide_integer_negated`, `wide_integer_added`,
-`wide_integer_doubled`, `wide_integer_read_by_name_added`, `integer_power_beyond_64_bits` and
-`wide_integer_squared` agreement probes hold this against a fresh xacro render, beside the
-`xacro_literal_read`, `xacro_wide_integer`, `native_wide_integer`, `native_exact_compare` and
-`native_big_integer` cases.
+`wide_integer_doubled`, `wide_integer_read_by_name_added`, `integer_power_beyond_64_bits`,
+`wide_integer_squared`, `wide_integer_floor_division`, `wide_integer_modulo`, `wide_integer_halved`,
+`wide_integer_divided`, `wide_integer_beside_real`, `wide_integer_real_power` and
+`real_floored_beyond_64_bits` agreement probes hold this against a fresh xacro render, beside the
+`xacro_literal_read`, `xacro_wide_integer`, `native_wide_integer`, `native_exact_compare`,
+`native_big_integer` and `native_wide_real` cases.
 
 **A property's value is evaluated at its first read, in the table that defined it.** The text written
 in `value` or `default` is stored where the property is written, and the first expression that reads
@@ -213,8 +218,9 @@ floor   max   min   radians   sin   sqrt   tan
 
 `min` and `max` take one or more arguments — zero is a fault, not an identity — order them exactly
 and answer the first of equal arguments, so `${min(1, 1.0)}` is `1` and `${max(1.0, 1)}` is `1.0`.
-`atan2` takes exactly two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
-integers whatever they are handed. All fifteen render here. `abs` is not a portable spelling: xacro's
+`atan2` takes exactly two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` answer
+an integer unchanged and a real as the exact integer it rounds to, of any size, so `${floor(1e30)}` is
+`1000000000000000019884624838656`. All fifteen render here. `abs` is not a portable spelling: xacro's
 expression globals carry the mathematics module and the two reducers and no builtins at all, so
 `${abs(-3)}`, which renders `3` here, raises an undefined name under xacro. It is a reviewed
 difference, and the section on differences below carries it. Any other name followed by `(` is refused
@@ -247,7 +253,7 @@ difference [known limitations](known-limitations.md#expression-evaluation) lists
 arithmetic carries that nesting as well, so a chain of `${p1 + 1}` reads renders six properties deep.
 
 **The kinds a value can have.** An expression works over exactly seven: a null, a boolean, an
-integer, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
+integer of any size up to 4300 digits, a real, a string, a sequence and a mapping. The first five have a scalar spelling and can be
 written into a document; a sequence and a mapping have none, so one reaching a document's text is a
 located, typed failure naming the kind rather than an invented serialization. Those last two reach an
 expression two ways: out of an auxiliary document, and out of the grammar itself — the mapping
@@ -279,7 +285,7 @@ decided by the failure's kind, and there are exactly four:
 | Kind | What produces it | Terminal |
 |------|------------------|----------|
 | `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a member of a string other than the named split, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string beyond adding two of them | no: a lenient policy may leave the span verbatim |
-| `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer result of more than 4300 digits, a floor division, remainder or rounding outside the 64-bit range, a non-finite result, malformed syntax | yes, under every policy |
+| `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer result of more than 4300 digits, an integer or a quotient too large for a real, a non-finite result, malformed syntax | yes, under every policy |
 | `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
@@ -1185,9 +1191,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and forty-three agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and fifty agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  forty-one the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  forty-eight the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

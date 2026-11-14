@@ -1,6 +1,8 @@
 #include "lexer.h"
+#include "big_integer.h"
 #include "eval_parser.h"
 #include "numeric_order.h"
+#include "numeric_detail.h"
 #include "reference_names.h"
 #include "eval_numeric_ops.h"
 
@@ -45,7 +47,18 @@ value math_abs(parser &p, const value &v)
         return real_result(p, std::fabs(*v.real()));
     if(is_integral(v))
         return integer_abs(p, v);
-    return int_result(p, checked_abs(need_int(p, v)), "absolute value");
+    return value{ need_int(p, v) };
+}
+
+// Past 64 bits a whole real is read as the exact integer it holds, at most 309 digits.
+value rounded_integer(parser &p, const value &v, double (*rounding)(double))
+{
+    if(is_integral(v))
+        return v.kind() == value_kind::boolean ? value{ *as_int(v) } : v;
+    const double whole = rounding(need_double(p, v));
+    if(const std::optional<std::int64_t> narrow = int_from_double(whole))
+        return value{ *narrow };
+    return integer_result(p, *big_integer::from_spelling(integral_digits(whole)), "rounding");
 }
 
 // The first of equal arguments is the answer, so an argument replaces it only when strictly
@@ -71,8 +84,8 @@ value math_reduce(parser &p, std::string_view name, const std::vector<value> &ar
 value call_unary(parser &p, std::string_view name, const value &arg)
 {
     if(name == "abs")     return math_abs(p, arg);
-    if(name == "floor")   return int_from_real(p, std::floor(need_double(p, arg)));
-    if(name == "ceil")    return int_from_real(p, std::ceil(need_double(p, arg)));
+    if(name == "floor")   return rounded_integer(p, arg, std::floor);
+    if(name == "ceil")    return rounded_integer(p, arg, std::ceil);
     if(name == "radians") return real_result(p, need_double(p, arg) * (3.141592653589793 / 180.0));
     if(name == "degrees") return real_result(p, need_double(p, arg) * (180.0 / 3.141592653589793));
     math_fn fn = unary_math_fn(name);

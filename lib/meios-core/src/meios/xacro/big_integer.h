@@ -6,6 +6,7 @@
 #include <compare>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <optional>
 #include <string_view>
 
@@ -44,6 +45,11 @@ public:
 
     friend big_integer operator*(const big_integer &a, const big_integer &b);
     friend big_integer pow(const big_integer &base, std::uint64_t exponent);
+    friend big_integer operator<<(const big_integer &a, std::size_t bits);
+
+    // The quotient rounded toward negative infinity and the remainder, which takes the divisor's
+    // sign; the divisor must not be zero.
+    friend std::pair<big_integer, big_integer> floor_divmod(const big_integer &dividend, const big_integer &divisor);
 
 private:
     bool m_negative;
@@ -52,7 +58,13 @@ private:
     big_integer(std::vector<std::uint32_t> limbs, bool negative);
 
     static big_integer signed_sum(const big_integer &a, const big_integer &b, bool b_negative);
+
+    static std::uint32_t divide_in_place(std::vector<std::uint32_t> &magnitude, std::uint32_t divisor);
 };
+
+// The quotient rounded once to the nearest real, ties to even, and nothing past the double range;
+// the divisor must not be zero.
+std::optional<double> true_quotient(const big_integer &dividend, const big_integer &divisor);
 
 }
 

@@ -394,3 +394,10 @@ wide_integer_doubled	agreement
 wide_integer_read_by_name_added	agreement
 integer_power_beyond_64_bits	agreement
 wide_integer_squared	agreement
+wide_integer_floor_division	agreement
+wide_integer_modulo	agreement
+wide_integer_halved	agreement
+wide_integer_divided	agreement
+wide_integer_beside_real	agreement
+wide_integer_real_power	agreement
+real_floored_beyond_64_bits	agreement
