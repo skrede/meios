@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 from recorder.corpus import REPO
-from grammar_probes import GRAMMAR_AGREEMENT_PROBES, GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
+from grammar_probes import GRAMMAR_DOCUMENT_PROBES, GRAMMAR_PROBE_ARGUMENTS, GRAMMAR_PROBE_ROOTS
+from grammar_agreement_probes import GRAMMAR_AGREEMENT_PROBES
 
 # The known divergences, measured and deliberately not changed: an alias inside the node it names,
 # the two mapping-constructor argument shapes upstream accepts that are refused here, the four

@@ -13,6 +13,7 @@ enum class value_kind
     string,
     sequence,
     mapping,
+    wide_integer,
 };
 
 }

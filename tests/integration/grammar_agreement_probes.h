@@ -8,7 +8,7 @@
 namespace differential
 {
 
-// Spelled exactly as grammar_probes.py spells them, at the same positions.
+// Spelled exactly as grammar_agreement_probes.py spells them, at the same positions.
 inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"property_eager_in_unmodelled_element", "property_eager_in_unmodelled_element", {}, std::nullopt, {}, {}, true},
         agreement_probe{"property_parent_scope_in_macro", "property_parent_scope_in_macro", {}},
@@ -142,6 +142,7 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"macro_definition_attribute_evaluated", "macro_definition_attribute_evaluated", {}, meios::diagnostic_code::undefined_property},
         agreement_probe{"macro_definition_attribute_uncalled", "macro_definition_attribute_uncalled", {}},
         agreement_probe{"xacro_namespace_declaration_evaluated", "xacro_namespace_declaration_evaluated", {}, meios::diagnostic_code::undefined_property},
+        agreement_probe{"integer_literal_wide", "integer_literal_wide", {}},
 };
 
 }

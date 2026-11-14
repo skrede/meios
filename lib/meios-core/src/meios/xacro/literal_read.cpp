@@ -5,10 +5,12 @@
 #include "meios/xacro/value_kind.h"
 
 #include "meios/xacro/detail/numeric.h"
+#include "meios/xacro/detail/wide_integer.h"
 
 #include <string>
 #include <cstdint>
 #include <optional>
+#include <algorithm>
 #include <string_view>
 
 namespace meios::detail
@@ -29,6 +31,29 @@ value integer(const std::string &digits)
     return ok ? value{ number } : value{ digits };
 }
 
+std::optional<std::string> canonical_integer(std::string_view digits)
+{
+    const bool negative = digits.starts_with('-');
+    std::string_view magnitude = negative ? digits.substr(1) : digits;
+    if(magnitude.empty() || magnitude.find_first_not_of("0123456789") != std::string_view::npos)
+        return std::nullopt;
+    magnitude = magnitude.substr(std::min(magnitude.find_first_not_of('0'), magnitude.size() - 1));
+    return (negative && magnitude != "0" ? "-" : "") + std::string(magnitude);
+}
+
+}
+
+std::optional<value> integer_literal(std::string_view digits)
+{
+    const std::optional<std::string> spelling = canonical_integer(digits);
+    if(!spelling)
+        return std::nullopt;
+    bool ok = false;
+    const std::int64_t number = parse_int(*spelling, ok);
+    if(ok)
+        return value{ number };
+    const std::optional<wide_integer> wide = wide_integer::from_spelling(*spelling);
+    return wide ? std::optional<value>(value{ *wide }) : std::nullopt;
 }
 
 value read_literal(std::string_view text)

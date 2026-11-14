@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "literal_read.h"
 #include "identifier_text.h"
 
 #include "meios/xacro/value.h"
@@ -8,7 +9,6 @@
 #include <string>
 #include <vector>
 #include <cstddef>
-#include <cstdint>
 #include <utility>
 #include <optional>
 #include <algorithm>
@@ -69,12 +69,9 @@ token_kind one_char_kind(char c)
 
 std::optional<value> number_leaf(std::string_view text, bool is_float)
 {
-    bool ok = false;
     if(!is_float)
-    {
-        const std::int64_t number = parse_int(text, ok);
-        return ok ? std::optional<value>(value{ number }) : std::nullopt;
-    }
+        return integer_literal(text);
+    bool ok = false;
     const double number = parse_double(text, ok);
     return ok ? value::make_real(number) : std::nullopt;
 }

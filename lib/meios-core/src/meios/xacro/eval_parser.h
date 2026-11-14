@@ -129,6 +129,8 @@ inline std::optional<bool> truthy(const value &v)
         return !v.text()->empty();
     if(v.kind() == value_kind::sequence || v.kind() == value_kind::mapping)
         return v.size() != 0;
+    if(v.kind() == value_kind::wide_integer)
+        return true;
     if(std::optional<double> number = as_double(v))
         return *number != 0.0;
     return std::nullopt;

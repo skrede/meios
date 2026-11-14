@@ -33,13 +33,14 @@ std::optional<bool> get_boolean_value(const value &v)
 {
     switch(v.kind())
     {
-        case value_kind::null:     return false;
-        case value_kind::boolean:  return *v.boolean();
-        case value_kind::integer:  return *v.integer() != 0;
-        case value_kind::real:     return *v.real() != 0.0;
-        case value_kind::string:   return spelled_boolean(*v.text());
+        case value_kind::null:         return false;
+        case value_kind::boolean:      return *v.boolean();
+        case value_kind::integer:      return *v.integer() != 0;
+        case value_kind::real:         return *v.real() != 0.0;
+        case value_kind::string:       return spelled_boolean(*v.text());
         case value_kind::sequence:
-        case value_kind::mapping:  return v.size() != 0;
+        case value_kind::mapping:      return v.size() != 0;
+        case value_kind::wide_integer: return true;
     }
     return std::nullopt;
 }

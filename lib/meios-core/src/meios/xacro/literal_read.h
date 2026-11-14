@@ -3,6 +3,7 @@
 
 #include "meios/xacro/value.h"
 
+#include <optional>
 #include <string_view>
 
 namespace meios::detail
@@ -16,6 +17,10 @@ value read_literal(std::string_view text);
 
 // A bound string is read as a literal; a value of any other kind keeps its type.
 value read_literal(const value &bound);
+
+// An optional '-' and decimal digits, leading zeros dropped: an integer when the number fits 64 bits,
+// a wide integer up to wide_digit_ceiling digits, and nothing for any other text.
+std::optional<value> integer_literal(std::string_view digits);
 
 }
 

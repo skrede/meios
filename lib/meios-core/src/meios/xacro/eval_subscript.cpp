@@ -3,6 +3,8 @@
 #include "meios/xacro/value.h"
 #include "meios/xacro/value_render.h"
 
+#include "meios/xacro/detail/wide_integer.h"
+
 #include "meios/detail/article.h"
 
 #include "meios/diagnostic/diagnostic_code.h"
@@ -35,6 +37,8 @@ value key_into(parser &p, const value &container, const value &key)
 // would give the spelling a meaning xacro does not.
 value position_into(parser &p, const value &container, const value &key)
 {
+    if(const std::optional<wide_integer> wide = key.wide())
+        return p.fail("index " + wide->spelling() + " is outside the sequence", diagnostic_code::undefined_property);
     if(!is_int(key))
         return p.fail("a sequence index must be an integer, not " + with_article(kind_name(key.kind())));
     const std::int64_t asked = *as_int(key);

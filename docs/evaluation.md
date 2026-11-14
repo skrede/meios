@@ -94,7 +94,12 @@ digits as text, whether it is read by name or forwarded by a value that is one s
 under the built-in evaluator. Under `meios::eval-python` such an integer reaches the expression as
 text: `${b + 1}` refuses, `${b * 2}` renders the digits twice over rather than the doubled number, and
 `${int(b) + 1}` computes on the integer, while a property bound to `${2**70}` renders
-`1180591620717411303424`. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+`1180591620717411303424`. An integer written inside an expression is read as an integer of any size up
+to 4300 digits, so `${99999999999999999999}` renders `99999999999999999999` and a literal of more
+digits refuses, naming that ceiling. Under the built-in evaluator such an integer is true wherever a
+truth is read and equals no string, while arithmetic, a sign, a numeric comparison, `min`, `max` and
+`abs` on it refuse under `unsupported_expression`, and as a sequence index it refuses as outside the
+sequence. A value `float()` reads as infinity, `1e400` or `INFINITY`,
 stays text as written, because a real here is always finite; [known
 limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
 runs wherever a value is bound: a property evaluated where it is written, a property stored for its
@@ -106,8 +111,9 @@ whatever an expression evaluates to, so `${'0' + '1'}` binds the integer `1`, ex
 does. An argument and a boolean attribute are not read this way; both are described below. The
 `property_quoted_value`, `property_padded_number`, `property_signed_number`, `property_unicode_digit`,
 `macro_argument_literal_reading`, `property_wide_integer_forwarded`,
-`property_wide_integer_forwarded_eager` and `macro_argument_wide_integer_forwarded` agreement probes
-hold this against a fresh xacro render, beside the `xacro_literal_read` cases.
+`property_wide_integer_forwarded_eager`, `macro_argument_wide_integer_forwarded` and
+`integer_literal_wide` agreement probes hold this against a fresh xacro render, beside the
+`xacro_literal_read` and `native_wide_integer` cases.
 
 **A property's value is evaluated at its first read, in the table that defined it.** The text written
 in `value` or `default` is stored where the property is written, and the first expression that reads
@@ -1168,9 +1174,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and thirty-three agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and thirty-four agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  thirty-one the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  thirty-two the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

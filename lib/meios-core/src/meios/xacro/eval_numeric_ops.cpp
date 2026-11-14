@@ -22,10 +22,13 @@ namespace
 
 // Concatenation is the one arithmetic meaning a string carries here; repetition by an integer is
 // the meaning that stays outside the measured surface, so a string reaching any other operator
-// refuses as unsupported and a lenient policy may still retain the span. Every other kind reaching
-// here has no arithmetic meaning in Python, which makes it a genuine fault.
+// refuses as unsupported and a lenient policy may still retain the span. An integer outside the
+// 64-bit range has a meaning in Python this evaluator does not compute, so it refuses the same way.
+// Every other kind reaching here has no arithmetic meaning in Python, which makes it a genuine fault.
 value refuse_kind(parser &p, const value &v)
 {
+    if(v.kind() == value_kind::wide_integer)
+        return p.fail_unsupported("an integer operand outside the 64-bit range has no numeric meaning here — use eval-python");
     const std::string message = with_article(kind_name(v.kind())) + " operand has no arithmetic meaning here";
     if(v.kind() == value_kind::string)
         return p.fail_unsupported(message + " — use eval-python");

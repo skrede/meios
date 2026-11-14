@@ -5,6 +5,7 @@
 
 #include "meios/xacro/detail/value_key.h"
 #include "meios/xacro/detail/value_node.h"
+#include "meios/xacro/detail/wide_integer.h"
 
 #include <memory>
 #include <string>
@@ -30,6 +31,7 @@ public:
     explicit value(bool flag) : m_from_yaml(false), m_data(flag) {}
     explicit value(std::int64_t number) : m_from_yaml(false), m_data(number) {}
     explicit value(std::string text) : m_from_yaml(false), m_data(std::move(text)) {}
+    explicit value(detail::wide_integer number) : m_from_yaml(false), m_data(std::move(number)) {}
 
     // A character pointer converts to bool ahead of std::string, which would silently
     // turn an authored literal into a boolean.
@@ -51,6 +53,7 @@ public:
     std::optional<double> real() const { return held<double>(); }
     std::optional<std::int64_t> integer() const { return held<std::int64_t>(); }
     std::optional<std::string> text() const { return held<std::string>(); }
+    std::optional<detail::wide_integer> wide() const { return held<detail::wide_integer>(); }
 
     std::size_t size() const;
     std::optional<value> at(std::size_t index) const;
@@ -66,7 +69,7 @@ private:
 
     bool m_from_yaml;
     std::variant<std::monostate, bool, std::int64_t, double, std::string, sequence_ref,
-                 mapping_ref>
+                 mapping_ref, detail::wide_integer>
         m_data;
 
     explicit value(double number) : m_from_yaml(false), m_data(number) {}

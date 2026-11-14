@@ -116,6 +116,7 @@ inline constexpr pairing element_pairings[] = {
          "conditional_quoted_text",
          standing::agrees},
         {"token.expr", carrier::agreement, "xacro_attribute_never_evaluated", standing::agrees},
+        {"token.expr", carrier::agreement, "integer_literal_wide", standing::agrees},
         {"token.expr", carrier::manifest, "sum_not_a_reference_global", standing::refuses_listed},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.extension", carrier::agreement, "command_nested_in_default include_find_composed", standing::agrees},

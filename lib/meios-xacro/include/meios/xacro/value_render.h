@@ -20,12 +20,13 @@ inline std::optional<std::string> render_scalar(const value &subject)
 {
     switch(subject.kind())
     {
-        case value_kind::null:    return std::string("None");
-        case value_kind::boolean: return *subject.boolean() ? "True" : "False";
-        case value_kind::integer: return std::to_string(*subject.integer());
-        case value_kind::real:    return detail::print_double(*subject.real());
-        case value_kind::string:  return *subject.text();
-        default:                  return std::nullopt;
+        case value_kind::null:         return std::string("None");
+        case value_kind::boolean:      return *subject.boolean() ? "True" : "False";
+        case value_kind::integer:      return std::to_string(*subject.integer());
+        case value_kind::real:         return detail::print_double(*subject.real());
+        case value_kind::string:       return *subject.text();
+        case value_kind::wide_integer: return subject.wide()->spelling();
+        default:                       return std::nullopt;
     }
 }
 
@@ -47,13 +48,14 @@ inline std::string_view kind_name(value_kind kind)
 {
     switch(kind)
     {
-        case value_kind::null:     return "null";
-        case value_kind::boolean:  return "boolean";
-        case value_kind::integer:  return "integer";
-        case value_kind::real:     return "real";
-        case value_kind::string:   return "string";
-        case value_kind::sequence: return "sequence";
-        default:                   return "mapping";
+        case value_kind::null:         return "null";
+        case value_kind::boolean:      return "boolean";
+        case value_kind::integer:      return "integer";
+        case value_kind::real:         return "real";
+        case value_kind::string:       return "string";
+        case value_kind::sequence:     return "sequence";
+        case value_kind::wide_integer: return "integer";
+        default:                       return "mapping";
     }
 }
 

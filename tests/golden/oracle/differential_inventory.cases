@@ -384,3 +384,4 @@ included_root_attribute_before_content	agreement
 macro_definition_attribute_evaluated	agreement
 macro_definition_attribute_uncalled	agreement
 xacro_namespace_declaration_evaluated	agreement
+integer_literal_wide	agreement
