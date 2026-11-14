@@ -33,6 +33,10 @@ double strtod_c_locale(const char *first, char **last);
 
 std::string print_double_shortest(double number);
 
+// The exact decimal digits of a finite whole real, sign included, where the shortest spelling
+// that reads back is not exact: past 2^53 it drops digits that rounding restores.
+std::string integral_digits(double number);
+
 }
 
 #endif

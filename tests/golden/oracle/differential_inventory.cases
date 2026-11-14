@@ -385,3 +385,6 @@ macro_definition_attribute_evaluated	agreement
 macro_definition_attribute_uncalled	agreement
 xacro_namespace_declaration_evaluated	agreement
 integer_literal_wide	agreement
+wide_integer_compared	agreement
+wide_integer_condition	agreement
+wide_integer_compared_with_real	agreement

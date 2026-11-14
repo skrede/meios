@@ -76,6 +76,8 @@ inline pybind11::object to_py_object(const pybind11::dict &priv, const value &bo
         return pybind11::int_(*number);
     if(std::optional<double> number = bound.real())
         return pybind11::float_(*number);
+    if(std::optional<wide_integer> number = bound.wide())
+        return pybind11::int_(pybind11::str(number->spelling()));
     return pybind11::none();
 }
 

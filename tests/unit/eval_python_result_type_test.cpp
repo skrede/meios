@@ -105,3 +105,21 @@ TEST_CASE("a property bound to a wide integer result renders its digits when rea
     REQUIRE(resolved.expanded.has_value());
     CHECK(leaves(resolved, "<l>c_1180591620717411303424</l>"));
 }
+
+TEST_CASE("a bound or forwarded wide integer reaches a Python expression as an integer", "[eval_python]")
+{
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const std::string bound = R"(<xacro:property name="b" value="99999999999999999999"/><xacro:property name="c" value="${b}"/>)";
+    const std::pair<std::string_view, std::string_view> rows[] = {
+        { "${b * 2}", "<l>199999999999999999998</l>" }, { "${c * 2}", "<l>199999999999999999998</l>" },
+        { "${b + 1}", "<l>100000000000000000000</l>" }, { "${c + 1}", "<l>100000000000000000000</l>" },
+        { "${-c}", "<l>-99999999999999999999</l>" },    { "${c &gt; 0}", "<l>True</l>" },
+    };
+    for(const std::pair<std::string_view, std::string_view> &row : rows)
+    {
+        const outcome resolved = run(std::string(header) + bound + "<l>" + std::string(row.first) + "</l></robot>",
+                                     meios::eval_policy::fail, handle);
+        INFO(row.first << " -> " << (resolved.expanded ? resolved.expanded->document : resolved.reported));
+        CHECK((resolved.expanded.has_value() && leaves(resolved, row.second)));
+    }
+}

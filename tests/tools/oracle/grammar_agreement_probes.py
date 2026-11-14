@@ -131,4 +131,7 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("macro_definition_attribute_evaluated", "macro_definition_attribute_evaluated", None),
                             ("macro_definition_attribute_uncalled", "macro_definition_attribute_uncalled", None),
                             ("xacro_namespace_declaration_evaluated", "xacro_namespace_declaration_evaluated", None),
-                            ("integer_literal_wide", "integer_literal_wide", None))
+                            ("integer_literal_wide", "integer_literal_wide", None),
+                            ("wide_integer_compared", "wide_integer_compared", None),
+                            ("wide_integer_condition", "wide_integer_condition", None),
+                            ("wide_integer_compared_with_real", "wide_integer_compared_with_real", None))

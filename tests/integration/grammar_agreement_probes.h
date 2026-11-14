@@ -143,6 +143,9 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"macro_definition_attribute_uncalled", "macro_definition_attribute_uncalled", {}},
         agreement_probe{"xacro_namespace_declaration_evaluated", "xacro_namespace_declaration_evaluated", {}, meios::diagnostic_code::undefined_property},
         agreement_probe{"integer_literal_wide", "integer_literal_wide", {}},
+        agreement_probe{"wide_integer_compared", "wide_integer_compared", {}},
+        agreement_probe{"wide_integer_condition", "wide_integer_condition", {}},
+        agreement_probe{"wide_integer_compared_with_real", "wide_integer_compared_with_real", {}},
 };
 
 }

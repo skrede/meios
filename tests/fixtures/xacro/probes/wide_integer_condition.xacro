@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="b" value="99999999999999999999"/>
+  <xacro:property name="c" value="${b}"/>
+  <xacro:if value="${c &gt; 1}">
+    <link name="l_taken"/>
+  </xacro:if>
+</robot>

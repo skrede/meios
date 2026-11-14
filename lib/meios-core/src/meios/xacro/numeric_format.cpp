@@ -163,4 +163,18 @@ std::string print_double_shortest(double number)
     return number < 0.0 ? "-inf" : "inf";
 }
 
+// The largest real has 309 digits; at precision zero both spellings print the exact value.
+std::string integral_digits(double number)
+{
+    std::array<char, 330> buffer{};
+#if MEIOS_HAS_FLOAT_CHARCONV
+    const std::to_chars_result made =
+        std::to_chars(buffer.data(), buffer.data() + buffer.size(), number, std::chars_format::fixed, 0);
+    return std::string(buffer.data(), made.ptr);
+#else
+    const int written = snprintf_c_locale(buffer.data(), buffer.size(), false, 0, number);
+    return std::string(buffer.data(), buffer.data() + written);
+#endif
+}
+
 }

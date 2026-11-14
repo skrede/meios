@@ -33,7 +33,9 @@ description needing Python behavior the grammar does not carry; it has
   a division by zero and a non-finite result are all loud failures rather than a wrapped value or an
   `inf` reaching your document.
 - Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
-  reads as both comparisons rather than as a comparison against a boolean.
+  reads as both comparisons rather than as a comparison against a boolean. Comparing two numbers is
+  exact, so `${9007199254740993 == 9007199254740992}` is `False`, and an integer wider than 64 bits is
+  compared with a real by its value: `${99999999999999999999 < 1e20}` is `True`.
 - Boolean logic: `and`, `or`, `not`, short-circuiting — an operand that cannot change the result is
   never evaluated. `or` yields its first true operand, or its last when none is, and `and` its first
   false operand, or its last when none is, without converting it: `${1 or 2}` is `1`, `${0 or 2}` is
@@ -88,18 +90,17 @@ Python's `int()` reads becomes an integer, text its `float()` reads as a finite 
 and `true`, `True`, `false` and `False` become booleans; anything else stays text. The order is what
 leaves `1` an integer rather than a true, and `yes` and `no` text rather than booleans. So ` 1`, `+1`
 and `١` bind `1`, `00012` binds `12`, `1.50` binds `1.5`, `1e3` binds `1000.0` and `1_0` the text
-`1_0`, while `0x10`, `TRUE` and ` true ` stay as written. An integer too wide for 64 bits keeps its
-digits as text, whether it is read by name or forwarded by a value that is one span reading it,
-`c="${b}"` or a macro argument `a="${b}"`, so it renders as written, and arithmetic on it refuses
-under the built-in evaluator. Under `meios::eval-python` such an integer reaches the expression as
-text: `${b + 1}` refuses, `${b * 2}` renders the digits twice over rather than the doubled number, and
-`${int(b) + 1}` computes on the integer, while a property bound to `${2**70}` renders
-`1180591620717411303424`. An integer written inside an expression is read as an integer of any size up
-to 4300 digits, so `${99999999999999999999}` renders `99999999999999999999` and a literal of more
-digits refuses, naming that ceiling. Under the built-in evaluator such an integer is true wherever a
-truth is read and equals no string, while arithmetic, a sign, a numeric comparison, `min`, `max` and
-`abs` on it refuse under `unsupported_expression`, and as a sequence index it refuses as outside the
-sequence. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+`1_0`, while `0x10`, `TRUE` and ` true ` stay as written. An integer of up to 4300 digits is an
+integer of that size whether it is read by name, forwarded by a value that is one span reading it
+(`c="${b}"`, a macro argument `a="${b}"`) or written inside an expression, so
+`${99999999999999999999}` renders `99999999999999999999`. An integer too wide for 64 bits therefore
+renders as written, compares exactly with any number and is true wherever a truth is read; it equals
+no string, arithmetic on it refuses under the built-in evaluator, as a sign and `abs` on it do, under
+`unsupported_expression`, and as a sequence index it refuses as outside the sequence. A literal of
+more than 4300 digits refuses, naming that ceiling, and a bound value of more digits stays text.
+Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
+renders `199999999999999999998`, and a property bound to `${2**70}` renders
+`1180591620717411303424`. A value `float()` reads as infinity, `1e400` or `INFINITY`,
 stays text as written, because a real here is always finite; [known
 limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
 runs wherever a value is bound: a property evaluated where it is written, a property stored for its
@@ -111,9 +112,10 @@ whatever an expression evaluates to, so `${'0' + '1'}` binds the integer `1`, ex
 does. An argument and a boolean attribute are not read this way; both are described below. The
 `property_quoted_value`, `property_padded_number`, `property_signed_number`, `property_unicode_digit`,
 `macro_argument_literal_reading`, `property_wide_integer_forwarded`,
-`property_wide_integer_forwarded_eager`, `macro_argument_wide_integer_forwarded` and
-`integer_literal_wide` agreement probes hold this against a fresh xacro render, beside the
-`xacro_literal_read` and `native_wide_integer` cases.
+`property_wide_integer_forwarded_eager`, `macro_argument_wide_integer_forwarded`,
+`integer_literal_wide`, `wide_integer_compared`, `wide_integer_condition` and
+`wide_integer_compared_with_real` agreement probes hold this against a fresh xacro render, beside the
+`xacro_literal_read`, `xacro_wide_integer`, `native_wide_integer` and `native_exact_compare` cases.
 
 **A property's value is evaluated at its first read, in the table that defined it.** The text written
 in `value` or `default` is stored where the property is written, and the first expression that reads
@@ -202,8 +204,9 @@ abs   acos   asin   atan   atan2   ceil   cos   degrees
 floor   max   min   radians   sin   sqrt   tan
 ```
 
-`min` and `max` take one or more arguments — zero is a fault, not an identity — `atan2` takes exactly
-two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
+`min` and `max` take one or more arguments — zero is a fault, not an identity — order them exactly
+and answer the first of equal arguments, so `${min(1, 1.0)}` is `1` and `${max(1.0, 1)}` is `1.0`.
+`atan2` takes exactly two, and the rest take exactly one. `abs` of an integer is an integer; `floor` and `ceil` yield
 integers whatever they are handed. All fifteen render here. `abs` is not a portable spelling: xacro's
 expression globals carry the mathematics module and the two reducers and no builtins at all, so
 `${abs(-3)}`, which renders `3` here, raises an undefined name under xacro. It is a reviewed
@@ -1174,9 +1177,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and thirty-four agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and thirty-seven agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  thirty-two the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  thirty-five the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
   the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
   rows of it: twelve document probes and eleven expression probes listed in

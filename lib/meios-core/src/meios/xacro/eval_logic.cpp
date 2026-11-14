@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "numeric_order.h"
 #include "reference_names.h"
 #include "eval_numeric_ops.h"
 
@@ -13,6 +14,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -44,13 +46,23 @@ value math_abs(parser &p, const value &v)
     return int_result(p, checked_abs(need_int(p, v)), "absolute value");
 }
 
+// The first of equal arguments is the answer, so an argument replaces it only when strictly
+// greater for max or strictly smaller for min.
 value math_reduce(parser &p, std::string_view name, const std::vector<value> &args)
 {
     if(args.empty()) return p.fail(std::string(name) + "() needs an argument");
+    const std::partial_ordering wanted = name == "max" ? std::partial_ordering::greater : std::partial_ordering::less;
     value best = args[0];
-    bool want_max = name == "max";
     for(std::size_t i = 1; i < args.size(); ++i)
-        if((need_double(p, args[i]) > need_double(p, best)) == want_max) best = args[i];
+    {
+        const std::optional<std::partial_ordering> order = numeric_order(args[i], best);
+        if(!order)
+        {
+            need_double(p, is_number(best) ? args[i] : best);
+            return value{};
+        }
+        if(*order == wanted) best = args[i];
+    }
     return best;
 }
 

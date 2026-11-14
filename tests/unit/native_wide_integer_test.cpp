@@ -146,12 +146,11 @@ TEST_CASE("an integer literal holds at most the digit ceiling and a longer one r
     CHECK(out.log.messages[0].find("99999") == std::string::npos);
 }
 
-TEST_CASE("arithmetic, a sign, ordering, numeric equality, min, max and abs on a wide integer refuse as unsupported", "[xacro][wide]")
+TEST_CASE("arithmetic, a sign and abs on a wide integer refuse as unsupported", "[xacro][wide]")
 {
     for(const std::string &expression : { wide_digits + " + 1", wide_digits + " * 2", "-" + wide_digits, "+" + wide_digits,
-                                          wide_digits + " > 0", wide_digits + " == " + wide_digits, "min(" + wide_digits + ", 1)",
-                                          "max(1, " + wide_digits + ")", "abs(" + wide_digits + ")", wide_digits + " ** 2",
-                                          wide_digits + " // 7", "floor(" + wide_digits + ")" })
+                                          "abs(" + wide_digits + ")", wide_digits + " ** 2", wide_digits + " // 7",
+                                          "floor(" + wide_digits + ")" })
     {
         DYNAMIC_SECTION(expression)
         {

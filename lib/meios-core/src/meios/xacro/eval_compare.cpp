@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "numeric_order.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
@@ -8,6 +9,7 @@
 #include "meios/detail/article.h"
 
 #include <string>
+#include <compare>
 #include <optional>
 
 namespace meios::detail
@@ -24,15 +26,20 @@ bool is_comparison(token_kind k)
 
 bool compare_numbers(parser &p, token_kind op, const value &a, const value &b)
 {
-    double x = need_double(p, a), y = need_double(p, b);
+    const std::optional<std::partial_ordering> order = numeric_order(a, b);
+    if(!order)
+    {
+        need_double(p, is_number(a) ? b : a);
+        return false;
+    }
     switch(op)
     {
-        case token_kind::less:          return x <  y;
-        case token_kind::less_equal:    return x <= y;
-        case token_kind::greater:       return x >  y;
-        case token_kind::greater_equal: return x >= y;
-        case token_kind::equal_equal:   return x == y;
-        case token_kind::not_equal:     return x != y;
+        case token_kind::less:          return *order <  0;
+        case token_kind::less_equal:    return *order <= 0;
+        case token_kind::greater:       return *order >  0;
+        case token_kind::greater_equal: return *order >= 0;
+        case token_kind::equal_equal:   return *order == 0;
+        case token_kind::not_equal:     return *order != 0;
         default:                        return false;
     }
 }

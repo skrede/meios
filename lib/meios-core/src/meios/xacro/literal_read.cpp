@@ -24,13 +24,6 @@ bool quoted(std::string_view text)
     return text.size() >= 2 && text.front() == '\'' && text.back() == '\'';
 }
 
-value integer(const std::string &digits)
-{
-    bool ok = false;
-    const std::int64_t number = parse_int(digits, ok);
-    return ok ? value{ number } : value{ digits };
-}
-
 std::optional<std::string> canonical_integer(std::string_view digits)
 {
     const bool negative = digits.starts_with('-');
@@ -63,7 +56,7 @@ value read_literal(std::string_view text)
     if(text.find('_') != std::string_view::npos)
         return value{ std::string(text) };
     if(const std::optional<std::string> digits = python_int(text))
-        return integer(*digits);
+        return integer_literal(*digits).value_or(value{ *digits });
     if(const std::optional<double> real = python_real(text))
         if(std::optional<value> number = value::make_real(*real))
             return *number;
