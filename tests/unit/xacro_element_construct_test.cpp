@@ -117,6 +117,20 @@ TEST_CASE("xacro:element refuses an evaluated name that is not an XML name, nami
     REQUIRE(refused(R"(<xacro:element xacro:name="${1}"/>)").message.find("'1'") != std::string::npos);
 }
 
+TEST_CASE("an evaluated name that is not an XML name is quoted with its control characters written visibly", "[xacro][element]")
+{
+    const meios::expansion_error line_feed = refused(R"(<xacro:element xacro:name="a&#10;b"/>)");
+    REQUIRE(line_feed.message.find(R"('a\nb')") != std::string::npos);
+    REQUIRE(line_feed.message.find_first_of("\t\r\n") == std::string::npos);
+    REQUIRE(refused(R"(<xacro:element xacro:name="a&#127;b"/>)").message.find(R"('a\x7fb')") != std::string::npos);
+    const meios::expansion_error attribute = refused(R"(<link name="l"><xacro:attribute name="a&#10;b" value="1"/></link>)");
+    REQUIRE(attribute.message.find(R"('a\nb')") != std::string::npos);
+    REQUIRE(attribute.message.find_first_of("\t\r\n") == std::string::npos);
+    std::vector<heard> records;
+    REQUIRE(attribute_place::render(R"(<xacro:element xacro:name="a&#10;b"/>)", records).starts_with("REFUSED"));
+    REQUIRE(attribute_place::at_level(records, meios::level::error).size() == 1);
+}
+
 TEST_CASE("xacro:element removes the whitespace around its evaluated name and warns", "[xacro][element]")
 {
     for(const std::string written : {"link ", " link", "link&#9;"})

@@ -51,7 +51,7 @@ value math_abs(parser &p, const value &v)
 }
 
 // Past 64 bits a whole real is read as the exact integer it holds, at most 309 digits.
-value rounded_integer(parser &p, const value &v, double (*rounding)(double))
+value rounded_integer(parser &p, const value &v, math_fn rounding)
 {
     if(is_integral(v))
         return v.kind() == value_kind::boolean ? value{ *as_int(v) } : v;
@@ -84,8 +84,8 @@ value math_reduce(parser &p, std::string_view name, const std::vector<value> &ar
 value call_unary(parser &p, std::string_view name, const value &arg)
 {
     if(name == "abs")     return math_abs(p, arg);
-    if(name == "floor")   return rounded_integer(p, arg, std::floor);
-    if(name == "ceil")    return rounded_integer(p, arg, std::ceil);
+    if(name == "floor")   return rounded_integer(p, arg, [](double x) { return std::floor(x); });
+    if(name == "ceil")    return rounded_integer(p, arg, [](double x) { return std::ceil(x); });
     if(name == "radians") return real_result(p, need_double(p, arg) * (3.141592653589793 / 180.0));
     if(name == "degrees") return real_result(p, need_double(p, arg) * (180.0 / 3.141592653589793));
     math_fn fn = unary_math_fn(name);

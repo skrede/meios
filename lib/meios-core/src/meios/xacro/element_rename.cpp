@@ -57,7 +57,7 @@ std::string evaluated_name(expand_ctx &ctx, const dispatch_view &view, std::stri
     if(name.empty())
         ok = fail(ctx, view.node, diagnostic_code::xacro_structural_error, head + "an empty name");
     else if(!is_xml_name(name))
-        ok = fail(ctx, view.node, diagnostic_code::xacro_structural_error, head + '\'' + name + "', which is not an XML name");
+        ok = fail(ctx, view.node, diagnostic_code::xacro_structural_error, head + '\'' + escaped_controls(name) + "', which is not an XML name");
     else if(name.size() != text.size())
         ctx.log.log(level::warn, locate(ctx, view.node), head + '\'' + escaped_controls(text) + "' and uses '" + name + "', without the white space around it");
     return name;

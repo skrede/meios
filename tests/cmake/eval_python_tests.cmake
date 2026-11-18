@@ -25,7 +25,9 @@ if(TARGET meios_eval-python)
             MEIOS_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
         meios_enable_coverage(eval_python_container_test)
         meios_warnings(eval_python_container_test)
-        catch_discover_tests(eval_python_container_test TEST_PREFIX "eval_python_container.")
+        # Run under a lowered digit limit so the wide-integer cases observe the limit the backend holds.
+        catch_discover_tests(eval_python_container_test TEST_PREFIX "eval_python_container."
+            PROPERTIES ENVIRONMENT "PYTHONINTMAXSTRDIGITS=640")
     endif()
 
     set(eval_python_refusal_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_refusal_test.cpp)

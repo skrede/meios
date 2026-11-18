@@ -114,7 +114,9 @@ refuses as outside the sequence. A literal of more than 4300 digits refuses, nam
 bound value of more digits stays text.
 Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
-`1180591620717411303424`. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+`1180591620717411303424`. The backend holds the interpreter's integer-to-text limit at 4300 digits
+whatever `PYTHONINTMAXSTRDIGITS` in the environment sets, so an integer of up to that many digits
+crosses into an expression and out of it, and a longer result refuses. A value `float()` reads as infinity, `1e400` or `INFINITY`,
 stays text as written, because a real here is always finite; [known
 limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
 runs wherever a value is bound: a property evaluated where it is written, a property stored for its
@@ -655,15 +657,16 @@ carries the element's own `file:line`. An evaluated name, here and for `xacro:at
 loses the XML white space at either end — space, tab, carriage return and line feed, nothing else —
 and when any was removed, one located `level::warn` note with no diagnostic code names the evaluated
 text and the name used, as `<xacro:element> evaluates its xacro:name to 'link ' and uses 'link',
-without the white space around it` does, so a load that renders with it keeps its claims. In the
-quoted evaluated text a tab, a carriage return or a line feed is written `\t`, `\r` or `\n`, and any
-other control character as `\x` and two hex digits, so the record stays on one line. A padded name
-that strips to the name of an xacro element is handled as that element, so `xacro:name="xacro:if "` is
-a conditional, where xacro refuses. What is left must be a name by the Name production of XML 1.0
+without the white space around it` does, so a load that renders with it keeps its claims. A padded
+name that strips to the name of an xacro element is handled as that element, so
+`xacro:name="xacro:if "` is a conditional, where xacro refuses. What is left must be a name by the Name production of XML 1.0
 (fifth edition, section 2.3); one that is not refuses under `xacro_structural_error`, naming the text,
 as `<xacro:element> evaluates its xacro:name to 'a><x', which is not an XML name` does, so evaluated
 text cannot write markup into the output, and an empty one, a name of white space alone among them,
-refuses too. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
+refuses too. In the text the warning and this refusal quote, a tab, a carriage return or a line feed
+is written `\t`, `\r` or `\n`, and any other control character as `\x` and two hex digits, so each
+record stays on one line; the warning's text can hold only the first three, since it differs from the
+name used by XML white space alone. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
 into its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML; here
 each refuses, white space inside a name included. The `element_empty_name`,
 `element_named_by_attribute`, `element_renamed_to_conditional`, `element_renamed_to_macro_call`,

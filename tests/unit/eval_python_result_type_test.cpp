@@ -123,3 +123,17 @@ TEST_CASE("a bound or forwarded wide integer reaches a Python expression as an i
         CHECK((resolved.expanded.has_value() && leaves(resolved, row.second)));
     }
 }
+
+TEST_CASE("an integer of 700 digits crosses into and out of Python whatever digit limit the environment sets", "[eval_python]")
+{
+    const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
+    const std::string digits = '1' + std::string(699, '0');
+    const std::string bound = std::string(header) + R"(<xacro:property name="b" value=")" + digits + R"("/>)";
+    const outcome remainder = run(bound + "<l>${b % 7}</l></robot>", meios::eval_policy::fail, handle);
+    REQUIRE(remainder.expanded.has_value());
+    CHECK(leaves(remainder, "<l>6</l>"));
+    const outcome product = run(bound + "<l>${b * 1}</l></robot>", meios::eval_policy::fail, handle);
+    REQUIRE(product.expanded.has_value());
+    CHECK(leaves(product, "<l>" + digits + "</l>"));
+    CHECK_FALSE(run(span_document("${10 ** 4300}"), meios::eval_policy::fail, handle).expanded.has_value());
+}
