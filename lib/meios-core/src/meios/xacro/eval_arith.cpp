@@ -5,6 +5,8 @@
 
 #include "meios/xacro/value.h"
 
+#include "meios/xacro/detail/wide_integer.h"
+
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 #include "meios/diagnostic/diagnostic_code.h"
@@ -65,8 +67,9 @@ std::string lexical_message(std::string_view text)
         return *fault;
     if(!text.empty() && text.front() == '\'')
         return "unterminated string in expression: " + std::string(text);
+    // Only an over-long literal reaches this branch: integer_literal declines a run of digits only past the ceiling.
     if(!text.empty() && text.find_first_not_of("0123456789") == std::string_view::npos)
-        return "an integer literal has more than the 4300 digits an integer holds here";
+        return "an integer literal has more than the " + std::to_string(wide_digit_ceiling) + " digits an integer holds here";
     return "unrecognized character in expression: '" + std::string(text) + "'";
 }
 

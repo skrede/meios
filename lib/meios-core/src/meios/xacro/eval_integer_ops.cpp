@@ -35,8 +35,10 @@ std::optional<std::int64_t> checked(std::int64_t a, std::int64_t b, token_kind o
 
 value refuse_digits(parser &p, std::string_view operation)
 {
-    return p.fail(std::string(operation) + " produced an integer of more than the " + std::to_string(wide_digit_ceiling)
-                  + " digits an integer holds here");
+    report_exhausted(p.session, std::string(operation) + " produced an integer of more than the " + std::to_string(wide_digit_ceiling)
+                     + " digits an integer holds here; this load cannot continue", p.log, p.anchor);
+    p.refuse_exhausted();
+    return value{};
 }
 
 // The leading fifteen digits carry the logarithm to the precision a double holds; the rest only
@@ -106,6 +108,8 @@ value integer_arithmetic(parser &p, const value &a, const value &b, token_kind o
     if(x && y)
         if(const std::optional<std::int64_t> made = checked(*x, *y, op))
             return value{ *made };
+    if(!admits_digits(p, a) || !admits_digits(p, b))
+        return value{};
     if(op == token_kind::plus)
         return integer_result(p, big_integer_of(a) + big_integer_of(b), "addition");
     if(op == token_kind::minus)
@@ -118,6 +122,8 @@ value integer_negate(parser &p, const value &v)
     if(const std::optional<std::int64_t> x = as_int(v))
         if(const std::optional<std::int64_t> made = checked_negate(*x))
             return value{ *made };
+    if(!admits_digits(p, v))
+        return value{};
     return integer_result(p, -big_integer_of(v), "negation");
 }
 
@@ -126,6 +132,8 @@ value integer_abs(parser &p, const value &v)
     if(const std::optional<std::int64_t> x = as_int(v))
         if(const std::optional<std::int64_t> made = checked_abs(*x))
             return value{ *made };
+    if(!admits_digits(p, v))
+        return value{};
     return integer_result(p, abs(big_integer_of(v)), "absolute value");
 }
 
@@ -143,6 +151,8 @@ value integer_power(parser &p, const value &a, const value &b)
     if(base && exponent)
         if(const std::optional<std::int64_t> made = checked_power(*base, *exponent))
             return value{ *made };
+    if(!admits_digits(p, a))
+        return value{};
     const big_integer exact_base = big_integer_of(a);
     if(!exponent && exact_base.bit_length() <= 1)
         return closed_power(exact_base, *b.wide());

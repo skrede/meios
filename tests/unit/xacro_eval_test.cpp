@@ -132,7 +132,7 @@ TEST_CASE("integer power bounds its work and loud-fails on an unrepresentable re
     const failure overflow = eval_failure("9**99999999999");
     REQUIRE(overflow.failed);
     REQUIRE(overflow.diagnostics >= 1);
-    REQUIRE(eval_kind("9**99999999999") == meios::eval_failure_kind::error);
+    REQUIRE(eval_kind("9**99999999999") == meios::eval_failure_kind::exhausted);
 }
 
 TEST_CASE("core evaluator dispatches the whitelisted math functions", "[xacro][eval]")

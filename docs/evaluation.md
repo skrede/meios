@@ -31,8 +31,10 @@ description needing Python behavior the grammar does not carry; it has
 - Arithmetic: `+`, `-`, `*`, `/`, `//`, `%`, `**`, and unary `+`/`-`. Integer arithmetic stays
   integer — `2 + 3` is `5`, not `5.0` — while `/` is always true division, so `4 / 2` is `2.0`.
   Every operation computes exactly on integers of any size up to 4300 digits, a result past 64 bits
-  included, so `${2 ** 70}` is `1180591620717411303424`; a result with more digits refuses, a power
-  before it is computed. `/` is true division, rounded once, for integers of any size, so
+  included, so `${2 ** 70}` is `1180591620717411303424`. A result with more digits crosses the integer
+  ceiling, a bound of meios's own that halts the load under `expansion_budget_exceeded`, a power before
+  it is computed; xacro computes such an integer, a difference
+  [known limitations](known-limitations.md#expression-evaluation) lists. `/` is true division, rounded once, for integers of any size, so
   `${2 ** 70 / 3}` is `3.935305402391371e+20`. `//` and `%` round toward negative infinity, the
   remainder taking the divisor's sign, so `${-7 // 2}` is `-4` and `${7 % -2}` is `-1`. Over reals
   `//` is the whole number of times the divisor fits, counted from the exact remainder, so
@@ -106,7 +108,7 @@ and `١` bind `1`, `00012` binds `12`, `1.50` binds `1.5`, `1e3` binds `1000.0` 
 integer of that size whether it is read by name, forwarded by a value that is one span reading it
 (`c="${b}"`, a macro argument `a="${b}"`) or written inside an expression, so
 `${99999999999999999999}` renders `99999999999999999999`. An integer too wide for 64 bits therefore
-renders as written, compares exactly with any number and is true wherever a truth is read; it equals
+renders its digits, compares exactly with any number and is true wherever a truth is read; it equals
 no string, it takes part in every operation as any integer does, exactly, and as a sequence index it
 refuses as outside the sequence. A literal of more than 4300 digits refuses, naming that ceiling, and a
 bound value of more digits stays text.
@@ -290,8 +292,8 @@ decided by the failure's kind, and there are exactly four:
 | Kind | What produces it | Terminal |
 |------|------------------|----------|
 | `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a member of a string other than the named split, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string beyond adding two of them | no: a lenient policy may leave the span verbatim |
-| `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer result of more than 4300 digits, an integer or a quotient too large for a real, a non-finite result, malformed syntax | yes, under every policy |
-| `exhausted` | a crossed resource ceiling | yes, and it halts the load rather than the expression |
+| `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer literal of more than 4300 digits, an integer or a quotient too large for a real, a non-finite result, malformed syntax | yes, under every policy |
+| `exhausted` | a crossed resource ceiling, the 4300-digit integer ceiling among them | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
 Every diagnostic carries a `file:line:column` and a `diagnostic_code`, so a caller branches on a code
@@ -363,14 +365,19 @@ nesting depth (64) and alias expansion (1 000 000); the bytes produced (8 000 00
 (1 000 000), evaluation steps (10 000 000) and elements built into a collection the grammar
 produces (100 000) over the whole load; and, for any one expression, its nesting depth (188), its
 token count (10 000), the magnitude of an exponentiation's real operands (1 000 000 000 000) and the
-length in bytes of a string it produces (1 000 000). An integer raised to a non-negative integer
-exponent is bounded instead by its 4300-digit result, refused before the work. Six of them
+length in bytes of a string it produces (1 000 000). Six of them
 accumulate across every expression in one load rather than resetting per expression, so a document
 cannot spend a bounded budget an unbounded number of times; the other five are high-water marks instead, because what they bound is
 the most any one expression reaches and not how often it is reached. A ceiling requested as zero is
 refused and takes its default, so there is no spelling that means unbounded. Crossing one is
 terminal and stops the load at the position that crossed it: a load continuing past its own ceiling
-would report a partial answer as a whole one.
+would report a partial answer as a whole one. Beside the eleven, an integer holds at most 4300 digits,
+a fixed bound that cannot be configured and is crossed as the others are: an integer of more digits
+arising anywhere in an expression halts the load under `expansion_budget_exceeded`, and an integer
+raised to a non-negative integer exponent is bounded by it instead of by the magnitude ceiling, refused
+before the work. Each time an operation reads an integer wider than 64 bits it is charged one
+evaluation step for every nine of its digits, plus one, so repeated arithmetic on long integers spends
+the evaluation step ceiling.
 
 Expansion carries three more that are not the evaluator's: a work count (1 000 000) over nodes
 visited, macro instantiations and substitutions, an emitted-node count (100 000), and the depth of
@@ -982,6 +989,14 @@ comparison fails if it stops reproducing exactly as much as it fails if a new on
 is documented, implemented and range-checked here and a pinned description already reaches it, so it is
 recorded rather than removed.
 
+**An integer of more than 4300 digits refuses here wherever an expression computes one; xacro refuses
+one only where it is written as text.** `${10**5000 // 10**4990}` renders `10000000000` under xacro,
+which computes the intermediate power exactly; here that power crosses the integer ceiling and the load
+halts under `expansion_budget_exceeded`. The ceiling is meios's own bound on what one expression can
+demand and is kept on purpose. A result of more than 4300 digits written into the document refuses
+under both. The `integer_intermediate_past_digit_ceiling` row of the divergence manifest compares the
+shape through both implementations, so a change to either side fails the differential.
+
 **A self-referential alias graph refuses here; PyYAML loads it.** A document whose anchor contains an
 alias to itself — `a: &x [1, *x]` — reads under PyYAML as a value that contains itself, because PyYAML
 builds a mutable node and fills it in afterwards. A value here is immutable once constructed and its
@@ -1204,9 +1219,9 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
   forty-nine the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
-  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-three
+  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-four
   rows of it: twelve document probes and twelve expression probes listed in
-  `tests/tools/oracle/differential_probes.py`, and the grammar record's thirty-nine document probes, a
+  `tests/tools/oracle/differential_probes.py`, and the grammar record's forty document probes, a
   group listed in `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
   cause: xacro's exception class and message stem, mapped through `tests/refusal_causes.h` to the code
   meios gives for that cause, and a xacro refusal no row maps fails the run. The expression cases and

@@ -44,6 +44,8 @@ value integer_floor_divide(parser &p, const value &a, const value &b)
     if(x && y)
         if(const std::optional<std::int64_t> made = checked_floordiv(*x, *y))
             return value{ *made };
+    if(!admits_digits(p, a) || !admits_digits(p, b))
+        return value{};
     return integer_result(p, floor_divmod(big_integer_of(a), big_integer_of(b)).first, "floor division");
 }
 
@@ -55,6 +57,8 @@ value integer_modulo(parser &p, const value &a, const value &b)
     if(x && y)
         if(const std::optional<std::int64_t> made = checked_mod(*x, *y))
             return value{ *made };
+    if(!admits_digits(p, a) || !admits_digits(p, b))
+        return value{};
     return integer_result(p, floor_divmod(big_integer_of(a), big_integer_of(b)).second, "remainder");
 }
 
@@ -65,6 +69,8 @@ value integer_divide(parser &p, const value &a, const value &b)
     const std::optional<std::int64_t> x = as_int(a), y = as_int(b);
     if(exact_as_reals(x) && exact_as_reals(y))
         return real_result(p, static_cast<double>(*x) / static_cast<double>(*y));
+    if(!admits_digits(p, a) || !admits_digits(p, b))
+        return value{};
     const std::optional<double> quotient = true_quotient(big_integer_of(a), big_integer_of(b));
     if(!quotient)
         return p.fail("the quotient of '/' is too large for a real");

@@ -4,8 +4,11 @@
 
 #include "meios/xacro/value.h"
 
+#include "meios/xacro/detail/wide_integer.h"
+
 #include <cmath>
 #include <string>
+#include <cstddef>
 #include <utility>
 #include <optional>
 
@@ -43,6 +46,17 @@ bool admits_power(parser &p, const value &a, const value &b)
     const std::optional<double> exponent = b.real();
     if((!base || p.session.admits_numeric_magnitude(std::fabs(*base), p.log, p.anchor))
        && (!exponent || p.session.admits_numeric_magnitude(std::fabs(*exponent), p.log, p.anchor)))
+        return true;
+    return p.refuse_exhausted();
+}
+
+bool admits_digits(parser &p, const value &v)
+{
+    const std::optional<wide_integer> wide = v.wide();
+    if(!wide)
+        return true;
+    const std::size_t digits = wide->spelling().size() - (wide->negative() ? 1 : 0);
+    if(p.session.charge_steps(digits / 9 + 1, p.log, p.anchor))
         return true;
     return p.refuse_exhausted();
 }

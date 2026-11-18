@@ -75,6 +75,8 @@ std::int64_t need_int(parser &p, const value &v)
 
 double need_double(parser &p, const value &v)
 {
+    if(!admits_digits(p, v))
+        return 0.0;
     std::optional<double> number = as_double(v);
     if(number)
         return *number;

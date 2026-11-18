@@ -15,7 +15,7 @@ namespace meios::detail
 
 // CPython's default integer-to-text digit limit, sys.int_info.default_max_str_digits
 // (docs.python.org/3/library/stdtypes.html#integer-string-conversion-length-limitation), so every
-// integer a document can render fits and quadratic arithmetic on one stays cheap.
+// integer a document can render fits and the work of one operation on one is bounded.
 inline constexpr std::size_t wide_digit_ceiling = 4300;
 
 // The canonical decimal spelling is the stored form because rendering it is what a document does

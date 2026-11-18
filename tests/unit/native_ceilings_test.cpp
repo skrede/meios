@@ -51,18 +51,19 @@ TEST_CASE("the numeric ceiling refuses a base or an exponent past it", "[native]
     CHECK(once("1001 ** 1", bounded).rendered == "1001");
 }
 
-TEST_CASE("an integral power is bounded by its digits and not by the numeric ceiling", "[native][ceilings]")
+TEST_CASE("an integer past its digit ceiling is a crossed ceiling wherever an expression computes it",
+          "[native][ceilings]")
 {
     CHECK(once("9 ** 1000", numeric(1000)).rendered.size() == 955);
 
     const meios::evaluator_limits defaults;
     CHECK(once("2 ** 14284", defaults).rendered.size() == 4300);
-    const ceiling::outcome past = once("2 ** 14285", defaults);
-    CHECK(past.kind == meios::eval_failure_kind::error);
-    REQUIRE(past.messages.size() == 1);
-    CHECK(past.messages.front().find("4300") != std::string::npos);
-    CHECK(once("9 ** 99999999999", defaults).kind == meios::eval_failure_kind::error);
-    CHECK(once("10 ** 10 ** 10", defaults).kind == meios::eval_failure_kind::error);
+    CHECK(once("2 ** 14285", defaults).refused_on("4300"));
+    CHECK(once("10 ** 5000 // 10 ** 4990", defaults).refused_on("4300"));
+    CHECK(once("10 ** 4300 // 10", defaults).refused_on("4300"));
+    CHECK(once("2 ** 20000 > 1", defaults).refused_on("4300"));
+    CHECK(once("9 ** 99999999999", defaults).kind == meios::eval_failure_kind::exhausted);
+    CHECK(once("10 ** 10 ** 10", defaults).kind == meios::eval_failure_kind::exhausted);
 }
 
 // A magnitude just above the bound would be admitted if the operand were narrowed to a whole
@@ -146,6 +147,7 @@ TEST_CASE("each new ceiling is terminal under every evaluation policy", "[native
     const meios::evaluator_limits width = per_expression(8);
     const meios::evaluator_limits length = produced(4);
     const meios::evaluator_limits fields = collection(2);
+    const meios::evaluator_limits defaults;
 
     for(meios::eval_policy policy :
         { meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip })
@@ -154,15 +156,18 @@ TEST_CASE("each new ceiling is terminal under every evaluation policy", "[native
         meios::detail::eval_session over_width(width);
         meios::detail::eval_session over_length(length);
         meios::detail::eval_session over_fields(fields);
+        meios::detail::eval_session over_digits(defaults);
 
         CHECK_FALSE(ceiling::substitute("v ${1.0 ** 1001.0}", policy, over_magnitude).survived);
         CHECK_FALSE(ceiling::substitute("v ${1+1+1+1+1}", policy, over_width).survived);
         CHECK_FALSE(ceiling::substitute("v ${'ab' + 'cde'}", policy, over_length).survived);
         CHECK_FALSE(ceiling::substitute("v ${'a,b,c'.split(',')[0]}", policy, over_fields).survived);
+        CHECK_FALSE(ceiling::substitute("v ${2 ** 14285}", policy, over_digits).survived);
         CHECK(over_magnitude.failure == meios::eval_failure_kind::exhausted);
         CHECK(over_width.failure == meios::eval_failure_kind::exhausted);
         CHECK(over_length.failure == meios::eval_failure_kind::exhausted);
         CHECK(over_fields.failure == meios::eval_failure_kind::exhausted);
+        CHECK(over_digits.failure == meios::eval_failure_kind::exhausted);
     }
 }
 

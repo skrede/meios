@@ -39,6 +39,10 @@ bool admits_element(parser &p);
 // asked before the exponentiation runs, since a check on its result cannot bound the work.
 bool admits_power(parser &p, const value &a, const value &b);
 
+// Reading a wide integer's digits costs work in proportion to them, while a result that fits 64
+// bits is charged nothing else, so each read spends one evaluation step per nine digits.
+bool admits_digits(parser &p, const value &v);
+
 // Each yields no value when the result is not representable in 64 bits, so the operator above it
 // computes the exact integer or refuses with a located diagnostic instead of wrapping, trapping or
 // aborting the process.
@@ -56,7 +60,7 @@ bool is_integral(const value &v);
 big_integer big_integer_of(const value &v);
 
 // Every integer result passes here: an integer where it fits 64 bits, otherwise a wide integer
-// charged its digits as a produced string is charged, and past the digit ceiling a refusal.
+// charged its digits as a produced string is charged, and past the digit ceiling a crossed ceiling.
 value integer_result(parser &p, const big_integer &number, std::string_view operation);
 
 value integer_arithmetic(parser &p, const value &a, const value &b, token_kind op);
