@@ -147,4 +147,5 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("wide_integer_divided", "wide_integer_divided", None),
                             ("wide_integer_beside_real", "wide_integer_beside_real", None),
                             ("wide_integer_real_power", "wide_integer_real_power", None),
-                            ("real_floored_beyond_64_bits", "real_floored_beyond_64_bits", None))
+                            ("real_floored_beyond_64_bits", "real_floored_beyond_64_bits", None),
+                            ("real_floor_division", "real_floor_division", None))

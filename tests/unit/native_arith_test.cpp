@@ -118,10 +118,36 @@ TEST_CASE("two strings add where every other operator on a string still refuses"
     CHECK(arith::evaluate("-'x'").failed);
 }
 
+TEST_CASE("a real floor division counts the whole divisors that fit, by every sign", "[native][arith]")
+{
+    const std::pair<std::string_view, std::string_view> quotients[] = {
+            {"1 // 0.1", "9.0"}, {"-1 // 0.1", "-10.0"}, {"1 // -0.1", "-10.0"}, {"-1 // -0.1", "9.0"},
+            {"530 // 0.1", "5299.0"}, {"-530 // -0.1", "5299.0"}, {"0.5 // 0.1", "4.0"}, {"2.0 // 0.2", "9.0"},
+            {"(1 // 0.1) * 0.1 + 1 % 0.1", "1.0"}, {"7.5 // 2", "3.0"}, {"-7.5 // 2", "-4.0"},
+            {"0.0 // 3.0", "0.0"}, {"-0.0 // 3.0", "-0.0"}, {"0 // -3.0", "-0.0"},
+            {"2**64 // 0.1", "1.844674407370955e+20"}, {"-(2**64) // 0.1", "-1.844674407370955e+20"}};
+    for(const auto &[expression, rendered] : quotients)
+    {
+        INFO(expression);
+        CHECK(arith::evaluate(expression).rendered == rendered);
+    }
+    const arith::outcome past = arith::evaluate("1e308 // 1e-308");
+    CHECK(past.failed);
+    REQUIRE(past.messages.size() == 1);
+    CHECK(past.messages.front().find("not a finite number") != std::string::npos);
+}
+
+TEST_CASE("a real remainder of exactly zero is written with the dividend's sign", "[native][arith]")
+{
+    CHECK(arith::evaluate("-4.0 % 2.0").rendered == "-0.0");
+    CHECK(arith::evaluate("4.0 % -2.0").rendered == "0.0");
+    CHECK(arith::evaluate("-4.0 % 2.0 == 0").rendered == "True");
+}
+
 TEST_CASE("a zero divisor refuses naming its operator", "[native][arith]")
 {
     const std::pair<std::string_view, std::string_view> divisions[] = {
-            {"1 / 0", "/"}, {"1.0 / 0", "/"}, {"7 // 0", "//"}, {"7.0 // 0", "//"}, {"7 % 0", "%"}, {"7.0 % 0.0", "%"},
+            {"1 / 0", "/"}, {"1.0 / 0", "/"}, {"7 // 0", "//"}, {"7.0 // 0", "//"}, {"5 // 0.0", "//"}, {"7 % 0", "%"}, {"7.0 % 0.0", "%"},
             {"99999999999999999999 / 0", "/"}, {"99999999999999999999 // False", "//"}, {"-99999999999999999999 % 0", "%"}};
     for(const auto &[expression, op] : divisions)
     {

@@ -34,9 +34,14 @@ description needing Python behavior the grammar does not carry; it has
   included, so `${2 ** 70}` is `1180591620717411303424`; a result with more digits refuses, a power
   before it is computed. `/` is true division, rounded once, for integers of any size, so
   `${2 ** 70 / 3}` is `3.935305402391371e+20`. `//` and `%` round toward negative infinity, the
-  remainder taking the divisor's sign, so `${-7 // 2}` is `-4` and `${7 % -2}` is `-1`. An integer
-  beside a real is read as the nearest real, so `${99999999999999999999 * 0.5}` is `5e+19`, and one
-  too large for a real refuses, as a quotient too large for a real does. Every real result must be
+  remainder taking the divisor's sign, so `${-7 // 2}` is `-4` and `${7 % -2}` is `-1`. Over reals
+  `//` is the whole number of times the divisor fits, counted from the exact remainder, so
+  `${1 // 0.1}` is `9.0`: the real written `0.1` is a little more than one tenth. The
+  `real_floor_division` agreement probe holds this against a fresh xacro render. A real remainder of
+  exactly zero keeps the dividend's sign, so `${-4.0 % 2.0}` is `-0.0`, a difference
+  [known limitations](known-limitations.md#expression-evaluation) lists. An integer beside a real is
+  read as the nearest real, so `${99999999999999999999 * 0.5}` is `5e+19`, and one too large for a
+  real refuses, as a quotient too large for a real does. Every real result must be
   finite, and a division by zero and a non-finite result are loud failures rather than a wrapped value
   or an `inf` reaching your document.
 - Comparison: `<`, `<=`, `>`, `>=`, `==`, `!=`, chained the way Python chains them, so `0 < x < 1`
@@ -1195,12 +1200,12 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and fifty agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and fifty-one agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  forty-eight the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  forty-nine the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
-  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-two
-  rows of it: twelve document probes and eleven expression probes listed in
+  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-three
+  rows of it: twelve document probes and twelve expression probes listed in
   `tests/tools/oracle/differential_probes.py`, and the grammar record's thirty-nine document probes, a
   group listed in `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
   cause: xacro's exception class and message stem, mapped through `tests/refusal_causes.h` to the code

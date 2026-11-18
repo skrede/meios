@@ -46,6 +46,22 @@ value concatenate(parser &p, const value &a, const value &b)
     return p.fail_unsupported("a string concatenates only with another string operand, not with " + with_article(kind_name(left ? b.kind() : a.kind())) + " — use eval-python");
 }
 
+// Counts the divisor from the exact remainder so the quotient never rounds up across a whole
+// number, after CPython's float_divmod (Objects/floatobject.c).
+double floored_quotient(double x, double y)
+{
+    const double remainder = std::fmod(x, y);
+    double quotient = (x - remainder) / y;
+    if(remainder != 0.0 && ((remainder < 0.0) != (y < 0.0)))
+        quotient -= 1.0;
+    if(quotient == 0.0)
+        return std::copysign(0.0, x / y);
+    const double floored = std::floor(quotient);
+    if(quotient - floored > 0.5)
+        return floored + 1.0;
+    return floored;
+}
+
 }
 
 std::int64_t need_int(parser &p, const value &v)
@@ -138,7 +154,7 @@ value floor_divide(parser &p, const value &a, const value &b)
     double y = need_double(p, b);
     if(y == 0.0)
         return p.fail("the divisor of '//' is zero");
-    return real_result(p, std::floor(need_double(p, a) / y));
+    return real_result(p, floored_quotient(need_double(p, a), y));
 }
 
 value modulo(parser &p, const value &a, const value &b)

@@ -100,7 +100,7 @@ struct probe
     std::string_view expression;
 };
 
-inline constexpr std::array<probe, 11> divergence_probes{
+inline constexpr std::array<probe, 12> divergence_probes{
     probe{ driven::document, "div_self_reference", "xacro.load_yaml('recursive.yaml')['a']" },
     probe{ driven::grammar, "div_dict_pair_sequence", "dict([('a', 1)])" },
     probe{ driven::grammar, "div_dict_mixed_arguments", "dict([('a', 1)], b=2)" },
@@ -111,7 +111,8 @@ inline constexpr std::array<probe, 11> divergence_probes{
     probe{ driven::grammar, "div_absolute_value", "abs(-3)" },
     probe{ driven::span, "div_span_closing_brace_in_literal", "'a}b'" },
     probe{ driven::span, "div_span_format_operator", "'%.3f' % 1.2345" },
-    probe{ driven::span, "div_span_nested_expression", "${'1 + 2'}" }
+    probe{ driven::span, "div_span_nested_expression", "${'1 + 2'}" },
+    probe{ driven::grammar, "div_real_remainder_zero_sign", "-4.0 % 2.0" }
 };
 
 inline outcome run_probe(const probe &one)

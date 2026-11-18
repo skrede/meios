@@ -123,6 +123,7 @@ inline constexpr pairing element_pairings[] = {
         {"token.expr", carrier::agreement, "wide_integer_read_by_name_added integer_power_beyond_64_bits wide_integer_squared", standing::agrees},
         {"token.expr", carrier::agreement, "wide_integer_floor_division wide_integer_modulo wide_integer_halved wide_integer_divided", standing::agrees},
         {"token.expr", carrier::agreement, "wide_integer_beside_real wide_integer_real_power real_floored_beyond_64_bits", standing::agrees},
+        {"token.expr", carrier::agreement, "real_floor_division", standing::agrees},
         {"token.expr", carrier::manifest, "sum_not_a_reference_global", standing::refuses_listed},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.extension", carrier::agreement, "command_nested_in_default include_find_composed", standing::agrees},

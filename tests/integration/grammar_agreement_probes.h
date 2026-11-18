@@ -159,6 +159,7 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"wide_integer_beside_real", "wide_integer_beside_real", {}},
         agreement_probe{"wide_integer_real_power", "wide_integer_real_power", {}},
         agreement_probe{"real_floored_beyond_64_bits", "real_floored_beyond_64_bits", {}},
+        agreement_probe{"real_floor_division", "real_floor_division", {}},
 };
 
 }

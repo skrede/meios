@@ -401,3 +401,4 @@ wide_integer_divided	agreement
 wide_integer_beside_real	agreement
 wide_integer_real_power	agreement
 real_floored_beyond_64_bits	agreement
+real_floor_division	agreement
