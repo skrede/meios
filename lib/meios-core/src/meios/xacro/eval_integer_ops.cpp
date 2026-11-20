@@ -33,9 +33,9 @@ std::optional<std::int64_t> checked(std::int64_t a, std::int64_t b, token_kind o
     return checked_mul(a, b);
 }
 
-value refuse_digits(parser &p, std::string_view operation)
+value refuse_digits(parser &p, std::string_view operation, std::string_view verb)
 {
-    report_exhausted(p.session, std::string(operation) + " produced an integer of more than the " + std::to_string(wide_digit_ceiling)
+    report_exhausted(p.session, std::string(operation) + " " + std::string(verb) + " an integer of more than the " + std::to_string(wide_digit_ceiling)
                      + " digits an integer holds here; this load cannot continue", p.log, p.anchor);
     p.refuse_exhausted();
     return value{};
@@ -92,7 +92,7 @@ value integer_result(parser &p, const big_integer &number, std::string_view oper
         return value{ *narrow };
     std::optional<wide_integer> wide = wide_integer::from_spelling(number.spelling());
     if(!wide)
-        return refuse_digits(p, operation);
+        return refuse_digits(p, operation, "produced");
     const std::size_t digits = wide->spelling().size() - (wide->negative() ? 1 : 0);
     if(!p.session.admits_string_length(digits, p.log, p.anchor) || !p.session.charge_bytes(digits, p.log, p.anchor))
     {
@@ -157,7 +157,7 @@ value integer_power(parser &p, const value &a, const value &b)
     if(!exponent && exact_base.bit_length() <= 1)
         return closed_power(exact_base, *b.wide());
     if(!exponent || certainly_too_long(a, *exponent))
-        return refuse_digits(p, "exponentiation");
+        return refuse_digits(p, "exponentiation", "would produce");
     return integer_result(p, pow(exact_base, static_cast<std::uint64_t>(*exponent)), "exponentiation");
 }
 

@@ -4,8 +4,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
+#include <latch>
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
+#include <cstddef>
+#include <optional>
 
 TEST_CASE("a container emitted whole into element text carries no control-char marker",
           "[eval_python]")
@@ -71,4 +77,20 @@ TEST_CASE("a list crossing a xacro:property boundary re-hydrates without leaking
     REQUIRE(leaves(resolved, ">20</l>"));
     REQUIRE(leaves(resolved, "[10, 20, 30]"));
     marker::absent_from(resolved.expanded->document);
+}
+
+TEST_CASE("eight threads making the process's first evaluations at once each render the sum", "[eval_python]")
+{
+    std::array<std::optional<std::string>, 8> answers;
+    std::latch running(static_cast<std::ptrdiff_t>(answers.size()));
+    {
+        std::vector<std::jthread> threads;
+        for(std::optional<std::string> &answer : answers)
+            threads.emplace_back([&running, &answer] {
+                running.arrive_and_wait();
+                answer = evaluate("1 + 1", meios::eval_scope{});
+            });
+    }
+    for(const std::optional<std::string> &answer : answers)
+        CHECK(answer == std::optional<std::string>("2"));
 }

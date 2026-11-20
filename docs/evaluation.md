@@ -116,7 +116,8 @@ Under `meios::eval-python` such an integer reaches the expression as a Python in
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
 `1180591620717411303424`. The backend holds the interpreter's integer-to-text limit at 4300 digits
 whatever `PYTHONINTMAXSTRDIGITS` in the environment sets, so an integer of up to that many digits
-crosses into an expression and out of it, and a longer result refuses. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+crosses into an expression and out of it, and a longer result refuses as an `error`
+(`expression_error`), where the built-in evaluator refuses one as a crossed ceiling. A value `float()` reads as infinity, `1e400` or `INFINITY`,
 stays text as written, because a real here is always finite; [known
 limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
 runs wherever a value is bound: a property evaluated where it is written, a property stored for its
@@ -295,7 +296,7 @@ decided by the failure's kind, and there are exactly four:
 |------|------------------|----------|
 | `unsupported` | a construct outside the grammar that a fuller backend would evaluate — a comprehension, an f-string, a member of a string other than the named split, a Python constructor, a dotted read of anything but a loaded mapping's key, arithmetic on a string beyond adding two of them | no: a lenient policy may leave the span verbatim |
 | `error` | a genuine fault — an undefined name, a missing key, division by zero, an integer literal of more than 4300 digits, an integer or a quotient too large for a real, a non-finite result, malformed syntax | yes, under every policy |
-| `exhausted` | a crossed resource ceiling, the 4300-digit integer ceiling among them | yes, and it halts the load rather than the expression |
+| `exhausted` | a crossed resource ceiling, the built-in evaluator's 4300-digit integer ceiling among them | yes, and it halts the load rather than the expression |
 | `refused` | a rule of the opt-in Python backend; the built-in evaluator never produces one | yes, under every policy |
 
 Every diagnostic carries a `file:line:column` and a `diagnostic_code`, so a caller branches on a code
@@ -373,13 +374,16 @@ cannot spend a bounded budget an unbounded number of times; the other five are h
 the most any one expression reaches and not how often it is reached. A ceiling requested as zero is
 refused and takes its default, so there is no spelling that means unbounded. Crossing one is
 terminal and stops the load at the position that crossed it: a load continuing past its own ceiling
-would report a partial answer as a whole one. Beside the eleven, an integer holds at most 4300 digits,
-a fixed bound that cannot be configured and is crossed as the others are: an integer of more digits
-arising anywhere in an expression halts the load under `expansion_budget_exceeded`, and an integer
-raised to a non-negative integer exponent is bounded by it instead of by the magnitude ceiling, refused
-before the work. Each time an operation reads an integer wider than 64 bits it is charged one
-evaluation step for every nine of its digits, plus one, so repeated arithmetic on long integers spends
-the evaluation step ceiling.
+would report a partial answer as a whole one. Beside the eleven, an integer under the built-in
+evaluator holds at most 4300 digits, a fixed bound that cannot be configured and is crossed as the
+others are: an integer of more digits arising anywhere in an expression halts the load under
+`expansion_budget_exceeded`, and an integer raised to a non-negative integer exponent is bounded by it
+instead of by the magnitude ceiling, refused before the work. A power refused that way says it would
+produce an integer of more than 4300 digits, where a result computed past the ceiling says it produced
+one. Each arithmetic operation that converts an integer wider than 64 bits to work on it is charged
+one evaluation step for every nine of its digits, plus one, so repeated arithmetic on long integers
+spends the evaluation step ceiling; a comparison, `min` and `max`, a truth, a unary `+`, `floor` and
+`ceil` of an integer and a subscript read the digits without converting them and are not charged.
 
 Expansion carries three more that are not the evaluator's: a work count (1 000 000) over nodes
 visited, macro instantiations and substitutions, an emitted-node count (100 000), and the depth of

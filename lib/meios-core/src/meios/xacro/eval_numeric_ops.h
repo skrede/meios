@@ -16,9 +16,9 @@ namespace meios::detail
 
 class big_integer;
 
-// need_int and need_double route an operand with no arithmetic meaning, a string, a sequence or a
-// mapping included, to parser::fail, and need_double an integer too large for a real; need_truth
-// answers the truth every value kind has.
+// need_int and need_double route an operand with no arithmetic meaning (a string, sequence or mapping) to parser::fail, need_double
+// an integer too large for a real too; it refuses as exhausted when the step ceiling refuses the conversion. After any refusal it
+// answers 0.0 and the parser keeps the first failure, so a caller's following fail does nothing. need_truth answers any value's truth.
 std::int64_t need_int(parser &p, const value &v);
 double need_double(parser &p, const value &v);
 bool need_truth(parser &p, const value &v);
@@ -39,8 +39,9 @@ bool admits_element(parser &p);
 // asked before the exponentiation runs, since a check on its result cannot bound the work.
 bool admits_power(parser &p, const value &a, const value &b);
 
-// Reading a wide integer's digits costs work in proportion to them, while a result that fits 64
-// bits is charged nothing else, so each read spends one evaluation step per nine digits.
+// Converting a wide integer's digits costs work that grows faster than their count; the 4300-digit cap
+// is what lets one evaluation step per nine digits bound it, while a result that fits 64 bits is
+// charged nothing else.
 bool admits_digits(parser &p, const value &v);
 
 // Each yields no value when the result is not representable in 64 bits, so the operator above it

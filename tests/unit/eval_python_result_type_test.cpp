@@ -124,7 +124,7 @@ TEST_CASE("a bound or forwarded wide integer reaches a Python expression as an i
     }
 }
 
-TEST_CASE("an integer of 700 digits crosses into and out of Python whatever digit limit the environment sets", "[eval_python]")
+TEST_CASE("an integer of 700 digits crosses into and out of Python whatever digit limit the environment sets", "[eval_python][digit_limit]")
 {
     const auto handle = std::make_shared<meios::evaluator_handle>(meios::python_evaluator{});
     const std::string digits = '1' + std::string(699, '0');

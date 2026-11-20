@@ -64,6 +64,10 @@ TEST_CASE("an integer past its digit ceiling is a crossed ceiling wherever an ex
     CHECK(once("2 ** 20000 > 1", defaults).refused_on("4300"));
     CHECK(once("9 ** 99999999999", defaults).kind == meios::eval_failure_kind::exhausted);
     CHECK(once("10 ** 10 ** 10", defaults).kind == meios::eval_failure_kind::exhausted);
+    CHECK(once("9 ** 99999999999", defaults).refused_on("exponentiation would produce"));
+    CHECK(once("2 ** (2 ** 64)", defaults).refused_on("exponentiation would produce"));
+    CHECK(once("10 ** 4300", defaults).refused_on("exponentiation produced"));
+    CHECK(once("10 ** 2200 * 10 ** 2200", defaults).refused_on("multiplication produced"));
 }
 
 // A magnitude just above the bound would be admitted if the operand were narrowed to a whole
