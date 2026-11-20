@@ -1,4 +1,4 @@
-foreach(stem IN ITEMS math diag records types sink)
+foreach(stem IN ITEMS math diag records types sink escape)
     set(model_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/model_${stem}_test.cpp)
     if(EXISTS ${model_test_src})
         add_executable(model_${stem}_test ${model_test_src})

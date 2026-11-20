@@ -4,7 +4,7 @@
 set(meios_module_test_stems
         xacro_eval xacro_scope xacro_property xacro_structural xacro_macro_params
         xacro_condition xacro_attribute_table xacro_literal_read xacro_wide_integer xacro_macro_defaults xacro_macro_redeclared xacro_macro_call xacro_deferred xacro_namespace xacro_block xacro_block_rewalk xacro_dollar_run xacro_lex_lookahead xacro_include_read xacro_include_find
-        xacro_output_shape xacro_element_construct xacro_attribute_place
+        xacro_output_shape xacro_element_construct xacro_attribute_place xacro_record_escape
         xacro_include_spelling xacro_include_bytes xacro_include_resolution
         xacro_include_precedence xacro_include_identity xacro_include_target xacro_subst
         xacro_subst_command xacro_subst_order xacro_binding

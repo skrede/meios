@@ -147,6 +147,16 @@ TEST_CASE("cli_validate: the most-severe class wins and the report lists the res
     REQUIRE(cli::format_json(report).find("\"exit_code\":2") != std::string::npos);
 }
 
+TEST_CASE("cli_validate: the text report lists a message holding a line feed on one line")
+{
+    cli::validation_report report;
+    report.findings.push_back(cli::validation_finding{ 4, "unsupported-feature", { "a\n[error] forged" } });
+
+    const std::string printed = cli::format_text(report);
+    REQUIRE(printed.find("  - a\\n[error] forged\n") != std::string::npos);
+    REQUIRE(printed.find("\n[error]") == std::string::npos);
+}
+
 TEST_CASE("cli_validate: the exit code agrees with the reported status in both modes")
 {
     std::string text;

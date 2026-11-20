@@ -136,5 +136,5 @@ endif()
 # generator can hold them to the interpreter over more strings than a test case could list.
 add_executable(identifier_probe ${CMAKE_CURRENT_SOURCE_DIR}/tools/unicode/identifier_probe.cpp)
 target_include_directories(identifier_probe PRIVATE ${meios_SOURCE_DIR}/lib/meios-core/src)
-target_link_libraries(identifier_probe PRIVATE meios::core)
+target_link_libraries(identifier_probe PRIVATE meios::core meios::model)
 meios_warnings(identifier_probe)

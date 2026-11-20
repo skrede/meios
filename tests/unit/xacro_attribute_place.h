@@ -96,7 +96,6 @@ inline void require_one_trim_warning(const std::vector<heard> &records, int32_t 
     REQUIRE(warnings.size() == 1);
     REQUIRE(warnings[0].line == line);
     REQUIRE_FALSE(warnings[0].code.has_value());
-    REQUIRE(warnings[0].message.find_first_of("\t\r\n") == std::string::npos);
     REQUIRE(names(warnings[0], '\'' + evaluated + '\''));
     REQUIRE(names(warnings[0], '\'' + used + '\''));
 }

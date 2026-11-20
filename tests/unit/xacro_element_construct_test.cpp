@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 using element_construct::refused;
 using element_construct::render;
@@ -16,6 +17,16 @@ namespace
 
 const std::string defines_m = R"(<xacro:macro name="m" params=""><link name="m"/></xacro:macro>)";
 const std::string defines_ma = R"(<xacro:macro name="m" params="a"><link name="${a}"/></xacro:macro>)";
+
+std::string streamed(const std::string &body)
+{
+    std::ostringstream out;
+    meios::log_sink_s log{out};
+    meios::source_stack sources{};
+    meios::eval_scope scope;
+    (void)meios::expand(element_construct::head + body + "</robot>", scope, sources, "inline.xacro", meios::expansion_limits{}, log);
+    return out.str();
+}
 
 }
 
@@ -117,18 +128,17 @@ TEST_CASE("xacro:element refuses an evaluated name that is not an XML name, nami
     REQUIRE(refused(R"(<xacro:element xacro:name="${1}"/>)").message.find("'1'") != std::string::npos);
 }
 
-TEST_CASE("an evaluated name that is not an XML name is quoted with its control characters written visibly", "[xacro][element]")
+TEST_CASE("an evaluated name that is not an XML name is quoted as evaluated, and the stream sink writes it on one line", "[xacro][element]")
 {
-    const meios::expansion_error line_feed = refused(R"(<xacro:element xacro:name="a&#10;b"/>)");
-    REQUIRE(line_feed.message.find(R"('a\nb')") != std::string::npos);
-    REQUIRE(line_feed.message.find_first_of("\t\r\n") == std::string::npos);
-    REQUIRE(refused(R"(<xacro:element xacro:name="a&#127;b"/>)").message.find(R"('a\x7fb')") != std::string::npos);
-    const meios::expansion_error attribute = refused(R"(<link name="l"><xacro:attribute name="a&#10;b" value="1"/></link>)");
-    REQUIRE(attribute.message.find(R"('a\nb')") != std::string::npos);
-    REQUIRE(attribute.message.find_first_of("\t\r\n") == std::string::npos);
-    std::vector<heard> records;
-    REQUIRE(attribute_place::render(R"(<xacro:element xacro:name="a&#10;b"/>)", records).starts_with("REFUSED"));
-    REQUIRE(attribute_place::at_level(records, meios::level::error).size() == 1);
+    REQUIRE(refused(R"(<xacro:element xacro:name="a&#10;b"/>)").message.find("'a\nb'") != std::string::npos);
+    REQUIRE(refused(R"(<xacro:element xacro:name="a&#127;b"/>)").message.find("'a\x7f" "b'") != std::string::npos);
+    REQUIRE(refused(R"(<link name="l"><xacro:attribute name="a&#10;b" value="1"/></link>)").message.find("'a\nb'") != std::string::npos);
+    const std::string refusal = streamed(R"(<xacro:element xacro:name="a&#10;b"/>)");
+    REQUIRE(refusal.find(R"('a\nb')") != std::string::npos);
+    REQUIRE(refusal.find('\n') == refusal.size() - 1);
+    const std::string warning = streamed(R"(<xacro:element xacro:name="link&#10;" name="l"/>)");
+    REQUIRE(warning.find(R"('link\n')") != std::string::npos);
+    REQUIRE(warning.find('\n') == warning.size() - 1);
 }
 
 TEST_CASE("xacro:element removes the whitespace around its evaluated name and warns", "[xacro][element]")
@@ -139,7 +149,7 @@ TEST_CASE("xacro:element removes the whitespace around its evaluated name and wa
         std::vector<heard> records;
         REQUIRE(attribute_place::render("\n<xacro:element xacro:name=\"" + written + "\" name=\"l\"/>", records)
                 == R"(<robot name="p"><link name="l"></link></robot>)");
-        require_one_trim_warning(records, 3, written == "link&#9;" ? R"(link\t)" : written, "link");
+        require_one_trim_warning(records, 3, written == "link&#9;" ? "link\t" : written, "link");
     }
     std::vector<heard> records;
     REQUIRE(attribute_place::render(R"(<xacro:element xacro:name="xacro:if " value="1"><link name="t"/></xacro:element>)", records)

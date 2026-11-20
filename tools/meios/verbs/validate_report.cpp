@@ -1,6 +1,8 @@
 #include "validate.h"
 #include "json_escape.h"
 
+#include "meios/detail/escaped_controls.h"
+
 #include <string>
 #include <cstddef>
 #include <sstream>
@@ -36,7 +38,7 @@ std::string format_text(const validation_report &report)
     {
         out << '[' << finding.code << "] " << finding.klass << ":\n";
         for(const std::string &message : finding.messages)
-            out << "  - " << message << '\n';
+            out << "  - " << detail::escaped_controls(message) << '\n';
     }
     return out.str();
 }

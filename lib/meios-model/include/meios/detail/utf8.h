@@ -1,5 +1,5 @@
-#ifndef HPP_GUARD_MEIOS_DETAIL_UTF8_H
-#define HPP_GUARD_MEIOS_DETAIL_UTF8_H
+#ifndef HPP_GUARD_MEIOS_MODEL_DETAIL_UTF8_H
+#define HPP_GUARD_MEIOS_MODEL_DETAIL_UTF8_H
 
 #include <string>
 #include <cstddef>

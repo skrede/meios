@@ -663,10 +663,9 @@ name that strips to the name of an xacro element is handled as that element, so
 (fifth edition, section 2.3); one that is not refuses under `xacro_structural_error`, naming the text,
 as `<xacro:element> evaluates its xacro:name to 'a><x', which is not an XML name` does, so evaluated
 text cannot write markup into the output, and an empty one, a name of white space alone among them,
-refuses too. In the text the warning and this refusal quote, a tab, a carriage return or a line feed
-is written `\t`, `\r` or `\n`, and any other control character as `\x` and two hex digits, so each
-record stays on one line; the warning's text can hold only the first three, since it differs from the
-name used by XML white space alone. The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
+refuses too. The warning and the refusal quote the text as evaluated, and the command line writes
+each on one line, as it writes every record ([where a diagnostic comes
+from](troubleshooting.md#where-a-diagnostic-comes-from)). The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
 into its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML; here
 each refuses, white space inside a name included. The `element_empty_name`,
 `element_named_by_attribute`, `element_renamed_to_conditional`, `element_renamed_to_macro_call`,

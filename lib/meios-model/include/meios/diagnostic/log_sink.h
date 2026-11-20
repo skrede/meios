@@ -6,6 +6,8 @@
 #include "meios/diagnostic/source_location.h"
 #include "meios/diagnostic/operation_failure.h"
 
+#include "meios/detail/escaped_controls.h"
+
 #include <string>
 #include <ostream>
 #include <utility>
@@ -104,17 +106,17 @@ public:
 
     void log(level lvl, const std::string &message) override
     {
-        m_stream << '[' << to_string(lvl) << "] " << message << '\n';
+        m_stream << '[' << to_string(lvl) << "] " << detail::escaped_controls(message) << '\n';
     }
 
     void log(level lvl, const source_location &location, const std::string &message) override
     {
-        m_stream << to_string(location) << ": [" << to_string(lvl) << "] " << message << '\n';
+        m_stream << detail::escaped_controls(to_string(location)) << ": [" << to_string(lvl) << "] " << detail::escaped_controls(message) << '\n';
     }
 
     void log(level lvl, diagnostic_code code, const source_location &location, const std::string &message) override
     {
-        m_stream << to_string(location) << ": [" << to_string(lvl) << "] (" << to_string(code) << ") " << message << '\n';
+        m_stream << detail::escaped_controls(to_string(location)) << ": [" << to_string(lvl) << "] (" << to_string(code) << ") " << detail::escaped_controls(message) << '\n';
     }
 
     void log(level lvl, diagnostic_code code, const source_location &location, const operation_failure &, const std::string &message) override
