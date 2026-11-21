@@ -123,7 +123,7 @@ TEST_CASE("a lexical refusal the reader already gave keeps its code and message"
     REQUIRE(quoted.message == "unterminated ${ substitution span at offset 1");
     REQUIRE(evaluation_refuses_holding("1 'x", "unexpected trailing tokens in expression"));
     REQUIRE(evaluation_refuses_holding("'x", "unterminated string in expression: 'x"));
-    REQUIRE(evaluation_refuses_holding("1e + €", "unrecognized character in expression: '1e'"));
+    REQUIRE(evaluation_refuses_holding("07 + €", "an integer literal other than zero is written without a leading zero: '07'"));
 }
 
 TEST_CASE("a number followed by a readable name is a syntax refusal, not a read of the name", "[xacro][identifier]")

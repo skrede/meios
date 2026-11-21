@@ -1,9 +1,8 @@
 #include "lexer.h"
-#include "literal_read.h"
+#include "number_token.h"
 #include "identifier_text.h"
 
 #include "meios/xacro/value.h"
-#include "meios/xacro/detail/numeric.h"
 
 #include <cctype>
 #include <string>
@@ -65,35 +64,6 @@ token_kind one_char_kind(char c)
         case '=': return token_kind::assign;
     }
     return token_kind::error;
-}
-
-std::optional<value> number_leaf(std::string_view text, bool is_float)
-{
-    if(!is_float && text.size() > 1 && text.front() == '0' && text.find_first_not_of('0') != std::string_view::npos)
-        return std::nullopt;
-    if(!is_float)
-        return integer_literal(text);
-    bool ok = false;
-    const double number = parse_double(text, ok);
-    return ok ? value::make_real(number) : std::nullopt;
-}
-
-std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> &out)
-{
-    std::size_t j = i;
-    bool is_float = false;
-    for(; j < src.size(); ++j)
-    {
-        char c = src[j];
-        bool exp_sign = (c == '+' || c == '-') && (src[j - 1] == 'e' || src[j - 1] == 'E');
-        if(c == '.' || c == 'e' || c == 'E') is_float = true;
-        else if(!std::isdigit(static_cast<unsigned char>(c)) && !exp_sign) break;
-    }
-    std::string_view text = src.substr(i, j - i);
-    const std::optional<value> leaf = number_leaf(text, is_float);
-    out.push_back(token{ leaf ? token_kind::number : token_kind::error, text,
-                         leaf.value_or(value{}) });
-    return j;
 }
 
 // Only the single-quoted spelling is measured against the pinned xacro, so the double-quoted

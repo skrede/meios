@@ -116,9 +116,24 @@ bound value of more digits stays text. An integer literal other than zero may no
 `${007}` refuses under `expression_error` while `${00}` is `0` and `${007.5}` the real `7.5`; text a
 property or an argument holds is read by the literal reading above, not by the expression's, so
 `value="007"` binds `7`. The `integer_literal_leading_zero` agreement probe holds the refusal against
-a fresh xacro render.
-Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
-renders `199999999999999999998`, and a property bound to `${2**70}` renders
+a fresh xacro render. An integer literal in an expression may carry single underscores between digits
+and a `0x`, `0o` or `0b` prefix (in either case), as a Python literal may, so `${1_000}` is `1000`,
+`${0x10}` is `16` and `${0_0}` is `0`, while `${0_7}` refuses as `${07}` does and an underscore
+anywhere but between two digits (`${1__0}`, `${1_}`, `${0x1_}`), a prefix with no digit (`${0x}`) and
+a digit outside its base (`${0b2}`) refuse under `expression_error`, each naming its fault. A real may
+carry the underscores too, so `${1_0.5}` is `10.5`. A prefixed literal too wide for 64 bits is a wide
+integer, and one whose value has more than 4300 digits refuses as a longer decimal literal does. This
+is the expression's reading: text a property or an argument holds keeps the literal reading above, so
+`value="0x10"` stays `0x10`. An imaginary literal (`${7j}`) names a complex number, which the built-in
+evaluator does not hold: it refuses as `unsupported_expression`, so a lenient policy leaves the span
+as written. `meios::eval-python` evaluates it, so `${abs(3+4j)}` renders `5.0` there, while a complex
+result is not written as text and refuses as an `error`. The `number_literal_forms`,
+`number_literal_wide_prefixed`, `number_literal_separator_doubled`,
+`number_literal_separator_leading_zero` and `number_literal_digit_outside_base` agreement probes hold
+these forms against a fresh xacro render, and the `number_literal_imaginary` row of the divergence
+manifest lists the imaginary literal.
+Under `meios::eval-python` an integer too wide for 64 bits reaches the expression as a Python
+integer, so `${b * 2}` renders `199999999999999999998`, and a property bound to `${2**70}` renders
 `1180591620717411303424`. In an interpreter it starts, the backend holds the integer-to-text limit at
 4300 digits whatever `PYTHONINTMAXSTRDIGITS` in the environment sets, so an integer of up to that many
 digits crosses into an expression and out of it, and a longer result refuses as an `error`

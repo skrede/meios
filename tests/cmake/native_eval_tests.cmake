@@ -89,7 +89,7 @@ foreach(stem IN ITEMS native_value native_value_key native_value_scope native_re
                       native_boolean_value native_root_symbols native_identifier
                       native_identifier_read native_identifier_fault native_expression_space
                       native_wide_integer native_exact_compare native_big_integer
-                      native_wide_real)
+                      native_wide_real native_number_literal)
     meios_add_native_test(${stem} evaluator)
 endforeach()
 

@@ -1,11 +1,10 @@
 #include "lexer.h"
 #include "eval_parser.h"
+#include "number_token.h"
 #include "identifier_text.h"
 #include "eval_numeric_ops.h"
 
 #include "meios/xacro/value.h"
-
-#include "meios/xacro/detail/wide_integer.h"
 
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
@@ -67,13 +66,8 @@ std::string lexical_message(std::string_view text)
         return *fault;
     if(!text.empty() && text.front() == '\'')
         return "unterminated string in expression: " + std::string(text);
-    // The lexer declines a run of digits only when a zero leads a nonzero integer or the run is past
-    // the ceiling, so a run starting with 0 here is the first.
-    const bool digits = !text.empty() && text.find_first_not_of("0123456789") == std::string_view::npos;
-    if(digits && text.front() == '0')
-        return "an integer literal other than zero is written without a leading zero: '" + std::string(text) + "'";
-    if(digits)
-        return "an integer literal has more than the " + std::to_string(wide_digit_ceiling) + " digits an integer holds here";
+    if(const std::optional<std::string> fault = number_fault(text))
+        return *fault;
     return "unrecognized character in expression: '" + std::string(text) + "'";
 }
 
@@ -83,6 +77,8 @@ std::string unsupported_message(std::string_view text)
 {
     if(text.empty())
         return "unsupported expression — use eval-python";
+    if(imaginary_literal(text))
+        return "the imaginary literal '" + std::string(text) + "' names a complex number, which the built-in evaluator does not hold — use eval-python";
     return "unsupported expression at '" + std::string(text) + "' — use eval-python";
 }
 

@@ -42,7 +42,8 @@ GRAMMAR_DOCUMENT_PROBES = ("include_find_answering_root_only",
                            "attribute_value_not_text",
                            "integer_intermediate_past_digit_ceiling",
                            "conditional_padded_expression",
-                           "element_name_boolean")
+                           "element_name_boolean",
+                           "number_literal_imaginary")
 
 # Each root is joined under the directory the probe is staged in, in the listed order, and @STAGE@
 # in an argument value is that directory resolved.

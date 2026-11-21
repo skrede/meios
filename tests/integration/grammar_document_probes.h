@@ -11,7 +11,7 @@ namespace differential
 #ifdef MEIOS_TEST_HAS_YAML
 
 // Spelled exactly as grammar_probes.py spells them, at the same positions.
-inline const std::array<document_probe, 42> grammar_document_probes{
+inline const std::array<document_probe, 43> grammar_document_probes{
         document_probe{
                 false, "include_find_answering_root_only", false, false, {}, false, {}, {"include_find_answering_root_only.d/r1", "include_find_answering_root_only.d/r2"}, false},
         document_probe{false, "include_missing_element_before_parent"},
@@ -55,6 +55,7 @@ inline const std::array<document_probe, 42> grammar_document_probes{
         document_probe{false, "integer_intermediate_past_digit_ceiling"},
         document_probe{false, "conditional_padded_expression"},
         document_probe{false, "element_name_boolean"},
+        document_probe{false, "number_literal_imaginary"},
 };
 
 #endif

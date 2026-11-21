@@ -166,6 +166,11 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"caller_argument_as_given", "caller_argument_as_given", {{"a", " x "}, {"b", "\x1c" "1"}}},
         agreement_probe{"attribute_through_passed_block", "attribute_through_passed_block", {}},
         agreement_probe{"property_flag_empty", "property_flag_empty", {}},
+        agreement_probe{"number_literal_forms", "number_literal_forms", {}},
+        agreement_probe{"number_literal_wide_prefixed", "number_literal_wide_prefixed", {}},
+        agreement_probe{"number_literal_separator_doubled", "number_literal_separator_doubled", {}, meios::diagnostic_code::expression_error},
+        agreement_probe{"number_literal_separator_leading_zero", "number_literal_separator_leading_zero", {}, meios::diagnostic_code::expression_error},
+        agreement_probe{"number_literal_digit_outside_base", "number_literal_digit_outside_base", {}, meios::diagnostic_code::expression_error},
 };
 
 }

@@ -23,6 +23,9 @@ public:
     // An optional '-' and one or more decimal digits; nothing for any other text.
     static std::optional<big_integer> from_spelling(std::string_view text);
 
+    // Digits of base 2**bits_per_digit, for bits_per_digit 1 to 4; nothing for a digit outside the base.
+    static std::optional<big_integer> from_power_of_two_digits(std::string_view digits, std::uint32_t bits_per_digit);
+
     std::string spelling() const;
 
     std::optional<std::int64_t> int64() const;

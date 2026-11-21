@@ -154,4 +154,9 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("eval_argument_separator_character", "eval_argument_separator_character", None),
                             ("caller_argument_as_given", "caller_argument_as_given", {"a": " x ", "b": "\x1c1"}),
                             ("attribute_through_passed_block", "attribute_through_passed_block", None),
-                            ("property_flag_empty", "property_flag_empty", None))
+                            ("property_flag_empty", "property_flag_empty", None),
+                            ("number_literal_forms", "number_literal_forms", None),
+                            ("number_literal_wide_prefixed", "number_literal_wide_prefixed", None),
+                            ("number_literal_separator_doubled", "number_literal_separator_doubled", None),
+                            ("number_literal_separator_leading_zero", "number_literal_separator_leading_zero", None),
+                            ("number_literal_digit_outside_base", "number_literal_digit_outside_base", None))
