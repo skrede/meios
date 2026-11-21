@@ -7,6 +7,7 @@
 #include <bit>
 #include <array>
 #include <cstdio>
+#include <limits>
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -109,4 +110,31 @@ TEST_CASE("upstream picks notation by decimal exponent, not by the shorter spell
     REQUIRE(meios::detail::choose_notation(lowest - 1) == notation::scientific);
     REQUIRE(meios::detail::choose_notation(highest) == notation::fixed);
     REQUIRE(meios::detail::choose_notation(highest + 1) == notation::scientific);
+}
+
+// Each verdict is the one std::from_chars gives, which the strtod reader compiled where floating-point
+// charconv is missing must repeat: strtod alone reads a leading space, a plus sign and a hexadecimal
+// form, and its ERANGE flags an in-range subnormal.
+TEST_CASE("a real is read exactly where from_chars reads one", "[numeric]")
+{
+    for(const std::string_view refused : {"", "-", "+7", " 7", "\t1", "7 ", "0x10", "-0x1p3", "+inf", "1e309", "-1e309",
+                                           "1.7976931348623159e308", "1e-400", "-2.4703282292062327e-324"})
+    {
+        INFO("spelling '" << refused << "'");
+        bool ok = true;
+        meios::detail::parse_double(refused, ok);
+        CHECK_FALSE(ok);
+    }
+    constexpr double tiniest = std::numeric_limits<double>::denorm_min();
+    const std::pair<std::string_view, double> readings[] = {
+            {"-7", -7.0}, {"1e-308", 1e-308}, {"4.9e-324", tiniest}, {"-2.4703282292062328e-324", -tiniest},
+            {"1.7976931348623158e308", std::numeric_limits<double>::max()}, {"0e-999", 0.0}, {"-0", -0.0},
+            {"-inf", -std::numeric_limits<double>::infinity()}};
+    for(const auto &[spelling, number] : readings)
+    {
+        INFO("spelling '" << spelling << "'");
+        bool ok = false;
+        CHECK(bits_of(meios::detail::parse_double(spelling, ok)) == bits_of(number));
+        CHECK(ok);
+    }
 }

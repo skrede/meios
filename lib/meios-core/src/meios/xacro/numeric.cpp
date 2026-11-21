@@ -2,11 +2,12 @@
 
 #include "meios/xacro/detail/numeric.h"
 
-#include <cerrno>
+#include <cmath>
 #include <string>
 #include <cstdint>
 #include <cstdlib>
 #include <charconv>
+#include <string_view>
 #include <system_error>
 
 namespace meios::detail
@@ -31,6 +32,31 @@ double strtod_c_locale(const char *first, char **last)
     #endif
 }
 
+namespace
+{
+
+// from_chars reads strtod's "C"-locale subject sequence less the leading white space, the plus
+// sign and the hexadecimal form ([charconv.from.chars]).
+bool strtod_only_spelling(std::string_view text)
+{
+    const std::string_view body = text.substr(text.starts_with('-') ? 1 : 0);
+    if(body.empty() || std::string_view("0123456789.iInN").find(body.front()) == std::string_view::npos)
+        return true;
+    return body.starts_with("0x") || body.starts_with("0X");
+}
+
+// from_chars refuses a decimal that rounds to an infinity, or a nonzero one that rounds to zero, and
+// reads a subnormal; strtod's ERANGE flags the subnormal too, so the range is judged by the value.
+bool outside_double_range(std::string_view text, double number)
+{
+    if(std::isinf(number))
+        return text.find_first_of("iI") == std::string_view::npos;
+    const std::string_view mantissa = text.substr(0, text.find_first_of("eE"));
+    return number == 0.0 && mantissa.find_first_of("123456789") != std::string_view::npos;
+}
+
+}
+
 #endif
 
 double parse_double(std::string_view text, bool &ok)
@@ -43,11 +69,10 @@ double parse_double(std::string_view text, bool &ok)
     ok = result.ec == std::errc{} && result.ptr == last;
     return ok ? number : 0.0;
 #else
-    std::string buffer(text);
+    const std::string buffer(text);
     char *stop = nullptr;
-    errno = 0;
-    double number = strtod_c_locale(buffer.c_str(), &stop);
-    ok = errno == 0 && stop == buffer.c_str() + buffer.size() && !buffer.empty();
+    const double number = strtod_c_locale(buffer.c_str(), &stop);
+    ok = stop == buffer.c_str() + buffer.size() && !strtod_only_spelling(text) && !outside_double_range(text, number);
     return ok ? number : 0.0;
 #endif
 }
