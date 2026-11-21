@@ -2,5 +2,13 @@
 <robot name="caller_arguments_stripped" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="a" default="d"/>
   <xacro:arg name="b" default="0"/>
+  <xacro:arg name="_p" default="d"/>
+  <xacro:arg name="__p" default="d"/>
+  <xacro:arg name="_" default="d"/>
   <link name="l_$(arg a)_$(eval b + 1)"/>
+  <link name="p_$(arg _p)_$(arg __p)_$(arg _)"/>
+  <joint name="j" type="fixed">
+    <parent link="l_$(arg a)_$(eval b + 1)"/>
+    <child link="p_$(arg _p)_$(arg __p)_$(arg _)"/>
+  </joint>
 </robot>

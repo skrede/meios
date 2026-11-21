@@ -441,8 +441,12 @@ The command-line tool is not as strict about that last one. See
 
 ### Argument overrides are a CMake list
 
-Each `ARGS` entry is one `key:=value` token. The key must be non-empty; the value need not be, so
-`name:=` is a legal override setting the argument to the empty string.
+Each `ARGS` entry is one `key:=value` token, and the key must be non-empty. The command line strips
+white space from both sides of the `:=`, then drops an override whose name or value is empty, so
+`name:=` leaves the argument at the document's default, and ignores a name with a
+single leading underscore (`_p:=1`; `_` and `__p` still bind). Each such override writes a warning
+and has no effect, as under xacro's command line. A program's `load_options::args` binds each entry
+as written.
 
 Two spellings are refused rather than passed along. An entry beginning with `-` reaches the binary
 as an option instead of an override. And a `;` inside a value does not survive the list: CMake

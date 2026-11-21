@@ -1,10 +1,10 @@
 #include "verbs.h"
+#include "arg_overrides.h"
 #include "register_scanners.h"
 #include "deferred_error_sink.h"
 
 #include "meios/urdf/load.h"
 
-#include "meios/xacro/python_space.h"
 #include "meios/xacro/evaluator_handle.h"
 
 #ifdef MEIOS_CLI_HAS_EVAL_PYTHON
@@ -19,13 +19,10 @@
 #include "meios/diagnostic/level.h"
 #include "meios/diagnostic/log_sink.h"
 
-#include <map>
 #include <memory>
 #include <string>
-#include <vector>
 #include <iostream>
 #include <filesystem>
-#include <string_view>
 
 namespace meios::cli
 {
@@ -79,26 +76,6 @@ bool select_backend(const verb_context &ctx, load_options &opts, log_sink &log)
     opts.backend = std::make_shared<evaluator_handle>(python_evaluator{});
 #endif
     return true;
-}
-
-// Stripping belongs to reading a command line, so a program's load_options::args binds the text
-// it was handed as written.
-bool collect_arg_overrides(const std::vector<std::string> &tokens, std::map<std::string, std::string> &args, log_sink &log)
-{
-    bool ok = true;
-    for(const std::string &token : tokens)
-    {
-        const std::string::size_type split = token.find(":=");
-        const std::string_view name        = split == std::string::npos ? std::string_view{} : detail::python_stripped(std::string_view(token).substr(0, split));
-        if(name.empty())
-        {
-            log.log(level::error, "malformed argument override '" + token + "'; expected key:=value with a non-empty key");
-            ok = false;
-            continue;
-        }
-        args[std::string(name)] = std::string(detail::python_stripped(std::string_view(token).substr(split + 2)));
-    }
-    return ok;
 }
 
 // The one place a finished load becomes a terminal record: the returned primary failure, or

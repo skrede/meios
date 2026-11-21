@@ -206,7 +206,10 @@ a declared default, or an override a program hands `load()` through `load_option
 characters that were written; the conversion above is not applied to it. An override the `meios`
 command line reads as `name:=value` first has the white space `str.strip()` removes taken off its
 name and its value, so `a:= x ` binds `x`, while a program's override binds as written, which the
-`caller_argument_as_given` agreement probe holds against a fresh xacro render. Only a default that is
+`caller_argument_as_given` agreement probe holds against a fresh xacro render. As under xacro's command
+line, the command line then drops an override whose name or value is empty, so `a:=` leaves `a` at its
+default, and ignores a name with a single leading underscore such as `_p`, each with a warning. Only a
+default that is
 itself one whole expression binds that expression's value, exactly as an attribute of the same shape
 does, so `default="${1+1}"` binds the integer `2`. Everything else stays as written, which is what
 leaves `$(arg flag)` of a `false`-spelled default rendering `false` into a flattened document rather

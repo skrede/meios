@@ -182,17 +182,6 @@ TEST_CASE("cli_verbs: flatten fails loudly on a malformed argument override and 
     REQUIRE(out.str().find("<robot") == std::string::npos);
 }
 
-TEST_CASE("cli_verbs: flatten fails loudly on an empty-key argument override")
-{
-    verb_context ctx;
-    ctx.id = "flatten";
-    ctx.positionals = { fixture("args_doc.xacro") };
-    ctx.arg_overrides = { ":=front" };
-    cout_capture out;
-    REQUIRE(cli::run_flatten(ctx) != 0);
-    REQUIRE(out.str().find("<robot") == std::string::npos);
-}
-
 TEST_CASE("cli_verbs: bundle fails loudly on an unopenable path and writes nothing")
 {
     verb_context ctx;
