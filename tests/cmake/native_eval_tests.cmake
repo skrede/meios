@@ -78,7 +78,7 @@ if(TARGET grammar_constructs_test)
         MEIOS_UNIT_STEM_SOURCES="${CMAKE_CURRENT_BINARY_DIR}/unit_stem_sources.txt")
 endif()
 
-foreach(stem IN ITEMS native_value native_value_key native_value_scope native_render
+foreach(stem IN ITEMS native_value native_value_key native_value_scope native_render native_shortest_real
                       native_expression native_expression_document native_expression_constructor
                       native_member native_member_collision native_session native_session_isolation
                       native_budget native_branch native_arith native_string native_split

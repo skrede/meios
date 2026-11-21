@@ -2,6 +2,8 @@
 #define HPP_GUARD_MEIOS_XACRO_NUMERIC_DETAIL_H
 
 #include <string>
+#include <cstddef>
+#include <cstdint>
 #include <version>
 
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
@@ -29,7 +31,13 @@ namespace meios::detail
 
 double strtod_c_locale(const char *first, char **last);
 
+int snprintf_c_locale(char *buffer, std::size_t size, bool scientific, int precision, double number);
+
 #endif
+
+std::int32_t fixed_fraction(std::int32_t significant, std::int32_t exponent);
+
+std::string print_finite_shortest(double number);
 
 std::string print_double_shortest(double number);
 

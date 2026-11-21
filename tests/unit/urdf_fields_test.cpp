@@ -29,6 +29,30 @@ std::string one_joint(const std::string &attributes, const std::string &children
          + ">\n    <parent link=\"base\"/>\n    <child link=\"tip\"/>\n" + children + "  </joint>\n";
 }
 
+std::string offset_joint(const std::string &xyz)
+{
+    return one_joint("type=\"fixed\"", "    <origin xyz=\"" + xyz + "\"/>\n");
+}
+
+std::string massive_link(const std::string &mass)
+{
+    return "  <link name=\"base\">\n    <inertial><mass value=\"" + mass + "\"/>"
+           "<inertia ixx=\"1\" ixy=\"0\" ixz=\"0\" iyy=\"1\" iyz=\"0\" izz=\"1\"/></inertial>\n"
+           "  </link>\n";
+}
+
+struct offset_reading
+{
+    std::string            xyz;
+    meios::vector3<double> expected;
+};
+
+struct mass_reading
+{
+    std::string mass;
+    double      expected;
+};
+
 }
 
 TEST_CASE("a required part that is missing drops its containing element at every setting",
@@ -110,4 +134,40 @@ TEST_CASE("a non-finite value is refused under a code rather than under none", "
 
     REQUIRE(carries(out, meios::level::error, meios::diagnostic_code::invalid_number));
     REQUIRE_FALSE(mentions(out, meios::diagnostic_code::unspecified));
+}
+
+TEST_CASE("a number after leading white space or one plus sign is read as urdfdom reads it",
+          "[urdf][fields]")
+{
+    for(const offset_reading &one : { offset_reading{ "+1 0 0", { 1.0, 0.0, 0.0 } },
+                                      offset_reading{ "+1 +2.5 -3", { 1.0, 2.5, -3.0 } } })
+    {
+        INFO("xyz '" << one.xyz << "'");
+        const outcome out = walk(offset_joint(one.xyz), meios::strictness::fail);
+        CHECK(out.notes.empty());
+        const meios::vector3<double> &at = out.robot.joints.at(0).origin.translation;
+        CHECK((at.x == one.expected.x && at.y == one.expected.y && at.z == one.expected.z));
+    }
+    for(const mass_reading &one : { mass_reading{ " 1.0", 1.0 }, mass_reading{ "+0.5e1", 5.0 },
+                                    mass_reading{ "\t\n +2", 2.0 } })
+    {
+        INFO("mass '" << one.mass << "'");
+        const outcome out = walk(massive_link(one.mass), meios::strictness::fail);
+        CHECK(out.notes.empty());
+        const meios::link<double> &base = out.robot.links.at(0);
+        CHECK((base.body.has_value() && base.body->mass == one.expected));
+    }
+}
+
+TEST_CASE("a doubled sign, a lone plus, trailing white space or a blank still refuses the number",
+          "[urdf][fields]")
+{
+    for(const std::string refused : { "++1", "+-1", "-+1", "+", "+ 1", "1.0 ", " ", "", "+inf" })
+    {
+        INFO("mass '" << refused << "'");
+        const outcome out = walk(massive_link(refused), meios::strictness::fail);
+        CHECK(carries(out, meios::level::error, meios::diagnostic_code::invalid_number));
+    }
+    const outcome out = walk(offset_joint("++1 0 0"), meios::strictness::fail);
+    CHECK(carries(out, meios::level::error, meios::diagnostic_code::invalid_number));
 }

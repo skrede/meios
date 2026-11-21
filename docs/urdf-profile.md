@@ -198,9 +198,14 @@ fifth. meios refuses one rather than falling through to a shape it invented; bef
 and which no consumer could distinguish from an authored one.
 
 **A numeric attribute must carry a number meios can read, and that number must be finite.** The wiki
-never states what may appear in a numeric attribute. meios refuses text it cannot parse and text that
-parses to an infinity or a NaN, because both reach a consumer as a coordinate, a mass or a limit and
-propagate through every arithmetic that touches them.
+never states what may appear in a numeric attribute. meios reads a number as urdfdom reads one: a
+decimal real, optionally with an exponent, after any white space before it and one `+` sign, so
+`+1` and ` 1.0` read as 1. Anything after the number refuses, white space included, as do a
+second sign (`++1`, `+-1`, `-+1`) and a sign standing alone. A fixed-length attribute's components
+are separated by white space, so `+1 +2.5 -3` is three numbers. meios refuses text it cannot parse
+and text that parses to an infinity or a NaN (`inf` and `nan` read, then refuse), because both reach
+a consumer as a coordinate, a mass or a limit and propagate through every arithmetic that touches
+them.
 
 **A fixed-length numeric attribute must carry exactly its own number of components.** The wiki
 describes `xyz` as "the x, y, z offset" and `rpy` as the roll, pitch and yaw angles about the fixed
