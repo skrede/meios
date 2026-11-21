@@ -1267,13 +1267,13 @@ absent, whoever finds it. The space has four parts, each counted on the tree thi
   `tests/golden/oracle/differential_inventory.cases` and the rows of `compatibility_ledger.cases`.
 - **The expression cases**: one hundred and thirty-three, the twenty-three minimized and one hundred
   and ten authored cases above, which are the `expression` rows of the inventory.
-- **The committed probes**: two hundred and fifty-seven agreement probes, the `agreement` rows of the
+- **The committed probes**: two hundred and sixty-two agreement probes, the `agreement` rows of the
   inventory, one hundred and two of them the documents the enumeration above names and one hundred and
-  fifty-five the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
+  sixty the grammar record's, each held to a fresh xacro render. An expansion-only agreement probe
   compares a construct the robot model does not carry on the whole canonical expansion. Beside them are
-  the probes whose difference the reviewed manifest `differential_divergences.cases` records, sixty-six
-  rows of it: thirteen document probes and eleven expression probes listed in
-  `tests/tools/oracle/differential_probes.py`, and the grammar record's forty-two document probes, a
+  the probes whose difference the reviewed manifest `differential_divergences.cases` records,
+  sixty-seven rows of it: thirteen document probes and eleven expression probes listed in
+  `tests/tools/oracle/differential_probes.py`, and the grammar record's forty-three document probes, a
   group listed in `tests/tools/oracle/grammar_probes.py`. A probe meios and xacro both refuse agrees only on the same
   cause: xacro's exception class and message stem, mapped through `tests/refusal_causes.h` to the code
   meios gives for that cause, and a xacro refusal no row maps fails the run. The expression cases and
