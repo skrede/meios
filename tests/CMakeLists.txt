@@ -152,6 +152,7 @@ endif()
 
 include(cmake/enrichment_tests.cmake)
 include(cmake/eval_python_tests.cmake)
+include(cmake/eval_python_start_tests.cmake)
 include(cmake/property_tests.cmake)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/compile/fail)

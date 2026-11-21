@@ -64,9 +64,10 @@ inline std::string argument_hint(bool unbound, std::string_view raised, const ev
 template<typename Body>
 text_outcome under_interpreter(std::string_view expr, const eval_scope &scope, log_sink &log, Body body)
 {
-    ensure_interpreter();
-    pybind11::gil_scoped_acquire gil;
     const std::string quoted = "\"" + std::string(expr) + "\"";
+    if(const std::optional<std::string> failure = interpreter_failure())
+        return report(eval_failure_kind::error, log, "python evaluation of " + quoted + " failed: " + *failure);
+    pybind11::gil_scoped_acquire gil;
     yaml_context ctx{log, scope, std::nullopt, std::nullopt};
     std::string message;
     bool unbound = false;

@@ -122,7 +122,7 @@ Every default below is the default the declaration states.
 | `MEIOS_ROS_PACKAGE_SUPPORT` | **`ON`** | Resolve `package://` through ROS package manifests (pugixml). |
 | `MEIOS_YAML_SUPPORT` | **`ON`** | Build `meios::yaml`, which reads an auxiliary configuration document from an expression (yaml-cpp). |
 | `MEIOS_ARCHIVE_ZIP_SUPPORT` | `OFF` | Build `meios::archive-zip` (miniz). |
-| `MEIOS_EVAL_PYTHON_SUPPORT` | `OFF` | Build `meios::eval-python` (pybind11 + found Python3). |
+| `MEIOS_EVAL_PYTHON_SUPPORT` | `OFF` | Build `meios::eval-python` (pybind11 + found Python3, 3.11 or later). |
 | `MEIOS_REQUIRE_EVAL_PYTHON` | `OFF` | Turn a skipped `meios::eval-python` into a configure error. |
 
 **Two of these are on by default, and they are the two the default load path relies on for
@@ -138,9 +138,10 @@ read their joint limits out of a file.
 
 **`MEIOS_REQUIRE_EVAL_PYTHON` enables nothing.** It is a strictness switch over
 `MEIOS_EVAL_PYTHON_SUPPORT`, not a second way to turn the module on. With support on and this off, a
-missing Python `Development.Embed` component makes the configure print that it is skipping
-`meios::eval-python` and carry on. With this on, the same situation is a hard configure error, and
-so is the module failing to materialize for any other reason. On its own it does nothing at all.
+missing Python `Development.Embed` component, or a CPython older than 3.11, makes the configure print
+that it is skipping `meios::eval-python` and carry on. With this on, the same situation is a hard
+configure error, and so is the module failing to materialize for any other reason. On its own it does
+nothing at all.
 
 ### What the project builds beside the library
 

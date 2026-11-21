@@ -110,14 +110,14 @@ endif()
 # component is absent the target is skipped rather than failing the configure.
 if(MEIOS_EVAL_PYTHON_SUPPORT)
     if(MEIOS_REQUIRE_EVAL_PYTHON)
-        find_package(Python3 QUIET COMPONENTS Interpreter Development.Embed)
+        find_package(Python3 3.11 QUIET COMPONENTS Interpreter Development.Embed)
         if(NOT Python3_FOUND)
             message(FATAL_ERROR
-                "meios: MEIOS_REQUIRE_EVAL_PYTHON is ON but Python3 Development.Embed was not found, "
+                "meios: MEIOS_REQUIRE_EVAL_PYTHON is ON but Python3 3.11 or later with Development.Embed was not found, "
                 "so meios::eval-python would have been skipped.")
         endif()
     else()
-        find_package(Python3 COMPONENTS Interpreter Development.Embed)
+        find_package(Python3 3.11 COMPONENTS Interpreter Development.Embed)
     endif()
     if(Python3_FOUND)
         meios_add_enrichment(eval-python
@@ -133,7 +133,7 @@ if(MEIOS_EVAL_PYTHON_SUPPORT)
         endif()
     else()
         message(STATUS
-            "meios: Python3 Development.Embed not found; skipping meios::eval-python.")
+            "meios: Python3 3.11 or later with Development.Embed not found; skipping meios::eval-python.")
     endif()
     # The enrichment helper also returns silently when the module's source glob comes
     # back empty, which a found interpreter says nothing about; a required build has to

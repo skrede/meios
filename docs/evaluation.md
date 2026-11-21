@@ -119,10 +119,13 @@ property or an argument holds is read by the literal reading above, not by the e
 a fresh xacro render.
 Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
-`1180591620717411303424`. The backend holds the interpreter's integer-to-text limit at 4300 digits
-whatever `PYTHONINTMAXSTRDIGITS` in the environment sets, so an integer of up to that many digits
-crosses into an expression and out of it, and a longer result refuses as an `error`
-(`expression_error`), where the built-in evaluator refuses one as a crossed ceiling. A value `float()` reads as infinity, `1e400` or `INFINITY`,
+`1180591620717411303424`. In an interpreter it starts, the backend holds the integer-to-text limit at
+4300 digits whatever `PYTHONINTMAXSTRDIGITS` in the environment sets, so an integer of up to that many
+digits crosses into an expression and out of it, and a longer result refuses as an `error`
+(`expression_error`), where the built-in evaluator refuses one as a crossed ceiling. An interpreter the
+program already runs keeps the program's own limit. A limit that cannot be held is reported once: the
+process's first Python evaluation refuses as an `error` saying so, and later ones run under the
+interpreter's own limit. A value `float()` reads as infinity, `1e400` or `INFINITY`,
 stays text as written, because a real here is always finite; [known
 limitations](known-limitations.md#expression-evaluation) lists that difference. The reading
 runs wherever a value is bound: a property evaluated where it is written, a property stored for its
@@ -1595,12 +1598,19 @@ int main()
 Python behavior the grammar above does not carry — a comprehension, an f-string, a string method other
 than the named split, a method call on a loaded mapping, string repetition or ordering, or a unit tag
 written over something other than a numeric literal: it registers the same six tags and evaluates the
-tagged text as an expression. It drives a *found* (never fetched) CPython. Its default class,
-`meios::python_evaluator`, is restricted: it evaluates a documented subset and refuses anything outside
-it with a `file:line` diagnostic naming one of four rules — `dunder-identifier`, `format-traversal`,
-`non-allowlisted-builtin`, `uncontained-yaml-path`. Its sibling `meios::unrestricted_python_evaluator`
-applies none of those rules and evaluates whatever CPython evaluates, `${__import__('os').getcwd()}`
-included.
+tagged text as an expression. It drives a *found* (never fetched) CPython, 3.11 or later. The
+interpreter it starts puts no program or working directory on its module path and installs none of
+Python's signal handlers, so a module file beside where the program was started is never imported and
+SIGINT keeps the disposition the program gave it. A program that already runs Python keeps its
+interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
+included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
+not hold that lock on another thread while a load runs. An interpreter that cannot start makes every
+Python evaluation of the process refuse as an `error` naming the failed start, and the start is not
+tried again. Its default class, `meios::python_evaluator`, is restricted: it evaluates a documented
+subset and refuses anything outside it with a `file:line` diagnostic naming one of four rules —
+`dunder-identifier`, `format-traversal`, `non-allowlisted-builtin`, `uncontained-yaml-path`. Its
+sibling `meios::unrestricted_python_evaluator` applies none of those rules and evaluates whatever
+CPython evaluates, `${__import__('os').getcwd()}` included.
 
 **Under both classes a name is read when Python evaluates it**, at any depth of the expression: the
 expression is evaluated over a mapping that reads the scope as its globals, so a name inside a lambda,
