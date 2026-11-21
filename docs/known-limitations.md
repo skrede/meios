@@ -678,26 +678,30 @@ space, with nothing after it and with a blank expression, `$(env)` with a second
 `$(optenv)`'s fallback words, the empty `$()`, and an auxiliary document's explicit mapping key with no
 content. They are also a spelling of infinity and a real beyond the double range written as a property's
 value, which xacro reads as infinity and meios keeps as the text written, since a real here is always
-finite. They are also comments, which xacro keeps, evaluates after `xacro:eval-comments` until
-`xacro:eval-comments:off` and deletes before an element of xacro's grammar, and processing instructions,
-which it keeps. They are also a glob include filename matching no file, which xacro warns about and
-includes nothing for, an include whose namespace evaluates to a list, which meios and xacro refuse for
-different causes, xacro because a list cannot key a table and meios because it does not read a bracketed
-list literal, and a find read with no package index. The pinned install ships none, so there xacro
-refuses every find as a substitution it cannot support, where meios refuses a find no configured source
-answers as unresolved; that probe alone is rendered without the package index vendored beside the
-oracle. They are also a chain of properties, each reading the next, deeper than the expression-depth
-ceiling admits, which refuses here and xacro renders. They are also an include namespace read as a
-value, which refuses here and xacro reads as the table holding its names, a global constant other than
-`pi` read through an include namespace, which refuses here and xacro renders, and a call to `sum`, which
-the built-in evaluator refuses because it does not support the list it is given, while xacro, whose
-expression globals do not bind `sum`, refuses `${sum([1, 2])}` as an undefined name. They are also an
-imaginary literal, which refuses here as unsupported and xacro renders. A probe marked to keep comments
-is compared on its comments and processing instructions as well, which the canonical text drops. Its
-probes can be handed caller arguments, ordered package roots, their stage as working directory and one
-fixed environment, so that held finds, root precedence and the command layer are measured on equal
-terms. An attribute a property, an argument, a macro, an include, a block insertion or a conditional
-does not use warns here; the differential compares no warning, so a unit case pins it.
+finite. They are also comments and processing instructions, which meios does not parse, so none reaches
+its expansion: a comment, which xacro keeps; the comments after one holding `xacro:eval-comments`, which
+xacro evaluates until an element, non-empty text or the marker that switches evaluation off; a comment
+directly before an element of xacro's grammar, which xacro deletes; and processing instructions, which
+xacro also keeps. They are also a glob include filename matching no file, which xacro warns about and
+includes nothing for, and an include whose namespace evaluates to a list, which meios and xacro refuse
+for different causes, xacro because a list cannot key a table and meios because it does not read a
+bracketed list literal. They are also a comment after one holding `xacro:eval-comments:off`, which xacro
+keeps verbatim since its evaluation stops there, and a find read with no package index. The pinned
+install ships none, so there xacro refuses every find as a substitution it cannot support, where meios
+refuses a find no configured source answers as unresolved; that probe alone is rendered without the
+package index vendored beside the oracle. They are also a chain of properties, each reading the next,
+deeper than the expression-depth ceiling admits, which refuses here and xacro renders. They are also an
+include namespace read as a value, which refuses here and xacro reads as the table holding its names, a
+call to `sum`, which the built-in evaluator refuses because it does not support the list it is given,
+while xacro, whose expression globals do not bind `sum`, refuses `${sum([1, 2])}` as an undefined name,
+and a global constant other than `pi` read through an include namespace, which refuses here and xacro
+renders. They are also an imaginary literal, which refuses here as unsupported and xacro renders. A
+probe marked to keep comments is compared on its comments and processing instructions as well, which the
+canonical text drops. Its probes can be handed caller arguments, ordered package roots, their stage as
+working directory and one fixed environment, so that held finds, root precedence and the command layer
+are measured on equal terms. An attribute a property, an argument, a macro, an include, a block
+insertion or a conditional does not use warns here; the differential compares no warning, so a unit case
+pins it.
 
 **Every construct of the pinned xacro grammar is paired with what measures it, or with the evidence that
 no document reaches it; twenty-two still have recorded differences not yet closed, and eight only

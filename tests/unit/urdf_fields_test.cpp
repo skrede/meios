@@ -149,7 +149,7 @@ TEST_CASE("a number after leading white space or one plus sign is read as urdfdo
         CHECK((at.x == one.expected.x && at.y == one.expected.y && at.z == one.expected.z));
     }
     for(const mass_reading &one : { mass_reading{ " 1.0", 1.0 }, mass_reading{ "+0.5e1", 5.0 },
-                                    mass_reading{ "\t\n +2", 2.0 } })
+                                    mass_reading{ "&#9;&#10; +2", 2.0 } })
     {
         INFO("mass '" << one.mass << "'");
         const outcome out = walk(massive_link(one.mass), meios::strictness::fail);

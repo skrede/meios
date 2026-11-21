@@ -8,6 +8,7 @@
 #include <fcntl.h>
 
 #include <cstdint>
+#include <optional>
 
 namespace meios::detail
 {
@@ -74,13 +75,8 @@ inline checked_handle_result walk(const ntdll_api &api, handle_owner root, const
     return std::move(handles.back());
 }
 
-inline native_file_result stream_from(handle_owner handle) noexcept
+inline native_file_result stream_of(int descriptor) noexcept
 {
-    errno                = 0;
-    const int descriptor = _open_osfhandle(reinterpret_cast<std::intptr_t>(handle.get()), _O_RDONLY | _O_BINARY);
-    if(descriptor == -1)
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
-    (void)handle.release();
     errno             = 0;
     std::FILE *stream = _fdopen(descriptor, "rb");
     if(stream != nullptr)
@@ -88,6 +84,27 @@ inline native_file_result stream_from(handle_owner handle) noexcept
     const std::error_code error = native_crt_error();
     (void)_close(descriptor);
     return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, error));
+}
+
+inline std::optional<text_read_failure> regular_file_failure(int descriptor) noexcept
+{
+    struct _stat64 state{};
+    errno = 0;
+    if(_fstat64(descriptor, &state) != 0)
+        return native_failure(text_read_failure_kind::status, operation_kind::status, native_crt_error());
+    if((state.st_mode & _S_IFMT) != _S_IFREG)
+        return native_failure(text_read_failure_kind::non_regular, operation_kind::status, {});
+    return std::nullopt;
+}
+
+inline native_file_result stream_from(handle_owner handle) noexcept
+{
+    errno                = 0;
+    const int descriptor = _open_osfhandle(reinterpret_cast<std::intptr_t>(handle.get()), _O_RDONLY | _O_BINARY);
+    if(descriptor == -1)
+        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
+    (void)handle.release();
+    return stream_of(descriptor);
 }
 
 }
@@ -98,26 +115,12 @@ inline native_file_result native_open(const std::filesystem::path &path) noexcep
     const int descriptor = _wopen(path.c_str(), _O_RDONLY | _O_BINARY | _O_NOINHERIT);
     if(descriptor == -1)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
-    struct _stat64 state{};
-    errno = 0;
-    if(_fstat64(descriptor, &state) != 0)
-    {
-        const std::error_code error = native_crt_error();
-        (void)_close(descriptor);
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::status, operation_kind::status, error));
-    }
-    if((state.st_mode & _S_IFMT) != _S_IFREG)
+    if(const std::optional<text_read_failure> failure = native::regular_file_failure(descriptor))
     {
         (void)_close(descriptor);
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::non_regular, operation_kind::status, {}));
+        return unexpected<text_read_failure>(*failure);
     }
-    errno             = 0;
-    std::FILE *stream = _fdopen(descriptor, "rb");
-    if(stream != nullptr)
-        return stream;
-    const std::error_code error = native_crt_error();
-    (void)_close(descriptor);
-    return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, error));
+    return native::stream_of(descriptor);
 }
 
 inline native_file_result native_open_under(const std::filesystem::path &root, const std::filesystem::path &relative) noexcept

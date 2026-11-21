@@ -6,6 +6,7 @@
 #include <windows.h>
 
 #include <utility>
+#include <algorithm>
 #include <system_error>
 
 namespace meios::detail::native
@@ -16,13 +17,24 @@ inline bool names_another_location(const FILE_ATTRIBUTE_TAG_INFO &attributes) no
     return (attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 && IsReparseTagNameSurrogate(attributes.ReparseTag) != 0;
 }
 
-inline bool same_file(HANDLE first, HANDLE second) noexcept
+inline bool same_index(HANDLE first, HANDLE second) noexcept
 {
     BY_HANDLE_FILE_INFORMATION one{};
     BY_HANDLE_FILE_INFORMATION other{};
     if(!GetFileInformationByHandle(first, &one) || !GetFileInformationByHandle(second, &other))
         return false;
     return one.dwVolumeSerialNumber == other.dwVolumeSerialNumber && one.nFileIndexHigh == other.nFileIndexHigh && one.nFileIndexLow == other.nFileIndexLow;
+}
+
+// ReFS names a file by 128 bits, which the 64-bit index does not cover, so the index serves only
+// where the file system reports no 128-bit identity.
+inline bool same_file(HANDLE first, HANDLE second) noexcept
+{
+    FILE_ID_INFO one{};
+    FILE_ID_INFO other{};
+    if(!GetFileInformationByHandleEx(first, FileIdInfo, &one, sizeof(one)) || !GetFileInformationByHandleEx(second, FileIdInfo, &other, sizeof(other)))
+        return same_index(first, second);
+    return one.VolumeSerialNumber == other.VolumeSerialNumber && std::ranges::equal(one.FileId.Identifier, other.FileId.Identifier);
 }
 
 inline text_read_failure leaves_root() noexcept
