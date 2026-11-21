@@ -21,12 +21,9 @@ char ahead(const number_scan &s, std::size_t offset = 0)
     return s.at + offset < s.src.size() ? s.src[s.at + offset] : '\0';
 }
 
-// `0or` reads as a zero and the keyword `or`, a deliberate extension: Python takes it for an octal
-// prefix with no digit.
 std::uint32_t prefix_base(std::string_view src, std::size_t i)
 {
     const char marker = src[i] == '0' && i + 1 < src.size() ? src[i + 1] : '\0';
-    if(src.substr(i, 3) == "0or") return 10;
     if(marker == 'x' || marker == 'X') return 16;
     if(marker == 'o' || marker == 'O') return 8;
     if(marker == 'b' || marker == 'B') return 2;

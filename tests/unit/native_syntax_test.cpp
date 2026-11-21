@@ -102,6 +102,31 @@ TEST_CASE("a syntax refusal is terminal under every evaluation policy", "[native
     }
 }
 
+// The parse stops at the first unsupported construct: a fault after it is never reached, one before it is terminal.
+TEST_CASE("an unsupported construct ahead of a malformed literal leaves the span as written under a lenient policy", "[native][syntax]")
+{
+    for(const std::string expression : {"1j + 07", "1j + 1_", "a.b + 07"})
+    {
+        INFO("expression: " << expression);
+        const std::string body = "<m v=\"${" + expression + "}\"/>";
+        for(meios::eval_policy policy : {meios::eval_policy::skip, meios::eval_policy::warn})
+        {
+            const auto expanded = syntax_probe::load_under(body, policy);
+            REQUIRE(expanded.has_value());
+            CHECK(expanded->document.find("v=\"${" + expression + "}\"") != std::string::npos);
+        }
+        const auto strict = syntax_probe::load_under(body, meios::eval_policy::fail);
+        REQUIRE_FALSE(strict.has_value());
+        CHECK(strict.error().code == meios::diagnostic_code::unsupported_expression);
+    }
+    for(meios::eval_policy policy : {meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip})
+    {
+        const auto expanded = syntax_probe::load_under("<m v=\"${07 + 1j}\"/>", policy);
+        REQUIRE_FALSE(expanded.has_value());
+        CHECK(expanded.error().code == meios::diagnostic_code::expression_error);
+    }
+}
+
 // This evaluator reads neither a mapping literal nor a sequence literal, so the scan leaves both
 // to the parser, and only the branch actually taken is parsed -- so their verdict is still
 // decided at run time. Settling it in the scan would mean re-encoding a grammar the parser owns.

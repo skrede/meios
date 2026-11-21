@@ -119,8 +119,11 @@ property or an argument holds is read by the literal reading above, not by the e
 a fresh xacro render. An integer literal in an expression may carry single underscores between digits
 and a `0x`, `0o` or `0b` prefix (in either case), as a Python literal may, so `${1_000}` is `1000`,
 `${0x10}` is `16` and `${0_0}` is `0`, while `${0_7}` refuses as `${07}` does and an underscore
-anywhere but between two digits (`${1__0}`, `${1_}`, `${0x1_}`), a prefix with no digit (`${0x}`) and
-a digit outside its base (`${0b2}`) refuse under `expression_error`, each naming its fault. A real may
+anywhere but between two digits (`${1__0}`, `${1_}`, `${0x1_}`), a prefix with no digit (`${0x}`, and
+`${0or 2}`, whose `0o` is the octal prefix), a digit outside its base (`${0b2}`), a literal directly
+followed by a name other than the keywords `and`, `else`, `for`, `if`, `in`, `is`, `not` and `or`
+(`${1abc}`, `${1e}`; `${1if 1else 2}` still reads) and a real literal outside the range of a double
+(`${1e999}`) refuse under `expression_error`, each naming its fault. A real may
 carry the underscores too, so `${1_0.5}` is `10.5`. A prefixed literal too wide for 64 bits is a wide
 integer, and one whose value has more than 4300 digits refuses as a longer decimal literal does. This
 is the expression's reading: text a property or an argument holds keeps the literal reading above, so
@@ -221,10 +224,10 @@ a declared default, or an override a program hands `load()` through `load_option
 characters that were written; the conversion above is not applied to it. An override the `meios`
 command line reads as `name:=value` first has the white space `str.strip()` removes taken off its
 name and its value, so `a:= x ` binds `x`, while a program's override binds as written, which the
-`caller_argument_as_given` agreement probe holds against a fresh xacro render. As under xacro's command
-line, the command line then drops an override whose name or value is empty, so `a:=` leaves `a` at its
-default, and ignores a name with a single leading underscore such as `_p`, each with a warning. Only a
-default that is
+`caller_argument_as_given` agreement probe holds against a fresh xacro render. The command line splits
+an override at its first `:=`, so `a:=b:=c` binds `b:=c`, and an override whose name or value is empty
+once stripped, or whose name has a single leading underscore such as `_p`, binds nothing and writes a
+warning saying so. Only a default that is
 itself one whole expression binds that expression's value, exactly as an attribute of the same shape
 does, so `default="${1+1}"` binds the integer `2`. Everything else stays as written, which is what
 leaves `$(arg flag)` of a `false`-spelled default rendering `false` into a flattened document rather

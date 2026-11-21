@@ -20,7 +20,7 @@ std::string_view unbound_reason(std::string_view name, std::string_view value)
     if(name.empty())
         return "its name is empty";
     if(value.empty())
-        return "its value is empty, so the argument keeps the document's default";
+        return "its value is empty";
     if(name.size() > 1 && name[0] == '_' && name[1] != '_')
         return "a name with one leading underscore is read as a parameter, not an argument";
     return {};
@@ -40,15 +40,14 @@ bool bind_override(const std::string &token, std::map<std::string, std::string> 
     if(reason.empty())
         args[std::string(name)] = std::string(value);
     else
-        log.log(level::warn, "argument override '" + token + "' has no effect: " + std::string(reason));
+        log.log(level::warn, "argument override '" + token + "' binds nothing: " + std::string(reason));
     return true;
 }
 
 }
 
 // Stripping belongs to reading a command line, so a program's load_options::args binds the text
-// it was handed as written. The command line also drops what xacro's drops: an empty name or
-// value, and a name with one leading underscore.
+// it was handed as written.
 bool collect_arg_overrides(const std::vector<std::string> &tokens, std::map<std::string, std::string> &args, log_sink &log)
 {
     bool ok = true;

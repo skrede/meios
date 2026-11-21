@@ -77,6 +77,7 @@ void require_without_effect(const std::string &token)
     CHECK(renders(ran, "p_d_d_d"));
     CHECK(warnings_in(ran.errors) == 1);
     CHECK(ran.errors.find("'" + token + "'") != std::string::npos);
+    CHECK(ran.errors.find("binds nothing") != std::string::npos);
 }
 
 }
@@ -134,6 +135,26 @@ TEST_CASE("cli_arguments: each override without effect writes its own warning an
     CHECK(renders(ran, "l_d_2"));
     CHECK(renders(ran, "p_d_1_d"));
     CHECK(warnings_in(ran.errors) == 3);
+}
+
+TEST_CASE("cli_arguments: a dropped override leaves the binding an earlier one made")
+{
+    const flattened ran = flatten_with({"a:=1", "a:="});
+    REQUIRE(ran.code == 0);
+    CHECK(renders(ran, "l_1_1"));
+    CHECK(renders(ran, "p_d_d_d"));
+    CHECK(warnings_in(ran.errors) == 1);
+    CHECK(ran.errors.find("'a:='") != std::string::npos);
+    CHECK(ran.errors.find("binds nothing") != std::string::npos);
+    CHECK(ran.errors.find("default") == std::string::npos);
+}
+
+TEST_CASE("cli_arguments: an override splits at its first assignment, so its value may hold another")
+{
+    const flattened ran = flatten_with({"a:=b:=c"});
+    REQUIRE(ran.code == 0);
+    CHECK(renders(ran, "l_b:=c_1"));
+    CHECK(warnings_in(ran.errors) == 0);
 }
 
 TEST_CASE("cli_arguments: a token without an assignment refuses as a malformed override and prints no document")

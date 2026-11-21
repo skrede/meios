@@ -99,13 +99,16 @@ TEST_CASE("base-two digits pack into an arbitrary-precision integer", "[native][
 TEST_CASE("a malformed literal refuses as an expression fault naming the fault", "[native][syntax]")
 {
     const std::string_view leading = "leading zero", separator = "digit separator", bare = "followed by no digit",
-                           outside = "holds only the digits", exponent = "exponent";
+                           outside = "holds only the digits", exponent = "exponent", glued = "directly followed by a name",
+                           range = "outside the range of a double";
     for(const literal_case one : { literal_case{ "0_7", leading }, { "00_7", leading }, { "07", leading },
                                    { "1__0", separator }, { "1_", separator }, { "0_", separator }, { "0__0", separator },
                                    { "1_.5", separator }, { "1._5", separator }, { "1e_5", separator }, { "1e5_", separator },
                                    { "1_e5", separator }, { "1e+", exponent }, { "0x", bare }, { "0x_", bare },
                                    { "0x1_", separator }, { "0x__1", separator }, { "0o", bare }, { "0b", bare },
-                                   { "0b_", bare }, { "0b2", outside }, { "0o8", outside }, { "0b12", outside } })
+                                   { "0b_", bare }, { "0b2", outside }, { "0o8", outside }, { "0b12", outside },
+                                   { "0or 2", bare }, { "1e", glued }, { "1abc", glued }, { "1jx", glued },
+                                   { "0x1j", glued }, { "1.5abc", glued }, { "1e999", range } })
     {
         INFO("literal: " << one.spelling);
         const auto expanded = strictly(one.spelling);
@@ -156,7 +159,7 @@ TEST_CASE("a lenient policy leaves an imaginary literal's span as written", "[na
 TEST_CASE("a number directly followed by a keyword still reads as the number and the keyword", "[native][syntax]")
 {
     for(const literal_case one : { literal_case{ "1 if True else 2", "1" }, { "1if True else 2", "1" },
-                                   { "1if 1else 2", "1" }, { "0or 2", "2" }, { "1and 0", "0" },
+                                   { "1if 1else 2", "1" }, { "1and 0", "0" },
                                    { "0b1and 2", "2" }, { "1 if 0else 2", "2" }, { "True or 1", "True" }, { "not 1in cfg", "True" } })
     {
         INFO("expression: " << one.spelling);

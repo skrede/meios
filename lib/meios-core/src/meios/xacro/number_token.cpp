@@ -11,6 +11,7 @@
 #include "meios/xacro/detail/wide_integer.h"
 
 #include <bit>
+#include <array>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -75,6 +76,17 @@ bool word_character(char c)
     return decimal_digit(c) || ((c | 0x20) >= 'a' && (c | 0x20) <= 'z') || c == '_';
 }
 
+// A literal may touch one of these keywords (`1if 1else 2`); any other name directly after it makes
+// the literal malformed.
+constexpr std::array<std::string_view, 8> adjacent_keywords = { "and", "else", "for", "if", "in", "is", "not", "or" };
+
+bool followed_by_name(std::string_view src, std::size_t at)
+{
+    const std::string_view rest = src.substr(at);
+    const auto starts_rest = [rest](std::string_view keyword) { return rest.starts_with(keyword); };
+    return !rest.empty() && word_character(rest.front()) && std::ranges::none_of(adjacent_keywords, starts_rest);
+}
+
 // A malformed literal leaves no point to resume reading from, so its token ends the stream.
 std::size_t push_malformed(std::string_view src, std::size_t i, std::size_t at, std::vector<token> &out)
 {
@@ -103,7 +115,7 @@ std::string flaw_message(const number_scan &s, std::string_view text)
 std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> &out)
 {
     const number_scan s = read_number(src, i);
-    if(s.fault != number_flaw::none) return push_malformed(src, i, s.at, out);
+    if(s.fault != number_flaw::none || followed_by_name(src, s.at)) return push_malformed(src, i, s.at, out);
     const std::string_view lexeme = src.substr(i, s.at - i);
     if(s.imaginary) { out.push_back(token{ token_kind::unsupported, lexeme }); return s.at; }
     const std::optional<value> leaf = s.base == 10 ? decimal_value(s, lexeme) : prefixed_value(lexeme, s.base);
@@ -111,15 +123,17 @@ std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> 
     return s.at;
 }
 
-// A well-formed integer is declined only when a zero leads a nonzero decimal integer or its value
-// is past the ceiling, and a well-formed real only when it is not finite.
+// Beyond a flaw, declined are a literal a name follows directly, an integer whose zero leads a nonzero
+// decimal one or whose value is past the ceiling, and a real a double cannot hold.
 std::optional<std::string> number_fault(std::string_view text)
 {
     if(!starts_number(text)) return std::nullopt;
     const number_scan s = read_number(text, 0);
     const std::string ceiling = std::to_string(wide_digit_ceiling);
     if(s.fault != number_flaw::none) return flaw_message(s, text);
-    if(s.real || s.imaginary) return std::nullopt;
+    if(s.at < text.size()) return "a number is directly followed by a name: '" + std::string(text) + "'";
+    if(s.imaginary) return std::nullopt;
+    if(s.real) return "a real literal is outside the range of a double: '" + std::string(text) + "'";
     if(s.base != 10) return "an integer literal's value has more than the " + ceiling + " decimal digits an integer holds here";
     if(leading_zero(without_separators(text)))
         return "an integer literal other than zero is written without a leading zero: '" + std::string(text) + "'";
