@@ -679,18 +679,18 @@ other attributes and its children bind as that call's, and `macro` takes no part
 dotted name reaches a macro an include namespace holds, as `<xacro:n.m/>` does. A name no macro
 answers refuses under `xacro_structural_error` at the call's `file:line`, as `<xacro:call> names
 'nope', which is not a macro in scope` does, and so does `macro="if"`, which names no macro rather
-than a conditional. An empty `macro` refuses as naming no macro, and `macro="call"` refuses as a call
-with no `macro` attribute. The `call_empty_macro`, `macro_called_by_name_attribute` and
-`call_unknown_macro` agreement probes hold these against a fresh xacro render, beside the
-`xacro_element_construct` cases.
+than a conditional. An empty `macro` refuses as naming no macro, and `macro="call"`, written or
+evaluated, refuses as naming `xacro:call` itself, which is no macro. The `call_empty_macro`,
+`macro_called_by_name_attribute` and `call_unknown_macro` agreement probes hold these against a fresh
+xacro render, beside the `xacro_element_construct` cases.
 
 **`xacro:element` is processed again under the name it evaluates.** `<xacro:element
 xacro:name="${'li' + 'nk'}" name="l"/>` evaluates `xacro:name` as text and handles the same element as
 if that name had been written: a plain element, a conditional, a property, an argument, a macro
-definition, a macro call, an `xacro:call`, and an `xacro:element`, which then refuses for want of its
-own `xacro:name`. `xacro:name` takes no part in what the renamed element reads; its other attributes
-are evaluated once, where the new name's branch evaluates them, and every diagnostic it raises
-carries the element's own `file:line`. An evaluated name, here and for `xacro:attribute` below, first
+definition, a macro call, an `xacro:call`, and an `xacro:element`, which refuses as renaming itself.
+`xacro:name` takes no part in what the renamed element reads; its other attributes are evaluated
+once, where the new name's branch evaluates them, and every diagnostic it raises carries the element's
+own `file:line`. An evaluated name, here and for `xacro:attribute` below, first
 loses the XML white space at either end — space, tab, carriage return and line feed, nothing else —
 and when any was removed, one located `level::warn` note with no diagnostic code names the evaluated
 text and the name used, as `<xacro:element> evaluates its xacro:name to 'link ' and uses 'link',

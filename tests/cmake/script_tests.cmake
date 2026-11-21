@@ -15,3 +15,8 @@ if(MEIOS_BASH_EXECUTABLE AND NOT WIN32)
             FAIL_REGULAR_EXPRESSION "FAIL: ")
     endforeach()
 endif()
+
+# A corpus record is five fields whatever its call passes, or every record after it shifts.
+add_test(NAME cmake_corpus_document_fields
+    COMMAND ${CMAKE_COMMAND} -DMEIOS_CMAKE_DIR=${meios_SOURCE_DIR}/cmake -P ${CMAKE_CURRENT_LIST_DIR}/corpus_document_fields_case.cmake)
+set_tests_properties(cmake_corpus_document_fields PROPERTIES PASS_REGULAR_EXPRESSION "MEIOS_CORPUS_DOCUMENT_FIELDS_PASSED")

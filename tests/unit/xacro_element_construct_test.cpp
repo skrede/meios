@@ -60,10 +60,8 @@ TEST_CASE("xacro:call names only a macro, never another construct", "[xacro][cal
     refused(R"(<xacro:property name="q" value="1"/><xacro:call macro="property" name="r" value="2"/>)");
 }
 
-TEST_CASE("xacro:call naming call refuses for the macro attribute it no longer has", "[xacro][call]")
+TEST_CASE("xacro:call without a macro attribute refuses naming it", "[xacro][call]")
 {
-    const meios::expansion_error again = refused(defines_m + R"(<xacro:call macro="call"/>)");
-    REQUIRE(again.message.find("macro attribute") != std::string::npos);
     REQUIRE(refused(R"(<xacro:call/>)").message.find("macro attribute") != std::string::npos);
     REQUIRE(refused(R"(<xacro:call macro=""/>)").message.find("macro") != std::string::npos);
 }
@@ -110,9 +108,8 @@ TEST_CASE("xacro:element renamed into a macro call binds everything but xacro:na
     refused(R"(<xacro:element xacro:name="xacro:nope"/>)");
 }
 
-TEST_CASE("xacro:element renamed into xacro:element refuses for the xacro:name it no longer has", "[xacro][element]")
+TEST_CASE("xacro:element without a xacro:name attribute refuses naming it", "[xacro][element]")
 {
-    REQUIRE(refused(R"(<xacro:element xacro:name="xacro:element"/>)").message.find("xacro:name attribute") != std::string::npos);
     REQUIRE(refused(R"(<xacro:element name="x"/>)").message.find("xacro:name attribute") != std::string::npos);
 }
 

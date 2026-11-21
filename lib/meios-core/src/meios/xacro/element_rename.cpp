@@ -27,14 +27,15 @@ std::string authored_tag(const dispatch_view &view)
     return '<' + std::string(view.node.name()) + '>';
 }
 
-// The name selects a macro and nothing else: the call never becomes another construct, and a call
-// naming call is the call again, its macro attribute consumed.
+// The name selects a macro and nothing else: the call never becomes another construct or itself.
 bool call_by_name(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node out, const std::filesystem::path &document)
 {
     if(*view_attribute(view, "macro").value() == '\0')
         return fail(ctx, view.node, diagnostic_code::xacro_structural_error, authored_tag(view) + " names no macro in its macro attribute");
     bool ok = true;
     const std::string name = evaluated_text(ctx, view, "macro", document, ok);
+    if(ok && name == "call")
+        return fail(ctx, view.node, diagnostic_code::xacro_structural_error, authored_tag(view) + " names the macro 'call', which is xacro:call itself and no macro");
     return ok && call_macro(ctx, renamed(view, "xacro:" + name, "macro"), out, document);
 }
 
@@ -81,6 +82,8 @@ bool rename_element(expand_ctx &ctx, const dispatch_view &view, pugi::xml_node o
 {
     bool ok = true;
     const std::string name = evaluated_name(ctx, view, "xacro:name", document, ok);
+    if(ok && name == "xacro:element")
+        return fail(ctx, view.node, diagnostic_code::xacro_structural_error, authored_tag(view) + " renames itself to xacro:element, which names no element");
     return ok && dispatch_element(ctx, renamed(view, name, "xacro:name"), out, document);
 }
 

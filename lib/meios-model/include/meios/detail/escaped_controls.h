@@ -20,7 +20,7 @@ inline void append_hex(std::string &out, char32_t value, std::size_t digits)
 
 inline bool escaped_byte(char32_t point)
 {
-    return point < 0x20 || point == 0x7F;
+    return point < 0x20 || point == 0x7F || point == '\\';
 }
 
 inline bool escaped_point(char32_t point)
@@ -36,6 +36,8 @@ inline void append_visible_byte(std::string &out, char32_t byte)
         out += "\\r";
     else if(byte == '\n')
         out += "\\n";
+    else if(byte == '\\')
+        out += "\\\\";
     else
     {
         out += "\\x";
@@ -49,9 +51,9 @@ inline void append_visible_point(std::string &out, char32_t point)
     append_hex(out, point, 4);
 }
 
-// A tab, carriage return or line feed is written \t, \r or \n, any other C0 control or DEL as \x and
-// two hex digits, and U+0080..U+009F, U+2028 or U+2029 as \u and four, so quoted text cannot split a
-// one-record-per-line log. The output holds nothing this rewrites, so escaping it again changes nothing.
+// A tab, carriage return or line feed is written \t, \r or \n, a backslash \\, any other C0 control, DEL or stray byte
+// in 0x80..0x9F as \x and two hex digits, and U+0080..U+009F, U+2028 or U+2029 as \u and four. Every backslash the
+// output holds begins an escape, so a record stays on one line and reads back to the text raised.
 inline std::string escaped_controls(std::string_view text)
 {
     std::string out;
@@ -60,12 +62,13 @@ inline std::string escaped_controls(std::string_view text)
     while(at < text.size())
     {
         const utf8_point point = decode_utf8(text, at);
-        // A byte that begins no well-formed sequence is no line break or control under UTF-8, and a
-        // Windows path is written in the ANSI code page, where such bytes are ordinary characters.
-        if(point.value == malformed_utf8)
+        const auto byte        = static_cast<std::uint8_t>(text[at]);
+        // A stray byte above 0x9F is copied: a Windows path is written in the ANSI code page, where such
+        // bytes are ordinary characters.
+        if(point.value == malformed_utf8 && byte > 0x9F)
             out += text[at];
-        else if(escaped_byte(point.value))
-            append_visible_byte(out, point.value);
+        else if(point.value == malformed_utf8 || escaped_byte(point.value))
+            append_visible_byte(out, byte);
         else if(escaped_point(point.value))
             append_visible_point(out, point.value);
         else

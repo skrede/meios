@@ -14,11 +14,13 @@
 #include <filesystem>
 
 using element_construct::render;
+using element_construct::refused;
 
 namespace
 {
 
 const std::string lifting_m = R"(<xacro:macro name="m" params="" xmlns:a="urn:a"><visual/></xacro:macro>)";
+const std::string defines_m = R"(<xacro:macro name="m" params=""><link name="m"/></xacro:macro>)";
 
 }
 
@@ -61,4 +63,33 @@ TEST_CASE("an element renamed into an include passes every check an authored inc
     const include_tree::expansion_result escaped = include_tree::expand_file(bad, sources, silent);
     REQUIRE_FALSE(escaped.has_value());
     REQUIRE(escaped.error().code == meios::diagnostic_code::uncontained_asset);
+}
+
+TEST_CASE("xacro:call naming call refuses because call is xacro:call itself", "[xacro][call]")
+{
+    for(const std::string written : {"call", "${'call'}"})
+    {
+        CAPTURE(written);
+        const std::string message = refused(defines_m + "<xacro:call macro=\"" + written + "\"/>").message;
+        CHECK(message.find("is xacro:call itself") != std::string::npos);
+        CHECK(message.find("needs a macro attribute") == std::string::npos);
+    }
+}
+
+TEST_CASE("xacro:element renamed to xacro:element refuses because it renames itself", "[xacro][element]")
+{
+    for(const std::string written : {"xacro:element", "${'xacro:element'}"})
+    {
+        CAPTURE(written);
+        const std::string message = refused(R"(<link name="l"><xacro:element xacro:name=")" + written + R"("/></link>)").message;
+        CHECK(message.find("renames itself") != std::string::npos);
+        CHECK(message.find("needs a xacro:name attribute") == std::string::npos);
+    }
+}
+
+TEST_CASE("xacro:element renamed to xacro:call still refuses for the macro attribute the call lacks", "[xacro][element][call]")
+{
+    const std::string message = refused(R"(<link name="l"><xacro:element xacro:name="xacro:call"/></link>)").message;
+    CHECK(message.find("needs a macro attribute") != std::string::npos);
+    REQUIRE(render(defines_m + R"(<xacro:call macro="m"/>)") == R"(<robot name="p"><link name="m"></link></robot>)");
 }

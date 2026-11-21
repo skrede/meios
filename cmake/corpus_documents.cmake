@@ -9,8 +9,9 @@ include_guard(GLOBAL)
 # <robot> root with no name and no links, so every refusal would be a false one.
 # A record is five fields — absolute path, space-separated key=value expansion
 # arguments, the evaluator the document needs, a package root or nothing, and further
-# key=value arguments the load is also handed but the record's key leaves out — and
-# the records are joined with the "|" the resource paths already travel under.
+# key=value arguments the load is also handed but the record's key leaves out, joined
+# with spaces into the fifth field — and the records are joined with the "|" the
+# resource paths already travel under.
 # The evaluator vocabulary is closed at three spellings, of which the corpus names two:
 # core for a document that needs no expression evaluation, and native for one the
 # built-in evaluator must handle alone. The third selects the CPython backend and no
@@ -18,7 +19,7 @@ include_guard(GLOBAL)
 # through to a default backend.
 set(MEIOS_CORPUS_DOCUMENTS "")
 macro(meios_corpus_document _path _args _eval _root)
-    set(_load "${ARGN}")
+    string(JOIN " " _load ${ARGN})
     list(APPEND MEIOS_CORPUS_DOCUMENTS "${_path}" "${_args}" "${_eval}" "${_root}" "${_load}")
 endmacro()
 
