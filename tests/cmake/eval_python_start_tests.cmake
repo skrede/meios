@@ -1,4 +1,6 @@
 if(TARGET meios_eval-python)
+    set(module_path_first ${CMAKE_CURRENT_BINARY_DIR}/module-path-first)
+    set(module_path_second ${CMAKE_CURRENT_BINARY_DIR}/module-path-second)
     set(eval_python_start_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_start_test.cpp)
     if(EXISTS ${eval_python_start_src})
         add_executable(eval_python_start_test ${eval_python_start_src})
@@ -16,8 +18,6 @@ if(TARGET meios_eval-python)
             PROPERTIES ENVIRONMENT "PYTHONHOME=${CMAKE_CURRENT_BINARY_DIR}/no-python-home")
         catch_discover_tests(eval_python_start_test TEST_PREFIX "eval_python_pin_failed." TEST_SPEC "[pin_failure]"
             PROPERTIES ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/python/digit_limit_refused")
-        set(module_path_first ${CMAKE_CURRENT_BINARY_DIR}/module-path-first)
-        set(module_path_second ${CMAKE_CURRENT_BINARY_DIR}/module-path-second)
         # A ';' cannot reach a discovered case's environment, so Windows takes its empty element from a path-list
         # prepend; the interior discovery spells its selection apart because Catch names a discovery's files by its spec.
         if(WIN32)
@@ -31,5 +31,19 @@ if(TARGET meios_eval-python)
             catch_discover_tests(eval_python_start_test TEST_PREFIX "eval_python_start_interior_element." TEST_SPEC "[eval_python][planted_module]"
                 PROPERTIES ENVIRONMENT "PYTHONPATH=${module_path_first}::${module_path_second}")
         endif()
+    endif()
+    set(eval_python_host_state_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_host_state_test.cpp)
+    if(EXISTS ${eval_python_host_state_src})
+        add_executable(eval_python_host_state_test ${eval_python_host_state_src})
+        target_link_libraries(eval_python_host_state_test
+            PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                pybind11::embed Catch2::Catch2WithMain)
+        meios_enable_coverage(eval_python_host_state_test)
+        meios_warnings(eval_python_host_state_test)
+        catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state."
+            PROPERTIES ENVIRONMENT_MODIFICATION "PYTHONPATH=unset:")
+        # The module path is handed over after the preconfiguration, so the locale case runs again with one set.
+        catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state_module_path." TEST_SPEC "[host_locale]"
+            PROPERTIES ENVIRONMENT "PYTHONPATH=${module_path_first}")
     endif()
 endif()

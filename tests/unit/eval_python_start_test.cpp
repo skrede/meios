@@ -94,19 +94,6 @@ TEST_CASE("a module path list keeps every named element in its order and drops o
     CHECK(without_empty_elements<wchar_t>(L";C:\\a;;D:\\b;", L';') == L"C:\\a;D:\\b");
 }
 
-TEST_CASE("the first evaluation leaves the interrupt and broken-pipe dispositions as the host set them", "[eval_python]")
-{
-    const disposition interrupt = std::signal(SIGINT, SIG_DFL);
-#ifdef SIGPIPE
-    const disposition pipe = std::signal(SIGPIPE, SIG_DFL);
-#endif
-    REQUIRE(evaluate("1 + 1", meios::eval_scope{}) == std::optional<std::string>("2"));
-    CHECK(std::signal(SIGINT, interrupt) == SIG_DFL);
-#ifdef SIGPIPE
-    CHECK(std::signal(SIGPIPE, pipe) == SIG_DFL);
-#endif
-}
-
 namespace
 {
 

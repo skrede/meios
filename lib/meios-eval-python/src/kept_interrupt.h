@@ -18,6 +18,7 @@ class kept_interrupt
 {
 public:
 #if defined(_WIN32)
+    // std::signal reaches the handler table CPython uses only when both link the DLL C runtime (/MD).
     kept_interrupt()
             : m_kept(std::signal(SIGINT, SIG_DFL))
     {

@@ -508,6 +508,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The interpreter the Python evaluator embeds, and the one whose site the yaml cases import
+      # their module from.
+      - uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: '3.12'
+
+      - name: Install the yaml module
+        run: python -m pip install 'pyyaml==6.0.3'
+
       - name: Install pugixml
         run: |
           git clone https://github.com/zeux/pugixml.git pugixml-src
@@ -534,7 +544,11 @@ jobs:
             -DMEIOS_SCAN_GLTF_SUPPORT=ON \
             -DMEIOS_ARCHIVE_ZIP_SUPPORT=ON \
             -DMEIOS_BUILD_EXAMPLES=ON \
-            -DMEIOS_ROS_PACKAGE_SUPPORT=ON
+            -DMEIOS_ROS_PACKAGE_SUPPORT=ON \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=ON \
+            -DMEIOS_REQUIRE_EVAL_PYTHON=ON \
+            -DPython3_EXECUTABLE:FILEPATH="${{ steps.python.outputs.python-path }}" \
+            -DPython_EXECUTABLE:FILEPATH="${{ steps.python.outputs.python-path }}"
 
       - name: Build
         run: cmake --build build
@@ -591,6 +605,21 @@ jobs:
           fi
           echo "scan_gltf registered $registered test(s)"
           ctest -R '^scan_gltf\.' --output-on-failure --no-tests=error
+
+      # The evaluator's stems register only where the backend is built, and a -R filter selecting
+      # nothing exits 0, so their discovery is asserted before their result is trusted.
+      - name: Focus eval_python tests
+        run: |
+          cd build
+          grep -E '^Python3?_EXECUTABLE:' CMakeCache.txt
+          echo "ctest -N -R '^eval_python'"
+          registered=$(ctest -N -R '^eval_python' | grep -c 'Test *#' || true)
+          if [ "$registered" -eq 0 ]; then
+            echo "eval_python registered no tests"
+            exit 1
+          fi
+          echo "eval_python registered $registered test(s)"
+          ctest -R '^eval_python' --output-on-failure --no-tests=error
 
       - name: Test
         run: cd build && ctest --output-on-failure --no-tests=error

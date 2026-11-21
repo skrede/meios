@@ -51,16 +51,42 @@ void claim_signal_module()
     }
 }
 
+// Runs before any PyConfig string is set, since setting one preinitializes with the defaults, which set the
+// host's locale and export LC_CTYPE; UTF-8 mode then decodes without that locale.
+std::optional<std::string> preinitialized()
+{
+    PyPreConfig preconfig;
+    PyPreConfig_InitPythonConfig(&preconfig);
+    preconfig.configure_locale = 0;
+    preconfig.coerce_c_locale  = 0;
+    preconfig.utf8_mode        = 1;
+    const PyStatus status      = Py_PreInitialize(&preconfig);
+    if(PyStatus_Exception(status) == 0)
+        return std::nullopt;
+    std::string failed = "the embedded Python interpreter did not start: its preconfiguration failed";
+    if(status.err_msg != nullptr)
+        failed += std::string(": ") + status.err_msg;
+    return failed;
+}
+
+PyStatus configured(PyConfig &config)
+{
+    PyConfig_InitPythonConfig(&config);
+    config.safe_path               = 1;
+    config.install_signal_handlers = 0;
+    config.configure_c_stdio       = 0;
+    return set_module_path(config);
+}
+
 std::optional<std::string> configured_start()
 {
     const kept_interrupt kept;
+    if(std::optional<std::string> failed = preinitialized())
+        return failed;
     try
     {
         PyConfig config;
-        PyConfig_InitPythonConfig(&config);
-        config.safe_path               = 1;
-        config.install_signal_handlers = 0;
-        if(PyStatus_Exception(set_module_path(config)) != 0)
+        if(PyStatus_Exception(configured(config)) != 0)
         {
             PyConfig_Clear(&config);
             return "the embedded Python interpreter did not start: PYTHONPATH could not be handed to it";

@@ -172,9 +172,10 @@ exists breaks a build instead of rotting quietly.
 `MEIOS_WERROR` is the only switch that injects `-Werror`, and it is applied per target rather than
 directory-wide so the warning set never leaks into a third-party build. Its default is meios's own
 top-level status, which is what keeps meios's warning drift from ever breaking a consumer that
-builds it in-tree. `MEIOS_COVERAGE` instruments only first-party targets and only under GCC or
-Clang, and links the instrumentation through the build interface so it never reaches an installed
-export.
+builds it in-tree. Under GCC the warning `-Wmaybe-uninitialized` still prints but does not fail
+the build, because GCC reports it falsely on `std::variant` members. `MEIOS_COVERAGE` instruments
+only first-party targets and only under GCC or Clang, and links the instrumentation through the
+build interface so it never reaches an installed export.
 
 `MEIOS_INSTALL` has the same conditional default; see [what an installed package
 carries](#what-an-installed-package-carries) for the contract that goes with it.

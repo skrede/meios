@@ -33,7 +33,9 @@ function(meios_warnings target)
         if(MSVC)
             target_compile_options(${target} PRIVATE /WX)
         else()
-            target_compile_options(${target} PRIVATE -Werror)
+            # GCC reports maybe-uninitialized falsely on std::variant members it cannot track, so the
+            # warning is kept and only its error is lifted.
+            target_compile_options(${target} PRIVATE -Werror $<$<CXX_COMPILER_ID:GNU>:-Wno-error=maybe-uninitialized>)
         endif()
     endif()
 endfunction()
