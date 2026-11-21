@@ -128,6 +128,14 @@ TEST_CASE("xacro:element refuses an evaluated name that is not an XML name, nami
     REQUIRE(refused(R"(<xacro:element xacro:name="${1}"/>)").message.find("'1'") != std::string::npos);
 }
 
+TEST_CASE("an evaluated name that is not text is written as its text, which must still be an XML name", "[xacro][element]")
+{
+    REQUIRE(render(R"(<xacro:element xacro:name="${True}"/>)") == R"(<robot name="p"><True></True></robot>)");
+    REQUIRE(render(R"(<link name="l"><xacro:attribute name="${True}" value="1"/></link>)") == R"(<robot name="p"><link True="1" name="l"></link></robot>)");
+    REQUIRE(refused(R"(<xacro:element xacro:name="${1}"/>)").message.find("'1', which is not an XML name") != std::string::npos);
+    REQUIRE(refused(R"(<link name="l"><xacro:attribute name="${1}" value="1"/></link>)").message.find("'1', which is not an XML name") != std::string::npos);
+}
+
 TEST_CASE("an evaluated name that is not an XML name is quoted as evaluated, and the stream sink writes it on one line", "[xacro][element]")
 {
     REQUIRE(refused(R"(<xacro:element xacro:name="a&#10;b"/>)").message.find("'a\nb'") != std::string::npos);

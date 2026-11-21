@@ -20,7 +20,7 @@ namespace differential
 
 // Spelled exactly as differential.py's own tuple spells them, so an id names the same fixture and
 // the same rendered file whichever side wrote it.
-inline const std::array<document_probe, 12> document_probes{
+inline const std::array<document_probe, 13> document_probes{
         document_probe{true, "non_text_mapping_key"},      document_probe{false, "argument_without_default"},
         document_probe{false, "argument_helper_call"},     document_probe{false, "include_parent_directory"},
         document_probe{false, "include_absolute_path", true}, document_probe{false, "dirname_command"},
@@ -30,6 +30,7 @@ inline const std::array<document_probe, 12> document_probes{
         document_probe{false, "find_dotted_root", false, false, "./find_dotted_root.d", true},
         document_probe{false, "include_find_climbs_out_of_package", false, false, "include_find_climbs_out_of_package.d", true},
         document_probe{false, "include_glob_filename", false, false, "include_glob_filename.d", true},
+        document_probe{false, "attribute_value_raw_less_than"},
 };
 
 inline void list_comments_and_instructions(std::string &listed, pugi::xml_node node)

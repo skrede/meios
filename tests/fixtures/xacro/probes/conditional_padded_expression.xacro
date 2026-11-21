@@ -1,0 +1,7 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="a"/>
+  <xacro:if value=" ${True} ">
+    <link name="b"/>
+    <joint name="j" type="fixed"><parent link="a"/><child link="b"/></joint>
+  </xacro:if>
+</robot>

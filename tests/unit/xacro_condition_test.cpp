@@ -81,12 +81,27 @@ TEST_CASE("a zero real takes an unless branch and an empty produced text refuses
     require_structural_refusal(expand_body(conditional("if", " value=\"${''}\"")), 2);
 }
 
+TEST_CASE("a condition padding one expression span with spaces is read by what the span yields", "[xacro][condition]")
+{
+    REQUIRE(takes_branch("if", " value=\" ${True} \""));
+    REQUIRE_FALSE(takes_branch("if", " value=\" ${0} \""));
+}
+
 TEST_CASE("a property's remove reads by the same rule, and an empty one as its default", "[xacro][condition]")
 {
     require_structural_refusal(expand_body("<xacro:property name=\"p\" value=\"1\" remove=\"TRUE\"/>"), 2);
     const expansion_result kept = expand_body("<xacro:property name=\"p\" value=\"1\" remove=\"\"/><link name=\"l${p}\"/>");
     REQUIRE(kept.has_value());
     CHECK(kept->document.find("<link name=\"l1\"") != std::string::npos);
+}
+
+TEST_CASE("an empty lazy_eval reads as lazy while an empty condition refuses", "[xacro][condition]")
+{
+    const expansion_result lazy = expand_body("<xacro:property name=\"x\" value=\"1\"/><xacro:property name=\"b\" value=\"${x}\" lazy_eval=\"\"/>"
+                                              "<xacro:property name=\"x\" value=\"2\"/><link name=\"l${b}\"/>");
+    REQUIRE(lazy.has_value());
+    CHECK(lazy->document.find("<link name=\"l2\"") != std::string::npos);
+    require_structural_refusal(expand_body(conditional("if", " value=\"\"")), 2);
 }
 
 TEST_CASE("text a logical operator yields refuses as a condition unless it spells a boolean", "[xacro][condition]")

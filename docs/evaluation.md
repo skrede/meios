@@ -188,12 +188,14 @@ because the `or` yields the text `x`. `1_0` and `١` take the branch, and so doe
 refuses it, a difference [known limitations](known-limitations.md#expression-evaluation) lists. An
 empty `value` on `xacro:if` or `xacro:unless` refuses, as an empty `optional` does, and a missing
 `value` refuses as a missing required attribute, below; an empty `remove` or `lazy_eval` reads as that
-attribute's default. A value that pads one span with spaces, `value=" ${True} "`, is read by what the
-span yields, so it takes the branch, where xacro reads the padded value as text and refuses it; no
-probe holds that shape yet. The `conditional_upper_true`, `conditional_empty`,
-`conditional_quoted_text`, `conditional_without_value`, `unless_without_value`,
-`conditional_underscore_digits`, `conditional_unicode_digit`, `conditional_not_a_number` and
-`conditional_padded_one` agreement probes hold the rule against a fresh xacro render, beside the
+attribute's default, which the `property_flag_empty` agreement probe holds. A value that pads one span
+with spaces is read by what the span yields: `value=" ${True} "` takes the branch and `value=" ${0} "`
+does not. This is meios behavior; xacro reads the padded value as text and refuses the first, and
+the `conditional_padded_expression` row of the divergence manifest holds that difference in both
+directions. The `conditional_upper_true`, `conditional_empty`, `conditional_quoted_text`,
+`conditional_without_value`, `unless_without_value`, `conditional_underscore_digits`,
+`conditional_unicode_digit`, `conditional_not_a_number` and `conditional_padded_one` agreement probes
+hold the rule against a fresh xacro render, beside the
 `xacro_condition` and `native_boolean_value` cases.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An argument —
@@ -677,8 +679,12 @@ name that strips to the name of an xacro element is handled as that element, so
 (fifth edition, section 2.3); one that is not refuses under `xacro_structural_error`, naming the text,
 as `<xacro:element> evaluates its xacro:name to 'a><x', which is not an XML name` does, so evaluated
 text cannot write markup into the output, and an empty one, a name of white space alone among them,
-refuses too. The warning and the refusal quote the text as evaluated, and the command line writes
-each on one line, as it writes every record ([where a diagnostic comes
+refuses too. An evaluated value that is not text is written as its text before that check, so
+`xacro:name="${True}"` makes an element `True`, where xacro refuses a name that is not text, and the
+`element_name_boolean` row of the divergence manifest holds it; `xacro:name="${1}"` refuses because
+`1` is not an XML name, which is why the `element_name_not_text` probe refuses on both sides. The
+warning and the refusal quote the text as evaluated, and the command line writes each on one line,
+as it writes every record ([where a diagnostic comes
 from](troubleshooting.md#where-a-diagnostic-comes-from)). The production admits colons anywhere, so `:a` and `a:b` pass. xacro writes such text
 into its output as it is, so `a b` or `1x` there yields a document that is not well-formed XML; here
 each refuses, white space inside a name included. The `element_empty_name`,
@@ -694,9 +700,11 @@ name="type" value="t"/>` evaluates `name` and `value` as text and sets the attri
 holding it, overwriting a value already there, whether authored or set by an earlier
 `xacro:attribute`; a plain element, the top document's root, a `*` block's element and an element
 `xacro:element` renamed each receive it. An evaluated value that is not text is written as its text,
-so `value="${1}"` sets `1`, where xacro refuses. Where the element holding it does not reach the
-output — a conditional, a macro body, an included document's root, a `**` block's wrapper or a block
-property's body — the attribute is set on the element that parent's content lands in, the enclosing
+so `value="${1}"` sets `1`, where xacro refuses, and so is an evaluated `name`, which must then be an
+XML name as `xacro:element`'s is: `name="${True}"` sets an attribute `True`, and `name="${1}"`
+refuses. Where the element holding it does not reach the output — a conditional, a macro body, an
+included document's root, a `**` block's wrapper or a block property's body — the attribute is set
+on the element that parent's content lands in, the enclosing
 element of the conditional, the call, the include or the insertion, and one located `level::info`
 note says so: `attribute 'type' placed on <link>, the element its parent's content lands in`. xacro
 sets it on the node the output drops, so there the attribute is lost; [known

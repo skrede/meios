@@ -86,6 +86,7 @@ row names each code it covers, so grouping never hides one.
 | Codes | What it means | What to do |
 |---|---|---|
 | `duplicate_attribute`, `additional_root_element`, `trailing_content`, `comment_interrupting` | The document is not well-formed in a way the XML parser tolerated but the profile does not: an attribute written twice, a second root element, text after the root, or a comment interrupting an element's text. | Fix the markup. These four are graded together by the document-validity setting — refused under the strict default, disclosed at warning level under the permissive ones. What each setting does is in [the profile](urdf-profile.md#where-this-profile-decides-on-its-own-authority). |
+| No code | A raw `<` inside an attribute value, as in `name="l_${c < 2}"`. meios reads it as the character and raises no diagnostic, while a stricter XML reader, xacro's among them, refuses the whole document. The `attribute_value_raw_less_than` row of the divergence manifest holds the difference. | To have a document every reader accepts, write it `&lt;`, as in `name="l_${c &lt; 2}"`. |
 
 ### Content meios does not read
 

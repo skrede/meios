@@ -165,6 +165,7 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"eval_argument_separator_character", "eval_argument_separator_character", {}},
         agreement_probe{"caller_argument_as_given", "caller_argument_as_given", {{"a", " x "}, {"b", "\x1c" "1"}}},
         agreement_probe{"attribute_through_passed_block", "attribute_through_passed_block", {}},
+        agreement_probe{"property_flag_empty", "property_flag_empty", {}},
 };
 
 }
