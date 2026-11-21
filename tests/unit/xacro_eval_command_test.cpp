@@ -30,6 +30,18 @@ std::string single_link(std::string_view name)
     return meios::canonical_xml("<robot name=\"probe\"><link name=\"" + std::string(name) + "\"/></robot>");
 }
 
+std::string flattened_with_argument(std::string_view text, std::string_view body)
+{
+    meios::source_stack sources;
+    meios::eval_scope scope;
+    scope.arguments().set("a", meios::value{std::string(text)});
+    recorder log;
+    meios::log_sink_f sink{std::ref(log)};
+    const expansion_result out = meios::expand(document_of(body), scope, sources, "doc.xacro", meios::expansion_limits{}, sink);
+    REQUIRE(out.has_value());
+    return meios::canonical_xml(out->document);
+}
+
 meios::expansion_error refusal(std::string_view source)
 {
     recorder log;
@@ -113,4 +125,11 @@ TEST_CASE("the evaluation command refuses a body holding a double underscore", "
     const meios::expansion_error error = refusal(probe("eval_double_underscore"));
     REQUIRE(error.code == meios::diagnostic_code::expression_error);
     REQUIRE(error.message.find("__") != std::string::npos);
+}
+
+TEST_CASE("the evaluation command reads an argument holding a separator character as text", "[xacro][eval_command]")
+{
+    CHECK(flattened_with_argument("\x1c" "1", R"XML(<link name="$(eval a == 1)"/>)XML") == single_link("False"));
+    CHECK(flattened_with_argument("\x1f" "2.5", R"XML(<link name="$(eval a == 2.5)"/>)XML") == single_link("False"));
+    CHECK(flattened_with_argument(" 1 ", R"XML(<link name="$(eval a + 1)"/>)XML") == single_link("2"));
 }

@@ -168,6 +168,8 @@ value modulo(parser &p, const value &a, const value &b)
         return p.fail("the divisor of '%' is zero");
     double r = std::fmod(need_double(p, a), y);
     if(r != 0.0 && ((r < 0.0) != (y < 0.0))) r += y;
+    // A zero remainder takes the divisor's sign, after CPython's float_rem (Objects/floatobject.c).
+    if(r == 0.0) r = std::copysign(0.0, y);
     return real_result(p, r);
 }
 

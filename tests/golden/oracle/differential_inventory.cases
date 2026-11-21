@@ -402,3 +402,7 @@ wide_integer_beside_real	agreement
 wide_integer_real_power	agreement
 real_floored_beyond_64_bits	agreement
 real_floor_division	agreement
+real_remainder_zero_sign	agreement
+integer_literal_leading_zero	agreement
+eval_argument_separator_character	agreement
+caller_argument_as_given	agreement

@@ -1,5 +1,4 @@
 #include "literal_read.h"
-#include "python_space.h"
 #include "python_number.h"
 #include "argument_conversion.h"
 
@@ -42,8 +41,7 @@ std::string lowered(std::string_view text)
 
 std::optional<value> converted_argument(std::string_view text)
 {
-    const std::string_view number   = python_stripped(text);
-    const std::optional<value> read = text.find('.') == std::string_view::npos ? integer_spelling(number) : real_spelling(number);
+    const std::optional<value> read = text.find('.') == std::string_view::npos ? integer_spelling(text) : real_spelling(text);
     if(!read || read->kind() != value_kind::string)
         return read;
     const std::string spelling = lowered(text);

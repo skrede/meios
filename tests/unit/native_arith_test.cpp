@@ -137,11 +137,17 @@ TEST_CASE("a real floor division counts the whole divisors that fit, by every si
     CHECK(past.messages.front().find("not a finite number") != std::string::npos);
 }
 
-TEST_CASE("a real remainder of exactly zero is written with the dividend's sign", "[native][arith]")
+TEST_CASE("a real remainder of exactly zero is written with the divisor's sign", "[native][arith]")
 {
-    CHECK(arith::evaluate("-4.0 % 2.0").rendered == "-0.0");
-    CHECK(arith::evaluate("4.0 % -2.0").rendered == "0.0");
-    CHECK(arith::evaluate("-4.0 % 2.0 == 0").rendered == "True");
+    const std::pair<std::string_view, std::string_view> remainders[] = {
+            {"-4.0 % 2.0", "0.0"}, {"4.0 % -2.0", "-0.0"}, {"-0.0 % 2.0", "0.0"}, {"0.0 % -2.0", "-0.0"},
+            {"-(2**64) % 2.0", "0.0"}, {"atan2(-4.0 % 2.0, -1)", "3.141592653589793"}, {"-4.0 % 2.0 == 0", "True"},
+            {"7.5 % 2", "1.5"}, {"-7.5 % 2", "0.5"}, {"7.5 % -2", "-0.5"}};
+    for(const auto &[expression, rendered] : remainders)
+    {
+        INFO(expression);
+        CHECK(arith::evaluate(expression).rendered == rendered);
+    }
 }
 
 TEST_CASE("a zero divisor refuses naming its operator", "[native][arith]")

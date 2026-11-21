@@ -124,6 +124,7 @@ inline constexpr pairing element_pairings[] = {
         {"token.expr", carrier::agreement, "wide_integer_floor_division wide_integer_modulo wide_integer_halved wide_integer_divided", standing::agrees},
         {"token.expr", carrier::agreement, "wide_integer_beside_real wide_integer_real_power real_floored_beyond_64_bits", standing::agrees},
         {"token.expr", carrier::agreement, "real_floor_division", standing::agrees},
+        {"token.expr", carrier::agreement, "real_remainder_zero_sign integer_literal_leading_zero", standing::agrees},
         {"token.expr", carrier::manifest, "sum_not_a_reference_global", standing::refuses_listed},
         {"token.expr", carrier::manifest, "integer_intermediate_past_digit_ceiling", standing::refuses_listed},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
@@ -134,6 +135,7 @@ inline constexpr pairing element_pairings[] = {
 
         {"command.arg", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"command.arg", carrier::agreement, "arg_command_without_name property_default_reads_argument", standing::agrees},
+        {"command.arg", carrier::agreement, "caller_argument_as_given", standing::agrees},
         {"command.arg", carrier::manifest, "cwd_command include_held_find_in_argument", standing::refuses_listed},
         {"command.arg", carrier::generated, "include_004", standing::refuses_listed},
         {"command.dirname", carrier::manifest, "dirname_command", standing::open},
@@ -161,6 +163,7 @@ inline constexpr pairing element_pairings[] = {
         {"form.eval_comments_off", carrier::manifest, "comment_evaluation_switched_off", standing::open},
         {"form.target_namespace", carrier::agreement, "root_target_namespace", standing::agrees},
         {"form.eval_prefix", carrier::agreement, "eval_unicode_digits eval_double_underscore", standing::agrees},
+        {"form.eval_prefix", carrier::agreement, "eval_argument_separator_character", standing::agrees},
         {"form.eval_prefix", carrier::manifest, "eval_command_padded", standing::open},
         {"form.eval_prefix", carrier::manifest, "eval_command_empty eval_command_blank", standing::refuses_listed},
 };

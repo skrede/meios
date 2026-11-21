@@ -160,6 +160,10 @@ inline const std::vector<agreement_probe> grammar_agreement_probes{
         agreement_probe{"wide_integer_real_power", "wide_integer_real_power", {}},
         agreement_probe{"real_floored_beyond_64_bits", "real_floored_beyond_64_bits", {}},
         agreement_probe{"real_floor_division", "real_floor_division", {}},
+        agreement_probe{"real_remainder_zero_sign", "real_remainder_zero_sign", {}},
+        agreement_probe{"integer_literal_leading_zero", "integer_literal_leading_zero", {}, meios::diagnostic_code::expression_error},
+        agreement_probe{"eval_argument_separator_character", "eval_argument_separator_character", {}},
+        agreement_probe{"caller_argument_as_given", "caller_argument_as_given", {{"a", " x "}, {"b", "\x1c" "1"}}},
 };
 
 }

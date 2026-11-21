@@ -40,8 +40,9 @@ description needing Python behavior the grammar does not carry; it has
   `//` is the whole number of times the divisor fits, counted from the exact remainder, so
   `${1 // 0.1}` is `9.0`: the real written `0.1` is a little more than one tenth. The
   `real_floor_division` agreement probe holds this against a fresh xacro render. A real remainder of
-  exactly zero keeps the dividend's sign, so `${-4.0 % 2.0}` is `-0.0`, a difference
-  [known limitations](known-limitations.md#expression-evaluation) lists. An integer beside a real is
+  exactly zero takes the divisor's sign, as every remainder does, so `${-4.0 % 2.0}` is `0.0` and
+  `${4.0 % -2.0}` is `-0.0`; the `real_remainder_zero_sign` agreement probe holds this against a
+  fresh xacro render. An integer beside a real is
   read as the nearest real, so `${99999999999999999999 * 0.5}` is `5e+19`, and one too large for a
   real refuses, as a quotient too large for a real does. Every real result must be
   finite, and a division by zero and a non-finite result are loud failures rather than a wrapped value
@@ -111,7 +112,11 @@ integer of that size whether it is read by name, forwarded by a value that is on
 renders its digits, compares exactly with any number and is true wherever a truth is read; it equals
 no string, it takes part in every operation as any integer does, exactly, and as a sequence index it
 refuses as outside the sequence. A literal of more than 4300 digits refuses, naming that ceiling, and a
-bound value of more digits stays text.
+bound value of more digits stays text. An integer literal other than zero may not begin with `0`, so
+`${007}` refuses under `expression_error` while `${00}` is `0` and `${007.5}` the real `7.5`; text a
+property or an argument holds is read by the literal reading above, not by the expression's, so
+`value="007"` binds `7`. The `integer_literal_leading_zero` agreement probe holds the refusal against
+a fresh xacro render.
 Under `meios::eval-python` such an integer reaches the expression as a Python integer, so `${b * 2}`
 renders `199999999999999999998`, and a property bound to `${2**70}` renders
 `1180591620717411303424`. The backend holds the interpreter's integer-to-text limit at 4300 digits
@@ -192,25 +197,30 @@ probe holds that shape yet. The `conditional_upper_true`, `conditional_empty`,
 `xacro_condition` and `native_boolean_value` cases.
 
 **An argument binds the text, and the site that reads it is where that reading happens.** An argument —
-a declared default, or an override a caller hands the load — binds the characters that were written;
-the conversion above is not applied to it. Only a default that is itself one whole expression binds
-that expression's value, exactly as an attribute of the same shape does, so `default="${1+1}"` binds
-the integer `2`. Everything else stays as written, which is what leaves `$(arg flag)` of a
-`false`-spelled default rendering `false` into a flattened document rather than the `False` a boolean
-spells, and what leaves a `0.10` default its trailing zero. The conversion happens instead where the
-argument is read into something that does bind a value: `<xacro:m flag="$(arg flag)"/>` hands text to
-the parameter, the parameter binds it by the reading above, and `${flag}` inside that macro is a
-boolean. Both implementations keep two tables — an argument table the `$(arg n)` and `$(eval)` commands
-read, and a property table an expression span reads — so an expression span cannot name an argument:
-`${flag}` over an argument alone refuses, and the refusal names `$(arg flag)`. A property of an
-argument's name is a second binding beside the argument, never a write to it, so a property's
-`default=` binds over an argument of the same name and `$(arg n)` answers the argument whatever
-property is written. `$(eval)` reads each argument it names through a conversion of its own rather than
-the one above — `1e3` stays text there, `1_000` is the integer `1000`, and a digit is any decimal digit
-Python 3.14 reads, so `١٢` is `12` — sees the mathematics names and the spellings `true` and `false`
-before any argument, sees no property, refuses a double underscore, and ends at its first closing
-parenthesis, so its body holds no call; [known limitations](known-limitations.md#expression-evaluation)
-records what was measured.
+a declared default, or an override a program hands `load()` through `load_options::args` — binds the
+characters that were written; the conversion above is not applied to it. An override the `meios`
+command line reads as `name:=value` first has the white space `str.strip()` removes taken off its
+name and its value, so `a:= x ` binds `x`, while a program's override binds as written, which the
+`caller_argument_as_given` agreement probe holds against a fresh xacro render. Only a default that is
+itself one whole expression binds that expression's value, exactly as an attribute of the same shape
+does, so `default="${1+1}"` binds the integer `2`. Everything else stays as written, which is what
+leaves `$(arg flag)` of a `false`-spelled default rendering `false` into a flattened document rather
+than the `False` a boolean spells, and what leaves a `0.10` default its trailing zero. The conversion
+happens instead where the argument is read into something that does bind a value:
+`<xacro:m flag="$(arg flag)"/>` hands text to the parameter, the parameter binds it by the reading
+above, and `${flag}` inside that macro is a boolean. Both implementations keep two tables — an
+argument table the `$(arg n)` and `$(eval)` commands read, and a property table an expression span
+reads — so an expression span cannot name an argument: `${flag}` over an argument alone refuses,
+and the refusal names `$(arg flag)`. A property of an argument's name is a second binding beside the
+argument, never a write to it, so a property's `default=` binds over an argument of the same name
+and `$(arg n)` answers the argument whatever property is written. `$(eval)` reads each argument it
+names through a conversion of its own rather than the one above — `1e3` stays text there, `1_000`
+is the integer `1000`, a digit is any decimal digit Python 3.14 reads, so `١٢` is `12`, and an
+argument holding one of U+001C to U+001F is text there, as the `eval_argument_separator_character`
+agreement probe holds against a fresh xacro render — sees the mathematics names and the spellings
+`true` and `false` before any argument, sees no property, refuses a double underscore, and ends at
+its first closing parenthesis, so its body holds no call;
+[known limitations](known-limitations.md#expression-evaluation) records what was measured.
 
 **A macro call's arguments are evaluated against the caller.** All of them are read before any is
 bound, so one argument never sees a sibling's new value: a call passing both

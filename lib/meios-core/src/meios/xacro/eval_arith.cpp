@@ -67,8 +67,12 @@ std::string lexical_message(std::string_view text)
         return *fault;
     if(!text.empty() && text.front() == '\'')
         return "unterminated string in expression: " + std::string(text);
-    // Only an over-long literal reaches this branch: integer_literal declines a run of digits only past the ceiling.
-    if(!text.empty() && text.find_first_not_of("0123456789") == std::string_view::npos)
+    // The lexer declines a run of digits only when a zero leads a nonzero integer or the run is past
+    // the ceiling, so a run starting with 0 here is the first.
+    const bool digits = !text.empty() && text.find_first_not_of("0123456789") == std::string_view::npos;
+    if(digits && text.front() == '0')
+        return "an integer literal other than zero is written without a leading zero: '" + std::string(text) + "'";
+    if(digits)
         return "an integer literal has more than the " + std::to_string(wide_digit_ceiling) + " digits an integer holds here";
     return "unrecognized character in expression: '" + std::string(text) + "'";
 }

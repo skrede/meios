@@ -623,12 +623,10 @@ and never hands its evaluator a whole expression to refuse. The third is a diffe
 evaluator itself carries: xacro's expression globals hold the mathematics module and the two reducers
 and no builtins at all, so `${abs(-3)}` renders `3` here and refuses as an undefined name under xacro,
 while every other name on this grammar's mathematics list renders under both. The next two have entries
-of their own further down, and the last has one under sources and resolution. And three render under
+of their own further down, and the last has one under sources and resolution. And two render under
 both with different answers: `$(find)` through a package root configured by a relative spelling, or by
 one holding a `.` element, writes a different directory than xacro does, which is the
-`find_relative_root` and `find_dotted_root` pair of rows, whose entry is under sources and resolution;
-and a real remainder of exactly zero is written with a different sign, the
-`div_real_remainder_zero_sign` row, whose entry is further down.
+`find_relative_root` and `find_dotted_root` pair of rows, whose entry is under sources and resolution.
 
 The last three entries above, the argument helper and `${n.e}` apart, are the ones the manifest does
 not carry, because none of them can be matched by exact text: the colliding member names produce text
@@ -917,17 +915,6 @@ four operations exposes a length or an index, because this grammar has no string
 string subscript. A byte sequence that is not well-formed text cannot be written into an XML document
 in the first place. The difference is real in the implementation and has no spelling that reaches it
 from a description.
-
-**A real remainder of exactly zero is written with the dividend's sign here and with the divisor's under
-xacro.** `${-4.0 % 2.0}` renders `-0.0` and `${4.0 % -2.0}` renders `0.0`, where xacro writes `0.0` and
-`-0.0`. The two zeros are the same value: they compare equal and test false on both sides, so a
-comparison or a condition over such a remainder takes the same branch everywhere. The written text
-differs, and keeps differing where the zero is carried on, as `sin`, `sqrt`, `degrees` and a product by
-a positive number carry it. `atan2` given such a zero and a negative second argument is the one
-function of this grammar measured to turn a zero's sign into a different nonzero answer:
-`${atan2(-4.0 % 2.0, -1)}` answers `-3.141592653589793` here and `3.141592653589793` under xacro. The
-difference is kept. The `div_real_remainder_zero_sign` row compares `-4.0 % 2.0` through both
-implementations, so a change to either sign fails the differential.
 
 **A chain of properties, each reading the next, renders ten deep; xacro renders one hundred and
 sixty-five.** A property is evaluated at its first read, so a property whose value reads another nests
@@ -1233,7 +1220,6 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | `$(dirname)` renders the directory of the file it is written in | The `dirname_command` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_identity.the directory command names the located directory of the file it is written in`, which pins the value inside a package include and a beside include and at the top, from two working directories. The relative and empty top-level values and the linked-directory value are carried by the measurement the entry states. |
 | A located path is written with generic separators | The assertions in `xacro_subst_command` that compose an expected path in the generic spelling, and `xacro_arg.a nested arg default resolves at declaration`, which is where the last native spelling was found. No manifest row is possible, and the entry says why. |
 | The string operations count bytes | Measured through both implementations over multi-byte text while this page was swept: the four operations agree, so there is no divergence for a row to carry. `native_string.membership against a string haystack tests substring containment` and `native_split.the named split yields the fields between separators, the empty ones included` carry meios's behavior. |
-| A real remainder of exactly zero takes the dividend's sign | The `div_real_remainder_zero_sign` row of the divergence manifest, driven through the grammar of both implementations in both directions by `native_differential`, beside `native_arith.a real remainder of exactly zero is written with the dividend's sign`, which pins both signs this side writes and the equal comparison. The condition, the functions that carry the zero on and the `atan2` values are carried by the measurement the entry states. |
 | A chain of properties each reading the next renders ten deep; xacro renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The lengths and the headroom are pinned by `native_span_depth.a chain of bare deferred reads keeps ninefold headroom` and `native_span_depth.a chain of deferred reads inside arithmetic keeps ninefold headroom`, each counting its chain exactly and refusing one longer before it meters the stack, and the Python backend's by `eval_python_scope.a deferred chain read by the backend refuses on the shared ceiling one level past its pin` and `eval_python_scope.a deferred chain read by the backend keeps ninefold headroom`. xacro's one hundred and sixty-five, and the rewritten chains rendering under both, were measured while this page was written and are carried by nothing. |
 | An integer of more than 4300 digits arising inside an expression refuses here; xacro computes it | The `integer_intermediate_past_digit_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_ceilings.an integer past its digit ceiling is a crossed ceiling wherever an expression computes it`, which pins the exhausted refusal of the intermediate shapes and of a power past the ceiling, and `native_ceilings.each new ceiling is terminal under every evaluation policy`, which pins it terminal under every policy. xacro's renders of the other three shapes, and its refusal of a result that long written as text, were measured while this page was written and are carried by nothing. |
 | An include namespace read as a value refuses here | The `include_namespace_read_as_value` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_namespace.a namespace read as a value refuses under every policy, naming the dotted spelling` and `xacro_namespace.a namespace an expression stops at inside another refuses with its dotted spelling`. The printed form of a bare read under xacro was measured while this page was written and is carried by nothing. |

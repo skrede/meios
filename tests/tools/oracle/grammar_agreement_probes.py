@@ -148,4 +148,8 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("wide_integer_beside_real", "wide_integer_beside_real", None),
                             ("wide_integer_real_power", "wide_integer_real_power", None),
                             ("real_floored_beyond_64_bits", "real_floored_beyond_64_bits", None),
-                            ("real_floor_division", "real_floor_division", None))
+                            ("real_floor_division", "real_floor_division", None),
+                            ("real_remainder_zero_sign", "real_remainder_zero_sign", None),
+                            ("integer_literal_leading_zero", "integer_literal_leading_zero", None),
+                            ("eval_argument_separator_character", "eval_argument_separator_character", None),
+                            ("caller_argument_as_given", "caller_argument_as_given", {"a": " x ", "b": "\x1c1"}))

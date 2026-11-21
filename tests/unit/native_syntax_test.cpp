@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <string_view>
 
 using syntax_probe::loads;
 using syntax_probe::refused;
@@ -130,4 +131,28 @@ TEST_CASE("a container written in a substitution span still refuses", "[native][
     CHECK_FALSE(loads("${[1, 2]}", meios::eval_policy::fail));
     for(meios::eval_policy policy : {meios::eval_policy::fail, meios::eval_policy::warn, meios::eval_policy::skip})
         CHECK(loads("${dict(a=1)['a']}", policy));
+}
+
+TEST_CASE("an integer literal other than zero written with a leading zero refuses", "[native][syntax]")
+{
+    for(std::string_view literal : {"007", "010", "0099999999999999999999", "-007"})
+    {
+        INFO("literal: " << literal);
+        const auto expanded = syntax_probe::load_under("${" + std::string(literal) + "}", meios::eval_policy::fail);
+        REQUIRE_FALSE(expanded.has_value());
+        CHECK(expanded.error().code == meios::diagnostic_code::expression_error);
+        CHECK(expanded.error().message.find("leading zero") != std::string::npos);
+        CHECK(expanded.error().message.find(std::string(literal.substr(literal.starts_with('-') ? 1 : 0))) != std::string::npos);
+    }
+}
+
+TEST_CASE("a zero, a real and literal text keep their reading beside a leading zero", "[native][syntax]")
+{
+    CHECK(probe::evaluate("0").rendered == "0");
+    CHECK(probe::evaluate("00").rendered == "0");
+    CHECK(probe::evaluate("007.5").rendered == "7.5");
+    CHECK(probe::evaluate("00e1").rendered == "0.0");
+    const auto expanded = syntax_probe::load_under("<xacro:property name=\"p\" value=\"007\"/><m v=\"${p}\"/>", meios::eval_policy::fail);
+    REQUIRE(expanded.has_value());
+    CHECK(expanded->document.find("v=\"7\"") != std::string::npos);
 }

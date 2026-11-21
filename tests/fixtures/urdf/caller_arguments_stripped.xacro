@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot name="caller_arguments_stripped" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="a" default="d"/>
+  <xacro:arg name="b" default="0"/>
+  <link name="l_$(arg a)_$(eval b + 1)"/>
+</robot>

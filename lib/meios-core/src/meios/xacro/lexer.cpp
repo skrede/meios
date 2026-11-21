@@ -69,6 +69,8 @@ token_kind one_char_kind(char c)
 
 std::optional<value> number_leaf(std::string_view text, bool is_float)
 {
+    if(!is_float && text.size() > 1 && text.front() == '0' && text.find_first_not_of('0') != std::string_view::npos)
+        return std::nullopt;
     if(!is_float)
         return integer_literal(text);
     bool ok = false;

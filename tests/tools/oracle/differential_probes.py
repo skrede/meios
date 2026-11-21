@@ -12,11 +12,10 @@ from grammar_agreement_probes import GRAMMAR_AGREEMENT_PROBES
 # the two mapping-constructor argument shapes upstream accepts that are refused here, the four
 # string meanings upstream carries that this grammar does not -- repetition, ordering, and the
 # split's two further argument shapes -- the one mathematics name this grammar answers and
-# upstream does not, the sign a real remainder of exactly zero is written with, and three
-# differences in what the span scanner hands the evaluator, upstream's own span pattern being
-# ^\$\{[^\}]*\} and so neither quote-aware nor nesting. None needs the expressions.cases seed
-# scope -- the first reads only the document written beside the probe, which load_yaml resolves
-# relative to the probe itself.
+# upstream does not, and three differences in what the span scanner hands the evaluator,
+# upstream's own span pattern being ^\$\{[^\}]*\} and so neither quote-aware nor nesting. None
+# needs the expressions.cases seed scope -- the first reads only the document written beside the
+# probe, which load_yaml resolves relative to the probe itself.
 DIVERGENCE_PROBES = (("div_self_reference", "xacro.load_yaml('recursive.yaml')['a']"),
                      ("div_dict_pair_sequence", "dict([('a', 1)])"),
                      ("div_dict_mixed_arguments", "dict([('a', 1)], b=2)"),
@@ -27,8 +26,7 @@ DIVERGENCE_PROBES = (("div_self_reference", "xacro.load_yaml('recursive.yaml')['
                      ("div_absolute_value", "abs(-3)"),
                      ("div_span_closing_brace_in_literal", "'a}b'"),
                      ("div_span_format_operator", "'%.3f' % 1.2345"),
-                     ("div_span_nested_expression", "${'1 + 2'}"),
-                     ("div_real_remainder_zero_sign", "-4.0 % 2.0"))
+                     ("div_span_nested_expression", "${'1 + 2'}"))
 RECURSIVE_YAML = "a: &a [1, *a]\n"
 
 # A difference needing a macro, a conditional and a call site has no expression to wrap, so its

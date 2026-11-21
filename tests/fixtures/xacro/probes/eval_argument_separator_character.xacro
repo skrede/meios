@@ -1,0 +1,6 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="t" value="${xacro.load_yaml('eval_argument_separator_character.yaml')}"/>
+  <xacro:arg name="a" default="${t['p']}"/>
+  <xacro:arg name="b" default="${t['q']}"/>
+  <link name="l_$(eval a == 1)_$(eval b == 1.5)"/>
+</robot>

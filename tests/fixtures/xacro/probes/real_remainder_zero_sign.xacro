@@ -1,0 +1,4 @@
+<robot name="probe" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:property name="c" value="99999999999999999999"/>
+  <link name="l_${-4.0 % 2.0}_${4.0 % -2.0}_${-(2**64) % 2.0}_${-c % 2.5}_${atan2(-4.0 % 2.0, -1)}"/>
+</robot>
