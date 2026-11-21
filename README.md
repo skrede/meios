@@ -265,7 +265,8 @@ from that install tree, on all three platforms, by a project that lives outside 
 | Deploying and flattening work under the Xcode generator — the CMake integration cases for both, with every sub-configure generated for Xcode | `harness-xcode` | | ● | |
 | Generative properties of the xacro evaluator | `property-tests` (RapidCheck) | ● | ● | ● |
 | An optional dependency is absent as well as present | `eval-python` — Python found *and* absent | ● | | |
-| The Python evaluator builds and its suite passes against a found Python | `eval-python` on Linux; `enrichments` on macOS and Windows, with Python 3.12 | ● | ● | ● |
+| The Python evaluator builds and its suite passes against a found Python | `eval-python` | ● | | |
+| The Python evaluator builds and its suite passes against Python 3.12 | `enrichments` | | ● | ● |
 | With `MEIOS_CORPUS_BREADTH` on, which adds the pre-expanded KUKA set, every robot description named in the pinned [description corpus](docs/known-limitations.md#what-the-description-corpus-proves) loads, and each one the built-in evaluator expands matches its recorded facts; the known-faulty fixture reports its typed diagnostic at its expected line, and flattening the known-good description reproduces a committed baseline byte for byte | `corpus` | ● | | |
 | Fresh renders through the pinned xacro, of every minimized and every authored expression case, every minimized binding document and every corpus document the built-in evaluator expands, agree with meios on accept or refuse and on normalized document structure, and each document's fresh render matches its recorded model facts; a difference passes only where the reviewed divergence manifest records it, and a recorded divergence that no longer reproduces fails — [what this evidence covers](docs/evaluation.md#what-this-evidence-covers) | `differential` | ● | | |
 | Header-guard uniqueness and format | `header-guards` | ● | | |
