@@ -703,9 +703,14 @@ sets it on the node the output drops, so there the attribute is lost; [known
 limitations](known-limitations.md#expression-evaluation) lists both differences. Written directly
 among a macro call's arguments, or where the content lands in no output element, it sets nothing and
 warns, `attribute 'a' is written where no element receives it, so it is not set`, and xacro sets
-nothing there either. The `attribute_empty_name`, `attribute_set_on_parent`,
-`attribute_under_block_element`, `attribute_on_document_root` and `attribute_padded_name` agreement probes hold the placement on
-an element the output keeps against a fresh xacro render, beside the `xacro_attribute_place` cases.
+nothing there either. Inside a block passed whole through one call's `*` parameter into another call's
+`**` parameter it is not set, since that insertion keeps only the block's content, and xacro loses it
+the same way; one located `level::info` note names it: `attribute 'k' is not set: the block holding it
+was passed whole into another call, which inserts only its content`. The
+`attribute_through_passed_block` agreement probe holds that drop against a fresh xacro render. The
+`attribute_empty_name`, `attribute_set_on_parent`, `attribute_under_block_element`,
+`attribute_on_document_root` and `attribute_padded_name` agreement probes hold the placement on an
+element the output keeps against a fresh xacro render, beside the `xacro_attribute_place` cases.
 
 **An attribute in the xacro namespace is removed unread, the xacro namespace declaration is evaluated
 and left out, and character data is kept as written.** An output element's attributes whose names
@@ -839,12 +844,14 @@ no case pins it.
 evaluated and then read by the boolean rule above, so `true`, `1` and `${True}` mark the include
 optional, `false`, `0` and an absent attribute do not, and an empty or other value refuses under
 `xacro_structural_error`. An optional include whose file is not found, is a directory, or may not be
-read includes nothing and logs one located `level::info` note naming the filename and the reason, as
-`optional include "missing.xacro" was not read: it was not found; nothing was included` does; the load
-renders as if the include were absent. Every other failure refuses whether the include is optional or
-not: a file outside the directories that admit it, a filename climbing above its document's directory,
-a package no source holds and a find naming none, a file too large to read, and a file that does not
-parse. A layer that serves only bytes cannot say whether it holds a package, so a missing
+read, or whose containment beside its document cannot be decided, includes nothing and logs one
+located `level::info` note naming the filename and the reason, as `optional include "missing.xacro"
+was not read: it was not found; nothing was included` does; the load renders as if the include were
+absent. Every other failure refuses whether the include is optional or not: a file outside the
+directories that admit it, a filename climbing above its document's directory, a package no source
+holds and a find naming none, a path the reader refuses to follow because a name on it is a link or a
+step leads out of the directory it is read under, a file that was opened and then failed to read or to
+close, a file too large to read, and a file that does not parse. A layer that serves only bytes cannot say whether it holds a package, so a missing
 `package://` file only such a layer could serve refuses under `optional` too. The mark covers the
 include's own file and nothing it reads: an include missing inside a file an optional include read
 refuses as any include does, deliberately, since that miss is a mistake in a file that was read.

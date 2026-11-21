@@ -20,6 +20,7 @@ enum class text_read_failure_kind
     read,
     close,
     too_large,
+    uncontained,
 };
 
 struct text_read_failure
@@ -47,6 +48,8 @@ inline std::string read_failure_reason(const text_read_failure &failure)
         return "not a regular file";
     if(failure.kind == text_read_failure_kind::too_large)
         return "larger than the maximum this read accepts";
+    if(failure.kind == text_read_failure_kind::uncontained)
+        return "the path leaves the directory it is read under, through a link or a step out of it";
     return std::string(to_string(failure.cause.operation)) + " failed: " + failure.cause.native.message();
 }
 

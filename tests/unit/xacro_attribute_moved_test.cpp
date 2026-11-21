@@ -69,3 +69,40 @@ TEST_CASE("an attribute among a call's arguments sets nothing and says so", "[xa
     REQUIRE(names(warnings[0], "'a'"));
     REQUIRE(at_level(records, meios::level::info).empty());
 }
+
+namespace
+{
+
+const std::string inserts_content = R"(<xacro:macro name="outer" params="**b"><link name="l"><xacro:insert_block name="b"/></link></xacro:macro>)";
+const std::string wrap_holding_k  = "<wrap>\n<xacro:attribute name=\"k\" value=\"v\"/><visual><geometry><box size=\"1 1 1\"/></geometry></visual></wrap>";
+const std::string visual          = R"(<visual><geometry><box size="1 1 1"></box></geometry></visual>)";
+
+}
+
+TEST_CASE("an attribute in a block passed whole into another call's content insertion is not set and is noted", "[xacro][attribute]")
+{
+    const std::string forwards = R"(<xacro:macro name="inner" params="*a"><xacro:outer><xacro:insert_block name="a"/></xacro:outer></xacro:macro>)";
+    std::vector<heard> records;
+    REQUIRE(render(inserts_content + forwards + "<xacro:inner>" + wrap_holding_k + "</xacro:inner>", records) == R"(<robot name="p"><link name="l">)" + visual + "</link></robot>");
+    const std::vector<heard> notes = at_level(records, meios::level::info);
+    REQUIRE(notes.size() == 1);
+    REQUIRE(notes[0].line == 3);
+    REQUIRE(names(notes[0], "'k'"));
+    REQUIRE(records.size() == 1);
+}
+
+TEST_CASE("an attribute in a block passed straight to a content insertion or inserted whole keeps its placement", "[xacro][attribute]")
+{
+    std::vector<heard> straight;
+    REQUIRE(render(inserts_content + "<xacro:outer>" + wrap_holding_k + "</xacro:outer>", straight) == R"(<robot name="p"><link k="v" name="l">)" + visual + "</link></robot>");
+    const std::vector<heard> notes = at_level(straight, meios::level::info);
+    REQUIRE(notes.size() == 1);
+    REQUIRE(notes[0].line == 3);
+    REQUIRE(names(notes[0], "'k'"));
+    REQUIRE(names(notes[0], "<link>"));
+
+    const std::string inserts = R"(<xacro:macro name="inner" params="*a"><link name="l"><xacro:insert_block name="a"/></link></xacro:macro>)";
+    std::vector<heard> whole;
+    REQUIRE(render(inserts + "<xacro:inner>" + wrap_holding_k + "</xacro:inner>", whole) == R"(<robot name="p"><link name="l"><wrap k="v">)" + visual + "</wrap></link></robot>");
+    REQUIRE(whole.empty());
+}

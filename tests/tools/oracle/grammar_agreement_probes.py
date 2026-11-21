@@ -152,4 +152,5 @@ GRAMMAR_AGREEMENT_PROBES = (("property_eager_in_unmodelled_element", "property_e
                             ("real_remainder_zero_sign", "real_remainder_zero_sign", None),
                             ("integer_literal_leading_zero", "integer_literal_leading_zero", None),
                             ("eval_argument_separator_character", "eval_argument_separator_character", None),
-                            ("caller_argument_as_given", "caller_argument_as_given", {"a": " x ", "b": "\x1c1"}))
+                            ("caller_argument_as_given", "caller_argument_as_given", {"a": " x ", "b": "\x1c1"}),
+                            ("attribute_through_passed_block", "attribute_through_passed_block", None))

@@ -113,7 +113,7 @@ inline native_file_result native_open(const std::filesystem::path &path) noexcep
 inline native_file_result native_open_under(const std::filesystem::path &root, const std::filesystem::path &relative) noexcept
 {
     if(!native::valid_request(relative))
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, make_error_code(std::errc::invalid_argument)));
+        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::uncontained, operation_kind::open, make_error_code(std::errc::invalid_argument)));
     expected<native::ntdll_api, std::error_code> api = native::load_api();
     if(!api)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, api.error()));

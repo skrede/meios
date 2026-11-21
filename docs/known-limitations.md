@@ -856,7 +856,9 @@ a link named `l` through a conditional, a macro's body, an included root and a b
 renders the link with `a="1"` here and without it under xacro, which are the
 `attribute_under_conditional`, `attribute_under_macro_body`, `attribute_under_included_root` and
 `attribute_under_block_wrapper` rows. A block property's body was measured the same way, and no row
-carries it.
+carries it. A block passed whole through one call's `*` parameter into another call's `**` parameter
+loses the attribute on both sides, which the `attribute_through_passed_block` agreement probe holds,
+and here one located note names it.
 
 **An `xacro:attribute` value that is not text is written as its text.** Its `name` and `value` are each
 evaluated and written as text, so `value="${1}"` sets `a="1"`. xacro writes only a value that is

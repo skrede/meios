@@ -406,3 +406,4 @@ real_remainder_zero_sign	agreement
 integer_literal_leading_zero	agreement
 eval_argument_separator_character	agreement
 caller_argument_as_given	agreement
+attribute_through_passed_block	agreement

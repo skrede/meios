@@ -84,6 +84,7 @@ struct placed_attribute
     std::string name;
     source_location where;
     bool moved;
+    bool forwarded;
 };
 
 // Threads the whole expansion: name scope, package sources, both budget counters,

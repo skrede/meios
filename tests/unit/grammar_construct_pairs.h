@@ -42,6 +42,7 @@ inline constexpr pairing element_pairings[] = {
         {"tag.xacro_element", carrier::agreement, "element_empty_name element_named_by_attribute element_renamed_to_conditional element_renamed_to_macro_call element_padded_name", standing::agrees},
         {"tag.xacro_element", carrier::agreement, "element_renamed_to_property element_name_not_text", standing::agrees},
         {"tag.xacro_attribute", carrier::agreement, "attribute_empty_name attribute_set_on_parent attribute_under_block_element attribute_on_document_root attribute_padded_name", standing::agrees},
+        {"tag.xacro_attribute", carrier::agreement, "attribute_through_passed_block", standing::agrees},
         {"tag.xacro_attribute", carrier::manifest, "attribute_under_conditional attribute_under_macro_body", standing::deliberate},
         {"tag.xacro_attribute", carrier::manifest, "attribute_under_included_root attribute_under_block_wrapper", standing::deliberate},
         {"tag.xacro_attribute", carrier::manifest, "attribute_value_not_text", standing::deliberate},

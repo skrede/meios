@@ -37,6 +37,21 @@ bool evaluate_wrapper(expand_ctx &ctx, pugi::xml_node in, const std::filesystem:
     return true;
 }
 
+// A block passed whole into another call's arguments is a copy, so its records travel with it.
+void forward_placed(expand_ctx &ctx, pugi::xml_node parked, pugi::xml_node copy)
+{
+    const std::size_t held = ctx.placed.size();
+    for(std::size_t i = 0; i < held; ++i)
+    {
+        placed_attribute one = ctx.placed[i];
+        if(one.element != parked)
+            continue;
+        one.element   = copy;
+        one.forwarded = true;
+        ctx.placed.push_back(std::move(one));
+    }
+}
+
 bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
                 const std::filesystem::path &document)
 {
@@ -44,7 +59,11 @@ bool walk_block(expand_ctx &ctx, const parked_block &block, pugi::xml_node out,
     {
         if(!emit_element(ctx, block.node, block.node.name(), out, document))
             return false;
-        note_placed(ctx, block.node);
+        // emit_element appends that one element to out.
+        if(!ctx.emitting.empty() && ctx.emitting.back().binding)
+            forward_placed(ctx, block.node, out.last_child());
+        else
+            note_placed(ctx, block.node);
         return true;
     }
     const lift_target dropped(ctx, {});

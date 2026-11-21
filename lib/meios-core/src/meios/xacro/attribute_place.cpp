@@ -29,6 +29,11 @@ void note(expand_ctx &ctx, const source_location &where, const std::string &name
     ctx.log.log(level::info, where, "attribute '" + name + "' placed on <" + onto.name() + ">, the element its parent's content lands in");
 }
 
+void note_dropped(expand_ctx &ctx, const placed_attribute &one)
+{
+    ctx.log.log(level::info, one.where, "attribute '" + one.name + "' is not set: the block holding it was passed whole into another call, which inserts only its content");
+}
+
 bool receives(const expand_ctx &ctx, pugi::xml_node out)
 {
     return !ctx.emitting.empty() && !ctx.emitting.back().binding && ctx.emitting.back().out == out;
@@ -48,7 +53,7 @@ void place(expand_ctx &ctx, pugi::xml_node out, const std::string &name, const s
     }
     overwrite(out, name, value);
     if(parked_argument(ctx))
-        ctx.placed.push_back(placed_attribute{out, name, where, moved});
+        ctx.placed.push_back(placed_attribute{out, name, where, moved, false});
     else if(moved)
         note(ctx, where, name, out);
 }
@@ -88,7 +93,9 @@ void carry_placed(expand_ctx &ctx, pugi::xml_node parked, pugi::xml_node out)
     for(std::size_t i = 0; i < held; ++i)
     {
         const placed_attribute one = ctx.placed[i];
-        if(one.element == parked)
+        if(one.element == parked && one.forwarded)
+            note_dropped(ctx, one);
+        else if(one.element == parked)
             place(ctx, out, one.name, parked.attribute(one.name.c_str()).value(), one.where, true);
     }
 }

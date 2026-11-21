@@ -96,6 +96,21 @@ inline std::vector<std::filesystem::path> parts(const std::filesystem::path &rel
     return result;
 }
 
+inline text_read_failure outside_root() noexcept
+{
+    return native_failure(text_read_failure_kind::uncontained, operation_kind::open, make_error_code(std::errc::invalid_argument));
+}
+
+// The errno alone cannot tell a link from any other refusal: a linked directory opened with O_DIRECTORY reports ENOTDIR.
+inline text_read_failure failed_open(int directory, const std::filesystem::path &name) noexcept
+{
+    const std::error_code error = native_crt_error();
+    struct stat state{};
+    if(::fstatat(directory, name.c_str(), &state, AT_SYMLINK_NOFOLLOW) == 0 && S_ISLNK(state.st_mode))
+        return native_failure(text_read_failure_kind::uncontained, operation_kind::open, error);
+    return native_failure(text_read_failure_kind::open, operation_kind::open, error);
+}
+
 inline native_file_result stream(fd_owner file) noexcept
 {
     struct stat state{};
@@ -129,15 +144,15 @@ inline native_file_result native_open(const std::filesystem::path &path) noexcep
 inline native_file_result native_open_under(const std::filesystem::path &root, const std::filesystem::path &relative) noexcept
 {
     if(!native::valid_relative(relative))
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, make_error_code(std::errc::invalid_argument)));
+        return unexpected<text_read_failure>(native::outside_root());
     errno = 0;
     std::vector<native::fd_owner> handles;
     handles.emplace_back(::open(root.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW));
     if(handles.back().get() < 0)
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
+        return unexpected<text_read_failure>(native::failed_open(AT_FDCWD, root));
     const std::vector<std::filesystem::path> components = native::parts(relative);
     if(components.empty())
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, make_error_code(std::errc::invalid_argument)));
+        return unexpected<text_read_failure>(native::outside_root());
     for(std::size_t index = 0; index < components.size(); ++index)
     {
         const bool final = index + 1 == components.size();
@@ -145,7 +160,7 @@ inline native_file_result native_open_under(const std::filesystem::path &root, c
         errno            = 0;
         handles.emplace_back(::openat(handles.back().get(), components[index].c_str(), flags));
         if(handles.back().get() < 0)
-            return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, native_crt_error()));
+            return unexpected<text_read_failure>(native::failed_open(handles[index].get(), components[index]));
     }
     return native::stream(std::move(handles.back()));
 }

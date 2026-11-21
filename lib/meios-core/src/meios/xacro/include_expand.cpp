@@ -46,13 +46,15 @@ bool reenters(const expand_ctx &ctx, const std::filesystem::path &key)
     return false;
 }
 
-// A file too large or one that would not close was opened and read, so an optional include refuses it as any include does.
+// A path the reader refused to follow out of its root, and a file that was opened and then failed, are not
+// a file that could not be read, so optional does not cover them.
 bool refuse_include(expand_ctx &ctx, pugi::xml_node in, const std::filesystem::path &key,
                     const text_read_failure &failure)
 {
     const std::string reason  = read_failure_reason(failure);
     const std::string message = "xacro:include could not read \"" + key.string() + "\": " + reason;
-    if(failure.kind == text_read_failure_kind::close || failure.kind == text_read_failure_kind::too_large)
+    const text_read_failure_kind kind = failure.kind;
+    if(kind == text_read_failure_kind::uncontained || kind == text_read_failure_kind::read || kind == text_read_failure_kind::close || kind == text_read_failure_kind::too_large)
         return fail(ctx, locate(ctx, in), diagnostic_code::unresolved_include, failure.cause, message);
     return missing_include(ctx, in, message, failure.cause, reason);
 }

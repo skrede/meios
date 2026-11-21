@@ -142,7 +142,7 @@ inline std::optional<text_read_failure> validate(HANDLE handle, bool final) noex
     if(!GetFileInformationByHandleEx(handle, FileAttributeTagInfo, &attributes, sizeof(attributes)))
         return native_failure(text_read_failure_kind::status, operation_kind::status, win32_error(ERROR_GEN_FAILURE));
     if((attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
-        return native_failure(text_read_failure_kind::open, operation_kind::open, {static_cast<int>(ERROR_CANT_ACCESS_FILE), std::system_category()});
+        return native_failure(text_read_failure_kind::uncontained, operation_kind::open, {static_cast<int>(ERROR_CANT_ACCESS_FILE), std::system_category()});
     if(!final)
         return std::nullopt;
     if((attributes.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
