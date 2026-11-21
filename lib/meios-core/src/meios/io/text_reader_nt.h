@@ -123,26 +123,29 @@ private:
 using handle_result         = expected<handle_owner, std::error_code>;
 using checked_handle_result = expected<handle_owner, text_read_failure>;
 
-inline handle_result nt_open(const ntdll_api &api, HANDLE root, PUNICODE_STRING name, ACCESS_MASK access, ULONG options) noexcept
+inline handle_result nt_open(const ntdll_api &api, HANDLE root, PUNICODE_STRING name, ACCESS_MASK access, ULONG options, bool open_reparse_point) noexcept
 {
     OBJECT_ATTRIBUTES attributes;
     InitializeObjectAttributes(&attributes, name, OBJ_CASE_INSENSITIVE, root, nullptr);
     IO_STATUS_BLOCK block{};
     HANDLE handle         = nullptr;
     const NTSTATUS result = api.create(&handle, access, &attributes, &block, nullptr, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN,
-                                       options | FILE_OPEN_REPARSE_POINT | FILE_SYNCHRONOUS_IO_NONALERT, nullptr, 0);
+                                       options | (open_reparse_point ? FILE_OPEN_REPARSE_POINT : 0UL) | FILE_SYNCHRONOUS_IO_NONALERT, nullptr, 0);
     if(result < 0)
         return unexpected<std::error_code>({static_cast<int>(api.status(result)), std::system_category()});
     return handle_owner{handle};
 }
 
-inline std::optional<text_read_failure> validate(HANDLE handle, bool final) noexcept
+inline expected<FILE_ATTRIBUTE_TAG_INFO, text_read_failure> attributes_of(HANDLE handle) noexcept
 {
     FILE_ATTRIBUTE_TAG_INFO attributes{};
     if(!GetFileInformationByHandleEx(handle, FileAttributeTagInfo, &attributes, sizeof(attributes)))
-        return native_failure(text_read_failure_kind::status, operation_kind::status, win32_error(ERROR_GEN_FAILURE));
-    if((attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
-        return native_failure(text_read_failure_kind::uncontained, operation_kind::open, {static_cast<int>(ERROR_CANT_ACCESS_FILE), std::system_category()});
+        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::status, operation_kind::status, win32_error(ERROR_GEN_FAILURE)));
+    return attributes;
+}
+
+inline std::optional<text_read_failure> validate(const FILE_ATTRIBUTE_TAG_INFO &attributes, HANDLE handle, bool final) noexcept
+{
     if(!final)
         return std::nullopt;
     if((attributes.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)

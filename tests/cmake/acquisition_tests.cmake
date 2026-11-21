@@ -49,6 +49,11 @@ if(NOT WIN32)
     meios_add_acquisition_test(scratch_denial)
 endif()
 
+# A junction and a file compressed behind a reparse point exist only on that platform's file systems.
+if(WIN32)
+    meios_add_acquisition_test(text_reader_reparse)
+endif()
+
 if(TARGET load_acquisition_test)
     target_compile_definitions(load_acquisition_test PRIVATE
         MEIOS_URDF_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/urdf")

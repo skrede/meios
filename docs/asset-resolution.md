@@ -205,9 +205,13 @@ own link leads: measured on a tree laid out as a colcon `--symlink-install` inst
 `install/share` link into the source tree, a `package://` mesh refuses under `uncontained_asset` with
 `install/share` as the root, because its link leads out of that root, and resolves once the source tree
 is the root instead. Configuring the source tree as the root is the remedy, and it grants reach to every
-file under that tree. What comes back from a source is not re-checked against the configured roots.
-Containment is the source's own answer and is settled there; whether the thing a source named is an
-asset at all is a different question, and it is asked where that answer leaves the resolver.
+file under that tree. On Windows a link is a reparse point that names another location, a symbolic link
+or a junction. Any other reparse point, a cloud placeholder such as OneDrive's, a deduplicated file or a
+compressed one, is read under its root as the file it is: it is opened a second time so the file system
+supplies its content, and read only when both opens name the same file. What comes back from a source is
+not re-checked against the configured roots. Containment is the source's own answer and is settled
+there; whether the thing a source named is an asset at all is a different question, and it is asked
+where that answer leaves the resolver.
 
 **Containment is enforced at resolution.** That is a statement about one step and not about the whole
 pipeline. Whether a component that later consumes a resolved path — the bundle writer copying assets

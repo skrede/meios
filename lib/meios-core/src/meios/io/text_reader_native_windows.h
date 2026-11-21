@@ -2,6 +2,7 @@
 #define HPP_GUARD_MEIOS_CORE_IO_TEXT_READER_NATIVE_WINDOWS_H
 
 #include "meios/io/text_reader_nt.h"
+#include "meios/io/text_reader_nt_reparse.h"
 
 #include <io.h>
 #include <fcntl.h>
@@ -12,6 +13,25 @@ namespace meios::detail
 {
 namespace native
 {
+
+inline checked_handle_result settled_open(const ntdll_api &api, HANDLE root, PUNICODE_STRING name, ACCESS_MASK access, ULONG options, bool final) noexcept
+{
+    handle_result opened = nt_open(api, root, name, access, options, true);
+    if(!opened)
+        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, opened.error()));
+    const expected<FILE_ATTRIBUTE_TAG_INFO, text_read_failure> first = attributes_of(opened->get());
+    if(!first)
+        return unexpected<text_read_failure>(first.error());
+    checked_handle_result settled = settle_reparse(api, root, name, access, options, std::move(*opened), *first);
+    if(!settled)
+        return settled;
+    const expected<FILE_ATTRIBUTE_TAG_INFO, text_read_failure> attributes = attributes_of(settled->get());
+    if(!attributes)
+        return unexpected<text_read_failure>(attributes.error());
+    if(const std::optional<text_read_failure> invalid = validate(*attributes, settled->get(), final))
+        return unexpected<text_read_failure>(*invalid);
+    return settled;
+}
 
 inline checked_handle_result open_root(const ntdll_api &api, const std::filesystem::path &root) noexcept
 {
@@ -24,12 +44,7 @@ inline checked_handle_result open_root(const ntdll_api &api, const std::filesyst
     if(converted < 0)
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, {static_cast<int>(api.status(converted)), std::system_category()}));
     unicode_owner owned{name, api.free_string};
-    handle_result opened = nt_open(api, nullptr, &name, FILE_LIST_DIRECTORY | FILE_TRAVERSE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, FILE_DIRECTORY_FILE);
-    if(!opened)
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, opened.error()));
-    if(const std::optional<text_read_failure> invalid = validate(opened->get(), false))
-        return unexpected<text_read_failure>(*invalid);
-    return std::move(*opened);
+    return settled_open(api, nullptr, &name, FILE_LIST_DIRECTORY | FILE_TRAVERSE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, FILE_DIRECTORY_FILE, false);
 }
 
 inline checked_handle_result open_component(const ntdll_api &api, HANDLE root, const std::filesystem::path &path, bool final) noexcept
@@ -40,13 +55,8 @@ inline checked_handle_result open_component(const ntdll_api &api, HANDLE root, c
         return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, name.error()));
     const ACCESS_MASK access = (final ? FILE_READ_DATA : FILE_LIST_DIRECTORY | FILE_TRAVERSE) | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
     // FILE_NON_DIRECTORY_FILE would turn a directory into a failed open; the last component is
-    // opened unrestricted so the checks below name its kind from the handle, as fstat does.
-    handle_result opened = nt_open(api, root, &*name, access, final ? 0UL : FILE_DIRECTORY_FILE);
-    if(!opened)
-        return unexpected<text_read_failure>(native_failure(text_read_failure_kind::open, operation_kind::open, opened.error()));
-    if(const std::optional<text_read_failure> invalid = validate(opened->get(), final))
-        return unexpected<text_read_failure>(*invalid);
-    return std::move(*opened);
+    // opened unrestricted so its kind is named from the handle, as fstat does.
+    return settled_open(api, root, &*name, access, final ? 0UL : FILE_DIRECTORY_FILE, final);
 }
 
 inline checked_handle_result walk(const ntdll_api &api, handle_owner root, const std::vector<std::filesystem::path> &path) noexcept
