@@ -1,5 +1,7 @@
 #include "eval_python_fixture.h"
 
+#include "module_path.h"
+
 #include <pybind11/embed.h>
 
 #include <catch2/catch_test_macros.hpp>
@@ -17,7 +19,8 @@
 #include <system_error>
 
 // Each case relies on its own first evaluation starting the interpreter, which holds because ctest
-// runs every discovered case in a process of its own.
+// runs every discovered case in a process of its own. The failing starts are hidden, since they need
+// the environment their own registration sets.
 namespace
 {
 
@@ -50,7 +53,7 @@ struct planted_directory
 
 }
 
-TEST_CASE("the first evaluation reads no module from the directory the process was started in", "[eval_python]")
+TEST_CASE("the first evaluation reads no module from the directory the process was started in", "[eval_python][planted_module]")
 {
     const planted_directory planted;
     REQUIRE(evaluate("1 + 1", meios::eval_scope{}) == std::optional<std::string>("2"));
@@ -61,14 +64,34 @@ TEST_CASE("the first evaluation reads no module from the directory the process w
 import os, sys
 here = {os.path.realpath(start), os.path.realpath(os.getcwd())}
 on_path = [entry for entry in sys.path if entry == '' or os.path.realpath(entry) in here]
+listed = [entry for entry in os.environ.get('PYTHONPATH', '').split(os.pathsep) if entry]
+known = {os.path.normcase(os.path.realpath(entry)) for entry in sys.path}
+missing = [entry for entry in listed if os.path.normcase(os.path.realpath(entry)) not in known]
 import ast
 planted = os.path.realpath(getattr(ast, '__file__', '')).startswith(os.path.realpath(start))
 )",
                    space);
     INFO("sys.path: " << pybind11::str(pybind11::module_::import("sys").attr("path")).cast<std::string>());
+    INFO("missing: " << pybind11::str(space["missing"]).cast<std::string>());
     CHECK(pybind11::len(space["on_path"]) == 0);
+    CHECK(pybind11::len(space["missing"]) == 0);
     CHECK_FALSE(space["planted"].cast<bool>());
     CHECK_FALSE(std::filesystem::exists(planted.m_root / "ast.py.ran"));
+}
+
+TEST_CASE("a module path list keeps every named element in its order and drops only the empty ones", "[eval_python][module_path]")
+{
+    using meios::detail::without_empty_elements;
+    CHECK(without_empty_elements<char>("", ':').empty());
+    CHECK(without_empty_elements<char>(":", ':').empty());
+    CHECK(without_empty_elements<char>("::", ':').empty());
+    CHECK(without_empty_elements<char>("/a", ':') == "/a");
+    CHECK(without_empty_elements<char>(":/a", ':') == "/a");
+    CHECK(without_empty_elements<char>("/a:", ':') == "/a");
+    CHECK(without_empty_elements<char>("/a::/b", ':') == "/a:/b");
+    CHECK(without_empty_elements<char>(":/a::/b:", ':') == "/a:/b");
+    CHECK(without_empty_elements<char>(".", ':') == ".");
+    CHECK(without_empty_elements<wchar_t>(L";C:\\a;;D:\\b;", L';') == L"C:\\a;D:\\b");
 }
 
 TEST_CASE("the first evaluation leaves the interrupt and broken-pipe dispositions as the host set them", "[eval_python]")
@@ -137,7 +160,7 @@ TEST_CASE("an interpreter the host already runs is used as the host left it", "[
     CHECK(pybind11::module_::import("sys").attr("get_int_max_str_digits")().cast<std::int64_t>() == 5000);
 }
 
-TEST_CASE("an interpreter that cannot start fails every evaluation as an error and is not tried again", "[eval_python][start_failure]")
+TEST_CASE("an interpreter that cannot start fails every evaluation as an error and is not tried again", "[eval_python][.start_failure]")
 {
     for(std::int32_t attempt = 0; attempt < 2; ++attempt)
     {
@@ -153,7 +176,7 @@ TEST_CASE("an interpreter that cannot start fails every evaluation as an error a
     CHECK(expanded.reported.find("did not start") != std::string::npos);
 }
 
-TEST_CASE("a digit limit that cannot be held fails the first evaluation only", "[eval_python][pin_failure]")
+TEST_CASE("a digit limit that cannot be held fails the first evaluation only", "[eval_python][.pin_failure]")
 {
     const reported_outcome first = evaluated("1 + 1");
     CHECK_FALSE(first.out.text.has_value());

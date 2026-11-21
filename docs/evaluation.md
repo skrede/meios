@@ -1617,9 +1617,13 @@ Python behavior the grammar above does not carry — a comprehension, an f-strin
 than the named split, a method call on a loaded mapping, string repetition or ordering, or a unit tag
 written over something other than a numeric literal: it registers the same six tags and evaluates the
 tagged text as an expression. It drives a *found* (never fetched) CPython, 3.11 or later. The
-interpreter it starts puts no program or working directory on its module path and installs none of
-Python's signal handlers, so a module file beside where the program was started is never imported and
-SIGINT keeps the disposition the program gave it. A program that already runs Python keeps its
+interpreter it starts puts no program or working directory on its module path and drops every
+empty element of `PYTHONPATH` (a leading, trailing or doubled separator), which Python would
+read as the working directory. Every directory `PYTHONPATH` names stays on the module path as
+Python keeps it, and a relative one, `.` included, is read against the working directory, so
+a module file beside where the program was started is imported only when `PYTHONPATH` names
+that directory. The interpreter installs none of Python's signal handlers, so SIGINT keeps
+the disposition the program gave it. A program that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every

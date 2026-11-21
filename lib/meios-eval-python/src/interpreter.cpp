@@ -1,4 +1,5 @@
 #include "interpreter.h"
+#include "module_path.h"
 #include "kept_interrupt.h"
 
 #include "meios/xacro/detail/wide_integer.h"
@@ -59,6 +60,11 @@ std::optional<std::string> configured_start()
         PyConfig_InitPythonConfig(&config);
         config.safe_path               = 1;
         config.install_signal_handlers = 0;
+        if(PyStatus_Exception(set_module_path(config)) != 0)
+        {
+            PyConfig_Clear(&config);
+            return "the embedded Python interpreter did not start: PYTHONPATH could not be handed to it";
+        }
         pybind11::initialize_interpreter(&config, 0, nullptr, false);
     }
     catch(const std::exception &failed)
