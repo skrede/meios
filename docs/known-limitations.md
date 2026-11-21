@@ -570,11 +570,11 @@ the principled opaque-value path is not yet in place.
 
 ## Expression evaluation
 
-**Sixty-four ways this evaluator differs from xacro are measured, and further ones no row can carry are
+**Sixty-six ways this evaluator differs from xacro are measured, and further ones no row can carry are
 written down beside them.** That is not a claim that the list is complete. The reviewed manifest
-carries sixty-four rows and the differential drives them on every push in both directions, so a
+carries sixty-six rows and the differential drives them on every push in both directions, so a
 divergence that quietly stopped reproducing fails the comparison as loudly as a new one does.
-Forty of them are the grammar record's, set out after this list. Of the rest, fifteen are
+Forty-two of them are the grammar record's, set out after this list. Of the rest, fifteen are
 constructs xacro renders and this evaluator refuses — the first five entries below, the argument helper
 the seventh names, and the mapping key an auxiliary document did not write as text, which has an entry
 of its own further down, and an include climbing above its document's directory, an absolute include
@@ -615,18 +615,19 @@ package, the `include_find_climbs_out_of_package` row, and a glob include filena
 - `map` and `filter`, which are not among the functions this grammar carries — the omission most likely
   to be met in a real description.
 
-Six differ in the other direction, rendering here where xacro refuses: a closing brace inside a string
+Seven differ in the other direction, rendering here where xacro refuses: a closing brace inside a string
 literal, one expression span written inside another, the absolute value, an argument declared without a
-default, `$(dirname)`, and a `package://` include filename. The first two follow from a span scanner
-that folds over quotes and counts depth, where xacro's pattern does neither, so xacro truncates the span
-and never hands its evaluator a whole expression to refuse. The third is a difference in what the
-evaluator itself carries: xacro's expression globals hold the mathematics module and the two reducers
-and no builtins at all, so `${abs(-3)}` renders `3` here and refuses as an undefined name under xacro,
-while every other name on this grammar's mathematics list renders under both. The next two have entries
-of their own further down, and the last has one under sources and resolution. And two render under
-both with different answers: `$(find)` through a package root configured by a relative spelling, or by
-one holding a `.` element, writes a different directory than xacro does, which is the
-`find_relative_root` and `find_dotted_root` pair of rows, whose entry is under sources and resolution.
+default, `$(dirname)`, a `package://` include filename, and a raw `<` in an attribute value. The first
+two follow from a span scanner that folds over quotes and counts depth, where xacro's pattern does
+neither, so xacro truncates the span and never hands its evaluator a whole expression to refuse. The
+third is a difference in what the evaluator itself carries: xacro's expression globals hold the
+mathematics module and the two reducers and no builtins at all, so `${abs(-3)}` renders `3` here and
+refuses as an undefined name under xacro, while every other name on this grammar's mathematics list
+renders under both. The next two have entries of their own further down, the sixth has one under sources
+and resolution, and the last has one further down. And two render under both with different answers:
+`$(find)` through a package root configured by a relative spelling, or by one holding a `.` element,
+writes a different directory than xacro does, which is the `find_relative_root` and `find_dotted_root`
+pair of rows, whose entry is under sources and resolution.
 
 The last three entries above, the argument helper and `${n.e}` apart, are the ones the manifest does
 not carry, because none of them can be matched by exact text: the colliding member names produce text
@@ -645,81 +646,87 @@ difference the manifest cannot carry is the separator a located path is written 
 is observable on Windows alone, and the job that renders a fresh xacro to compare against runs on
 Linux, where meios and xacro write the same character.
 
-Nine of the sixty-four are paired with their constructs under the reviewed standing rather than the
-open one: each is a difference meios keeps on purpose, and each has an entry of its own further down.
-They are the argument declared without a default, named above, and eight of the grammar record's. Of
-those eight, three more render here where xacro refuses: a condition written `1.0`, an include whose
-`optional` attribute an expression yields, and an `xacro:attribute` whose value is not text. Four
-render under both with different answers: an `xacro:attribute` under a conditional, a macro's body, an
-included document's root or a block's wrapper, each a node the output drops, sets its attribute on an
-element here and is lost under xacro. The last refuses here where xacro renders: a missing include
-inside a file that an optional include read.
+Thirteen of the sixty-six are rows meios keeps by decision, as an extension, as the meaning a construct
+evidently has where xacro does otherwise, or as a bound of its own, and each has an entry of its own
+further down. Twelve of them are paired with their constructs under the reviewed standing rather than
+the open one. The thirteenth, the raw `<` in an attribute value, named above, is kept by decision as
+well and carries no pairing, since no construct of xacro's grammar carries it. The twelve are the
+argument declared without a default, named above, and eleven of the grammar record's. Of those eleven,
+five more render here where xacro refuses: a condition written `1.0`, a condition padding one span with
+spaces, an include whose `optional` attribute an expression yields, an `xacro:attribute` whose value is
+not text, and an evaluated name that is not text. Four render under both with different answers: an
+`xacro:attribute` under a conditional, a macro's body, an included document's root or a block's wrapper,
+each a node the output drops, sets its attribute on an element here and is lost under xacro. Two refuse
+here where xacro renders: a missing include inside a file that an optional include read, and an integer
+of more than 4300 digits computed inside an expression, which is the bound meios keeps.
 
-**The grammar record lists forty measured differences in xacro's own grammar, thirty-two of them
-not yet closed.** Each is a construct of the element grammar, the attribute lists, the substitution
-lexer or its commands, measured against the pinned xacro on a minimized document both read, and each is
-a row of the divergence manifest held in both directions; none is claimed to agree. Eight of them are
-paired under the reviewed standing rather than the open one, each a difference meios keeps on purpose
-with an entry of its own further down: a condition written `1.0`, `xacro:attribute` under a conditional, a macro's body, an included
-document's root and a block's wrapper, an `xacro:attribute` value that is not text, an include whose
-`optional` attribute an expression yields, and a missing include inside a file an optional include read.
-The thirty-two not yet closed are, in the manifest's order, the root that answers a find when two hold
-its package, a missing directory before a parent step beside the document and under a find, a find held
-in a property or an argument and composed into a filename, a find composed onto text, a trailing
-separator after a file under a find, `$(cwd)`, `$(eval)` with a leading space, with nothing after it and
-with a blank expression, `$(env)` with a second word, the spacing of `$(optenv)`'s fallback words, the
-empty `$()`, and an auxiliary document's explicit mapping key with no content. They are also a spelling
-of infinity and a real beyond the double range written as a property's value, which xacro reads as
-infinity and meios keeps as the text written, since a real here is always finite. They are also
-comments, which xacro keeps, evaluates after `xacro:eval-comments` until `xacro:eval-comments:off` and
-deletes before an element of xacro's grammar, and processing instructions, which it keeps. They are also
-a glob include filename matching no file, which xacro warns about and includes nothing for, an include
-whose namespace evaluates to a list, which meios and xacro refuse for different causes, xacro because a
-list cannot key a table and meios because it does not read a bracketed list literal, and a find read
-with no package index. The pinned install ships none, so there xacro refuses every find as a
-substitution it cannot support, where meios refuses a find no configured source answers as unresolved;
-that probe alone is rendered without the package index vendored beside the oracle. They are also a chain
-of properties, each reading the next, deeper than the expression-depth ceiling admits, which refuses
-here and xacro renders. They are also an include namespace read as a value, which refuses here and
-xacro reads as the table holding its names, a global constant other than `pi` read through an include
-namespace, which refuses here and xacro renders, and a call to `sum`, which the built-in evaluator
-refuses because it does not support the list it is given, while xacro, whose expression globals do not
-bind `sum`, refuses `${sum([1, 2])}` as an undefined name. Last, they are an integer of more than 4300
-digits computed inside an expression, which crosses the integer ceiling here and xacro computes. A probe marked to keep comments is compared
-on its comments and processing instructions as well, which the canonical text drops. Its probes can be
-handed caller arguments, ordered package roots, their stage as working directory and one fixed
-environment, so that held finds, root precedence and the command layer are measured on equal terms. An
-attribute a property, an argument, a macro, an include, a block insertion or a conditional does not use
-warns here; the differential compares no warning, so a unit case pins it.
+**The grammar record lists forty-two measured differences in xacro's own grammar, thirty-one of them not
+yet closed.** Each is a construct of the element grammar, the attribute lists, the substitution lexer or
+its commands, measured against the pinned xacro on a minimized document both read, and each is a row of
+the divergence manifest held in both directions; none is claimed to agree. Not yet closed means not
+paired under the reviewed standing, on this page wherever it is used. Eleven of them are paired under
+that standing, each a row meios keeps by decision with an entry of its own further down: a condition
+written `1.0`, `xacro:attribute` under a conditional, a macro's body, an included document's root and a
+block's wrapper, an `xacro:attribute` value that is not text, an include whose `optional` attribute an
+expression yields, a missing include inside a file an optional include read, an integer of more than
+4300 digits computed inside an expression, a condition padding one span with spaces, and an evaluated
+name that is not text. The thirty-one not yet closed are, in the manifest's order, the root that answers
+a find when two hold its package, a missing directory before a parent step beside the document and under
+a find, a find held in a property or an argument and composed into a filename, a find composed onto
+text, a trailing separator after a file under a find, `$(cwd)`, `$(eval)` with a leading space, with
+nothing after it and with a blank expression, `$(env)` with a second word, the spacing of `$(optenv)`'s
+fallback words, the empty `$()`, and an auxiliary document's explicit mapping key with no content. They
+are also a spelling of infinity and a real beyond the double range written as a property's value, which
+xacro reads as infinity and meios keeps as the text written, since a real here is always finite. They
+are also comments, which xacro keeps, evaluates after `xacro:eval-comments` until
+`xacro:eval-comments:off` and deletes before an element of xacro's grammar, and processing instructions,
+which it keeps. They are also a glob include filename matching no file, which xacro warns about and
+includes nothing for, an include whose namespace evaluates to a list, which meios and xacro refuse for
+different causes, xacro because a list cannot key a table and meios because it does not read a bracketed
+list literal, and a find read with no package index. The pinned install ships none, so there xacro
+refuses every find as a substitution it cannot support, where meios refuses a find no configured source
+answers as unresolved; that probe alone is rendered without the package index vendored beside the
+oracle. They are also a chain of properties, each reading the next, deeper than the expression-depth
+ceiling admits, which refuses here and xacro renders. They are also an include namespace read as a
+value, which refuses here and xacro reads as the table holding its names, a global constant other than
+`pi` read through an include namespace, which refuses here and xacro renders, and a call to `sum`, which
+the built-in evaluator refuses because it does not support the list it is given, while xacro, whose
+expression globals do not bind `sum`, refuses `${sum([1, 2])}` as an undefined name. A probe marked to
+keep comments is compared on its comments and processing instructions as well, which the canonical text
+drops. Its probes can be handed caller arguments, ordered package roots, their stage as working
+directory and one fixed environment, so that held finds, root precedence and the command layer are
+measured on equal terms. An attribute a property, an argument, a macro, an include, a block insertion or
+a conditional does not use warns here; the differential compares no warning, so a unit case pins it.
 
 **Every construct of the pinned xacro grammar is paired with what measures it, or with the evidence that
-no document reaches it; twenty-two still have recorded differences not yet closed, and seven only
+no document reaches it; twenty-two still have recorded differences not yet closed, and eight only
 reviewed ones.** The grammar is the derived record `grammar_constructs.cases`: ninety-seven constructs,
 one per element branch, attribute list, lexer token, substitution command, special form, raise site and
 warning site of the pinned source. Eighty-five are measured, and each is counted by its least settled
 standing: an open difference outranks a reviewed one, and either outranks agreement. Thirteen of them
 have at least one open recorded difference on which meios renders something other than xacro; nine more
-have open differences only where meios refuses; seven more have only reviewed differences, all of them
-ones meios keeps on purpose, which are `xacro:if` and its attribute list, the raise site for a condition
-that is not a boolean, `xacro:macro`, `xacro:insert_block`, and `xacro:attribute` and its attribute
-list; and fifty-six are carried by measurements on which meios and xacro agree, four of them warning
-sites carried by a unit case alone, since the differential compares no warning. The seven constructs of
-the `${}` expression surface and the command-line driver are left to the boundary rather than measured
-here. The five sites no document reaches under the pinned install are four raise sites, a filename read
-without a symbol table and three value conversions no caller requests, and the warning for a parent
-scope at the top, since every table has a parent there; each is paired with that evidence instead of a
-measurement, and its standing stays open. Of the four warning sites a unit case alone carries, two are
-raised here. An attribute that a property, an argument, a macro, an include, a block insertion or a
-conditional does not use warns at that element, and the warning is raised without a code, like the
-other warnings of the structural constructs, so a load whose document renders keeps its claims; and an include redeclaring a namespace prefix with another value keeps the
-outer value and warns. The other two are not raised here: an include's child elements are ignored
-without a warning, and a `default` written beside a `scope` binds without one. A macro name written with
-the `xacro:` prefix warns and defines the rest of the name, which the `macro_name_with_xacro_prefix`
-agreement probe compares against xacro and a unit case pins with its warning. The two warnings for
-built-in names are raised here: a property, a macro parameter or an include namespace named after a
-built-in redefines it with a warning, and removing a built-in keeps it with a warning. The
-`property_shadows_pi` and `property_removes_builtin` agreement probes compare the documents against
-xacro, and unit cases pin each warning, which the differential does not compare.
+have open differences only where meios refuses; eight more have only reviewed differences, all of them
+ones meios keeps by decision, which are `xacro:if` and its attribute list, the raise site for a
+condition that is not a boolean, `xacro:macro`, `xacro:insert_block`, `xacro:element`, and
+`xacro:attribute` and its attribute list; and fifty-five are carried by measurements on which meios and
+xacro agree, four of them warning sites carried by a unit case alone, since the differential compares no
+warning. The seven constructs of the `${}` expression surface and the command-line driver are left to
+the boundary rather than measured here. The five sites no document reaches under the pinned install are
+four raise sites, a filename read without a symbol table and three value conversions no caller requests,
+and the warning for a parent scope at the top, since every table has a parent there; each is paired with
+that evidence instead of a measurement, and its standing stays open. Of the four warning sites a unit
+case alone carries, two are raised here. An attribute that a property, an argument, a macro, an include,
+a block insertion or a conditional does not use warns at that element, and the warning is raised without
+a code, like the other warnings of the structural constructs, so a load whose document renders keeps its
+claims; and an include redeclaring a namespace prefix with another value keeps the outer value and
+warns. The other two are not raised here: an include's child elements are ignored without a warning, and
+a `default` written beside a `scope` binds without one. A macro name written with the `xacro:` prefix
+warns and defines the rest of the name, which the `macro_name_with_xacro_prefix` agreement probe
+compares against xacro and a unit case pins with its warning. The two warnings for built-in names are
+raised here: a property, a macro parameter or an include namespace named after a built-in redefines it
+with a warning, and removing a built-in keeps it with a warning. The `property_shadows_pi` and
+`property_removes_builtin` agreement probes compare the documents against xacro, and unit cases pin each
+warning, which the differential does not compare.
 
 **Nine generated cases differ from the pinned xacro, and a reviewed row records each.** The generated
 comparison the [evaluation page](evaluation.md#the-input-space-the-comparison-was-measured-over)
@@ -943,7 +950,7 @@ under xacro, as `10000000000`, a 4300-digit power of ten, `True` and `4`, and re
 `expansion_budget_exceeded`: an integer holds at most 4300 digits, and an operation whose result has
 more crosses that ceiling and halts the load, whatever the result is then used for. xacro computes
 integers of any size and refuses only to write one of more than 4300 digits as text, so a result that
-long written into the document refuses under both. The ceiling is kept on purpose, to bound what one
+long written into the document refuses under both. The ceiling is kept by decision, to bound what one
 expression can demand, and no pinned description reaches it. The
 `integer_intermediate_past_digit_ceiling` row of the divergence manifest compares the first shape
 through both implementations, so a change to either side fails the differential.
@@ -958,6 +965,85 @@ renders `a`. A bare `${n}` there renders the table's printed form, which writes 
 with their addresses in the running process, so it differs from one run to the next and cannot be
 recorded; the manifest compares the conditional spelling, the `include_namespace_read_as_value` row.
 Read a name the namespace holds instead: `${n.w}` renders under both.
+
+**An integer wider than 64 bits that a property or a macro argument forwards keeps its digits.** A
+value that is one span reading such an integer binds the integer itself, not its text read again:
+a property written `value="${b}"`, whether read at its first use or marked `lazy_eval="false"`, and
+a macro argument `a="${b}"` each carry it to every later read, where it renders and computes
+exactly. Measured on three documents binding `b` to `99999999999999999999` and naming a link after
+the forwarded value: each renders the link named with all twenty digits here and under xacro, which
+the `property_wide_integer_forwarded`, `property_wide_integer_forwarded_eager` and
+`macro_argument_wide_integer_forwarded` agreement probes hold.
+
+**An `xacro:arg` whose `name` is written empty loads.** It is a declaration like any other: its
+`default` is evaluated, so a default that fails to evaluate refuses, and the value is bound under the
+empty name, which no `$(arg)` can read. A document declaring `<xacro:arg name="" default="1"/>` beside
+one link renders the link here and under xacro, which the `argument_empty_name` agreement probe holds.
+
+**Every attribute of an included document's root and of a macro definition is evaluated, and one
+that fails to evaluate refuses.** An included root is read before its content, in the scope the
+include reads into, so a root `name="${p}"` refuses where only the included content defines `p`. A
+macro definition is read on each call with the call's parameters bound, so `doc="${nope}"` refuses
+where the macro is called and nowhere else. An attribute in the xacro namespace, and a definition's
+`params`, are not evaluated this way. The results are discarded, apart from the namespace
+declarations the [evaluation page](evaluation.md) says are lifted. An included root naming an
+undefined property, one naming a property only its content defines, and a called macro definition
+holding `doc="${nope}"` refuse under `undefined_property` here and refuse under xacro for the same
+cause, and the same definition never called renders under both, which the
+`included_root_attribute_evaluated`, `included_root_attribute_before_content`,
+`macro_definition_attribute_evaluated` and `macro_definition_attribute_uncalled` agreement probes
+hold.
+
+**`xmlns:xacro` is evaluated wherever it is written.** On an output element, the top document's root,
+a block's element or wrapper, an included root, or a macro definition each time it is called, it is
+evaluated like the element's other attributes, so `<link name="l" xmlns:xacro="${nope}"/>` refuses
+under `undefined_property`. Its result is then left out of the output. That link refuses here and
+under xacro for the same cause, which the `xacro_namespace_declaration_evaluated` agreement probe
+holds.
+
+**An evaluated element or attribute name is checked as an XML 1.0 Name, not as a qualified name, so
+`:a` and a name with two colons pass and a name xacro would write as malformed XML refuses.** The
+check is the Name production of XML 1.0 (fifth edition, section 2.3), which admits a colon anywhere
+and the non-ASCII name characters. `xacro:name=":a"`, `"a::b"` and `"a:b:c"` make elements of those
+names here and under xacro, and the robot model then drops each under a link with an
+`unknown_element` warning. Text the production refuses, such as `a b` or `1x`, refuses here under
+`xacro_structural_error`, naming the text, so evaluated text cannot write markup into the output.
+xacro writes that text into its output as it is, so there `<a b/>` and `<1x/>` make a document that
+is not XML. Measured on a link holding `<xacro:element xacro:name="…"/>` for each of the five
+spellings. `${1}` is not an XML name either, and refuses here and under xacro.
+
+**White space around an evaluated name is removed, with a warning.** An evaluated `xacro:name`, or
+the `name` of an `xacro:attribute`, loses the XML white space at either end (space, tab, carriage
+return and line feed, nothing else) before the Name check. When any was removed, one located warning
+with no diagnostic code names the evaluated text and the name used, so a load that renders with it
+keeps its claims. `xacro:name="link "` renders a link `l` here and under xacro, and an
+`xacro:attribute` named `" a "` sets `a` under both, which the `element_padded_name` and
+`attribute_padded_name` agreement probes hold. A padded name that strips to the name of an xacro
+element is handled as that element, so `xacro:name="xacro:if "` is a conditional here, and xacro
+refuses that spelling.
+
+**A condition padding one expression span with spaces is read by what the span yields, where xacro
+refuses.** `<xacro:if value=" ${True} ">` takes its branch here and `value=" ${0} "` does not. xacro
+reads the padded value as text, which is not a boolean, and refuses the whole document. meios keeps
+this by decision, as an extension. Measured on a document whose `xacro:if value=" ${True} "` holds a
+second link and a joint: they render here and xacro refuses, which is the
+`conditional_padded_expression` row; with `value=" ${0} "` the first link alone renders under both.
+
+**An evaluated name that is not text is written as its text, where xacro refuses.**
+`xacro:name="${True}"` makes an element `True`, and an `xacro:attribute` whose `name` is `${True}`
+sets an attribute `True`. The text must still be an XML name, so `${1}` refuses as the entry above
+says. xacro refuses a name that is not text. meios keeps this by decision, as the meaning the
+construct evidently has. Measured on a link holding `<xacro:element xacro:name="${True}"/>`: it
+expands to `<True/>` under the link here, which the robot model then drops with an `unknown_element`
+warning, and xacro refuses, which is the `element_name_boolean` row. The attribute name was measured
+refusing under xacro as well, and no row carries it.
+
+**A raw `<` in an attribute value is read as the character, where xacro's parser refuses the
+document.** The reader takes the character inside a quoted value as text, so `<link name="l_${c < 2}"/>`
+over a property `c` of `1` renders `l_True`, and no diagnostic is raised. xacro's XML parser refuses
+the document as malformed. meios keeps this by decision, as an extension. It is markup the reader
+tolerates rather than a construct of xacro's grammar, so the `attribute_value_raw_less_than` row
+carries it with no construct pairing. Write `&lt;` for a document both read.
 
 ## Command-line behavior
 
@@ -1138,7 +1224,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes eighty claims — the bold sentence that opens each entry above — and this table
+This page makes eighty-eight claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -1206,12 +1292,12 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 
 | Claim | Carried by |
 |---|---|
-| Sixty-four measured differences | The sixty-four rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. The nine reviewed differences are the rows the entries further down name, and each is paired under the reviewed standing in `tests/unit/grammar_construct_pairs.h` or `grammar_construct_sites.h` where its construct is one of the grammar's. The alias inside the node it names is the `div_self_reference` row, and its located refusal through `xacro.load_yaml` is pinned by `native_load_yaml.an alias inside the node it names refuses at the line of the expression that loads it`, beside `native_yaml_alias.an alias to an anchor that is not yet complete refuses by name` at the reader; the reused anchor by `native_load_yaml.an anchor reused by an alias outside the node it names loads as the value it holds`. |
-| Forty measured differences of the grammar record, thirty-two not yet closed | The forty entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The eight reviewed among them are the rows whose pairings carry `standing::deliberate` in `tests/unit/grammar_construct_pairs.h` and `grammar_construct_sites.h`, and the thirty-two not yet closed are the rest. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list warns at the property`. |
+| Sixty-six measured differences | The sixty-six rows of `tests/golden/oracle/differential_divergences.cases`, driven in both directions by `native_differential`. The count on the page and the row count of that file are the same number and are meant to be compared. The thirteen kept by decision are the rows the entries further down name; twelve are paired under the reviewed standing in `tests/unit/grammar_construct_pairs.h` or `grammar_construct_sites.h`, and the `attribute_value_raw_less_than` row, whose construct is none of the grammar's, carries no pairing. The alias inside the node it names is the `div_self_reference` row, and its located refusal through `xacro.load_yaml` is pinned by `native_load_yaml.an alias inside the node it names refuses at the line of the expression that loads it`, beside `native_yaml_alias.an alias to an anchor that is not yet complete refuses by name` at the reader; the reused anchor by `native_load_yaml.an anchor reused by an alias outside the node it names loads as the value it holds`. |
+| Forty-two measured differences of the grammar record, thirty-one not yet closed | The forty-two entries of `differential::grammar_document_probes` in `tests/integration/grammar_document_probes.h`, listed at the same positions in `tests/tools/oracle/grammar_probes.py`, each a row of `tests/golden/oracle/differential_divergences.cases` driven in both directions by `native_differential.the divergence manifest matches the measured divergences and no others`. The count on the page and the length of that table are the same number. The eleven reviewed among them are the rows whose pairings carry `standing::deliberate` in `tests/unit/grammar_construct_pairs.h` and `grammar_construct_sites.h`, and the thirty-one not yet closed are the rest. The arguments, ordered roots and working directory are the `args`, `roots` and `in_stage` members of `differential::document_probe`, mirrored by `GRAMMAR_PROBE_ARGUMENTS`, `GRAMMAR_PROBE_ROOTS` and `GRAMMAR_PROBES_IN_STAGE`, and the fixed environment is the `ENVIRONMENT` and `ENVIRONMENT_MODIFICATION` of `native_differential` in `tests/cmake/integration_tests.cmake`, set alike by `probe_environment()`. The comment comparison is the `keeps_comments` member of `differential::document_probe` and `differential::comments_and_instructions` in `tests/integration/differential_document.h`. The probe rendered without the package index is `GRAMMAR_PROBES_WITHOUT_PACKAGE_INDEX`, taken off the import path by `without_package_index()` in `tests/tools/oracle/grammar_probes.py`. The warning sentence is carried by `xacro_property.an attribute outside a property's attribute list warns at the property`. |
 | Each construct of the pinned xacro grammar paired with what measures it, or with the evidence that no document reaches it | `grammar_constructs.every construct the derived enumeration lists is paired, and by its scope` and `grammar_constructs.every pairing names a construct the record lists and a carrier its record holds`, over `grammar::element_pairings` in `tests/unit/grammar_construct_pairs.h` and `grammar::site_pairings` in `tests/unit/grammar_construct_sites.h`, held against `tests/golden/oracle/grammar_constructs.cases` in both directions. Each standing is checked against the record its keys name: an agreeing construct points only at an agreement probe, a corpus document, a generated case with no reviewed row, an expression case with no reviewed row or a unit case of the named stem's own sources, and a recorded difference at a row of `differential_divergences.cases` or `generated_divergences.cases` whose column for meios reads `REFUSED` exactly where the standing says it refuses, and a reviewed difference, `standing::deliberate`, at a row the divergence manifest holds, whatever its columns read; `grammar_constructs.a deliberate pairing holds only where the manifest keeps its row` pins that last arm. The counts on the page are each construct's least settled standing across its pairings, counted from the two tables, a pairing standing open outranking one that refuses, either outranking a deliberate one, and that outranking agreement. The five unreached sites are paired with their evidence in `grammar::unreached_sites`, standing open, and no other pairing names them. The warning sentences are carried by the `xacro_property` and `xacro_include_read` cases tagged `[warning]`, the warning for an attribute an element does not use by `xacro_property.an attribute outside a property's attribute list warns at the property`, and the claims a load keeps beside it by `load_report.a load keeps every claim beside the warning for an attribute a xacro element does not read`; by the `macro_name_with_xacro_prefix` agreement probe beside `xacro_macro_redeclared.a macro name opening with the xacro prefix warns and defines the rest of the name`; by the `include_glob_matching_nothing` row; and by the `property_shadows_pi` and `property_removes_builtin` agreement probes beside the `xacro_property` cases that pin the two warnings for the built-in names. |
 | Nine generated cases differ from the pinned xacro, each recorded | The nine rows of `tests/golden/oracle/generated_divergences.cases`, driven in both directions by `generated_differential.every generated case agrees with the pinned reference or is a reviewed divergence` and `generated_differential.every reviewed generated divergence still disagrees as recorded`, beside `generated_differential.the record holds the committed count in every family`. The count on the page and the row count of that file are the same number and are meant to be compared. |
 | A block argument's contents take effect where the caller wrote them | The `block_property_never_inserted`, `block_global_call_never_inserted`, `block_emitting_call_never_inserted`, `block_include_never_inserted`, `block_unbound_never_inserted` and `block_unbound_discarded` agreement verdicts of `native_differential`, each a minimized document loaded here and compared whole against a fresh xacro render, beside `xacro_block.a property written inside a block the macro never inserts takes effect at the call site` and `xacro_block.a block argument naming an unbound property fails the load where the macro discards it`. The include sentence is carried by `block_include_never_inserted`, one of the six. The insertion walked again in the inserting scope is held against xacro by the `block_evaluated_where_inserted`, `block_inserted_twice_evaluated_each_time`, `block_reads_inserting_scope`, `block_wrapper_attribute_evaluated` and `block_parameter_seen_by_nested_call` agreement verdicts. |
-| An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh xacro render, a refusal by both agreeing only where meios's diagnostic code is the one the cause xacro raised maps to. Beside them `xacro_property.the minimized binding documents render each name by its property, argument and parameter precedence`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the eleven `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. An argument's integer wider than 64 bits is carried by `xacro_eval_command.the evaluation command reads an argument's integer wider than 64 bits`. Of the three readings that refuse here, the real beyond the double range is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh xacro render on every run, so a later change to their output surfaces there as a disagreement. |
+| An argument is read only through the substitution commands | Thirty-five of the agreement verdicts of `native_differential`: thirty-two minimized binding documents, three of them driven again with a caller argument, each loaded as a consumer loads it and compared whole against a fresh xacro render, a refusal by both agreeing only where meios's diagnostic code is the one the cause xacro raised maps to. Beside them `xacro_property.the minimized binding documents render each name by its property, argument and parameter precedence`, `xacro_property.a read of an argument other than through the argument command refuses and names it`, `xacro_arg_domain.an argument read by its bare name refuses and names the argument command`, `xacro_arg_domain.a conditional testing an argument by its bare name refuses and names the argument command`, `xacro_arg_domain.a bare name computing on an argument refuses as the plain read does`, `xacro_arg_domain.a dotted read whose head is an argument refuses and names the argument command`, `load_arg_domain.a property default binds over an argument of the same name`, `load_arg_domain.a property default binds over a caller argument of the same name` and `load_arg_domain.a property defaulting to its argument reads the caller's value`. The python evaluator's refusal is carried by `eval_python.an argument read by its bare name refuses and names the argument command`, and on an interpreter that attaches no name to the error by `eval_python_argument.the argument hint is read from the error itself, whether or not the interpreter names the unbound name`. The one-word sentence is carried by the `argument_command_second_word`, `argument_command_second_word_bound`, `argument_command_expression_name` and `argument_command_expression_words` agreement verdicts, beside `xacro_subst_command.substitution command dispatch resolves find, arg, eval and dirname`. The sentences on the other commands are carried by the seven `command_` agreement verdicts and the `xacro_command_body` cases over the same documents. The `$(eval)` sentences are carried by the twelve `eval_` agreement verdicts beside them, by the `xacro_eval_command` cases over the same documents, by `load_arg_domain.the evaluation command reads a caller's argument`, and under the python evaluator by the `eval_python_argument` cases. An argument's integer wider than 64 bits is carried by `xacro_eval_command.the evaluation command reads an argument's integer wider than 64 bits`. Of the three readings that refuse here, the real beyond the double range is carried by `xacro_eval_command.an argument the evaluation command reads and cannot carry refuses by name`; the other two by nothing beyond the measurement the entry states. The corpus sentence was measured when the change was made, by flattening each of the sixteen before and after it; the corpus arm of `native_differential` compares each against a fresh xacro render on every run, so a later change to their output surfaces there as a disagreement. |
 | An argument declared without a default is a required argument | The `argument_without_default` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_arg_declaration.a declaration without a default is a required argument whose unsupplied use refuses naming it`, which pins the code, the line and the message, and `xacro_arg_declaration.a required argument renders where a caller supplies it or nothing uses it`. |
 | A condition written as a real number is read by its truth | The `conditional_real_one` row of the divergence manifest, driven as a whole document through both implementations, beside `native_boolean_value.a finite real spelling reads by whether it is nonzero` and `xacro_condition.a zero real takes an unless branch and an empty produced text refuses`. |
 | An include's `optional` attribute is evaluated before it is read | The `include_optional_from_expression` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_include_read.optional is read by the boolean rule once evaluated` and, for the note, `xacro_include_read.an optional include of a missing file includes nothing and notes it at the include`. |
@@ -1225,6 +1311,15 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | A chain of properties each reading the next renders ten deep; xacro renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The lengths and the headroom are pinned by `native_span_depth.a chain of bare deferred reads keeps ninefold headroom` and `native_span_depth.a chain of deferred reads inside arithmetic keeps ninefold headroom`, each counting its chain exactly and refusing one longer before it meters the stack, and the Python backend's by `eval_python_scope.a deferred chain read by the backend refuses on the shared ceiling one level past its pin` and `eval_python_scope.a deferred chain read by the backend keeps ninefold headroom`. xacro's one hundred and sixty-five, and the rewritten chains rendering under both, were measured while this page was written and are carried by nothing. |
 | An integer of more than 4300 digits arising inside an expression refuses here; xacro computes it | The `integer_intermediate_past_digit_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_ceilings.an integer past its digit ceiling is a crossed ceiling wherever an expression computes it`, which pins the exhausted refusal of the intermediate shapes and of a power past the ceiling, and `native_ceilings.each new ceiling is terminal under every evaluation policy`, which pins it terminal under every policy. xacro's renders of the other three shapes, and its refusal of a result that long written as text, were measured while this page was written and are carried by nothing. |
 | An include namespace read as a value refuses here | The `include_namespace_read_as_value` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_namespace.a namespace read as a value refuses under every policy, naming the dotted spelling` and `xacro_namespace.a namespace an expression stops at inside another refuses with its dotted spelling`. The printed form of a bare read under xacro was measured while this page was written and is carried by nothing. |
+| An integer wider than 64 bits that a property or a macro argument forwards keeps its digits | The `property_wide_integer_forwarded`, `property_wide_integer_forwarded_eager` and `macro_argument_wide_integer_forwarded` agreement verdicts of `native_differential`, each compared whole against a fresh xacro render, beside `xacro_literal_read.a lazy property forwarding a wide integer renders its digits`, `xacro_literal_read.an eager property and a macro argument forwarding a wide integer render its digits` and the `xacro_wide_integer` cases, which compute on a forwarded wide integer. |
+| An `xacro:arg` whose `name` is written empty loads | The `argument_empty_name` agreement verdict of `native_differential`, beside `xacro_attribute_table.an argument declaration refuses without a name, binds an empty name, and binds nothing without a default`, which pins the render and the refusal of a default that fails. |
+| Every attribute of an included root and of a macro definition is evaluated, and one that fails refuses | The `included_root_attribute_evaluated`, `included_root_attribute_before_content`, `macro_definition_attribute_evaluated` and `macro_definition_attribute_uncalled` agreement verdicts of `native_differential`, the first three refusing on both sides on the same cause, beside `xacro_output_shape.an included root's attributes are evaluated before its content, in the including scope`, `xacro_output_shape.an included root whose attribute fails to evaluate refuses the load at that root` and `xacro_output_shape.a macro definition's attributes are evaluated on each call with its parameters bound`. |
+| `xmlns:xacro` is evaluated wherever it is written | The `xacro_namespace_declaration_evaluated` agreement verdict of `native_differential`, refusing on both sides on the same cause, beside `xacro_output_shape.an element's or the top root's xacro namespace declaration is evaluated`, `xacro_output_shape.a block's element and a block wrapper evaluate their xacro namespace declaration`, `xacro_output_shape.an included root's xacro namespace declaration is evaluated`, `xacro_output_shape.a called macro definition's xacro namespace declaration is evaluated` and `xacro_output_shape.the xacro namespace declaration never reaches the output`. |
+| An evaluated name is checked as an XML 1.0 Name, not as a qualified name | `xacro_element_construct.xacro:element accepts any XML name, a non-ASCII or a prefixed one among them`, `xacro_element_construct.xacro:element refuses an evaluated name that is not an XML name, naming the text`, which pins `a b`, `1x` and the other spellings a stricter check would refuse, and `xacro_attribute_place.xacro:attribute refuses a name that is empty or not an XML name`; the `element_name_not_text` agreement verdict of `native_differential` holds the refusal of `${1}` on both sides. The `:a`, `a::b` and `a:b:c` spellings, and xacro's output for `a b` and `1x`, are carried by the measurement the entry states; no case names them. |
+| White space around an evaluated name is removed, with a warning | The `element_padded_name` and `attribute_padded_name` agreement verdicts of `native_differential`, beside `xacro_element_construct.xacro:element removes the whitespace around its evaluated name and warns`, which also pins the padded `xacro:if`, and `xacro_attribute_place.xacro:attribute removes the whitespace around its evaluated name and warns`, which pin the warning the differential does not compare. xacro's refusal of the padded `xacro:if` is carried by the measurement the entry states. |
+| A condition padding one expression span is read by what the span yields | The `conditional_padded_expression` row of the divergence manifest, driven as a whole document through both implementations and paired under the reviewed standing, beside `xacro_condition.a condition padding one expression span with spaces is read by what the span yields`. The `${0}` shape is carried by that case and the measurement the entry states. |
+| An evaluated name that is not text is written as its text | The `element_name_boolean` row of the divergence manifest, driven as a whole document through both implementations and paired under the reviewed standing, beside `xacro_element_construct.an evaluated name that is not text is written as its text, which must still be an XML name`, which pins the element and the attribute name. xacro's refusal of the attribute name is carried by the measurement the entry states. |
+| A raw `<` in an attribute value is read as the character | The `attribute_value_raw_less_than` row of the divergence manifest, driven as a whole document through both implementations; it carries no construct pairing, and the entry says why. |
 
 ### Command-line behavior
 

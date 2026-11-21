@@ -32,10 +32,9 @@ enum class standing
 // unmeasured, and its standing is open because nothing here measures it. A unit case pins only this
 // side, so a unit pairing claims agrees: upstream warns where this side does not, on a document both
 // render alike. A manifest key may name a document upstream never reaches the construct in, where
-// this side reaching it is the recorded difference. A deliberate pairing names a manifest row kept
-// on purpose, where meios accepts more as a documented extension or does what the construct
-// evidently means where the pinned reference does otherwise; it holds wherever the manifest holds
-// the key.
+// this side reaching it is the recorded difference. A deliberate pairing names a manifest row meios
+// keeps by decision: a documented extension, the meaning a construct evidently has where the pinned
+// reference does otherwise, or a bound of meios's own; it holds wherever the manifest holds the key.
 struct pairing
 {
     std::string_view construct;

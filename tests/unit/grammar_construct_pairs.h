@@ -131,7 +131,7 @@ inline constexpr pairing element_pairings[] = {
         {"token.expr", carrier::agreement, "real_floor_division", standing::agrees},
         {"token.expr", carrier::agreement, "real_remainder_zero_sign integer_literal_leading_zero", standing::agrees},
         {"token.expr", carrier::manifest, "sum_not_a_reference_global", standing::refuses_listed},
-        {"token.expr", carrier::manifest, "integer_intermediate_past_digit_ceiling", standing::refuses_listed},
+        {"token.expr", carrier::manifest, "integer_intermediate_past_digit_ceiling", standing::deliberate},
         {"token.extension", carrier::corpus, "ur_type=ur5e", standing::agrees},
         {"token.extension", carrier::agreement, "command_nested_in_default include_find_composed", standing::agrees},
         {"token.extension", carrier::manifest, "empty_command include_find_composed_reads_neighbor", standing::refuses_listed},
