@@ -52,4 +52,18 @@ if(TARGET meios_eval-python)
         catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state_dev_mode." TEST_SPEC "[eval_python][fatal_signals]"
             PROPERTIES ENVIRONMENT "PYTHONDEVMODE=1")
     endif()
+    # A descriptor has a text or binary mode only on Windows.
+    set(eval_python_stream_mode_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/eval_python_stream_mode_test.cpp)
+    if(WIN32)
+        if(EXISTS ${eval_python_stream_mode_src})
+            add_executable(eval_python_stream_mode_test ${eval_python_stream_mode_src})
+            target_link_libraries(eval_python_stream_mode_test
+                PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
+                    pybind11::embed Catch2::Catch2WithMain)
+            meios_enable_coverage(eval_python_stream_mode_test)
+            meios_warnings(eval_python_stream_mode_test)
+            catch_discover_tests(eval_python_stream_mode_test TEST_PREFIX "eval_python_stream_mode."
+                PROPERTIES ENVIRONMENT_MODIFICATION "PYTHONPATH=unset:")
+        endif()
+    endif()
 endif()

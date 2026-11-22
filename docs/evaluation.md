@@ -123,8 +123,12 @@ anywhere but between two digits (`${1__0}`, `${1_}`, `${0x1_}`), a prefix with n
 `${0or 2}`, whose `0o` is the octal prefix), a digit outside its base (`${0b2}`), a literal directly
 followed by a digit, or by a name that does not begin with one of the keywords `and`, `else`, `for`,
 `if`, `in`, `is`, `not` and `or` (`${1abc}`, `${1e}`, `${1j2}`), and a real literal too large for a
-double (`${1e999}`) refuse under `expression_error`, each naming the literal's first fault, so
-`${07abc}` names its leading zero. A name that begins with one of those keywords is read apart from
+double (`${1e999}`) refuse under `expression_error`. Each names one fault, in this order: an
+underscore out of place, a prefix with no digit, a digit outside its base or an exponent sign with no
+digit after it (`${1e+}`) first, then a leading zero, then a digit or name directly after the literal,
+then a real too large for a double or an integer of more than 4300 digits, so `${07abc}` names its
+leading zero while `${07_}` names its underscore and `${07e+}` its exponent. A name that begins with
+one of those keywords is read apart from
 the number, so `${1if 1else 2}` reads, and `${1inx}` reads as the number `1` and the name `inx`, which
 then refuses as malformed syntax. A real literal too small for a double reads as zero, as the same
 text written as a property's value does: `${1e-999}` is `0.0`, `${-1e-999}` is `-0.0`, and a
@@ -1638,7 +1642,15 @@ set it and exports no locale variable into the environment, and on Windows it le
 streams in the mode the program gave them. It runs in Python's UTF-8 mode, so text Python decodes or
 encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
 `PYTHONLEGACYWINDOWSFSENCODING` is set: there UTF-8 mode is off, and that text follows the ANSI code
-page instead. A program that already runs Python keeps its
+page instead. On Windows Python ends each line it writes to `sys.stdout` or `sys.stderr` with a
+carriage return and a line feed itself, and a descriptor in text mode writes each line feed it is given
+as that pair too, so where the program keeps such a descriptor in text mode a line Python writes there
+ends with two carriage returns and a line feed; a program that wants Python's lines as Python writes
+them keeps that descriptor in binary mode. These guarantees hold for the start itself. Python code the
+start runs, a `sitecustomize` or `usercustomize` module on the module path or an `import` line of a
+`.pth` file in one of Python's site directories, can still turn the fault handler on, set the locale
+and export a locale variable; SIGINT's disposition and, on Windows, the standard streams' modes are set
+back once the start has run it. A program that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every

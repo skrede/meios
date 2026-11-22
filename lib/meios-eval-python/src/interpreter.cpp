@@ -1,6 +1,7 @@
 #include "interpreter.h"
 #include "module_path.h"
 #include "kept_interrupt.h"
+#include "kept_stream_modes.h"
 
 #include "meios/xacro/detail/wide_integer.h"
 
@@ -82,6 +83,7 @@ PyStatus configured(PyConfig &config)
 std::optional<std::string> configured_start()
 {
     const kept_interrupt kept;
+    const kept_stream_modes kept_modes;
     if(std::optional<std::string> failed = preinitialized())
         return failed;
     try
