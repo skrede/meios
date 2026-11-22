@@ -83,14 +83,16 @@ TEST_CASE("eight threads making the process's first evaluations at once each ren
 {
     std::array<std::optional<std::string>, 8> answers;
     std::latch running(static_cast<std::ptrdiff_t>(answers.size()));
-    {
-        std::vector<std::jthread> threads;
-        for(std::optional<std::string> &answer : answers)
-            threads.emplace_back([&running, &answer] {
-                running.arrive_and_wait();
-                answer = evaluate("1 + 1", meios::eval_scope{});
-            });
-    }
+    std::vector<std::thread> threads;
+    for(std::optional<std::string> &answer : answers)
+        threads.emplace_back(
+                [&running, &answer]
+                {
+                    running.arrive_and_wait();
+                    answer = evaluate("1 + 1", meios::eval_scope{});
+                });
+    for(std::thread &thread : threads)
+        thread.join();
     for(const std::optional<std::string> &answer : answers)
         CHECK(answer == std::optional<std::string>("2"));
 }

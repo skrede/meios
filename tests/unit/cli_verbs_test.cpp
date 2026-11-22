@@ -106,10 +106,9 @@ private:
 
 // One tree serves both halves of the containment rule: a package root holding an asset,
 // and a sibling directory no configured root covers.
-std::filesystem::path seed_resolve_tree()
+std::filesystem::path seed_resolve_tree(const std::string &name)
 {
-    const std::filesystem::path base =
-        std::filesystem::temp_directory_path() / "meios_cli_resolve";
+    const std::filesystem::path base = std::filesystem::temp_directory_path() / name;
     std::filesystem::remove_all(base);
     std::filesystem::create_directories(base / "root" / "somepkg" / "meshes");
     std::filesystem::create_directories(base / "outside");
@@ -313,7 +312,7 @@ TEST_CASE("cli_verbs: bundle succeeds with --name and no unresolved assets")
 
 TEST_CASE("cli_verbs: resolve answers for every form the asset matrix accepts")
 {
-    const scoped_tree tree(seed_resolve_tree());
+    const scoped_tree tree(seed_resolve_tree("meios_cli_resolve_accepts"));
     const std::filesystem::path root = tree.path() / "root";
     const std::filesystem::path asset = root / "somepkg" / "meshes" / "x.stl";
     std::error_code error;
@@ -340,7 +339,7 @@ TEST_CASE("cli_verbs: resolve answers for every form the asset matrix accepts")
 
 TEST_CASE("cli_verbs: resolve refuses every form the asset matrix refuses, under the library's code")
 {
-    const scoped_tree tree(seed_resolve_tree());
+    const scoped_tree tree(seed_resolve_tree("meios_cli_resolve_refuses"));
     const std::filesystem::path root = tree.path() / "root";
 
     struct row
@@ -402,7 +401,7 @@ TEST_CASE("cli_verbs: resolve names the argument it is missing rather than resol
 // document's own directory is the only thing that can contain the asset.
 TEST_CASE("cli_verbs: resolve measures a relative target against the model document's directory")
 {
-    const scoped_tree tree(seed_resolve_tree());
+    const scoped_tree tree(seed_resolve_tree("meios_cli_resolve_relative"));
     const std::filesystem::path root = tree.path() / "root";
     const std::filesystem::path asset = root / "somepkg" / "meshes" / "x.stl";
     std::error_code error;
