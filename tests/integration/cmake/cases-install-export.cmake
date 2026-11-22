@@ -42,6 +42,16 @@ list(APPEND _export_component_request
 set(_export_control -DFX_FIND_PACKAGE=ON -DFX_NAME=demo)
 list(APPEND _export_control -DFX_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/origin/clean)
 
+# The fresh configure would otherwise search for Python on its own, and on Windows and macOS that
+# search can settle on an interpreter other than the one this build found.
+set(_export_python "")
+foreach(_export_name IN ITEMS Python3_EXECUTABLE Python_EXECUTABLE)
+    if(${_export_name})
+        file(TO_CMAKE_PATH "${${_export_name}}" _export_path)
+        list(APPEND _export_python "-D${_export_name}=${_export_path}")
+    endif()
+endforeach()
+
 # Built and withheld. The command-line tool links the backend privately onto a support library
 # that is in no export set, so the tool still installs and carries the capability the config
 # records; the backend's own archive and headers are absent together.
@@ -50,7 +60,7 @@ if(TARGET meios_eval-python)
         FIXTURE subproject
         DRIVER  meios_subproject_case.cmake
         EXTRA   ${_export_build} -DMEIOS_BUILD_TOOLS=ON -DMEIOS_EVAL_PYTHON_SUPPORT=ON
-                -DMEIOS_REQUIRE_EVAL_PYTHON=ON
+                -DMEIOS_REQUIRE_EVAL_PYTHON=ON ${_export_python}
         BUILD_TARGET meios
         INSTALL ON
         TIMEOUT 1800

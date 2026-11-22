@@ -439,6 +439,17 @@ library's `weakly_canonical` normalized first — and no test exercises it on an
 direction is safe either way: the comparison can only refuse a path it should have accepted, never
 the reverse. Suspect it first behind an unexplained containment refusal on Windows.
 
+**On Windows, the second open of a reparse point that is not a link runs in no test.** A reparse
+point that is not a link, such as a cloud placeholder, a deduplicated file or a compressed one, is
+read under its root through a second open, and kept only when both opens name the same file: the
+same volume serial number and the same 128-bit file identifier, or the same 64-bit file index where
+the file system reports no 128-bit identifier. The one case that would run this compresses a file
+and skips when the volume keeps no compressed file behind a reparse point, which is what the
+`windows-2022` runner every Windows job uses does. The second open and the identity comparison are
+therefore checked by reading only; a case would need a volume or a fixture that keeps such a reparse
+point on the runner. The reading itself is stated in
+[asset resolution](asset-resolution.md#containment).
+
 **Containment is enforced at resolution, not at every subsequent copy.** An asset path is checked
 against the configured package roots and the input document's directories once, when it is resolved.
 Whether a component that later consumes a resolved path re-checks what it handles is that component's
@@ -1195,10 +1206,13 @@ no test covers is two roots offering the same package name. The acquired tree go
 entries follow in the order written, and the first root to supply a name is the one that wins, so
 an entry cannot displace the tree — but that ordering is read off the module rather than observed.
 
-**Flattening with the Python backend is only ever really run on Linux.** No macOS or Windows build
-carries the evaluation enrichment. On those platforms the configure-time behavior — the disclosure,
-the refusal, the accepted backend names — is exercised with the capability supplied by hand, and the
-expansion itself is not exercised at all.
+**Flattening with the Python backend is only ever really run on Linux.** The macOS and Windows
+`enrichments` jobs build the evaluation enrichment and run its unit suite against Python 3.12, but
+configure no command-line tool, so no flatten through the Python backend runs there; their one case
+that builds the tool does so in a tree of its own, installs it and runs nothing through it. On those
+platforms the configure-time behavior — the disclosure, the refusal, the accepted backend names — is
+exercised with the capability supplied by hand, and no flatten expands a description through the
+backend.
 
 **Submodules and large-file objects are left alone in a real clone, by design.** meios initializes
 no submodule and fetches no Git-LFS object of its own; what a clone brings back is whatever the
@@ -1249,7 +1263,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes ninety claims — the bold sentence that opens each entry above — and this table
+This page makes ninety-one claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -1287,6 +1301,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | What has been driven natively, and where | The `install-test` job in the three platform workflows, which builds the consumer under `tests/integration/consumer` against an installed package and runs it directly. The sentence about the resolution being observed on one platform only is carried by nothing, and says so. |
 | Whether a held-open replacement succeeds is a platform fact, measured on POSIX only | `scratch_publish.a replacement with the destination held open is measured, not assumed` — it asserts whichever branch its host takes, which is why no native refusal value exists. |
 | Whether containment over-refuses on Windows is unmeasured | Nothing, on any platform. A case would hand the containment check a candidate differing from its root only in case, or in short form, and assert the verdict. |
+| On Windows, the second open of a reparse point that is not a link runs in no test | **Nothing.** `text_reader_reparse.a file compressed behind a reparse point reads its content under a root` would carry it, and it skips on the `windows-2022` runner. |
 | Containment is enforced at resolution, not at every subsequent copy | `io_sources.a containment decision on a candidate that is not absolute is refused`, `uri_cases.uri rows unsoftened containment refusal`. That a later consumer does not re-check is carried by nothing. |
 
 ### Diagnostics
@@ -1377,7 +1392,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | `MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing | **Nothing.** No case, no row and no run: forwarding a CA bundle needs a TLS origin, which nothing offline can be. |
 | Flattening is not proven from an installed package | `cmake_flatten_install_destination` and `cmake_flatten_install_component` install a flattened document; both reach the modules through the module path, which is what leaves the claim standing. |
 | `PACKAGE_PATH` precedence is reasoned about, not measured | `cmake_flatten_package_path_reaches_vendored_package` carries the adds-reach half. Two roots offering one package name is carried by nothing. |
-| Flattening with the Python backend is only really run on Linux | `cmake_flatten_eval_python_live` and `cmake_flatten_eval_python_statement` where the enrichment is built; `cmake_flatten_eval_python_refusal` where it is not. |
+| Flattening with the Python backend is only really run on Linux | `cmake_flatten_eval_python_live` where the command-line tool is built with the Python backend, which only Linux's `eval-python` job builds; `cmake_flatten_eval_python_statement` and `cmake_flatten_eval_python_refusal`, the capability supplied by hand, wherever the command-line tool is built. |
 | Submodules and large-file objects are left alone | `cmake_declare_lfs_pointer_refusal` and `urdf_mesh.a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted`. Nothing clones a repository carrying a submodule. |
 | Nothing in the automated set cross-compiles | **Nothing**, by construction. A case would need a toolchain file and a host-runnable binary. |
 | Tool discovery is proven for two of three routes | `cmake_flatten_runs_a_cli_target` and `cmake_flatten_no_cli_refusal`. The installed-package route is carried by nothing. |

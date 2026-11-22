@@ -46,6 +46,11 @@ Both API tiers link the same target. What you do with the result is the
 [consumer guide](consumer-guide.md) or the [engine guide](engine-guide.md); which of them is yours
 is decided in [the documentation hub](README.md).
 
+On Windows, meios needs Windows 8 or later (`_WIN32_WINNT` `0x0602`): its file reader compares file
+identities through declarations the Windows SDK makes only from that version on. meios defines no
+`_WIN32_WINNT` itself, so the SDK's default applies, and a build that defines it lower, for its own
+targets or for meios built inside its configure, does not compile meios.
+
 ## Acquiring meios
 
 There are two paths and they produce the same target names.

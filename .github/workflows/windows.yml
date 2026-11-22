@@ -386,7 +386,7 @@ jobs:
 
   enrichments:
     runs-on: windows-2022
-    name: enrichments (scanners + archive-zip + ros)
+    name: enrichments (scanners + archive-zip + ros + eval-python)
     steps:
       - uses: actions/checkout@v4
 
