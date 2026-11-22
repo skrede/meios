@@ -137,3 +137,22 @@ TEST_CASE("an integer of 700 digits crosses into and out of Python whatever digi
     CHECK(leaves(product, "<l>" + digits + "</l>"));
     CHECK_FALSE(run(span_document("${10 ** 4300}"), meios::eval_policy::fail, handle).expanded.has_value());
 }
+
+TEST_CASE("a real literal too small for a double renders zero under the Python backend as under the built-in one", "[eval_python]")
+{
+    const std::pair<std::string_view, std::string_view> rows[] = {
+            {"${1e-999}", "<l>0.0</l>"},
+            {"${-1e-999}", "<l>-0.0</l>"},
+            {"${1e-320}", "<l>1e-320</l>"},
+    };
+    for(const std::pair<std::string_view, std::string_view> &row : rows)
+    {
+        INFO(row.first);
+        const outcome python = expand_span(row.first);
+        REQUIRE(python.expanded.has_value());
+        CHECK(leaves(python, row.second));
+        const outcome native = run(span_document(row.first), meios::eval_policy::fail, nullptr);
+        REQUIRE(native.expanded.has_value());
+        CHECK(leaves(native, row.second));
+    }
+}

@@ -121,10 +121,15 @@ and a `0x`, `0o` or `0b` prefix (in either case), as a Python literal may, so `$
 `${0x10}` is `16` and `${0_0}` is `0`, while `${0_7}` refuses as `${07}` does and an underscore
 anywhere but between two digits (`${1__0}`, `${1_}`, `${0x1_}`), a prefix with no digit (`${0x}`, and
 `${0or 2}`, whose `0o` is the octal prefix), a digit outside its base (`${0b2}`), a literal directly
-followed by a name other than the keywords `and`, `else`, `for`, `if`, `in`, `is`, `not` and `or`
-(`${1abc}`, `${1e}`; `${1if 1else 2}` still reads) and a real literal outside the range of a double
-(`${1e999}`) refuse under `expression_error`, each naming its fault. A real may
-carry the underscores too, so `${1_0.5}` is `10.5`. A prefixed literal too wide for 64 bits is a wide
+followed by a digit, or by a name that does not begin with one of the keywords `and`, `else`, `for`,
+`if`, `in`, `is`, `not` and `or` (`${1abc}`, `${1e}`, `${1j2}`), and a real literal too large for a
+double (`${1e999}`) refuse under `expression_error`, each naming the literal's first fault, so
+`${07abc}` names its leading zero. A name that begins with one of those keywords is read apart from
+the number, so `${1if 1else 2}` reads, and `${1inx}` reads as the number `1` and the name `inx`, which
+then refuses as malformed syntax. A real literal too small for a double reads as zero, as the same
+text written as a property's value does: `${1e-999}` is `0.0`, `${-1e-999}` is `-0.0`, and a
+subnormal such as `${1e-320}` keeps its value. A real may carry the underscores too, so `${1_0.5}` is
+`10.5`. A prefixed literal too wide for 64 bits is a wide
 integer, and one whose value has more than 4300 digits refuses as a longer decimal literal does. This
 is the expression's reading: text a property or an argument holds keeps the literal reading above, so
 `value="0x10"` stays `0x10`. An imaginary literal (`${7j}`) names a complex number, which the built-in

@@ -16,6 +16,29 @@ struct literal_case
     std::string_view expected;
 };
 
+constexpr literal_case evaluated_literals[] = {
+        {"0_0", "0"},
+        {"00_0", "0"},
+        {"1_000", "1000"},
+        {"1_000_000", "1000000"},
+        {"0x10", "16"},
+        {"0X1_f", "31"},
+        {"0x_1f", "31"},
+        {"0o17", "15"},
+        {"0O1_7", "15"},
+        {"0b101", "5"},
+        {"0B1_0", "2"},
+        {"-0x10", "-16"},
+        {"0x1F + 1", "32"},
+        {"1_0.5", "10.5"},
+        {".5_0", "0.5"},
+        {"0_7.5", "7.5"},
+        {"07.5", "7.5"},
+        {"0_7e1", "70.0"},
+        {"1_0e1_0", "100000000000.0"},
+        {"1.e5", "100000.0"},
+};
+
 meios::expected<meios::expansion, meios::expansion_error> strictly(std::string_view expression)
 {
     return syntax_probe::load_under("${" + std::string(expression) + "}", meios::eval_policy::fail);
@@ -25,26 +48,23 @@ meios::expected<meios::expansion, meios::expansion_error> strictly(std::string_v
 
 TEST_CASE("an underscored, prefixed or pointed literal evaluates to its number", "[native][syntax]")
 {
-    for(const literal_case one : {literal_case{"0_0", "0"},
-                                  {"00_0", "0"},
-                                  {"1_000", "1000"},
-                                  {"1_000_000", "1000000"},
-                                  {"0x10", "16"},
-                                  {"0X1_f", "31"},
-                                  {"0x_1f", "31"},
-                                  {"0o17", "15"},
-                                  {"0O1_7", "15"},
-                                  {"0b101", "5"},
-                                  {"0B1_0", "2"},
-                                  {"-0x10", "-16"},
-                                  {"0x1F + 1", "32"},
-                                  {"1_0.5", "10.5"},
-                                  {".5_0", "0.5"},
-                                  {"0_7.5", "7.5"},
-                                  {"07.5", "7.5"},
-                                  {"0_7e1", "70.0"},
-                                  {"1_0e1_0", "100000000000.0"},
-                                  {"1.e5", "100000.0"}})
+    for(const literal_case one : evaluated_literals)
+    {
+        INFO("literal: " << one.spelling);
+        CHECK(probe::evaluate(one.spelling).rendered == one.expected);
+    }
+}
+
+TEST_CASE("a real literal too small for a double reads as zero", "[native][syntax]")
+{
+    for(const literal_case one : {literal_case{"1e-999", "0.0"},
+                                  {"-1e-999", "-0.0"},
+                                  {"1_0e-999", "0.0"},
+                                  {".1e-330", "0.0"},
+                                  {"1e-324", "0.0"},
+                                  {"2.5e-324", "5e-324"},
+                                  {"1e-320", "1e-320"},
+                                  {"1e308", "1e+308"}})
     {
         INFO("literal: " << one.spelling);
         CHECK(probe::evaluate(one.spelling).rendered == one.expected);

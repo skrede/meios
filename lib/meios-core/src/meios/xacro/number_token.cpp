@@ -4,10 +4,10 @@
 #include "big_integer.h"
 #include "number_scan.h"
 #include "literal_read.h"
+#include "python_number.h"
 
 #include "meios/xacro/value.h"
 
-#include "meios/xacro/detail/numeric.h"
 #include "meios/xacro/detail/wide_integer.h"
 
 #include <bit>
@@ -45,9 +45,8 @@ std::optional<value> decimal_value(const number_scan &s, std::string_view lexeme
     const std::string digits = without_separators(lexeme);
     if(!s.real)
         return leading_zero(digits) ? std::nullopt : integer_literal(digits);
-    bool ok             = false;
-    const double number = parse_double(digits, ok);
-    return ok ? value::make_real(number) : std::nullopt;
+    const std::optional<double> number = python_real(digits);
+    return number ? value::make_real(*number) : std::nullopt;
 }
 
 std::size_t significant_bits(std::string_view digits, std::uint32_t bits_per_digit)
@@ -137,8 +136,8 @@ std::size_t push_number(std::string_view src, std::size_t i, std::vector<token> 
     return s.at;
 }
 
-// Beyond a flaw, declined are a literal a name follows directly, an integer whose zero leads a nonzero
-// decimal one or whose value is past the ceiling, and a real a double cannot hold.
+// Beyond a flaw, the first fault is named: a leading zero comes before a name or digit glued to the
+// literal, and both before an overflowing real or an integer past the ceiling.
 std::optional<std::string> number_fault(std::string_view text)
 {
     if(!starts_number(text))
@@ -147,16 +146,16 @@ std::optional<std::string> number_fault(std::string_view text)
     const std::string ceiling = std::to_string(wide_digit_ceiling);
     if(s.fault != number_flaw::none)
         return flaw_message(s, text);
+    if(s.base == 10 && !s.real && !s.imaginary && leading_zero(without_separators(text.substr(0, s.at))))
+        return "an integer literal other than zero is written without a leading zero: '" + std::string(text) + "'";
     if(s.at < text.size())
-        return "a number is directly followed by a name: '" + std::string(text) + "'";
+        return "a number is directly followed by a name or a digit: '" + std::string(text) + "'";
     if(s.imaginary)
         return std::nullopt;
     if(s.real)
-        return "a real literal is outside the range of a double: '" + std::string(text) + "'";
+        return "a real literal is too large for a double: '" + std::string(text) + "'";
     if(s.base != 10)
         return "an integer literal's value has more than the " + ceiling + " decimal digits an integer holds here";
-    if(leading_zero(without_separators(text)))
-        return "an integer literal other than zero is written without a leading zero: '" + std::string(text) + "'";
     return "an integer literal has more than the " + ceiling + " digits an integer holds here";
 }
 

@@ -124,7 +124,8 @@ TEST_CASE("a lexical refusal the reader already gave keeps its code and message"
     REQUIRE(evaluation_refuses_holding("1 'x", "unexpected trailing tokens in expression"));
     REQUIRE(evaluation_refuses_holding("'x", "unterminated string in expression: 'x"));
     REQUIRE(evaluation_refuses_holding("07 + €", "an integer literal other than zero is written without a leading zero: '07'"));
-    REQUIRE(evaluation_refuses_holding("1e + €", "a number is directly followed by a name: '1e'"));
+    REQUIRE(evaluation_refuses_holding("07abc + €", "an integer literal other than zero is written without a leading zero: '07abc'"));
+    REQUIRE(evaluation_refuses_holding("1e + €", "a number is directly followed by a name or a digit: '1e'"));
 }
 
 TEST_CASE("a number followed by a readable name is a syntax refusal, not a read of the name", "[xacro][identifier]")
