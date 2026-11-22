@@ -46,10 +46,14 @@ Both API tiers link the same target. What you do with the result is the
 [consumer guide](consumer-guide.md) or the [engine guide](engine-guide.md); which of them is yours
 is decided in [the documentation hub](README.md).
 
-On Windows, meios needs Windows 8 or later (`_WIN32_WINNT` `0x0602`): its file reader compares file
-identities through declarations the Windows SDK makes only from that version on. meios defines no
-`_WIN32_WINNT` itself, so the SDK's default applies, and a build that defines it lower, for its own
-targets or for meios built inside its configure, does not compile meios.
+On Windows, meios's own sources need the Windows 8 API level (`_WIN32_WINNT` `0x0602`) to compile:
+its file reader compares file identities through declarations the Windows SDK makes only from that
+level on, and it falls back to the older file index where the system cannot answer. meios defines no
+`_WIN32_WINNT` itself, so the SDK's default applies. A build that defines it lower where meios's
+sources see it, through a directory-wide `add_compile_definitions` or `CMAKE_CXX_FLAGS` set ahead of
+`FetchContent_MakeAvailable` or `add_subdirectory`, does not compile meios. No public meios header
+includes a Windows header, so a definition on your own targets, or against a prebuilt meios found
+through `find_package`, does not reach it.
 
 ## Acquiring meios
 

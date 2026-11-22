@@ -983,6 +983,18 @@ expression that turns it into a number or text renders there (`${abs(3+4j)}` is 
 `number_literal_imaginary` row of the divergence manifest compares `${07j}` through both
 implementations.
 
+**A real literal too large for a double refuses here; xacro reads it as infinity.** `${1e999}` and
+`${1e309}` render under xacro as `inf`, and `${-1e999}` as `-inf`; here each refuses under the built-in
+evaluator with `expression_error`, naming the literal as too large for a double. The refusal is a fault
+of the literal, not an unsupported construct, so `--eval-policy skip` and `warn` refuse it as `fail`
+does. It sits with the other non-finite values xacro reads and meios does not, each stated above: the
+names `inf` and `nan`, which the built-in evaluator does not bind, bare or through an include namespace
+(this section's first entry and the entry on reading an argument); a spelling of infinity and a real
+beyond the double range written as a property's value, which meios keeps as the text written (the
+grammar record's entry); and an argument whose real is beyond the double range, which `$(eval)`
+refuses (the entry on reading an argument). All of them follow from one ground: a real here is always
+finite.
+
 **Under a lenient policy, an unsupported construct ahead of a malformed literal leaves the span as written; xacro refuses the expression.**
 Under `--eval-policy skip` or `warn`, the reading of an expression stops at its first unsupported
 construct, an imaginary literal (`${1j + 07}`, `${1j + 1_}`) or a dotted name neither evaluator binds
@@ -1263,7 +1275,7 @@ stability in the meantime.
 
 ## What carries each claim
 
-This page makes ninety-one claims — the bold sentence that opens each entry above — and this table
+This page makes ninety-two claims — the bold sentence that opens each entry above — and this table
 says, for every one of them, what would fail if the claim stopped being true. A claim is carried by a
 case (named by the stem it lives in and its own wording), by a row in a committed record, or by
 nothing at all. **Nothing at all is a legitimate answer here and it is written as one**, because a
@@ -1351,6 +1363,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | A chain of properties each reading the next renders ten deep; xacro renders one hundred and sixty-five | The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_span_depth.a chain of deferred reads refuses one level past what the ceiling admits`, which counts the longest chain the ceiling admits and refuses one longer. The lengths and the headroom are pinned by `native_span_depth.a chain of bare deferred reads keeps ninefold headroom` and `native_span_depth.a chain of deferred reads inside arithmetic keeps ninefold headroom`, each counting its chain exactly and refusing one longer before it meters the stack, and the Python backend's by `eval_python_scope.a deferred chain read by the backend refuses on the shared ceiling one level past its pin` and `eval_python_scope.a deferred chain read by the backend keeps ninefold headroom`. xacro's one hundred and sixty-five, and the rewritten chains rendering under both, were measured while this page was written and are carried by nothing. |
 | An integer of more than 4300 digits arising inside an expression refuses here; xacro computes it | The `integer_intermediate_past_digit_ceiling` row of the divergence manifest, driven as a whole document through both implementations, beside `native_ceilings.an integer past its digit ceiling is a crossed ceiling wherever an expression computes it`, which pins the exhausted refusal of the intermediate shapes and of a power past the ceiling, and `native_ceilings.each new ceiling is terminal under every evaluation policy`, which pins it terminal under every policy. The prefixed literal's refusal is pinned by `native_prefixed_literal.a prefixed literal whose value is past the digit ceiling refuses`. xacro's renders of the other three shapes and of the prefixed literal, and its refusal of a result that long written as text, were measured while this page was written and are carried by nothing. |
 | An imaginary literal refuses here as unsupported; xacro renders it | The `number_literal_imaginary` row of the divergence manifest, driven as a whole document through both implementations, beside `native_number_literal.an imaginary literal refuses as unsupported, naming a complex number`, which pins the refusal of seven spellings, and `native_number_literal.a lenient policy leaves an imaginary literal's span as written`, which pins the span kept under `skip` and `warn`. xacro's render of `${1.5j}` and the `meios::eval-python` renders were measured while this page was written and are carried by nothing. |
+| A real literal too large for a double refuses here; xacro reads it as infinity | `native_malformed_literal.a malformed literal refuses as an expression fault naming the fault`, whose `1e309` and `1e999` rows pin the refusal under `fail` and the fault it names. The refusal under `skip` and `warn` and xacro's reading were measured while this page was written and are carried by nothing; the divergence manifest has no row for it. |
 | Under a lenient policy, an unsupported construct ahead of a malformed literal leaves the span as written; xacro refuses the expression | `native_syntax.an unsupported construct ahead of a malformed literal leaves the span as written under a lenient policy`, which pins the span kept under `skip` and `warn` for `${1j + 07}`, `${1j + 1_}` and `${a.b + 07}`, their refusal as `unsupported_expression` under `fail`, and the refusal of `${07 + 1j}` under every policy. xacro's refusal was measured when this entry was written and is carried by nothing. |
 | An include namespace read as a value refuses here | The `include_namespace_read_as_value` row of the divergence manifest, driven as a whole document through both implementations, beside `xacro_namespace.a namespace read as a value refuses under every policy, naming the dotted spelling` and `xacro_namespace.a namespace an expression stops at inside another refuses with its dotted spelling`. The printed form of a bare read under xacro was measured while this page was written and is carried by nothing. |
 | An integer wider than 64 bits that a property or a macro argument forwards keeps its digits | The `property_wide_integer_forwarded`, `property_wide_integer_forwarded_eager` and `macro_argument_wide_integer_forwarded` agreement verdicts of `native_differential`, each compared whole against a fresh xacro render, beside `xacro_literal_read.a lazy property forwarding a wide integer renders its digits`, `xacro_literal_read.an eager property and a macro argument forwarding a wide integer render its digits` and the `xacro_wide_integer` cases, which compute on a forwarded wide integer. |
@@ -1392,7 +1405,7 @@ reading can be repeated rather than redone from scratch by whoever next doubts a
 | `MEIOS_RESOURCE_TLS_CAINFO` is exercised by nothing | **Nothing.** No case, no row and no run: forwarding a CA bundle needs a TLS origin, which nothing offline can be. |
 | Flattening is not proven from an installed package | `cmake_flatten_install_destination` and `cmake_flatten_install_component` install a flattened document; both reach the modules through the module path, which is what leaves the claim standing. |
 | `PACKAGE_PATH` precedence is reasoned about, not measured | `cmake_flatten_package_path_reaches_vendored_package` carries the adds-reach half. Two roots offering one package name is carried by nothing. |
-| Flattening with the Python backend is only really run on Linux | `cmake_flatten_eval_python_live` where the command-line tool is built with the Python backend, which only Linux's `eval-python` job builds; `cmake_flatten_eval_python_statement` and `cmake_flatten_eval_python_refusal`, the capability supplied by hand, wherever the command-line tool is built. |
+| Flattening with the Python backend is only ever really run on Linux | `cmake_flatten_eval_python_live` where the command-line tool is built with the Python backend, which only Linux's `eval-python` job builds; `cmake_flatten_eval_python_statement` and `cmake_flatten_eval_python_refusal`, the capability supplied by hand, wherever the command-line tool is built. |
 | Submodules and large-file objects are left alone | `cmake_declare_lfs_pointer_refusal` and `urdf_mesh.a resolved mesh that is an unsmudged Git-LFS pointer is rejected, not accepted`. Nothing clones a repository carrying a submodule. |
 | Nothing in the automated set cross-compiles | **Nothing**, by construction. A case would need a toolchain file and a host-runnable binary. |
 | Tool discovery is proven for two of three routes | `cmake_flatten_runs_a_cli_target` and `cmake_flatten_no_cli_refusal`. The installed-package route is carried by nothing. |
