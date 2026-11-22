@@ -504,7 +504,7 @@ jobs:
 
   enrichments:
     runs-on: macos-15
-    name: enrichments (scanners + archive-zip + ros + eval-python)
+    name: enrichments (scanners + archive-zip + ros + eval-python, macOS)
     steps:
       - uses: actions/checkout@v4
 
