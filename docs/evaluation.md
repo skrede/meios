@@ -1626,10 +1626,14 @@ read as the working directory. Every directory `PYTHONPATH` names stays on the m
 Python keeps it, and a relative one, `.` included, is read against the working directory, so
 a module file beside where the program was started is imported only when `PYTHONPATH` names
 that directory. The interpreter installs none of Python's signal handlers, so SIGINT keeps
-the disposition the program gave it. Starting it leaves the program's locale as the program set it
-and exports no locale variable into the environment, and on Windows it leaves the standard streams
-in the mode the program gave them. It runs in Python's UTF-8 mode, so text Python decodes or encodes
-without naming an encoding is UTF-8 whatever the locale. A program that already runs Python keeps its
+the disposition the program gave it. It also leaves Python's fault handler off, even where
+`PYTHONFAULTHANDLER` or `PYTHONDEVMODE` asks for it, so the program's handlers for SIGSEGV, SIGFPE,
+SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
+set it and exports no locale variable into the environment, and on Windows it leaves the standard
+streams in the mode the program gave them. It runs in Python's UTF-8 mode, so text Python decodes or
+encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
+`PYTHONLEGACYWINDOWSFSENCODING` is set: there UTF-8 mode is off, and that text follows the ANSI code
+page instead. A program that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every

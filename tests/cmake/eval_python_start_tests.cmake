@@ -45,5 +45,11 @@ if(TARGET meios_eval-python)
         # The module path is handed over after the preconfiguration, so the locale case runs again with one set.
         catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state_module_path." TEST_SPEC "[host_locale]"
             PROPERTIES ENVIRONMENT "PYTHONPATH=${module_path_first}")
+        # Either variable can enable the fault handler, so the fatal-signal case runs again under each; the second
+        # spells its selection apart because Catch names a discovery's files by its spec.
+        catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state_faulthandler." TEST_SPEC "[fatal_signals]"
+            PROPERTIES ENVIRONMENT "PYTHONFAULTHANDLER=1")
+        catch_discover_tests(eval_python_host_state_test TEST_PREFIX "eval_python_host_state_dev_mode." TEST_SPEC "[eval_python][fatal_signals]"
+            PROPERTIES ENVIRONMENT "PYTHONDEVMODE=1")
     endif()
 endif()

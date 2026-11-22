@@ -74,6 +74,7 @@ PyStatus configured(PyConfig &config)
     PyConfig_InitPythonConfig(&config);
     config.safe_path               = 1;
     config.install_signal_handlers = 0;
+    config.faulthandler            = 0;
     config.configure_c_stdio       = 0;
     return set_module_path(config);
 }

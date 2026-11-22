@@ -5,6 +5,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <vector>
 #include <clocale>
 #include <csignal>
 #include <cstdint>
@@ -25,6 +26,15 @@ namespace
 {
 
 using disposition = decltype(std::signal(SIGINT, SIG_DFL));
+
+std::vector<std::int32_t> fatal_signals()
+{
+#ifdef SIGBUS
+    return {SIGSEGV, SIGFPE, SIGABRT, SIGILL, SIGBUS};
+#else
+    return {SIGSEGV, SIGFPE, SIGABRT, SIGILL};
+#endif
+}
 
 struct host_state
 {
@@ -65,6 +75,23 @@ void clear_locale_environment()
     unsetenv("LC_CTYPE");
     unsetenv("LANG");
 }
+
+// The probe puts the locale back before the case reads it, so the state compared is the one the process started with.
+std::optional<std::string> installed_utf8_locale()
+{
+    const std::string recorded = locale_of(LC_CTYPE);
+    std::optional<std::string> accepted;
+    for(const char *const candidate : {"C.UTF-8", "en_US.UTF-8", "UTF-8"})
+    {
+        if(std::setlocale(LC_CTYPE, candidate) != nullptr)
+        {
+            accepted = candidate;
+            break;
+        }
+    }
+    std::setlocale(LC_CTYPE, recorded.c_str());
+    return accepted;
+}
 #endif
 
 host_state read_host_state()
@@ -100,6 +127,29 @@ TEST_CASE("the first evaluation leaves the host's locale and its locale environm
 #endif
 }
 
+#if !defined(_WIN32)
+TEST_CASE("the first evaluation leaves the host's locale alone under a named locale environment", "[eval_python][host_locale_named]")
+{
+    if(Py_IsInitialized() != 0)
+        SKIP("this case needs a process of its own, whose first evaluation starts the interpreter");
+    clear_locale_environment();
+    const std::optional<std::string> named = installed_utf8_locale();
+    if(!named)
+        SKIP("no named UTF-8 locale is installed");
+    setenv("LC_CTYPE", named->c_str(), 1);
+    const host_state before = read_host_state();
+    REQUIRE(evaluate("1 + 1", meios::eval_scope{}) == std::optional<std::string>("2"));
+    const host_state after = read_host_state();
+    INFO("named locale in the environment: " << *named);
+    INFO("LC_CTYPE: " << before.ctype << " before, " << after.ctype << " after");
+    INFO("LC_ALL: " << before.all << " before, " << after.all << " after");
+    INFO("LC_CTYPE in the environment: " << before.exported.value_or("unset") << " before, " << after.exported.value_or("unset") << " after");
+    CHECK(after.ctype == before.ctype);
+    CHECK(after.all == before.all);
+    CHECK(after.exported == before.exported);
+}
+#endif
+
 TEST_CASE("the first evaluation leaves the interrupt and broken-pipe dispositions as the host set them", "[eval_python]")
 {
     const disposition interrupt = std::signal(SIGINT, SIG_DFL);
@@ -111,4 +161,20 @@ TEST_CASE("the first evaluation leaves the interrupt and broken-pipe disposition
 #ifdef SIGPIPE
     CHECK(std::signal(SIGPIPE, pipe) == SIG_DFL);
 #endif
+}
+
+TEST_CASE("the first evaluation leaves the fatal-signal dispositions as the host set them", "[eval_python][fatal_signals]")
+{
+    if(Py_IsInitialized() != 0)
+        SKIP("this case needs a process of its own, whose first evaluation starts the interpreter");
+    const std::vector<std::int32_t> signals = fatal_signals();
+    std::vector<disposition> previous;
+    for(const std::int32_t number : signals)
+        previous.push_back(std::signal(number, SIG_DFL));
+    REQUIRE(evaluate("1 + 1", meios::eval_scope{}) == std::optional<std::string>("2"));
+    for(std::size_t index = 0; index < signals.size(); ++index)
+    {
+        INFO("signal " << signals[index]);
+        CHECK(std::signal(signals[index], previous[index]) == SIG_DFL);
+    }
 }
