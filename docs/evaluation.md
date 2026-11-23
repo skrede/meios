@@ -1640,7 +1640,10 @@ the disposition the program gave it. It also leaves Python's fault handler off, 
 SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
 set it and exports no locale variable into the environment, and on Windows, where the backend keeps
 the modes, it leaves each standard stream in the text or binary mode the program gave it. A standard
-stream the program closed stays closed, and the first evaluation proceeds. The modes are kept only
+stream the program closed stays closed, and the first evaluation proceeds. The
+`eval_python_closed_input` cases pin this for the standard input and the standard error, each closed
+by the program before the first evaluation, and for the standard input closed by code the start runs;
+no case pins it for the standard output. The modes are kept only
 where the backend is built for the MSVC ABI against the release DLL C runtime (`/MD`), the runtime
 whose descriptors the release interpreter uses; which builds keep them follows the backend's own
 build, not the program's. A MinGW build gets no mode guard, and neither does a debug build that runs

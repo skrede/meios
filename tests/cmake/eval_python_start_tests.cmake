@@ -58,6 +58,7 @@ if(TARGET meios_eval-python)
         target_link_libraries(eval_python_closed_input_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
                 pybind11::embed Catch2::Catch2WithMain)
+        target_include_directories(eval_python_closed_input_test PRIVATE ${meios_SOURCE_DIR}/lib/meios-eval-python/src)
         meios_enable_coverage(eval_python_closed_input_test)
         meios_warnings(eval_python_closed_input_test)
         catch_discover_tests(eval_python_closed_input_test TEST_PREFIX "eval_python_closed_input."
