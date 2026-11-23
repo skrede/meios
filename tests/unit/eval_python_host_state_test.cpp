@@ -1,4 +1,5 @@
 #include "eval_python_fixture.h"
+#include "eval_python_descriptor_mode.h"
 
 #include <pybind11/embed.h>
 
@@ -14,9 +15,8 @@
 
 #if defined(_WIN32)
 
-    #include <io.h>
+    #include <array>
     #include <cstdio>
-    #include <fcntl.h>
 
 #endif
 
@@ -42,7 +42,7 @@ struct host_state
     std::string all;
     std::optional<std::string> exported;
 #if defined(_WIN32)
-    std::int32_t output;
+    std::array<std::int32_t, 3> modes;
 #endif
 };
 
@@ -61,14 +61,7 @@ std::optional<std::string> variable(const char *name)
     return std::string(found);
 }
 
-#if defined(_WIN32)
-std::int32_t output_mode()
-{
-    const std::int32_t mode = _setmode(_fileno(stdout), _O_TEXT);
-    _setmode(_fileno(stdout), mode);
-    return mode;
-}
-#else
+#if !defined(_WIN32)
 void clear_locale_environment()
 {
     unsetenv("LC_ALL");
@@ -97,7 +90,12 @@ std::optional<std::string> installed_utf8_locale()
 host_state read_host_state()
 {
 #if defined(_WIN32)
-    return host_state{locale_of(LC_CTYPE), locale_of(LC_ALL), variable("LC_CTYPE"), output_mode()};
+    const std::array<std::int32_t, 3> modes{
+            descriptor_mode(_fileno(stdin)),
+            descriptor_mode(_fileno(stdout)),
+            descriptor_mode(_fileno(stderr)),
+    };
+    return host_state{locale_of(LC_CTYPE), locale_of(LC_ALL), variable("LC_CTYPE"), modes};
 #else
     return host_state{locale_of(LC_CTYPE), locale_of(LC_ALL), variable("LC_CTYPE")};
 #endif
@@ -122,8 +120,12 @@ TEST_CASE("the first evaluation leaves the host's locale and its locale environm
     CHECK(after.all == before.all);
     CHECK(after.exported == before.exported);
 #if defined(_WIN32)
-    INFO("standard output mode: " << before.output << " before, " << after.output << " after");
-    CHECK(after.output == before.output);
+    const std::array<const char *, 3> streams{"input", "output", "error"};
+    for(std::size_t index = 0; index < streams.size(); ++index)
+    {
+        INFO("standard " << streams[index] << " mode: " << before.modes[index] << " before, " << after.modes[index] << " after");
+        CHECK(after.modes[index] == before.modes[index]);
+    }
 #endif
 }
 

@@ -1,13 +1,14 @@
 #ifndef HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 #define HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 
-#include <array>
-#include <cstdint>
-
 #if defined(_WIN32)
+
+    #include <array>
+    #include <cstdint>
 
     #include <io.h>
     #include <cstdio>
+    #include <cstdlib>
     #include <fcntl.h>
 
 #endif
@@ -25,6 +26,32 @@ class kept_stream_modes
         std::int32_t descriptor;
         std::int32_t mode;
     };
+
+    // A descriptor the program closed keeps its stream's number, and the runtime ends the process when such a
+    // descriptor is set; Python checks its own standard descriptors with the handler silenced the same way.
+    class silenced_parameter_checks
+    {
+    public:
+        silenced_parameter_checks()
+                : m_previous(_set_thread_local_invalid_parameter_handler(ignored))
+        {
+        }
+
+        ~silenced_parameter_checks()
+        {
+            _set_thread_local_invalid_parameter_handler(m_previous);
+        }
+
+        silenced_parameter_checks(const silenced_parameter_checks &)            = delete;
+        silenced_parameter_checks &operator=(const silenced_parameter_checks &) = delete;
+
+    private:
+        _invalid_parameter_handler m_previous;
+
+        static void ignored(const wchar_t *, const wchar_t *, const wchar_t *, std::uint32_t, std::uintptr_t)
+        {
+        }
+    };
 #endif
 
 public:
@@ -37,13 +64,16 @@ public:
 
     ~kept_stream_modes()
     {
+        const silenced_parameter_checks silenced;
+        // A Unicode translation mode is left binary, since Python writes bytes there and such a mode reads them as wide characters.
         for(const kept_mode &one : m_kept)
         {
-            if(one.mode >= 0)
+            if(one.mode == _O_TEXT || one.mode == _O_BINARY)
                 _setmode(one.descriptor, one.mode);
         }
     }
 #else
+    // Written out rather than defaulted, so the start's guard is not an unused variable, an error under -Werror.
     kept_stream_modes()
     {
     }
@@ -64,6 +94,7 @@ private:
     {
         if(descriptor < 0)
             return kept_mode{descriptor, -1};
+        const silenced_parameter_checks silenced;
         const std::int32_t mode = _setmode(descriptor, _O_BINARY);
         if(mode >= 0)
             _setmode(descriptor, mode);

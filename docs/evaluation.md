@@ -1638,19 +1638,27 @@ that directory. The interpreter installs none of Python's signal handlers, so SI
 the disposition the program gave it. It also leaves Python's fault handler off, even where
 `PYTHONFAULTHANDLER` or `PYTHONDEVMODE` asks for it, so the program's handlers for SIGSEGV, SIGFPE,
 SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
-set it and exports no locale variable into the environment, and on Windows it leaves the standard
-streams in the mode the program gave them. It runs in Python's UTF-8 mode, so text Python decodes or
-encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
+set it and exports no locale variable into the environment, and on Windows it leaves each standard
+stream in the text or binary mode the program gave it. It runs in Python's UTF-8 mode, so text Python
+decodes or encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
 `PYTHONLEGACYWINDOWSFSENCODING` is set: there UTF-8 mode is off, and that text follows the ANSI code
-page instead. On Windows Python ends each line it writes to `sys.stdout` or `sys.stderr` with a
-carriage return and a line feed itself, and a descriptor in text mode writes each line feed it is given
-as that pair too, so where the program keeps such a descriptor in text mode a line Python writes there
-ends with two carriage returns and a line feed; a program that wants Python's lines as Python writes
-them keeps that descriptor in binary mode. These guarantees hold for the start itself. Python code the
-start runs, a `sitecustomize` or `usercustomize` module on the module path or an `import` line of a
-`.pth` file in one of Python's site directories, can still turn the fault handler on, set the locale
-and export a locale variable; SIGINT's disposition and, on Windows, the standard streams' modes are set
-back once the start has run it. A program that already runs Python keeps its
+page instead. A standard stream the program put in a Unicode translation mode, wide-character or
+UTF-8 (`_O_U16TEXT`, `_O_U8TEXT` or `_O_WTEXT`), is not set back and stays in the binary mode the
+start gives it: Python writes bytes to it, which such a mode reads as wide characters, and a write
+of an odd number of bytes there would end the program. On Windows Python ends each line it writes to
+`sys.stdout` or `sys.stderr` with a carriage return and a line feed itself, and a descriptor in text
+mode writes each line feed it is given as that pair too, so where the program keeps such a
+descriptor in text mode and it leads to a file or a pipe, a line Python writes there ends with two
+carriage returns and a line feed; a program that wants Python's lines as Python writes them keeps
+that descriptor in binary mode. On a console Python writes through the console itself, unless
+`PYTHONLEGACYWINDOWSSTDIO` is set, and a line it writes there ends once. Where the standard input is
+a file or a pipe the program keeps in text mode, Python reads each carriage return and line feed
+there as one line feed, and a Ctrl-Z as the end of the input. These guarantees hold for the start
+itself. Python code the start runs, a `sitecustomize` or `usercustomize` module on the module path
+or an `import` line of a `.pth` file in one of Python's site directories, can still turn the fault
+handler on, set the locale and export a locale variable; SIGINT's disposition and, on Windows, the
+standard streams' text and binary modes are set back once the start has run it. A program that
+already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every
