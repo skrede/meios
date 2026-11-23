@@ -3,10 +3,10 @@
 
 #if defined(_WIN32)
 
-    #include <cstdint>
-
     #include <io.h>
     #include <fcntl.h>
+
+    #include <cstdint>
 
 namespace
 {

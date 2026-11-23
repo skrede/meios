@@ -15,8 +15,6 @@ inline std::string fixture(const std::string &name)
     return (std::filesystem::path(MEIOS_URDF_FIXTURE_DIR) / name).string();
 }
 
-// Redirects std::cout for the scope of one verb call so a test can assert on the
-// bytes a verb writes, restoring the stream on destruction.
 class cout_capture
 {
 public:

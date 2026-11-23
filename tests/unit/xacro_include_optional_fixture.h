@@ -27,7 +27,7 @@ namespace
 struct heard
 {
     meios::level lvl;
-    int32_t line;
+    std::int32_t line;
     std::string message;
 };
 

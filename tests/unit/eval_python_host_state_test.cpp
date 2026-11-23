@@ -124,6 +124,7 @@ TEST_CASE("the first evaluation leaves the host's locale and its locale environm
     for(std::size_t index = 0; index < streams.size(); ++index)
     {
         INFO("standard " << streams[index] << " mode: " << before.modes[index] << " before, " << after.modes[index] << " after");
+        CHECK(before.modes[index] >= 0);
         CHECK(after.modes[index] == before.modes[index]);
     }
 #endif

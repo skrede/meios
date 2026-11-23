@@ -1639,7 +1639,11 @@ the disposition the program gave it. It also leaves Python's fault handler off, 
 `PYTHONFAULTHANDLER` or `PYTHONDEVMODE` asks for it, so the program's handlers for SIGSEGV, SIGFPE,
 SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
 set it and exports no locale variable into the environment, and on Windows it leaves each standard
-stream in the text or binary mode the program gave it. It runs in Python's UTF-8 mode, so text Python
+stream in the text or binary mode the program gave it. A standard stream the program closed stays
+closed, and the first evaluation proceeds. The modes are kept where the program links the release DLL
+C runtime (`/MD`), whose descriptors the interpreter shares; a program built against a debug C runtime
+(`/MDd`, `/MTd`) or the static one (`/MT`) gets no mode guard, since the interpreter's mode changes do
+not reach its descriptors. It runs in Python's UTF-8 mode, so text Python
 decodes or encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
 `PYTHONLEGACYWINDOWSFSENCODING` is set: there UTF-8 mode is off, and that text follows the ANSI code
 page instead. A standard stream the program put in a Unicode translation mode, wide-character or
@@ -1657,8 +1661,8 @@ there as one line feed, and a Ctrl-Z as the end of the input. These guarantees h
 itself. Python code the start runs, a `sitecustomize` or `usercustomize` module on the module path
 or an `import` line of a `.pth` file in one of Python's site directories, can still turn the fault
 handler on, set the locale and export a locale variable; SIGINT's disposition and, on Windows, the
-standard streams' text and binary modes are set back once the start has run it. A program that
-already runs Python keeps its
+standard streams' text and binary modes are set back once the start has run it, and a standard
+stream that code closes stays closed. A program that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every

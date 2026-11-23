@@ -19,6 +19,9 @@
 #include <share.h>
 #include <sys/stat.h>
 
+// These cases need the program to share the release DLL C runtime's descriptors with the interpreter (/MD).
+#if defined(_DLL) && !defined(_DEBUG)
+
 namespace
 {
 
@@ -158,20 +161,24 @@ TEST_CASE("Python reads a standard input and writes a standard error kept in tex
     CHECK(bytes == "line\r\r\n");
 }
 
-// A debug runtime reports the closed descriptor in its own dialog before any handler is asked.
-#if !defined(_DEBUG)
-TEST_CASE("the first evaluation runs where the program closed its standard input", "[eval_python][stream_mode]")
+TEST_CASE("a standard output the program put in a wide-character mode is left in binary mode by the first evaluation", "[eval_python][stream_mode]")
 {
     if(Py_IsInitialized() != 0)
         SKIP("this case needs a process of its own, whose first evaluation starts the interpreter");
-    if(_fileno(stdin) != 0)
-        SKIP("the standard input's stream has no descriptor 0 to close");
-    const std::filesystem::path null_device("NUL");
-    std::int32_t opened = -1;
-    REQUIRE(_wsopen_s(&opened, null_device.c_str(), _O_RDONLY | _O_TEXT, _SH_DENYNO, _S_IREAD) == 0);
-    _dup2(opened, 0);
-    _close(opened);
-    _close(0);
-    REQUIRE(evaluate("1 + 1", meios::eval_scope{}) == std::optional<std::string>("2"));
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / "meios_stream_mode_wide.txt";
+    std::optional<std::string> evaluated;
+    std::int32_t previous = -1;
+    std::int32_t mode     = -1;
+    {
+        const redirected_descriptor redirected(1, path, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_TEXT);
+        previous  = _setmode(1, _O_U16TEXT);
+        evaluated = evaluate("1 + 1", meios::eval_scope{});
+        mode      = descriptor_mode(1);
+    }
+    std::filesystem::remove(path);
+    REQUIRE(evaluated == std::optional<std::string>("2"));
+    CHECK(previous == _O_TEXT);
+    CHECK(mode == _O_BINARY);
 }
+
 #endif
