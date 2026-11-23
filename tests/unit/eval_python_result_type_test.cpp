@@ -170,7 +170,10 @@ TEST_CASE("a real literal too large for a double reads as infinity inside a Pyth
         const outcome python = expand_span(row.first);
         REQUIRE(python.expanded.has_value());
         CHECK(leaves(python, row.second));
-        CHECK_FALSE(run(span_document(row.first), meios::eval_policy::fail, nullptr).expanded.has_value());
+        const outcome native = run(span_document(row.first), meios::eval_policy::fail, nullptr);
+        REQUIRE_FALSE(native.expanded.has_value());
+        CHECK(native.expanded.error().code == meios::diagnostic_code::expression_error);
+        CHECK(native.expanded.error().message.find("a real literal is too large for a double: '1e999'") != std::string::npos);
     }
     for(const std::string_view bare : {"${1e999}", "${-1e999}"})
     {

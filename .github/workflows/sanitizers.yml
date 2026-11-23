@@ -101,11 +101,16 @@ jobs:
       - name: Test
         run: cd build && ctest --output-on-failure
 
-      # The library starts no thread and holds no blocking primitive of its own,
-      # and the grep is the falsifier for that one claim: if it ever finds one under
-      # lib/ or tools/ the step fails so the assumption can be reconsidered. An
-      # atomic flag neither starts a thread nor blocks, so it is outside the claim
-      # and outside the pattern. What does not follow
+      # The library starts no thread and declares no blocking primitive of its own:
+      # no thread, async task, future, promise, packaged task, mutex, condition
+      # variable, latch, barrier, semaphore, or atomic wait or notify. The grep is
+      # the falsifier for that one claim: if it ever finds one under lib/ or tools/
+      # the step fails so the assumption can be reconsidered. An atomic only read
+      # and written neither starts a thread nor blocks, so it is outside the claim
+      # and outside the pattern, while its wait or notify is not. A function-local
+      # static's guarded initialization and the Python backend's interpreter lock
+      # block too, but the library declares neither, so both are outside the claim
+      # and the pattern does not look for them. What does not follow
       # is that the sanitizer has nothing to watch. This job builds the tests and
       # runs the whole suite over the pinned corpus, and two cases already drive two
       # threads through the library over a single shared handle — one through an
@@ -116,15 +121,16 @@ jobs:
       - name: Record tsan scope
         if: matrix.label == 'tsan'
         run: |
-          pattern='std::(thread|jthread|async|latch|barrier)|std::[a-z_]*(mutex|semaphore|condition_variable)|<(thread|future|mutex|shared_mutex|condition_variable|latch|barrier|semaphore)>'
+          pattern='std::(thread|jthread|async|future|shared_future|promise|packaged_task|latch|barrier)|std::[a-z_]*(mutex|semaphore|condition_variable)|std::atomic_(flag_)?(wait|notify_)|(\.|->)(wait|notify_one|notify_all)\(|<(thread|future|mutex|shared_mutex|condition_variable|latch|barrier|semaphore)>'
           hits=$(grep -rIE "$pattern" lib tools | wc -l)
           if [ "$hits" -ne 0 ]; then
-            echo "Thread-starting or blocking primitives found ($hits); the claim that the library starts no thread and holds no blocking primitive of its own is stale:" >&2
+            echo "Thread-starting or blocking primitives found ($hits); the claim that the library starts no thread and declares no blocking primitive of its own is stale:" >&2
             grep -rInE "$pattern" lib tools >&2
             exit 1
           fi
-          echo "No thread-starting or blocking primitive under lib/ and tools/: the library starts no thread and holds no lock of its own."
-          echo "An atomic flag neither starts a thread nor blocks, so the one the Python backend keeps to report a start-time note once is outside this check, and this leg does not build that backend."
+          echo "No thread-starting or blocking primitive under lib/ and tools/: the library starts no thread and declares no lock, wait, future or semaphore of its own."
+          echo "An atomic only read and written neither starts a thread nor blocks, so the flag the Python backend keeps to report a start-time note once is outside this check; an atomic's wait or notify is not, and the check looks for it."
+          echo "A function-local static's guarded initialization and the Python backend's interpreter lock block too, but the library declares neither, and this leg does not build that backend."
           echo "The concurrent traffic this job watches comes from the tests: native_session_test.cpp and native_constructs_test.cpp each drive two threads through one shared handle, and this leg runs the suite over the pinned corpus."
           echo "The job stays advisory (continue-on-error), so a cell citing it says so rather than citing it as a passing gate."
 

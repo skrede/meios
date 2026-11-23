@@ -93,3 +93,13 @@ TEST_CASE("an error whose attributes raise when read still ends on a typed failu
     REQUIRE_NOTHROW(out = raising(flaky, reported));
     REQUIRE(out.failure == meios::eval_failure_kind::error);
 }
+
+TEST_CASE("a real beyond the double range refuses by name as an argument, and stays as written as a property's value, under the python evaluator", "[eval_python]")
+{
+    const outcome argument = under_python(R"XML(<xacro:arg name="q" default="1.0e400"/>)XML", "$(eval q + 1)");
+    REQUIRE_FALSE(argument.expanded.has_value());
+    CHECK(argument.expanded.error().code == meios::diagnostic_code::expression_error);
+    CHECK(argument.expanded.error().message.find("the argument 'q'") != std::string::npos);
+    const outcome property = under_python(R"XML(<xacro:property name="p" value="1e999"/>)XML", "${p}");
+    CHECK(leaves(property, "<l>1e999</l>"));
+}
