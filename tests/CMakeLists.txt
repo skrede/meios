@@ -137,6 +137,13 @@ if(TARGET meios_cli)
         endif()
     endforeach()
 
+    if(TARGET cli_verbs_test)
+        target_sources(cli_verbs_test PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/cli_verbs_closure_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/cli_verbs_describe_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/unit/cli_verbs_resolve_test.cpp)
+    endif()
+
     # This stem alone reads the installed CMake modules and drives the built binary; the
     # other CLI stems have no use for either and would gain a coupling to a directory they
     # never open.
