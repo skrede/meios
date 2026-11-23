@@ -1,3 +1,5 @@
+#include "cli_verbs_fixture.h"
+
 #include "complete.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -12,28 +14,6 @@ using namespace meios;
 
 namespace
 {
-
-std::string fixture(const std::string &name)
-{
-    return (std::filesystem::path(MEIOS_URDF_FIXTURE_DIR) / name).string();
-}
-
-class cout_capture
-{
-public:
-    cout_capture() : m_buffer(), m_saved(std::cout.rdbuf(m_buffer.rdbuf())) {}
-
-    ~cout_capture() { std::cout.rdbuf(m_saved); }
-
-    cout_capture(const cout_capture &) = delete;
-    cout_capture &operator=(const cout_capture &) = delete;
-
-    std::string str() const { return m_buffer.str(); }
-
-private:
-    std::ostringstream m_buffer;
-    std::streambuf *m_saved;
-};
 
 std::string complete(const std::vector<std::string> &words)
 {

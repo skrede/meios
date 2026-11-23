@@ -1,3 +1,5 @@
+#include "cli_verbs_fixture.h"
+
 #include <meios/urdf.h>
 #include <meios/model.h>
 
@@ -7,18 +9,26 @@
 #include <vector>
 #include <chrono>
 #include <fstream>
-#include <sstream>
-#include <iostream>
-#include <streambuf>
+#include <utility>
 #include <filesystem>
 #include <string_view>
 
 namespace
 {
 
-std::filesystem::path fixture(const std::string &name)
+struct silent_load
 {
-    return std::filesystem::path{ MEIOS_URDF_FIXTURE_DIR } / name;
+    meios::expected<meios::load_result, meios::load_error> result;
+    std::string cerr_bytes;
+    std::string cout_bytes;
+};
+
+silent_load load_quietly(const std::string &name)
+{
+    cerr_capture err;
+    cout_capture out;
+    meios::expected<meios::load_result, meios::load_error> result = meios::load(fixture(name), meios::load_options{});
+    return silent_load{std::move(result), err.str(), out.str()};
 }
 
 std::filesystem::path make_pkg_root()
@@ -76,21 +86,11 @@ bool mentions(const std::vector<meios::captured_diagnostic> &records, std::strin
 
 TEST_CASE("a default load writes nothing to cerr or cout", "[urdf][silent]")
 {
-    std::ostringstream cerr_capture;
-    std::ostringstream cout_capture;
-    std::streambuf *saved_cerr = std::cerr.rdbuf(cerr_capture.rdbuf());
-    std::streambuf *saved_cout = std::cout.rdbuf(cout_capture.rdbuf());
+    const silent_load quiet = load_quietly("test-desc.urdf");
 
-    meios::load_options opts;
-    const meios::expected<meios::load_result, meios::load_error> result =
-        meios::load(fixture("test-desc.urdf"), opts);
-
-    std::cerr.rdbuf(saved_cerr);
-    std::cout.rdbuf(saved_cout);
-
-    REQUIRE(result.has_value());
-    REQUIRE(cerr_capture.str().empty());
-    REQUIRE(cout_capture.str().empty());
+    REQUIRE(quiet.result.has_value());
+    REQUIRE(quiet.cerr_bytes.empty());
+    REQUIRE(quiet.cout_bytes.empty());
 }
 
 TEST_CASE("options nobody configured refuse a document naming an unresolvable asset",

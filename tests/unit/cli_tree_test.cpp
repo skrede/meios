@@ -1,3 +1,5 @@
+#include "cli_verbs_fixture.h"
+
 #include "verbs/verbs.h"
 #include "verbs/tree.h"
 
@@ -24,62 +26,12 @@ using meios::cli::verb_context;
 namespace
 {
 
-std::string fixture(const std::string &name)
-{
-    return (std::filesystem::path(MEIOS_URDF_FIXTURE_DIR) / name).string();
-}
-
 std::string read_golden(const std::string &relative)
 {
     std::ifstream in(std::filesystem::path(MEIOS_GOLDEN_DIR) / relative, std::ios::binary);
     std::ostringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
-}
-
-class cout_capture
-{
-public:
-    cout_capture() : m_buffer(), m_saved(std::cout.rdbuf(m_buffer.rdbuf())) {}
-
-    ~cout_capture() { std::cout.rdbuf(m_saved); }
-
-    cout_capture(const cout_capture &) = delete;
-    cout_capture &operator=(const cout_capture &) = delete;
-
-    std::string str() const { return m_buffer.str(); }
-
-private:
-    std::ostringstream m_buffer;
-    std::streambuf *m_saved;
-};
-
-// The stderr twin of cout_capture: run_tree relays typed diagnostics through a
-// log_sink_s bound to std::cerr, so a failing-load test swaps std::cerr's rdbuf.
-class cerr_capture
-{
-public:
-    cerr_capture() : m_buffer(), m_saved(std::cerr.rdbuf(m_buffer.rdbuf())) {}
-
-    ~cerr_capture() { std::cerr.rdbuf(m_saved); }
-
-    cerr_capture(const cerr_capture &) = delete;
-    cerr_capture &operator=(const cerr_capture &) = delete;
-
-    std::string str() const { return m_buffer.str(); }
-
-private:
-    std::ostringstream m_buffer;
-    std::streambuf *m_saved;
-};
-
-std::size_t occurrences(const std::string &haystack, const std::string &needle)
-{
-    std::size_t count = 0;
-    for(std::size_t pos = haystack.find(needle); pos != std::string::npos;
-        pos = haystack.find(needle, pos + needle.size()))
-        ++count;
-    return count;
 }
 
 std::string run_tree_on(const std::string &file, bool dot)

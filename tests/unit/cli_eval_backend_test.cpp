@@ -1,3 +1,5 @@
+#include "cli_verbs_fixture.h"
+
 #include "verbs/verbs.h"
 
 #include "meios/completion/command_table.h"
@@ -19,23 +21,6 @@ using meios::cli::verb_context;
 
 namespace
 {
-
-class cout_capture
-{
-public:
-    cout_capture() : m_buffer(), m_saved(std::cout.rdbuf(m_buffer.rdbuf())) {}
-
-    ~cout_capture() { std::cout.rdbuf(m_saved); }
-
-    cout_capture(const cout_capture &) = delete;
-    cout_capture &operator=(const cout_capture &) = delete;
-
-    std::string str() const { return m_buffer.str(); }
-
-private:
-    std::ostringstream m_buffer;
-    std::streambuf *m_saved;
-};
 
 // The name attribute carries a python-only list literal the core evaluator declines:
 // a fail policy aborts, lenient policies leave it verbatim, the python backend renders it.

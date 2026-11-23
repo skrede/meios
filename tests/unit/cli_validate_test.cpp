@@ -1,3 +1,5 @@
+#include "cli_verbs_fixture.h"
+
 #include "verbs/verbs.h"
 #include "verbs/validate.h"
 
@@ -15,28 +17,6 @@ using meios::cli::verb_context;
 
 namespace
 {
-
-std::string fixture(const std::string &name)
-{
-    return (std::filesystem::path(MEIOS_URDF_FIXTURE_DIR) / name).string();
-}
-
-class cout_capture
-{
-public:
-    cout_capture() : m_buffer(), m_saved(std::cout.rdbuf(m_buffer.rdbuf())) {}
-
-    ~cout_capture() { std::cout.rdbuf(m_saved); }
-
-    cout_capture(const cout_capture &) = delete;
-    cout_capture &operator=(const cout_capture &) = delete;
-
-    std::string str() const { return m_buffer.str(); }
-
-private:
-    std::ostringstream m_buffer;
-    std::streambuf *m_saved;
-};
 
 std::size_t count_of(const std::string &text, const std::string &needle)
 {
