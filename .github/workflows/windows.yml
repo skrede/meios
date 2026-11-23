@@ -527,6 +527,188 @@ jobs:
       - name: Test
         run: cd build && ctest -C Release --output-on-failure --no-tests=error --timeout 60
 
+  # While this build is new to the matrix, the job reports without failing the run.
+  eval-python-mingw:
+    runs-on: windows-2022
+    name: eval-python (MinGW UCRT64, Windows)
+    continue-on-error: true
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+
+      - name: Report the toolchain and the runtime
+        run: |
+          gcc --version | head -1
+          cmake --version | head -1
+          python -c 'import sys; print(sys.version)'
+          for header in '' '#include <cstdio>'; do
+            echo "Predefines after '${header:-an empty input}':"
+            printf '%s\n' "$header" | g++ -x c++ -dM -E - \
+              | grep -E '^#define (_UCRT|__MINGW32__|__MINGW64__|_DLL|_DEBUG|__MSVCRT_VERSION__)( |$)' || echo "  none"
+          done
+          echo "Declarations of _set_thread_local_invalid_parameter_handler after <cstdlib>:"
+          printf '#include <cstdlib>\n' | g++ -x c++ -E - \
+            | grep -F '_set_thread_local_invalid_parameter_handler' || echo "  none"
+          echo "Declarations of _setmode after <io.h>:"
+          printf '#include <io.h>\n' | g++ -x c++ -E - | grep -wF '_setmode' || echo "  none"
+          for dll in /ucrt64/bin/libpython3*.dll; do
+            echo "C runtime DLLs named by $dll:"
+            grep -aoiE '(ucrtbase|api-ms-win-crt-[a-z0-9-]+|msvcrt)\.dll' "$dll" | sort | uniq -c || echo "  none"
+          done
+
+      - name: Configure
+        run: |
+          python_exe=$(cygpath -m "$(python -c 'import sys; print(sys.executable)')")
+          status=0
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DMEIOS_BUILD_TESTS=ON \
+            -DMEIOS_CMAKE_FETCH_DEPS=ON \
+            -DMEIOS_EVAL_PYTHON_SUPPORT=ON \
+            -DMEIOS_REQUIRE_EVAL_PYTHON=ON \
+            -DMEIOS_WERROR=OFF \
+            -DPython3_FIND_REGISTRY=NEVER \
+            -DPython3_EXECUTABLE:FILEPATH="$python_exe" \
+            -DPython_EXECUTABLE:FILEPATH="$python_exe" || status=$?
+          grep -E '^(PYTHON_IS_DEBUG|_?Python3_(EXECUTABLE|LIBRAR[A-Z_]*|RUNTIME_LIBRAR[A-Z_]*))[:=]' build/CMakeCache.txt || true
+          exit "$status"
+
+      - name: Build the closed-input, stream-mode and host-state stems
+        run: |
+          status=0
+          cmake --build build --parallel 4 \
+            --target eval_python_closed_input_test eval_python_stream_mode_test eval_python_host_state_test \
+            -- -k 0 > build.log 2>&1 || status=$?
+          cat build.log
+          echo "Compiler errors:"
+          grep -E 'error:' build.log || echo "  none"
+          echo "Compiler warnings: $(grep -c 'warning:' build.log || true)"
+          exit "$status"
+
+      - name: Focus the closed-input, stream-mode and host-state tests
+        if: ${{ !cancelled() }}
+        working-directory: build
+        run: |
+          selector='^eval_python_(closed_input|closed_input_during_start|stream_mode|host_state)'
+          echo "ctest -N -R '$selector'"
+          discovery=$(ctest -N -R "$selector")
+          printf '%s\n' "$discovery"
+          for prefix in closed_input closed_input_during_start stream_mode host_state host_state_module_path \
+              host_state_faulthandler host_state_dev_mode; do
+            echo "Discovered eval_python_$prefix.: $(printf '%s\n' "$discovery" | grep -cF "eval_python_$prefix." || true)"
+          done
+          echo "Discovered tests: $(printf '%s\n' "$discovery" | grep -cE 'Test +#[0-9]+:' || true)"
+          echo "ctest --output-on-failure --no-tests=error --timeout 60 -R '$selector'"
+          ctest --output-on-failure --no-tests=error --timeout 60 -R "$selector"
+
+  # While this build is new to the matrix, the job reports without failing the run.
+  eval-python-debug:
+    runs-on: windows-2022
+    name: eval-python (debug interpreter, Windows)
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the debug interpreter
+        id: python
+        shell: pwsh
+        run: |
+          $version = '3.14.10'
+          $published = '92480239264744fe0386a1bd8275786fefa126e3129e56a68e22b52c73329965'
+          $installer = Join-Path $env:RUNNER_TEMP "python-$version-amd64.exe"
+          Invoke-WebRequest -Uri "https://www.python.org/ftp/python/$version/python-$version-amd64.exe" -OutFile $installer
+          $digest = (Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash.ToLowerInvariant()
+          Write-Host "SHA-256: $digest"
+          if ($digest -ne $published) { throw "The installer's SHA-256 differs from the one python.org publishes" }
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer
+          Write-Host "Signature: $($signature.Status), signer: $($signature.SignerCertificate.Subject)"
+          if ($signature.Status -ne 'Valid') { throw "The installer's Authenticode signature is not valid" }
+          if ($signature.SignerCertificate.Subject -notmatch '(^|, )O=Python Software Foundation(,|$)') {
+            throw "The installer is not signed by the Python Software Foundation"
+          }
+          $target = Join-Path $env:RUNNER_TEMP 'pydebug'
+          $arguments = '/quiet', 'InstallAllUsers=0', 'Include_debug=1', 'Include_launcher=0', 'Include_test=0',
+            'Include_doc=0', 'Include_tcltk=0', 'PrependPath=0', "TargetDir=$target"
+          $process = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru
+          Write-Host "Installer exit code: $($process.ExitCode)"
+          if ($process.ExitCode -ne 0) { throw "The installer failed" }
+          $python = Join-Path $target 'python_d.exe'
+          & $python -c "import sys; print(sys.version); print('gettotalrefcount:', hasattr(sys, 'gettotalrefcount'))"
+          if ($LASTEXITCODE -ne 0) { throw "python_d.exe did not run" }
+          Get-ChildItem -LiteralPath (Join-Path $target 'libs') | ForEach-Object { Write-Host $_.Name }
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $target
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "python-path=$python"
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake . -B build -A x64 `
+            -DMEIOS_BUILD_TESTS=ON `
+            -DMEIOS_CMAKE_FETCH_DEPS=ON `
+            -DMEIOS_WERROR=ON `
+            -DMEIOS_EVAL_PYTHON_SUPPORT=ON `
+            -DMEIOS_REQUIRE_EVAL_PYTHON=ON `
+            -DPython3_EXECUTABLE:FILEPATH="${{ steps.python.outputs.python-path }}" `
+            -DPython_EXECUTABLE:FILEPATH="${{ steps.python.outputs.python-path }}"
+          $status = $LASTEXITCODE
+          if (Test-Path -LiteralPath build/CMakeCache.txt) {
+            Select-String -LiteralPath build/CMakeCache.txt `
+              -Pattern '^(PYTHON_IS_DEBUG|_?Python3_(EXECUTABLE|LIBRAR[A-Z_]*|RUNTIME_LIBRAR[A-Z_]*))[:=]' |
+              ForEach-Object { Write-Host $_.Line }
+          }
+          exit $status
+
+      - name: Build the closed-input, stream-mode and host-state stems
+        run: >-
+          cmake --build build --config Debug
+          --target eval_python_closed_input_test eval_python_stream_mode_test eval_python_host_state_test
+
+      - name: Read the stems' DLL imports
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          for stem in eval_python_closed_input_test eval_python_stream_mode_test eval_python_host_state_test; do
+            image="build/tests/Debug/$stem.exe"
+            echo "DLLs named by $image:"
+            if [ ! -f "$image" ]; then
+              echo "  missing"
+              continue
+            fi
+            grep -aoiE '(python3[0-9]*(_d)?|ucrtbased?|vcruntime140d?)\.dll' "$image" | sort | uniq -c || echo "  none"
+          done
+
+      - name: Focus the closed-input, stream-mode and host-state tests
+        if: ${{ !cancelled() }}
+        working-directory: build
+        shell: bash
+        run: |
+          selector='^eval_python_(closed_input|closed_input_during_start|stream_mode|host_state)'
+          echo "ctest -N -C Debug -R '$selector'"
+          discovery=$(ctest -N -C Debug -R "$selector")
+          printf '%s\n' "$discovery"
+          for prefix in closed_input closed_input_during_start stream_mode host_state host_state_module_path \
+              host_state_faulthandler host_state_dev_mode; do
+            echo "Discovered eval_python_$prefix.: $(printf '%s\n' "$discovery" | grep -cF "eval_python_$prefix." || true)"
+          done
+          echo "Discovered tests: $(printf '%s\n' "$discovery" | grep -cE 'Test +#[0-9]+:' || true)"
+          echo "ctest --output-on-failure --no-tests=error -C Debug --timeout 60 -R '$selector'"
+          ctest --output-on-failure --no-tests=error -C Debug --timeout 60 -R "$selector"
+
   examples:
     runs-on: windows-2022
     name: examples (MEIOS_BUILD_EXAMPLES)
