@@ -102,4 +102,6 @@ TEST_CASE("a real beyond the double range refuses by name as an argument, and st
     CHECK(argument.expanded.error().message.find("the argument 'q'") != std::string::npos);
     const outcome property = under_python(R"XML(<xacro:property name="p" value="1e999"/>)XML", "${p}");
     CHECK(leaves(property, "<l>1e999</l>"));
+    const outcome through_python = under_python(R"XML(<xacro:property name="p" value="1e999"/>)XML", "${str(p)}");
+    CHECK(leaves(through_python, "<l>1e999</l>"));
 }
