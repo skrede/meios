@@ -12,13 +12,13 @@ jobs:
   # the record on a single-threaded library. Flags are injected globally at
   # configure via CMAKE_CXX_FLAGS/CMAKE_C_FLAGS so instrumentation reaches
   # meios_core and the in-tree pugixml (FETCH_DEPS=ON builds it from source under
-  # the same flags), not just the harness translation units. continue-on-error
-  # keeps every finding advisory; promotion to a required gate is a deliberate,
-  # visible deferral recorded here in prose.
+  # the same flags), not just the harness translation units.
+  # continue-on-error on the Test step keeps every sanitizer finding advisory;
+  # configuring, building, the instrumentation and registration assertions and
+  # the tsan scope record gate the run.
   sanitize:
     name: sanitize (${{ matrix.label }})
     runs-on: ubuntu-24.04
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +99,7 @@ jobs:
           echo "eval_python registered $registered test(s)"
 
       - name: Test
+        continue-on-error: true
         run: cd build && ctest --output-on-failure
 
       # The library starts no thread and declares no blocking primitive of its own:
@@ -138,7 +139,7 @@ jobs:
           echo "An atomic only read and written neither starts a thread nor blocks, so the flag the Python backend keeps to report a start-time note once is outside this check; an atomic's wait or notify is not, and the check looks for it."
           echo "A function-local static's guarded initialization blocks too, and the library has several (the command table, the Python backend's start); the backend also takes the interpreter lock for each evaluation. Both are outside the claim and the pattern, and this leg does not build the backend."
           echo "The concurrent traffic this job watches comes from the tests: native_session_test.cpp and native_constructs_test.cpp each drive two threads through one shared handle, and this leg runs the suite over the pinned corpus."
-          echo "The job stays advisory (continue-on-error), so a cell citing it says so rather than citing it as a passing gate."
+          echo "This step gates the run; only the Test step's sanitizer findings are advisory, so a cell citing this job says which."
 
   # Advisory fuzz job: clang only, because the CMake guard builds zero harnesses
   # under gcc and would leave a gcc cell green while fuzzing nothing. Global

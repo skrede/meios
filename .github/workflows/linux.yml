@@ -682,6 +682,7 @@ jobs:
   eval-python:
     runs-on: ubuntu-24.04
     name: eval-python (Python found + absent)
+    timeout-minutes: 180
 
     steps:
       - uses: actions/checkout@v4
@@ -728,7 +729,7 @@ jobs:
         run: cmake --build build-py
 
       - name: Test (Python found)
-        run: cd build-py && ctest --output-on-failure
+        run: cd build-py && ctest --output-on-failure -j4 --timeout 120
 
       # ctest reports success when a -R filter selects nothing, so the leg that
       # requires the enrichment asserts the abuse suite exists before running it;
@@ -853,7 +854,7 @@ jobs:
         run: cmake --build build-nopy
 
       - name: Test (Python absent)
-        run: cd build-nopy && ctest --output-on-failure
+        run: cd build-nopy && ctest --output-on-failure -j4 --timeout 120
 
   examples:
     runs-on: ubuntu-24.04
