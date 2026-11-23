@@ -951,14 +951,15 @@ unoptimized build. With the built-in evaluator, a chain of ten properties, `p0` 
 to a tenth holding a number, renders, and a chain of eleven refuses; a read written inside parentheses
 or arithmetic is charged its nesting as well, so such a chain refuses sooner: written as `${p1 + 1}`,
 six properties render and seven refuse. Under `meios::eval-python` each read also carries the
-interpreter's own frames, and a chain of seven properties written that way renders. xacro bounds the
-same chain only by its interpreter's recursion limit: measured against the pinned xacro 2.1.1, it
-renders a chain of one hundred and sixty-five and refuses one of one hundred and sixty-six. The
-`property_chain_deeper_than_depth_ceiling` row of the divergence manifest compares a chain of
-thirty-two. A description that needs a longer chain can write each property after the one it reads and
-mark every tenth `lazy_eval="false"`: such a property is evaluated where it is written and caches its
-value, so a later read stops there, and the chain of thirty-two written that way renders under meios
-and xacro alike. A chain whose reads sit inside arithmetic needs one marked in every six.
+interpreter's own frames, and a chain of five properties written that way renders and one of six
+refuses. xacro bounds the same chain only by its interpreter's recursion limit: measured against the
+pinned xacro 2.1.1, it renders a chain of one hundred and sixty-five and refuses one of one hundred and
+sixty-six. The `property_chain_deeper_than_depth_ceiling` row of the divergence manifest compares a
+chain of thirty-two. A description that needs a longer chain can write each property after the one it
+reads and mark every tenth `lazy_eval="false"`: such a property is evaluated where it is written and
+caches its value, so a later read stops there, and the chain of thirty-two written that way renders
+under meios and xacro alike. A chain whose reads sit inside arithmetic needs one marked in every six,
+and one in every four under `meios::eval-python`.
 
 **An integer of more than 4300 digits arising inside an expression refuses here; xacro computes it.**
 `${10**5000 // 10**4990}`, `${10**4300 // 10}`, `${2**20000 > 1}` and `${(2**20000) % 7}` render

@@ -148,8 +148,8 @@ TEST_CASE("a circular definition read by the backend refuses as circular", "[eva
 // have no such guard, so the ceiling's charge on each read is what keeps the thread's headroom.
 TEST_CASE("a deferred chain read by the backend refuses on the shared ceiling one level past its pin", "[eval_python][scope]")
 {
-    const std::size_t most = longest_chain(7);
-    CHECK(most == 6);
+    const std::size_t most = longest_chain(5);
+    CHECK(most == 4);
     const scope_probe::loaded refused = load(arithmetic_chain(most + 1));
     REQUIRE(scope_probe::refuses_once(refused, "expression depth ceiling"));
     REQUIRE(refused.out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
@@ -164,7 +164,7 @@ TEST_CASE("a deferred chain read by the backend keeps ninefold headroom", "[eval
     constexpr std::size_t thread_stack      = 512 * 1024;
     bool rendered                           = load(arithmetic_chain(0)).out.has_value();
     const std::optional<std::size_t> base   = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(0)).out.has_value() && rendered; });
-    const std::optional<std::size_t> loaded = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(6)).out.has_value() && rendered; });
+    const std::optional<std::size_t> loaded = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(4)).out.has_value() && rendered; });
     REQUIRE(base);
     REQUIRE(loaded);
     CHECK(rendered);

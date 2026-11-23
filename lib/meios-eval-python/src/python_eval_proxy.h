@@ -23,8 +23,10 @@ namespace meios::detail
 inline pybind11::object namespace_proxy(const pybind11::dict &priv, yaml_context &ctx, const scope_namespace &space, const pybind11::tuple &fallback);
 
 // The interpreter's frames stay on the stack beneath the evaluation a read starts, as a parser's
-// do, so a read carries the nesting they are worth.
-inline constexpr std::size_t python_read_nesting = 9;
+// do, so a read is charged what they cost. Under the unoptimized builds the suite measures, one
+// interpreter level takes the stack of a little over forty-seven units of the ceiling, nineteen of
+// which the deferred read already charges.
+inline constexpr std::size_t python_read_nesting = 29;
 
 inline pybind11::error_already_set raised(const pybind11::handle &type, const std::string &message)
 {

@@ -1705,8 +1705,8 @@ holds no `abs` and refuses it; a member no name answers raises `NameError: nothi
 which suggests no argument command, as under the built-in evaluator. A property's text evaluated at its
 first read under this backend is charged against the expression-depth ceiling as the built-in evaluator
 charges it, and a circular definition refuses the same way. Each read this backend makes carries a
-nesting of nine, for the interpreter's frames that stay on the stack beneath the evaluation the read
-starts, so each level is charged that beside the nineteen a deferred read costs: a chain of seven
+nesting of twenty-nine, for the interpreter's frames that stay on the stack beneath the evaluation the
+read starts, so each level is charged that beside the nineteen a deferred read costs: a chain of five
 properties each reading the next inside arithmetic renders under it, where six do under the built-in
 evaluator, and one longer refuses with `expansion_budget_exceeded`. Measured on a 512 KiB thread with
 the ceiling lifted, the interpreter's own parser refuses such a chain of forty-nine properties, before
