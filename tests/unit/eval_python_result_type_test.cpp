@@ -156,3 +156,27 @@ TEST_CASE("a real literal too small for a double renders zero under the Python b
         CHECK(leaves(native, row.second));
     }
 }
+
+TEST_CASE("a real literal too large for a double reads as infinity inside a Python expression, and only a result still not finite refuses", "[eval_python]")
+{
+    const std::pair<std::string_view, std::string_view> rows[] = {
+            {"${str(1e999)}", "<l>inf</l>"},
+            {"${1e999 > 0}", "<l>True</l>"},
+            {"${1 / 1e999}", "<l>0.0</l>"},
+    };
+    for(const std::pair<std::string_view, std::string_view> &row : rows)
+    {
+        INFO(row.first);
+        const outcome python = expand_span(row.first);
+        REQUIRE(python.expanded.has_value());
+        CHECK(leaves(python, row.second));
+        CHECK_FALSE(run(span_document(row.first), meios::eval_policy::fail, nullptr).expanded.has_value());
+    }
+    for(const std::string_view bare : {"${1e999}", "${-1e999}"})
+    {
+        INFO(bare);
+        const outcome python = expand_span(bare);
+        REQUIRE_FALSE(python.expanded.has_value());
+        CHECK(python.reported.find("a non-finite float is not a serializable expression result") != std::string::npos);
+    }
+}
