@@ -91,7 +91,8 @@ if(TARGET xacro_attribute_place_test)
 endif()
 if(TARGET xacro_include_read_test)
     target_sources(xacro_include_read_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_warning_test.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_optional_test.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_optional_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/xacro_include_optional_refusal_test.cpp)
 endif()
 
 # Catch discovery transports properties as name/value pairs, so a platform-specific
