@@ -1,7 +1,10 @@
 #ifndef HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 #define HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 
+// Only a build against the release DLL C runtime (/MD), the one the release interpreter uses, keeps the modes. A MinGW
+// build or one running a debug Python keeps none, although either can share its descriptors with the interpreter.
 #if defined(_WIN32) && defined(_DLL) && !defined(_DEBUG)
+    #define MEIOS_KEEPS_STREAM_MODES 1
 
     #include <io.h>
     #include <fcntl.h>
@@ -10,18 +13,18 @@
     #include <cstdio>
     #include <cstdint>
     #include <cstdlib>
-
+#else
+    #define MEIOS_KEEPS_STREAM_MODES 0
 #endif
 
 namespace meios::detail
 {
 
 // The interpreter's file objects switch each standard descriptor they wrap to binary mode on Windows, so the
-// modes are read before the start and set back after it. Only the release DLL C runtime (/MD) shares its
-// descriptors with the interpreter, so no other build keeps a mode.
+// modes are read before the start and set back after it.
 class kept_stream_modes
 {
-#if defined(_WIN32) && defined(_DLL) && !defined(_DEBUG)
+#if MEIOS_KEEPS_STREAM_MODES
     struct kept_mode
     {
         std::int32_t descriptor;
@@ -56,7 +59,7 @@ class kept_stream_modes
 #endif
 
 public:
-#if defined(_WIN32) && defined(_DLL) && !defined(_DEBUG)
+#if MEIOS_KEEPS_STREAM_MODES
     kept_stream_modes()
             : m_kept{kept(_fileno(stdin)), kept(_fileno(stdout)), kept(_fileno(stderr))}
     {
@@ -87,7 +90,7 @@ public:
     kept_stream_modes &operator=(const kept_stream_modes &) = delete;
 
 private:
-#if defined(_WIN32) && defined(_DLL) && !defined(_DEBUG)
+#if MEIOS_KEEPS_STREAM_MODES
     std::array<kept_mode, 3> m_kept;
 
     static kept_mode kept(std::int32_t descriptor)

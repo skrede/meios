@@ -1,6 +1,8 @@
 #include "eval_python_fixture.h"
 #include "eval_python_descriptor_mode.h"
 
+#include "kept_stream_modes.h"
+
 #include <pybind11/embed.h>
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,8 +21,7 @@
 #include <share.h>
 #include <sys/stat.h>
 
-// These cases need the program to share the release DLL C runtime's descriptors with the interpreter (/MD).
-#if defined(_DLL) && !defined(_DEBUG)
+#if MEIOS_KEEPS_STREAM_MODES
 
 namespace
 {

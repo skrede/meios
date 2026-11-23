@@ -73,6 +73,8 @@ if(TARGET meios_eval-python)
             target_link_libraries(eval_python_stream_mode_test
                 PRIVATE meios::core meios::model meios::io meios::xacro meios::eval-python
                     pybind11::embed Catch2::Catch2WithMain)
+            # The cases exist only where the start keeps the modes, which the guard's own header decides.
+            target_include_directories(eval_python_stream_mode_test PRIVATE ${meios_SOURCE_DIR}/lib/meios-eval-python/src)
             meios_enable_coverage(eval_python_stream_mode_test)
             meios_warnings(eval_python_stream_mode_test)
             catch_discover_tests(eval_python_stream_mode_test TEST_PREFIX "eval_python_stream_mode."

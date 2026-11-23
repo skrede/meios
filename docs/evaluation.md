@@ -1638,12 +1638,16 @@ that directory. The interpreter installs none of Python's signal handlers, so SI
 the disposition the program gave it. It also leaves Python's fault handler off, even where
 `PYTHONFAULTHANDLER` or `PYTHONDEVMODE` asks for it, so the program's handlers for SIGSEGV, SIGFPE,
 SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
-set it and exports no locale variable into the environment, and on Windows it leaves each standard
-stream in the text or binary mode the program gave it. A standard stream the program closed stays
-closed, and the first evaluation proceeds. The modes are kept where the program links the release DLL
-C runtime (`/MD`), whose descriptors the interpreter shares; a program built against a debug C runtime
-(`/MDd`, `/MTd`) or the static one (`/MT`) gets no mode guard, since the interpreter's mode changes do
-not reach its descriptors. It runs in Python's UTF-8 mode, so text Python
+set it and exports no locale variable into the environment, and on Windows, where the backend keeps
+the modes, it leaves each standard stream in the text or binary mode the program gave it. A standard
+stream the program closed stays closed, and the first evaluation proceeds. The modes are kept only
+where the backend is built for the MSVC ABI against the release DLL C runtime (`/MD`), the runtime
+whose descriptors the release interpreter uses; which builds keep them follows the backend's own
+build, not the program's. A MinGW build gets no mode guard, and neither does a debug build that runs
+a debug build of Python; where either shares its descriptors with the interpreter, the start leaves
+each standard stream in binary mode. A program on a debug (`/MDd`, `/MTd`) or the static (`/MT`) C
+runtime that runs the release interpreter gets none either, and needs none, since the interpreter's
+mode changes do not reach its descriptors. It runs in Python's UTF-8 mode, so text Python
 decodes or encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
 `PYTHONLEGACYWINDOWSFSENCODING` is set: there UTF-8 mode is off, and that text follows the ANSI code
 page instead. A standard stream the program put in a Unicode translation mode, wide-character or
@@ -1657,11 +1661,18 @@ carriage returns and a line feed; a program that wants Python's lines as Python 
 that descriptor in binary mode. On a console Python writes through the console itself, unless
 `PYTHONLEGACYWINDOWSSTDIO` is set, and a line it writes there ends once. Where the standard input is
 a file or a pipe the program keeps in text mode, Python reads each carriage return and line feed
-there as one line feed, and a Ctrl-Z as the end of the input. These guarantees hold for the start
+there as one line feed, and a Ctrl-Z as the end of the input. The Unicode mode left binary, the
+doubled carriage return and the input's translation each need the interpreter to share the program's
+descriptors: a program on a debug or the static C runtime that runs the release interpreter has
+Python read and write through descriptors of the interpreter's own runtime, which the start sets to
+binary, so a Unicode mode the program set stays as it set it, a line Python writes to a file or a
+pipe ends with one carriage return and a line feed, and a Ctrl-Z does not end the input. These
+guarantees hold for the start
 itself. Python code the start runs, a `sitecustomize` or `usercustomize` module on the module path
 or an `import` line of a `.pth` file in one of Python's site directories, can still turn the fault
-handler on, set the locale and export a locale variable; SIGINT's disposition and, on Windows, the
-standard streams' text and binary modes are set back once the start has run it, and a standard
+handler on, set the locale and export a locale variable; SIGINT's disposition and, on Windows where
+the backend keeps them, the standard streams' text and binary modes are set back once the start has
+run it, and a standard
 stream that code closes stays closed. A program that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
