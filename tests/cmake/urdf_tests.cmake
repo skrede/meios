@@ -18,6 +18,14 @@ if(TARGET urdf_walk_test)
     target_link_libraries(urdf_walk_test PRIVATE meios::bundle)
 endif()
 
+# One stem and one test prefix, compiled from two sources.
+if(TARGET urdf_topology_test)
+    target_sources(urdf_topology_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_topology_forest_test.cpp)
+endif()
+if(TARGET urdf_mesh_test)
+    target_sources(urdf_mesh_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_mesh_refusal_test.cpp)
+endif()
+
 # These stems carry TEST_PREFIX so ctest -R can select them by stem; the urdf stems above
 # register their cases under prose names and predate that convention.
 foreach(stem IN ITEMS urdf_vocabulary urdf_identity urdf_fields urdf_joint_rules urdf_axis
