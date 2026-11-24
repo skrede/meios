@@ -173,6 +173,9 @@ if(TARGET meios_eval-python)
     set(urdf_yaml_flatten_src ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_test.cpp)
     if(EXISTS ${urdf_yaml_flatten_src})
         add_executable(urdf_yaml_flatten_test ${urdf_yaml_flatten_src})
+        target_sources(urdf_yaml_flatten_test PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_spec_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/integration/urdf_yaml_flatten_smoke_test.cpp)
         target_link_libraries(urdf_yaml_flatten_test
             PRIVATE meios::core meios::model meios::io meios::xacro meios::urdf meios::eval-python
                 Catch2::Catch2WithMain)
