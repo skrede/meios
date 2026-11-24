@@ -113,6 +113,11 @@ if(TARGET uri_cases_test)
         ${meios_SOURCE_DIR}/lib/meios-core/src)
 endif()
 
+if(TARGET uri_cases_test)
+    target_sources(uri_cases_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/uri_cases_classify_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/uri_cases_containment_test.cpp)
+endif()
+
 # The frame reference is data a consumer diffs against rather than a fixture the library
 # reads, so this stem needs the golden directory and links no meios target at all.
 set(frames_test_src ${CMAKE_CURRENT_SOURCE_DIR}/unit/urdf_frames_test.cpp)
