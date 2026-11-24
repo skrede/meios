@@ -270,7 +270,7 @@ from that install tree, on all three platforms, by a project that lives outside 
 | With `MEIOS_CORPUS_BREADTH` on, which adds the pre-expanded KUKA set, every robot description named in the pinned [description corpus](docs/known-limitations.md#what-the-description-corpus-proves) loads, and each one the built-in evaluator expands matches its recorded facts; the known-faulty fixture reports its typed diagnostic at its expected line, and flattening the known-good description reproduces a committed baseline byte for byte | `corpus` | ● | | |
 | Fresh renders through the pinned xacro, of every minimized and every authored expression case, every minimized binding document and every corpus document the built-in evaluator expands, agree with meios on accept or refuse and on normalized document structure, and each document's fresh render matches its recorded model facts; a difference passes only where the reviewed divergence manifest records it, and a recorded divergence that no longer reproduces fails — [what this evidence covers](docs/evaluation.md#what-this-evidence-covers) | `differential` | ● | | |
 | Header-guard uniqueness and format | `header-guards` | ● | | |
-| No header over the size ceiling unless registered | `file-size` | ● | | |
+| No C++ header or source over the size ceiling unless registered | `file-size` | ● | | |
 | Line coverage, uploaded to Codecov | `build` → gcovr | ● | | |
 
 Beyond the two routes `clean-consumer` builds, consuming meios as a *subproject* — the

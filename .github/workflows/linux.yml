@@ -40,21 +40,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check header size ceiling
+      - name: Check file size ceiling
         run: |
           status=0
-          while IFS= read -r header; do
-            lines=$(wc -l < "$header")
-            if [ "$lines" -gt 200 ] && ! grep -qF "$header" EXCEPTIONS.md; then
-              echo "OVER CEILING ($lines lines, limit 200): $header"
+          checked=0
+          while IFS= read -r file; do
+            checked=$((checked + 1))
+            lines=$(wc -l < "$file")
+            # A path mentioned outside the table's first column registers nothing.
+            if [ "$lines" -gt 200 ] && ! grep -qF "| \`$file\` |" EXCEPTIONS.md; then
+              echo "OVER CEILING ($lines lines, limit 200): $file"
               status=1
             fi
-          done < <(find lib -name '*.h')
-          if [ "$status" -ne 0 ]; then
-            echo "Headers over the 200-line ceiling must be registered in EXCEPTIONS.md."
+          done < <(find lib tests tools examples -type f \( -name '*.h' -o -name '*.cpp' \) | LC_ALL=C sort)
+          if [ "$checked" -eq 0 ]; then
+            echo "No C++ header or source found under lib/, tests/, tools/ or examples/." >&2
             exit 1
           fi
-          echo "All lib headers are within the 200-line ceiling (or registered)."
+          if [ "$status" -ne 0 ]; then
+            echo "C++ headers and sources over the 200-line ceiling must be split or registered in EXCEPTIONS.md."
+            exit 1
+          fi
+          echo "Checked $checked C++ headers and sources under lib/, tests/, tools/ and examples/: all within the 200-line ceiling (or registered)."
 
   build:
     strategy:
