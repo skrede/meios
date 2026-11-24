@@ -42,6 +42,14 @@ foreach(stem IN ITEMS operation_failure operation_adapter text_reader io_source_
     meios_add_acquisition_test(${stem})
 endforeach()
 
+# One stem and one test prefix, compiled from two sources.
+if(TARGET text_reader_test)
+    target_sources(text_reader_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/text_reader_native_test.cpp)
+endif()
+if(TARGET scratch_alias_test)
+    target_sources(scratch_alias_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit/scratch_alias_entries_test.cpp)
+endif()
+
 # Windows models directory permissions as a read-only attribute that denies nothing, so there is
 # no denial to drive there; the registration carries the condition rather than the source, because
 # a stem registered anyway would build a binary with no cases in it.
