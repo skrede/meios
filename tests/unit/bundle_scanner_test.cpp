@@ -1,81 +1,26 @@
-#include "asset_read_probe.h"
+#include "bundle_scanner_fixture.h"
 
 #include <meios/bundle.h>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <map>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <utility>
-#include <optional>
 #include <filesystem>
 #include <type_traits>
-#include <string_view>
 
 namespace
 {
 
-struct obj_scanner
-{
-    std::vector<std::string> refs;
-
-    std::vector<std::string> scan(const meios::resolved_asset &, meios::log_sink &) { return refs; }
-};
-
 meios::resolved_asset make_asset(std::string name)
 {
-    return meios::resolved_asset{ std::filesystem::path{ std::move(name) } };
-}
-
-// A path-backed fake source: it answers locate for the "pkg/rel" keys it was seeded
-// with, so the closure and the texture path can be driven without touching disk.
-struct fake_source
-{
-    std::map<std::string, std::filesystem::path> table;
-
-    meios::capability_descriptor capabilities() const
-    {
-        return meios::capability_descriptor{ meios::source_kind::directory, false };
-    }
-
-    std::optional<meios::resolved_asset> locate(std::string_view pkg, std::string_view rel)
-    {
-        const std::map<std::string, std::filesystem::path>::iterator hit =
-            table.find(std::string(pkg) + '/' + std::string(rel));
-        if(hit == table.end())
-            return std::nullopt;
-        return meios::resolved_asset{ hit->second };
-    }
-};
-
-// The closure applies the regular-file rule to a discovered child, so a seeded answer must
-// name a file that exists rather than a spelling nothing stands behind.
-struct seeded_tree
-{
-    seeded_tree() : root(asset_probe::fresh_dir()) {}
-
-    std::filesystem::path seed(const std::string &relative) const
-    {
-        const std::filesystem::path file = root.path() / relative;
-        std::filesystem::create_directories(file.parent_path());
-        std::ofstream(file, std::ios::binary);
-        return file;
-    }
-
-    meios::scratch_dir root;
-};
-
-meios::reference_record mesh_ref(std::string original, std::optional<std::string> resolved)
-{
-    return meios::reference_record{ std::move(original), std::move(resolved), false };
+    return meios::resolved_asset{std::filesystem::path{std::move(name)}};
 }
 
 }
 
 static_assert(meios::asset_scanner<obj_scanner>);
-static_assert(meios::package_source<fake_source>);
 static_assert(!std::is_copy_constructible_v<meios::scanner_handle>);
 static_assert(std::is_move_constructible_v<meios::scanner_handle>);
 
@@ -92,29 +37,27 @@ TEST_CASE("an unknown extension returns the null default", "[bundle][scanner]")
 TEST_CASE("a registered scanner is dispatched by its lowercased extension", "[bundle][scanner]")
 {
     meios::scanner_registry registry;
-    registry.register_scanner("obj", meios::scanner_handle{ obj_scanner{ { "a.mtl", "b.mtl" } } });
+    registry.register_scanner("obj", meios::scanner_handle{obj_scanner{{"a.mtl", "b.mtl"}}});
     meios::log_sink silent;
     meios::resolved_asset asset = make_asset("mesh.obj");
 
     const std::vector<std::string> refs = registry.scan("OBJ", asset, silent);
 
     REQUIRE(registry.contains("obj"));
-    REQUIRE(refs == std::vector<std::string>{ "a.mtl", "b.mtl" });
+    REQUIRE(refs == std::vector<std::string>{"a.mtl", "b.mtl"});
 }
 
 TEST_CASE("a package mesh reference rewrites to the namespaced bundle layout", "[bundle][rewrite]")
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{false}, sources, silent);
 
-    builder.add_reference(mesh_ref("package://ur5_description/meshes/base.stl",
-                                   "/abs/ur5_description/meshes/base.stl"));
+    builder.add_reference(mesh_ref("package://ur5_description/meshes/base.stl", "/abs/ur5_description/meshes/base.stl"));
 
     const meios::asset_manifest &manifest = builder.manifest();
     REQUIRE(manifest.entries.size() == 1);
-    REQUIRE(manifest.entries[0].rewritten_uri
-            == "package://botbundle/meshes/ur5_description/meshes/base.stl");
+    REQUIRE(manifest.entries[0].rewritten_uri == "package://botbundle/meshes/ur5_description/meshes/base.stl");
     REQUIRE(manifest.entries[0].dest_relative == "meshes/ur5_description/meshes/base.stl");
     REQUIRE(manifest.entries[0].copy_source == std::filesystem::path("/abs/ur5_description/meshes/base.stl"));
     REQUIRE(builder.status() == meios::emit_status::ok);
@@ -124,14 +67,13 @@ TEST_CASE("a relative mesh reference buckets under the bundle's own package", "[
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{false}, sources, silent);
 
     builder.add_reference(mesh_ref("meshes/base.stl", "/abs/meshes/base.stl"));
 
     const meios::asset_manifest &manifest = builder.manifest();
     REQUIRE(manifest.entries.size() == 1);
-    REQUIRE(manifest.entries[0].rewritten_uri
-            == "package://botbundle/meshes/botbundle/meshes/base.stl");
+    REQUIRE(manifest.entries[0].rewritten_uri == "package://botbundle/meshes/botbundle/meshes/base.stl");
     REQUIRE(manifest.entries[0].dest_relative == "meshes/botbundle/meshes/base.stl");
 }
 
@@ -139,7 +81,7 @@ TEST_CASE("a malformed package uri loud-fails and adds no entry", "[bundle][rewr
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{false}, sources, silent);
 
     builder.add_reference(mesh_ref("package://foo", "/abs/foo"));
 
@@ -151,7 +93,7 @@ TEST_CASE("logically equal source roots are not a collision", "[bundle][collisio
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{false}, sources, silent);
 
     builder.add_reference(mesh_ref("package://ur5/meshes/a.stl", "/ws1/ur5/meshes/a.stl"));
     builder.add_reference(mesh_ref("package://ur5/meshes/b.stl", "/ws1/./ur5/meshes/b.stl"));
@@ -165,7 +107,7 @@ TEST_CASE("same package name from distinct roots loud-fails by default", "[bundl
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{false}, sources, silent);
 
     builder.add_reference(mesh_ref("package://ur5/meshes/a.stl", "/ws1/ur5/meshes/a.stl"));
     builder.add_reference(mesh_ref("package://ur5/meshes/b.stl", "/ws2/ur5/meshes/b.stl"));
@@ -178,7 +120,7 @@ std::string second_dir(bool opt_in)
 {
     meios::source_stack sources;
     meios::log_sink silent;
-    meios::manifest_builder builder("botbundle", meios::collision_options{ opt_in }, sources, silent);
+    meios::manifest_builder builder("botbundle", meios::collision_options{opt_in}, sources, silent);
     builder.add_reference(mesh_ref("package://ur5/meshes/a.stl", "/ws1/ur5/meshes/a.stl"));
     builder.add_reference(mesh_ref("package://ur5/meshes/b.stl", "/ws2/ur5/meshes/b.stl"));
     return builder.manifest().entries.back().dest_relative;
@@ -192,126 +134,4 @@ TEST_CASE("the opt-in hash suffix keeps both colliding packages deterministicall
     REQUIRE(dest == "meshes/ur5-" + dest.substr(11, 8) + "/meshes/b.stl");
     REQUIRE(dest.substr(11, 8).size() == 8);
     REQUIRE(dest == second_dir(true));
-}
-
-TEST_CASE("the closure re-resolves a scanner-discovered ref into the manifest", "[bundle][closure]")
-{
-    const seeded_tree tree;
-    fake_source src;
-    src.table["ur5/materials/wood.mtl"] = tree.seed("ur5/materials/wood.mtl");
-    meios::source_stack sources(std::move(src));
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-    registry.register_scanner("obj", meios::scanner_handle{ obj_scanner{ { "package://ur5/materials/wood.mtl" } } });
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/meshes/base.obj", tree.seed("ur5/meshes/base.obj").string()));
-    builder.close_over(registry);
-
-    const meios::asset_manifest &manifest = builder.manifest();
-    REQUIRE(manifest.entries.size() == 2);
-    REQUIRE(manifest.entries[1].dest_relative == "meshes/ur5/materials/wood.mtl");
-}
-
-TEST_CASE("the closure re-anchors a bare relative scanner ref to the entry's package", "[bundle][closure]")
-{
-    const seeded_tree tree;
-    fake_source src;
-    src.table["ur5/meshes/material.mtl"] = tree.seed("ur5/meshes/material.mtl");
-    meios::source_stack sources(std::move(src));
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-    registry.register_scanner("obj", meios::scanner_handle{ obj_scanner{ { "material.mtl" } } });
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/meshes/base.obj", tree.seed("ur5/meshes/base.obj").string()));
-    builder.close_over(registry);
-
-    const meios::asset_manifest &manifest = builder.manifest();
-    REQUIRE(manifest.entries.size() == 2);
-    REQUIRE(manifest.entries[1].dest_relative == "meshes/ur5/meshes/material.mtl");
-    REQUIRE(manifest.unresolved.empty());
-}
-
-TEST_CASE("a scanner-discovered texture lands under the textures root", "[bundle][closure]")
-{
-    const seeded_tree tree;
-    fake_source src;
-    src.table["ur5/materials/wood.png"] = tree.seed("ur5/materials/wood.png");
-    meios::source_stack sources(std::move(src));
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-    registry.register_scanner("mtl", meios::scanner_handle{ obj_scanner{ { "package://ur5/materials/wood.png" } } });
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/materials/wood.mtl", tree.seed("ur5/materials/wood.mtl").string()));
-    builder.close_over(registry);
-
-    const meios::asset_manifest &manifest = builder.manifest();
-    REQUIRE(manifest.entries.size() == 2);
-    REQUIRE(manifest.entries[1].dest_relative == "textures/ur5/materials/wood.png");
-}
-
-TEST_CASE("a self-referencing scanner terminates via the visited guard", "[bundle][closure]")
-{
-    const seeded_tree tree;
-    const std::filesystem::path self = tree.seed("ur5/self.obj");
-    fake_source src;
-    src.table["ur5/self.obj"] = self;
-    meios::source_stack sources(std::move(src));
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-    registry.register_scanner("obj", meios::scanner_handle{ obj_scanner{ { "package://ur5/self.obj" } } });
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/self.obj", self.string()));
-    builder.close_over(registry);
-
-    REQUIRE(builder.manifest().entries.size() == 1);
-}
-
-TEST_CASE("an unregistered extension contributes only itself", "[bundle][closure]")
-{
-    meios::source_stack sources;
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/meshes/base.stl", "/abs/ur5/meshes/base.stl"));
-    builder.close_over(registry);
-
-    REQUIRE(builder.manifest().entries.size() == 1);
-}
-
-TEST_CASE("a texture is resolved bundle-side under the textures root", "[bundle][texture]")
-{
-    const seeded_tree tree;
-    fake_source src;
-    src.table["ur5/materials/wood.png"] = tree.seed("ur5/materials/wood.png");
-    meios::source_stack sources(std::move(src));
-    meios::log_sink silent;
-    meios::scanner_registry registry;
-    registry.register_scanner("mtl", meios::scanner_handle{ obj_scanner{ { "wood.png" } } });
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(mesh_ref("package://ur5/materials/base.mtl", tree.seed("ur5/materials/base.mtl").string()));
-    builder.close_over(registry);
-
-    const meios::asset_manifest &manifest = builder.manifest();
-    REQUIRE(manifest.entries.size() == 2);
-    REQUIRE(manifest.entries[1].dest_relative == "textures/ur5/materials/wood.png");
-    REQUIRE(manifest.entries[1].rewritten_uri
-            == "package://botbundle/textures/ur5/materials/wood.png");
-}
-
-TEST_CASE("an unresolvable texture is recorded, never dropped", "[bundle][texture]")
-{
-    meios::source_stack sources(fake_source{});
-    meios::log_sink silent;
-
-    meios::manifest_builder builder("botbundle", meios::collision_options{ false }, sources, silent);
-    builder.add_reference(meios::reference_record{ "package://ghost/x.png", std::nullopt, true });
-
-    REQUIRE(builder.manifest().entries.empty());
-    REQUIRE(builder.manifest().unresolved == std::vector<std::string>{ "package://ghost/x.png" });
 }
