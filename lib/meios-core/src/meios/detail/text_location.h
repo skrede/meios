@@ -6,19 +6,18 @@
 #include <pugixml.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string_view>
 
 namespace meios::detail
 {
 
-int offset_to_line(std::string_view text, std::ptrdiff_t offset);
+std::int32_t offset_to_line(std::string_view text, std::ptrdiff_t offset);
 
-source_location offset_location(std::string_view text, std::ptrdiff_t offset,
-                                const std::filesystem::path &file);
+source_location offset_location(std::string_view text, std::ptrdiff_t offset, const std::filesystem::path &file);
 
-source_location node_location(pugi::xml_node node, std::string_view text,
-                              const std::filesystem::path &file);
+source_location node_location(pugi::xml_node node, std::string_view text, const std::filesystem::path &file);
 
 // Refines a node-anchored location to the real document column of a failing token
 // inside an attribute value. `text` is the raw source of the hosting document,
@@ -27,9 +26,7 @@ source_location node_location(pugi::xml_node node, std::string_view text,
 // the decoded attribute value. On a self-check-confirmed decode the returned column
 // is the token column; on a decode divergence it degrades to the value-start column;
 // when the attribute cannot be located in the raw tag it returns `fallback` unchanged.
-source_location refine_attr_column(std::string_view text, pugi::xml_node host,
-                                   std::size_t attr_index, std::size_t decoded_offset,
-                                   const source_location &fallback);
+source_location refine_attr_column(std::string_view text, pugi::xml_node host, std::size_t attr_index, std::size_t decoded_offset, const source_location &fallback);
 
 }
 

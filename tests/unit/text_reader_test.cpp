@@ -1,6 +1,10 @@
 #include "acquisition_script.h"
 
+#include "meios/io/text_reader_operations.h"
+
 #include <meios/io/text_reader.h>
+
+#include <meios/diagnostic/operation_failure.h>
 
 #include <catch2/catch_test_macros.hpp>
 

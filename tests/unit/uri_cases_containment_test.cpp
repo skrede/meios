@@ -1,8 +1,13 @@
 #include "uri_table.h"
 #include "uri_fixture.h"
+#include "uri_sandbox.h"
+
+#include <meios/urdf.h>
+#include <meios/expected.h>
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/load_error.h>
 #include <meios/diagnostic/missing_asset.h>
 #include <meios/diagnostic/diagnostic_code.h>
 
@@ -11,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <utility>
 #include <optional>
 #include <algorithm>
 #include <filesystem>

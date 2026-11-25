@@ -1,4 +1,10 @@
 #include "scratch_source.h"
+#include "scratch_capture.h"
+
+#include <meios/io.h>
+
+#include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/operation_failure.h>
 
 #include <catch2/catch_test_macros.hpp>
 

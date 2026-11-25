@@ -76,7 +76,7 @@ std::optional<value_span> locate_attr_value(std::string_view t, std::size_t pos,
     return std::nullopt;
 }
 
-void encode_utf8(unsigned long cp, std::string &out)
+void encode_utf8(std::uint32_t cp, std::string &out)
 {
     if(cp < 0x80u)
         out.push_back(static_cast<char>(cp));
@@ -114,9 +114,9 @@ std::size_t decode_numeric(std::string_view t, std::size_t amp, std::size_t end,
     const bool hex           = amp + 2 < end && t[amp + 2] == 'x';
     const std::size_t digits = hex ? amp + 3 : amp + 2;
     std::size_t j            = digits;
-    unsigned long code       = 0;
+    std::uint32_t code       = 0;
     for(; j < end && digit_value(t[j], hex) >= 0; ++j)
-        code = code * (hex ? 16 : 10) + static_cast<unsigned long>(digit_value(t[j], hex));
+        code = code * (hex ? 16 : 10) + static_cast<std::uint32_t>(digit_value(t[j], hex));
     if(j == digits || j >= end || t[j] != ';')
         return 0;
     encode_utf8(code, out);

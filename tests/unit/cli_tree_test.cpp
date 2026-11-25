@@ -14,9 +14,9 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 #include <fstream>
 #include <sstream>
-#include <iostream>
 #include <algorithm>
 #include <filesystem>
 
@@ -37,8 +37,8 @@ std::string read_golden(const std::string &relative)
 std::string run_tree_on(const std::string &file, bool dot)
 {
     verb_context ctx;
-    ctx.id = "tree";
-    ctx.positionals = { file };
+    ctx.id                  = "tree";
+    ctx.positionals         = {file};
     ctx.bool_flags["--dot"] = dot;
     cout_capture out;
     REQUIRE(cli::run_tree(ctx) == 0);
@@ -54,12 +54,12 @@ struct tree_run
 tree_run run_tree_root(const std::string &file, const std::string &root)
 {
     verb_context ctx;
-    ctx.id = "tree";
-    ctx.positionals = { file };
+    ctx.id                    = "tree";
+    ctx.positionals           = {file};
     ctx.value_flags["--root"] = root;
     cout_capture out;
     const int code = cli::run_tree(ctx);
-    return { code, out.str() };
+    return {code, out.str()};
 }
 
 std::size_t line_count(const std::string &text)
@@ -89,7 +89,7 @@ TEST_CASE("cli_tree: both branches of a link render, not a single chain")
 TEST_CASE("cli_tree: --root renders only the subtree rooted at the named link")
 {
     const std::string full = run_tree_on(fixture("branched_all_joints.urdf"), false);
-    const tree_run sub = run_tree_root(fixture("branched_all_joints.urdf"), "torso");
+    const tree_run sub     = run_tree_root(fixture("branched_all_joints.urdf"), "torso");
     REQUIRE(sub.code == 0);
     REQUIRE(sub.out.find("arm") != std::string::npos);
     REQUIRE(sub.out.find("slider") != std::string::npos);
@@ -118,13 +118,13 @@ TEST_CASE("cli_tree: a loop-closure edge is styled distinctly")
     model<double> robot;
     // Qualify to disambiguate from POSIX ::link (unistd.h) under `using namespace
     // meios;` on gcc/Linux, where an unqualified `link` is ambiguous.
-    robot.links.push_back(meios::link<double>{ "a", {}, {}, {}, {}, {} });
-    robot.links.push_back(meios::link<double>{ "b", {}, {}, {}, {}, {} });
+    robot.links.push_back(meios::link<double>{"a", {}, {}, {}, {}, {}});
+    robot.links.push_back(meios::link<double>{"b", {}, {}, {}, {}, {}});
     joint<double> loop{};
-    loop.name = "belt";
-    loop.kind = joint_kind::fixed;
-    loop.parent = "a";
-    loop.child = "b";
+    loop.name        = "belt";
+    loop.kind        = joint_kind::fixed;
+    loop.parent      = "a";
+    loop.child       = "b";
     loop.closes_loop = true;
     robot.joints.push_back(loop);
 
@@ -144,18 +144,18 @@ TEST_CASE("cli_tree: tree exits nonzero and prints each failure's typed code exa
         diagnostic_code code;
     };
     const std::vector<row> rows = {
-        { fixture("malformed_xml.urdf"), diagnostic_code::xml_parse_error },
-        { fixture("this_file_does_not_exist.urdf"), diagnostic_code::cannot_open },
-        { fixture("undefined_property.xacro"), diagnostic_code::undefined_property },
+            {fixture("malformed_xml.urdf"), diagnostic_code::xml_parse_error},
+            {fixture("this_file_does_not_exist.urdf"), diagnostic_code::cannot_open},
+            {fixture("undefined_property.xacro"), diagnostic_code::undefined_property},
     };
 
     for(const row &r : rows)
     {
         verb_context ctx;
-        ctx.id = "tree";
-        ctx.positionals = { r.file };
+        ctx.id          = "tree";
+        ctx.positionals = {r.file};
         cerr_capture err;
-        const int code = cli::run_tree(ctx);
+        const int code          = cli::run_tree(ctx);
         const std::string token = "(" + std::string(to_string(r.code)) + ")";
         REQUIRE(code != 0);
         REQUIRE(occurrences(err.str(), token) == 1);

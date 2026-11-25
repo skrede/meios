@@ -6,9 +6,12 @@
 #include <meios/io/resolved_asset.h>
 #include <meios/io/directory_source.h>
 
+#include <meios/expected.h>
+
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/operation_failure.h>
 
 #include <catch2/catch_test_macros.hpp>
 

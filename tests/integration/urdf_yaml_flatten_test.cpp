@@ -14,10 +14,14 @@
 #include <meios/io/memory_source.h>
 #include <meios/io/source_handle.h>
 
+#include <meios/diagnostic/expansion_error.h>
+#include <meios/diagnostic/capturing_log_sink.h>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <memory>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -25,6 +29,7 @@
 #include <iterator>
 #include <optional>
 #include <filesystem>
+#include <functional>
 
 namespace
 {

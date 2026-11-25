@@ -1,6 +1,8 @@
 #include "uri_table.h"
 #include "uri_fixture.h"
 
+#include <meios/model.h>
+
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/claims.h>
 #include <meios/diagnostic/completeness.h>

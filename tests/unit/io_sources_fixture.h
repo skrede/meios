@@ -7,6 +7,7 @@
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
 #include <meios/diagnostic/diagnostic_code.h>
+#include <meios/diagnostic/source_location.h>
 
 #include <catch2/catch_test_macros.hpp>
 

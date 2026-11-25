@@ -1,9 +1,15 @@
 #include "uri_fixture.h"
+#include "uri_sandbox.h"
 
+#include <meios/urdf/load.h>
 #include <meios/urdf/asset_uri.h>
+#include <meios/urdf/load_result.h>
+
+#include <meios/expected.h>
 
 #include <meios/diagnostic/level.h>
 #include <meios/diagnostic/log_sink.h>
+#include <meios/diagnostic/load_error.h>
 
 #include <catch2/catch_test_macros.hpp>
 

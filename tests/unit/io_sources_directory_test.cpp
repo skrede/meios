@@ -1,5 +1,6 @@
 #include "io_sources_fixture.h"
 
+#include <meios/io/source_lookup.h>
 #include <meios/io/package_source.h>
 #include <meios/io/resolved_asset.h>
 #include <meios/io/directory_source.h>

@@ -12,6 +12,7 @@
 #include <utility>
 #include <optional>
 #include <filesystem>
+#include <functional>
 
 namespace
 {

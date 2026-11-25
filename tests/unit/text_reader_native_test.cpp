@@ -3,10 +3,15 @@
 #include <meios/io/scratch_dir.h>
 #include <meios/io/text_reader.h>
 
+#include <meios/expected.h>
+
+#include <meios/diagnostic/operation_failure.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <array>
 #include <string>
+#include <cstddef>
 #include <fstream>
 #include <filesystem>
 #include <string_view>

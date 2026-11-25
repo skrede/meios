@@ -6,8 +6,6 @@
 
 #include <string>
 #include <cstddef>
-#include <sstream>
-#include <iostream>
 #include <filesystem>
 
 using namespace meios;
@@ -19,8 +17,8 @@ namespace
 std::string run_info(const std::string &document, const std::string &format)
 {
     verb_context ctx;
-    ctx.id = "info";
-    ctx.positionals = { fixture(document) };
+    ctx.id          = "info";
+    ctx.positionals = {fixture(document)};
     if(!format.empty())
         ctx.value_flags["--format"] = format;
     cout_capture out;

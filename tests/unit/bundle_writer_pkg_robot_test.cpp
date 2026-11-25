@@ -1,6 +1,8 @@
 #include "bundle_writer_pkg_fixture.h"
 
 #include <meios/bundle.h>
+#include <meios/io.h>
+#include <meios/model.h>
 
 #include <catch2/catch_test_macros.hpp>
 

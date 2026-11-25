@@ -6,8 +6,6 @@
 
 #include <string>
 #include <vector>
-#include <sstream>
-#include <iostream>
 #include <filesystem>
 
 using namespace meios;
@@ -26,7 +24,7 @@ std::string complete(const std::vector<std::string> &words)
 
 TEST_CASE("cli_complete: a model position falls back to filesystem completion")
 {
-    const std::string out = complete({ "flatten", "" });
+    const std::string out = complete({"flatten", ""});
     REQUIRE(out.find(":0") != std::string::npos);
     REQUIRE(out.find(":4") == std::string::npos);
 }
@@ -35,8 +33,7 @@ TEST_CASE("cli_complete: tree --root enumerates live link names in the emitter a
 {
     // The emitters invoke `meios __complete tree <model> --root -- <cur>`; the `--`
     // separator must not defeat the prior-token branch that offers link names.
-    const std::string out =
-        complete({ "tree", fixture("branched_all_joints.urdf"), "--root", "--", "" });
+    const std::string out = complete({"tree", fixture("branched_all_joints.urdf"), "--root", "--", ""});
     REQUIRE(out.find("base_link") != std::string::npos);
     REQUIRE(out.find("slider") != std::string::npos);
     REQUIRE(out.find(":4") != std::string::npos);
@@ -44,7 +41,7 @@ TEST_CASE("cli_complete: tree --root enumerates live link names in the emitter a
 
 TEST_CASE("cli_complete: tree --root also enumerates link names without the separator")
 {
-    const std::string out = complete({ "tree", fixture("branched_all_joints.urdf"), "--root", "" });
+    const std::string out = complete({"tree", fixture("branched_all_joints.urdf"), "--root", ""});
     REQUIRE(out.find("base_link") != std::string::npos);
     REQUIRE(out.find("slider") != std::string::npos);
     REQUIRE(out.find(":4") != std::string::npos);
@@ -52,8 +49,7 @@ TEST_CASE("cli_complete: tree --root also enumerates link names without the sepa
 
 TEST_CASE("cli_complete: a resolve target offers no topology name and leaves the shell to complete a path")
 {
-    const std::string out =
-        complete({ "resolve", fixture("branched_all_joints.urdf"), "--", "" });
+    const std::string out = complete({"resolve", fixture("branched_all_joints.urdf"), "--", ""});
     REQUIRE(out.find("torso") == std::string::npos);
     REQUIRE(out.find("torso_to_arm") == std::string::npos);
     REQUIRE(out.find(":0") != std::string::npos);
@@ -62,7 +58,7 @@ TEST_CASE("cli_complete: a resolve target offers no topology name and leaves the
 
 TEST_CASE("cli_complete: an arg position enumerates the document's args in the emitter argv shape")
 {
-    const std::string out = complete({ "args", fixture("args_doc.xacro"), "--", "" });
+    const std::string out = complete({"args", fixture("args_doc.xacro"), "--", ""});
     REQUIRE(out.find("mass") != std::string::npos);
     REQUIRE(out.find("prefix") != std::string::npos);
     REQUIRE(out.find(":4") != std::string::npos);
@@ -70,8 +66,7 @@ TEST_CASE("cli_complete: an arg position enumerates the document's args in the e
 
 TEST_CASE("cli_complete: a fallback position performs no parse in the emitter argv shape")
 {
-    const std::string out = complete({ "resolve", fixture("branched_all_joints.urdf"),
-                                       "base_link", "--", "" });
+    const std::string out = complete({"resolve", fixture("branched_all_joints.urdf"), "base_link", "--", ""});
     REQUIRE(out.find(":0") != std::string::npos);
     REQUIRE(out.find("torso") == std::string::npos);
 }

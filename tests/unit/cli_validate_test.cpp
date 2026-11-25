@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 #include <cstddef>
-#include <sstream>
-#include <iostream>
 #include <filesystem>
 
 using namespace meios;
@@ -21,8 +19,7 @@ namespace
 std::size_t count_of(const std::string &text, const std::string &needle)
 {
     std::size_t found = 0;
-    for(std::string::size_type at = text.find(needle); at != std::string::npos;
-        at = text.find(needle, at + needle.size()))
+    for(std::string::size_type at = text.find(needle); at != std::string::npos; at = text.find(needle, at + needle.size()))
         ++found;
     return found;
 }
@@ -30,13 +27,13 @@ std::size_t count_of(const std::string &text, const std::string &needle)
 int run_validate_on(const std::string &file, const std::string &format, std::string &printed)
 {
     verb_context ctx;
-    ctx.id = "validate";
-    ctx.positionals = { file };
+    ctx.id          = "validate";
+    ctx.positionals = {file};
     if(!format.empty())
         ctx.value_flags["--format"] = format;
     cout_capture out;
     const int code = cli::run_validate(ctx);
-    printed = out.str();
+    printed        = out.str();
     return code;
 }
 
@@ -103,8 +100,7 @@ TEST_CASE("cli_validate: an unsupported xacro feature is class 4")
 // come from the one emission the expansion entry point makes.
 TEST_CASE("cli_validate: a failed expansion reports its class with the messages intact")
 {
-    const cli::validation_report report =
-        cli::classify(fixture("unsupported_xacro.xacro"), {});
+    const cli::validation_report report = cli::classify(fixture("unsupported_xacro.xacro"), {});
 
     REQUIRE(report.findings.size() == 1);
     REQUIRE(report.findings.front().code == 4);
@@ -117,8 +113,8 @@ TEST_CASE("cli_validate: a failed expansion reports its class with the messages 
 TEST_CASE("cli_validate: the most-severe class wins and the report lists the rest")
 {
     cli::validation_report report;
-    report.findings.push_back(cli::validation_finding{ 4, "unsupported-feature", { "a" } });
-    report.findings.push_back(cli::validation_finding{ 2, "connectivity", { "b" } });
+    report.findings.push_back(cli::validation_finding{4, "unsupported-feature", {"a"}});
+    report.findings.push_back(cli::validation_finding{2, "connectivity", {"b"}});
 
     const std::string printed = cli::format_text(report);
     REQUIRE(cli::exit_code(report) == 2);
@@ -130,7 +126,7 @@ TEST_CASE("cli_validate: the most-severe class wins and the report lists the res
 TEST_CASE("cli_validate: the text report lists a message holding a line feed on one line")
 {
     cli::validation_report report;
-    report.findings.push_back(cli::validation_finding{ 4, "unsupported-feature", { "a\n[error] forged" } });
+    report.findings.push_back(cli::validation_finding{4, "unsupported-feature", {"a\n[error] forged"}});
 
     const std::string printed = cli::format_text(report);
     REQUIRE(printed.find("  - a\\n[error] forged\n") != std::string::npos);

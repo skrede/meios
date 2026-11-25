@@ -10,9 +10,7 @@
 #include <string>
 #include <fstream>
 #include <ostream>
-#include <sstream>
 #include <utility>
-#include <iostream>
 #include <string_view>
 #include <filesystem>
 
@@ -24,25 +22,25 @@ namespace
 
 // The name attribute carries a python-only list literal the core evaluator declines:
 // a fail policy aborts, lenient policies leave it verbatim, the python backend renders it.
-constexpr std::string_view python_span_doc =
-    "<robot name=\"probe_${['x']}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
-    "<link name=\"base_link\"/></robot>";
+constexpr std::string_view python_span_doc = "<robot name=\"probe_${['x']}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+                                             "<link name=\"base_link\"/></robot>";
 
 // The name attribute reaches the process's own authority: the restricted evaluator refuses
 // it, and an unguarded one would interpolate the working directory into the emitted document.
-constexpr std::string_view reaching_span_doc =
-    "<robot name=\"probe_${__import__('os').getcwd()}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
-    "<link name=\"base_link\"/></robot>";
+constexpr std::string_view reaching_span_doc = "<robot name=\"probe_${__import__('os').getcwd()}\" xmlns:xacro=\"http://www.ros.org/wiki/xacro\">"
+                                               "<link name=\"base_link\"/></robot>";
 
 std::filesystem::path write_doc(const std::string &stem, std::string_view body)
 {
-    const std::filesystem::path path =
-        std::filesystem::temp_directory_path() / ("meios_cli_eval_" + stem + ".xacro");
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / ("meios_cli_eval_" + stem + ".xacro");
     std::ofstream(path) << body;
     return path;
 }
 
-std::filesystem::path write_probe(const std::string &stem) { return write_doc(stem, python_span_doc); }
+std::filesystem::path write_probe(const std::string &stem)
+{
+    return write_doc(stem, python_span_doc);
+}
 
 std::string lowered(std::string_view text)
 {
@@ -55,8 +53,8 @@ std::string lowered(std::string_view text)
 verb_context flatten_over(const std::filesystem::path &doc)
 {
     verb_context ctx;
-    ctx.id = "flatten";
-    ctx.positionals = { doc.string() };
+    ctx.id          = "flatten";
+    ctx.positionals = {doc.string()};
     return ctx;
 }
 
@@ -73,7 +71,7 @@ TEST_CASE("cli_eval_backend: --eval-policy skip makes a python-only span non-fat
         REQUIRE(out.str().find("<robot") == std::string::npos);
     }
 
-    verb_context lenient = flatten_over(doc);
+    verb_context lenient                 = flatten_over(doc);
     lenient.value_flags["--eval-policy"] = "skip";
     {
         cout_capture out;
@@ -91,8 +89,8 @@ TEST_CASE("cli_eval_backend: --eval python resolves a python-only span when the 
         return;
     }
     const std::filesystem::path doc = write_probe("linked");
-    verb_context ctx = flatten_over(doc);
-    ctx.value_flags["--eval"] = "python";
+    verb_context ctx                = flatten_over(doc);
+    ctx.value_flags["--eval"]       = "python";
 
     cout_capture out;
     const int code = cli::run_flatten(ctx);
@@ -110,8 +108,8 @@ TEST_CASE("cli_eval_backend: --eval python binds the restricted evaluator and re
         return;
     }
     const std::filesystem::path doc = write_doc("restricted", reaching_span_doc);
-    verb_context ctx = flatten_over(doc);
-    ctx.value_flags["--eval"] = "python";
+    verb_context ctx                = flatten_over(doc);
+    ctx.value_flags["--eval"]       = "python";
 
     cout_capture out;
     const int code = cli::run_flatten(ctx);
@@ -123,16 +121,16 @@ TEST_CASE("cli_eval_backend: --eval python binds the restricted evaluator and re
 
 TEST_CASE("cli_eval_backend: no spelling of an unrestricted opt-out reaches an unguarded evaluator")
 {
-    const std::filesystem::path doc = write_doc("optout", reaching_span_doc);
-    const std::string cwd = std::filesystem::current_path().string();
+    const std::filesystem::path doc                         = write_doc("optout", reaching_span_doc);
+    const std::string cwd                                   = std::filesystem::current_path().string();
     const std::pair<const char *, const char *> spellings[] = {
-        { "--eval", "unrestricted" }, { "--eval", "python-unrestricted" }, { "--eval", "unrestricted-python" },
-        { "--eval-unrestricted", "true" }, { "--unrestricted", "true" }, { "--eval-python-unrestricted", "python" },
+            {"--eval", "unrestricted"},      {"--eval", "python-unrestricted"}, {"--eval", "unrestricted-python"},
+            {"--eval-unrestricted", "true"}, {"--unrestricted", "true"},        {"--eval-python-unrestricted", "python"},
     };
     for(const std::pair<const char *, const char *> &spelling : spellings)
     {
         INFO(spelling.first << '=' << spelling.second);
-        verb_context ctx = flatten_over(doc);
+        verb_context ctx                = flatten_over(doc);
         ctx.value_flags["--eval"]       = "python";
         ctx.value_flags[spelling.first] = spelling.second;
 
@@ -169,8 +167,8 @@ TEST_CASE("cli_eval_backend: --eval python fails loudly when the backend is not 
         return;
     }
     const std::filesystem::path doc = write_probe("absent");
-    verb_context ctx = flatten_over(doc);
-    ctx.value_flags["--eval"] = "python";
+    verb_context ctx                = flatten_over(doc);
+    ctx.value_flags["--eval"]       = "python";
 
     cout_capture out;
     const int code = cli::run_flatten(ctx);

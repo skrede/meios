@@ -6,6 +6,8 @@
 
 #if defined(MEIOS_CLI_BINARY) && !defined(_WIN32)
     #include <cstdio>
+    #include <stdio.h>
+
     #include <sys/wait.h>
 #endif
 
