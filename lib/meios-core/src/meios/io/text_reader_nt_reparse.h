@@ -48,7 +48,7 @@ inline checked_handle_result settle_reparse(const ntdll_api &api, HANDLE root, P
                                             const FILE_ATTRIBUTE_TAG_INFO &attributes) noexcept
 {
     if((attributes.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0)
-        return std::move(first);
+        return first;
     if(names_another_location(attributes))
         return unexpected<text_read_failure>(leaves_root());
     handle_result second = nt_open(api, root, name, access, options, false);

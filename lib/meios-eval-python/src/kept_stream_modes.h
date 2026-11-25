@@ -1,9 +1,15 @@
 #ifndef HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 #define HPP_GUARD_MEIOS_EVAL_KEPT_STREAM_MODES_H
 
-// Only a build against the release DLL C runtime (/MD), the one the release interpreter uses, keeps the modes. A MinGW
-// build or one running a debug Python keeps none, although either can share its descriptors with the interpreter.
-#if defined(_WIN32) && defined(_DLL) && !defined(_DEBUG)
+#if defined(__MINGW32__)
+    // MinGW defines _UCRT only in its C runtime headers.
+    #include <cstdio>
+#endif
+
+// A build against the release DLL C runtime (/MD) and a MinGW build against the UCRT keep the modes, the runtimes the release
+// and the MSYS2 interpreters use. A MinGW build against the older MSVCRT keeps none, nor does a debug build: one running the
+// release interpreter needs none, and one running a debug Python goes unguarded.
+#if (defined(__MINGW32__) && defined(_UCRT)) || (!defined(__MINGW32__) && defined(_WIN32) && defined(_DLL) && !defined(_DEBUG))
     #define MEIOS_KEEPS_STREAM_MODES 1
 
     #include <io.h>
@@ -13,6 +19,11 @@
     #include <cstdio>
     #include <cstdint>
     #include <cstdlib>
+
+    #if defined(__MINGW32__)
+// mingw-w64 declares only the process-wide handler, though its UCRT import library also exports the thread-local one.
+extern "C" _CRTIMP _invalid_parameter_handler __cdecl _set_thread_local_invalid_parameter_handler(_invalid_parameter_handler);
+    #endif
 #else
     #define MEIOS_KEEPS_STREAM_MODES 0
 #endif

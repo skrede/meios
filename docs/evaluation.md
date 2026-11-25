@@ -1645,10 +1645,12 @@ stream the program closed stays closed, and the first evaluation proceeds. The
 by the program before the first evaluation, and for the standard input closed by code the start runs;
 no case pins it for the standard output. The modes are kept only
 where the backend is built for the MSVC ABI against the release DLL C runtime (`/MD`), the runtime
-whose descriptors the release interpreter uses; which builds keep them follows the backend's own
-build, not the program's. A MinGW build gets no mode guard, and neither does a debug build that runs
-a debug build of Python; where either shares its descriptors with the interpreter, the start leaves
-each standard stream in binary mode. A program on a debug (`/MDd`, `/MTd`) or the static (`/MT`) C
+whose descriptors the release interpreter uses, or with MinGW against the UCRT, the runtime MSYS2's
+interpreter uses; which builds keep them follows the backend's own build, not the program's. The
+`eval_python_stream_mode` cases pin the kept modes in both builds on Windows. A MinGW build against
+the older MSVCRT gets no mode guard, and neither does a debug build that runs a debug build of
+Python; where either shares its descriptors with the interpreter, the start leaves each standard
+stream in binary mode. A program on a debug (`/MDd`, `/MTd`) or the static (`/MT`) C
 runtime that runs the release interpreter gets none either, and needs none, since the interpreter's
 mode changes do not reach its descriptors. It runs in Python's UTF-8 mode, so text Python
 decodes or encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where

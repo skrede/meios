@@ -37,7 +37,8 @@ template<typename Function>
 Function symbol(HMODULE module, const char *name) noexcept
 {
     SetLastError(ERROR_SUCCESS);
-    return reinterpret_cast<Function>(GetProcAddress(module, name));
+    // Through void (*)(), which GCC takes as matching every function type, since FARPROC's own signature matches none of these.
+    return reinterpret_cast<Function>(reinterpret_cast<void (*)()>(GetProcAddress(module, name)));
 }
 
 inline expected<ntdll_api, std::error_code> load_api() noexcept
