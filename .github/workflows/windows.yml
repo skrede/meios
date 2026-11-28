@@ -538,7 +538,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: msys2/setup-msys2@v2
+      # v2.34.0, by commit: with update off the toolchain is the one this commit's installer lists, so it moves only when this line does.
+      - uses: msys2/setup-msys2@3c51bf698df1e37b2261f53cb67797b97761185c
         with:
           msystem: UCRT64
           update: false

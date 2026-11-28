@@ -46,7 +46,8 @@ jobs:
           checked=0
           while IFS= read -r file; do
             checked=$((checked + 1))
-            lines=$(wc -l < "$file")
+            # awk counts a last line that ends without a newline; wc -l does not.
+            lines=$(awk 'END { print NR }' "$file")
             # A path mentioned outside the table's first column registers nothing.
             if [ "$lines" -gt 200 ] && ! grep -qF "| \`$file\` |" EXCEPTIONS.md; then
               echo "OVER CEILING ($lines lines, limit 200): $file"
