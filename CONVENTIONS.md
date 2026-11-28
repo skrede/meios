@@ -60,10 +60,11 @@ file is still a real file and obeys these same rules.
 Enforcement: a dedicated file-size CI job enforces the 200-line **file** ceiling on every C++ header
 and source — it counts every `*.h` and `*.cpp` under `lib/`, `tests/`, `tools/` and `examples/` and
 **exits 1** on any over 200 lines that `EXCEPTIONS.md` does not register by path in its table (see
-below), or when it finds none. Running `.clang-tidy` locally also **reports** any unit — function or
-file — over its ceiling with a size / cognitive-complexity check, but clang-tidy does **not** run in
-CI, so that report is advisory. Either way, treat an overage as a defect to clear: a change is not done
-until it is within budget or its overage is a registered exception.
+below), or when it finds none. `.clang-tidy` also **reports** any function over its ceiling with a
+size / cognitive-complexity check; it measures functions, never files. CI runs it over the `lib/`
+translation units in an advisory job that fails no build, so that report is advisory wherever it is
+run. Either way, treat an overage as a defect to clear: a change is not done until it is within budget
+or its overage is a registered exception.
 
 ### Exceptions
 
@@ -75,8 +76,9 @@ for an exception only when decomposition would make the code worse.
 Every exception is registered in **`EXCEPTIONS.md`** — the single, complete list of every
 sanctioned over-limit unit, each with its justification. There is **no in-code marker**: the
 justification is bookkeeping, and bookkeeping never belongs in the code. `EXCEPTIONS.md` records
-exactly the sanctioned overages; the size report flags any unlisted overage, or a stale row whose
-file has since dropped under the ceiling, as a unit to reconcile. There are no silent exceptions.
+exactly the sanctioned overages; the file-size job fails on any unlisted file over its ceiling. No
+tool flags a stale row, one whose file has since dropped under the ceiling, so delete the row when
+that happens. There are no silent exceptions.
 
 ## Comments
 
@@ -221,8 +223,9 @@ initialization-order constraint in **Construction**.
   185-column lines, comments never reflowed to fit the column, short functions never auto-collapsed
   onto one line (the author decides), and includes left unsorted so the hand-ordering below holds.
   Run it.
-- `.clang-tidy` is the linter and the local, advisory size/complexity report; run locally it flags
-  overages rather than failing the build, and it does not run in CI. Treat its findings as defects to
+- `.clang-tidy` is the linter and the advisory size/complexity report for functions; it flags
+  overages rather than failing the build, locally and in CI's advisory Clang-Tidy job over the
+  `lib/` translation units. Treat its findings as defects to
   clear. (The one size rule that *is* CI-enforced is the 200-line file ceiling — a dedicated
   file-size job that exits 1 on an unregistered overage; see **File and function size guidelines**.)
 - Apply both across the whole tree. A change is not done until both are clean — or its overage is a

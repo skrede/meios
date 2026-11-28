@@ -1640,8 +1640,9 @@ the disposition the program gave it. It also leaves Python's fault handler off, 
 SIGABRT, SIGBUS and SIGILL stay as it set them. Starting it leaves the program's locale as the program
 set it and exports no locale variable into the environment, and on Windows, where the backend keeps
 the modes, it leaves each standard stream in the text or binary mode the program gave it. A standard
-stream the program closed stays closed, and the first evaluation proceeds. The
-`eval_python_closed_input` cases pin this for the standard input and the standard error, each closed
+stream the program closed stays closed, and the first evaluation proceeds, on Linux and macOS and, on
+Windows, in the two builds that keep the modes: those are the builds the `eval_python_closed_input`
+cases run in. The cases pin this for the standard input and the standard error, each closed
 by the program before the first evaluation, and for the standard input closed by code the start runs;
 no case pins it for the standard output. The modes are kept only
 where the backend is built for the MSVC ABI against the release DLL C runtime (`/MD`), the runtime
@@ -1650,7 +1651,9 @@ interpreter uses; which builds keep them follows the backend's own build, not th
 `eval_python_stream_mode` cases pin the kept modes in both builds on Windows. A MinGW build against
 the older MSVCRT gets no mode guard, and neither does a debug build that runs a debug build of
 Python; where either shares its descriptors with the interpreter, the start leaves each standard
-stream in binary mode. A program on a debug (`/MDd`, `/MTd`) or the static (`/MT`) C
+stream in binary mode. A debug build that runs a debug build of Python is also not known to get
+through its first evaluation with a standard stream closed: in the two runs made of that build, the
+evaluation did not return. A program on a debug (`/MDd`, `/MTd`) or the static (`/MT`) C
 runtime that runs the release interpreter gets none either, and needs none, since the interpreter's
 mode changes do not reach its descriptors. It runs in Python's UTF-8 mode, so text Python
 decodes or encodes without naming an encoding is UTF-8 whatever the locale, except on Windows where
@@ -1677,8 +1680,8 @@ itself. Python code the start runs, a `sitecustomize` or `usercustomize` module 
 or an `import` line of a `.pth` file in one of Python's site directories, can still turn the fault
 handler on, set the locale and export a locale variable; SIGINT's disposition and, on Windows where
 the backend keeps them, the standard streams' text and binary modes are set back once the start has
-run it, and a standard
-stream that code closes stays closed. A program that already runs Python keeps its
+run it, and a standard stream that code closes stays closed in the builds named above. A program
+that already runs Python keeps its
 interpreter: the backend uses it as it finds it, module path, integer digit limit and signal handling
 included, never finalizes it, and takes the interpreter lock for each evaluation, so the program must
 not hold that lock on another thread while a load runs. An interpreter that cannot start makes every
@@ -1712,8 +1715,11 @@ first read under this backend is charged against the expression-depth ceiling as
 charges it, and a circular definition refuses the same way. Each read this backend makes carries a
 nesting of twenty-nine, for the interpreter's frames that stay on the stack beneath the evaluation the
 read starts, so each level is charged that beside the nineteen a deferred read costs: a chain of five
-properties each reading the next inside arithmetic renders under it, where six do under the built-in
-evaluator, and one longer refuses with `expansion_budget_exceeded`. Measured on a 512 KiB thread with
+properties each reading the next inside arithmetic renders under it where the description reads the
+first as a bare `${p0}`, which the substitution layer answers without the backend, and a chain of four
+where that read is itself inside an expression, `${p0 + 1}`, since the backend then makes that read
+too. Six render under the built-in evaluator with either read, and in every case one longer refuses
+with `expansion_budget_exceeded`. Measured on a 512 KiB thread with
 the ceiling lifted, the interpreter's own parser refuses such a chain of forty-nine properties, before
 the thread runs out. The `eval_python_scope` cases carry all of this, and run each namespace document
 under the built-in evaluator as well.
