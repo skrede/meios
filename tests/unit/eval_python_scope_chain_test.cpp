@@ -31,21 +31,21 @@ bool both_refuse_once(const include_tree::tree &held, std::string_view body, std
             scope_probe::refuses_once(scope_probe::load_with(held, body, nullptr), naming);
 }
 
-// Property i reads property i + 1 inside arithmetic, so no level is a bare read the substitution layer
-// answers and every one is an evaluation in the interpreter.
-std::string arithmetic_chain(std::size_t levels)
+// Property i reads property i + 1 inside arithmetic, so each property's text is an evaluation in the interpreter.
+// The link's read of p0 is one more unless it is a bare ${p0}, which the substitution layer answers itself.
+std::string arithmetic_chain(std::size_t levels, std::string_view first_read)
 {
     std::string body;
     for(std::size_t at = 0; at < levels; ++at)
         body += property("p" + std::to_string(at), "${p" + std::to_string(at + 1) + " + 1}");
-    return body + property("p" + std::to_string(levels), "1") + link("${p0}");
+    return body + property("p" + std::to_string(levels), "1") + link(first_read);
 }
 
 // Stopped one past the pinned length, so a chain that grew reads one level too long.
-std::size_t longest_chain(std::size_t cap)
+std::size_t longest_chain(std::size_t cap, std::string_view first_read)
 {
     std::size_t levels = 0;
-    while(levels < cap && load(arithmetic_chain(levels + 1)).out.has_value())
+    while(levels < cap && load(arithmetic_chain(levels + 1, first_read)).out.has_value())
         ++levels;
     return levels;
 }
@@ -148,9 +148,17 @@ TEST_CASE("a circular definition read by the backend refuses as circular", "[eva
 // have no such guard, so the ceiling's charge on each read is what keeps the thread's headroom.
 TEST_CASE("a deferred chain read by the backend refuses on the shared ceiling one level past its pin", "[eval_python][scope]")
 {
-    const std::size_t most = longest_chain(5);
+    const std::size_t most = longest_chain(5, "${p0}");
     CHECK(most == 4);
-    const scope_probe::loaded refused = load(arithmetic_chain(most + 1));
+    const scope_probe::loaded refused = load(arithmetic_chain(most + 1, "${p0}"));
+    REQUIRE(scope_probe::refuses_once(refused, "expression depth ceiling"));
+    REQUIRE(refused.out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
+}
+
+TEST_CASE("a deferred chain the backend reads through an expression refuses one level sooner", "[eval_python][scope]")
+{
+    CHECK(longest_chain(4, "${p0 + 1}") == 3);
+    const scope_probe::loaded refused = load(arithmetic_chain(4, "${p0 + 1}"));
     REQUIRE(scope_probe::refuses_once(refused, "expression depth ceiling"));
     REQUIRE(refused.out.error().code == meios::diagnostic_code::expansion_budget_exceeded);
 }
@@ -162,9 +170,9 @@ TEST_CASE("a deferred chain read by the backend keeps ninefold headroom", "[eval
     if(!stack_meter::headroom_measured)
         SKIP("the stack figures belong to an unoptimized, uninstrumented POSIX build");
     constexpr std::size_t thread_stack      = 512 * 1024;
-    bool rendered                           = load(arithmetic_chain(0)).out.has_value();
-    const std::optional<std::size_t> base   = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(0)).out.has_value() && rendered; });
-    const std::optional<std::size_t> loaded = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(4)).out.has_value() && rendered; });
+    bool rendered                           = load(arithmetic_chain(0, "${p0}")).out.has_value();
+    const std::optional<std::size_t> base   = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(0, "${p0}")).out.has_value() && rendered; });
+    const std::optional<std::size_t> loaded = stack_meter::stack_used(thread_stack, [&] { rendered = load(arithmetic_chain(4, "${p0}")).out.has_value() && rendered; });
     REQUIRE(base);
     REQUIRE(loaded);
     CHECK(rendered);

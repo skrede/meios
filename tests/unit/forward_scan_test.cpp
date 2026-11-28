@@ -98,6 +98,17 @@ TEST_CASE("forward scan accounts for an entity before the token")
     REQUIRE(loc.column == f.column_of('$'));
 }
 
+TEST_CASE("forward scan places the token after a numeric reference wider than 32 bits")
+{
+    fixture f("<a v=\"&#x100000041;${nope}\"/>");
+    // pugixml accumulates a numeric reference in 32 bits, so this one decodes to U+0041 and '$' is decoded index 1.
+    const meios::source_location loc = refine(f, 0, 1);
+
+    REQUIRE(std::string_view(f.element().attribute("v").value()) == "A${nope}");
+    REQUIRE(loc.column == 20);
+    REQUIRE(loc.column == f.column_of('$'));
+}
+
 TEST_CASE("forward scan is bounded only by the matching quote")
 {
     fixture f("<a v=\"x>'y${q}\"/>");
