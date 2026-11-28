@@ -14,8 +14,8 @@ jobs:
   # meios_core and the in-tree pugixml (FETCH_DEPS=ON builds it from source under
   # the same flags), not just the harness translation units.
   # continue-on-error on the Test step keeps every failure of that step advisory,
-  # a sanitizer's report and an ordinary failed case alike, and the step after it
-  # raises a warning annotation for one; configuring, building, the
+  # a sanitizer's report, an ordinary failed case and a hung one alike, and the
+  # step after it raises a warning annotation for one; configuring, building, the
   # instrumentation and registration assertions and the tsan scope record gate
   # the run.
   sanitize:
@@ -102,10 +102,15 @@ jobs:
           fi
           echo "eval_python registered $registered test(s)"
 
+      # ctest's default per-test limit is effectively unbounded, so a hang would run into
+      # the job's limit and cancel the job before the report step runs. The step's limit,
+      # inside the job's, backstops hangs that stack up in this serial run or that ctest
+      # cannot end, and a step that times out is a failure continue-on-error keeps advisory.
       - name: Test
         id: test
         continue-on-error: true
-        run: cd build && ctest --output-on-failure
+        timeout-minutes: 100
+        run: cd build && ctest --output-on-failure --timeout 900
 
       - name: Report an advisory test failure
         if: steps.test.outcome == 'failure'
