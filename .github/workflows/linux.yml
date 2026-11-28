@@ -734,7 +734,7 @@ jobs:
             -DMEIOS_REQUIRE_EVAL_PYTHON=ON
 
       - name: Build (Python found)
-        run: cmake --build build-py
+        run: cmake --build build-py --parallel 4
 
       - name: Test (Python found)
         run: cd build-py && ctest --output-on-failure -j4 --timeout 120
@@ -832,7 +832,7 @@ jobs:
             -DMEIOS_CMAKE_FETCH_DEPS=OFF \
             -DMEIOS_EVAL_PYTHON_SUPPORT=ON \
             -DMEIOS_REQUIRE_EVAL_PYTHON=ON
-          cmake --build build-py-install
+          cmake --build build-py-install --parallel 4
           cmake --install build-py-install --prefix "${{ runner.temp }}/install-py"
           prefix="${{ runner.temp }}/install-py"
           test -x "$prefix/bin/meios"
@@ -859,7 +859,7 @@ jobs:
             -DCMAKE_DISABLE_FIND_PACKAGE_Python3=TRUE
 
       - name: Build (Python absent)
-        run: cmake --build build-nopy
+        run: cmake --build build-nopy --parallel 4
 
       - name: Test (Python absent)
         run: cd build-nopy && ctest --output-on-failure -j4 --timeout 120
