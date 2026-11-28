@@ -1,9 +1,9 @@
 #ifndef HPP_GUARD_MEIOS_UNIT_BUNDLE_SCANNER_FIXTURE_H
 #define HPP_GUARD_MEIOS_UNIT_BUNDLE_SCANNER_FIXTURE_H
 
-#include <meios/bundle.h>
 #include <meios/io.h>
 #include <meios/model.h>
+#include <meios/bundle.h>
 
 #include <string>
 #include <vector>

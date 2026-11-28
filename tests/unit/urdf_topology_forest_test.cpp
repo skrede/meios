@@ -3,6 +3,7 @@
 #include <meios/model.h>
 
 #include <meios/model/topology.h>
+
 #include <meios/diagnostic/diagnostic_code.h>
 
 #include <catch2/catch_test_macros.hpp>

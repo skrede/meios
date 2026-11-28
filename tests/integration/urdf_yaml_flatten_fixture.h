@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <optional>
 #include <filesystem>
 #include <string_view>
@@ -50,7 +51,7 @@ inline meios::load_options python_options()
 
 struct journal
 {
-    int errors{0};
+    std::int32_t errors{0};
     std::string report;
 
     void record(meios::level lvl, const std::string &message)
@@ -74,7 +75,7 @@ struct journal
 
 struct attempt
 {
-    int errors;
+    std::int32_t errors;
     std::string report;
     std::optional<meios::model<double>> robot;
 };

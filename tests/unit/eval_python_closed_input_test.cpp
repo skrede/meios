@@ -27,11 +27,9 @@
 namespace
 {
 
-// Python wraps the descriptor the standard input's stream holds (CPython's init_sys_streams takes fileno(stdin)), as
-// the start's mode guard reads it, so the cases need that stream on descriptor 0. A Windows program on another C
-// runtime than the interpreter's closes a descriptor Python never reads, so there the cases pin the evaluation alone.
-// The standard error's stream holds descriptor 2 the same way, and Python is asked whether it stayed closed only where
-// the program is known to share its descriptors with the interpreter.
+// Python wraps the descriptor each standard stream holds (CPython's init_sys_streams takes fileno(stdin)), as the
+// start's mode guard reads it, so a case needs its stream on descriptor 0 or 2. A Windows program on another C runtime
+// than the interpreter's closes a descriptor Python never reads, so there the cases pin the evaluation alone.
 void skip_unless_first_start_reads(std::int32_t descriptor)
 {
     if(Py_IsInitialized() != 0)

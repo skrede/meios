@@ -4,10 +4,12 @@
 #include <meios/model.h>
 
 #include <meios/model/topology.h>
+
 #include <meios/diagnostic/diagnostic_code.h>
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace
 {
@@ -16,7 +18,7 @@ struct entry
 {
     meios::level lvl;
     meios::diagnostic_code code;
-    int line;
+    std::int32_t line;
     std::string msg;
 };
 

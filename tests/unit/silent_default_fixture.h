@@ -6,14 +6,15 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 #include <string_view>
 
 namespace
 {
 
-inline int count_code(const std::vector<meios::captured_diagnostic> &records, meios::diagnostic_code code)
+inline std::int32_t count_code(const std::vector<meios::captured_diagnostic> &records, meios::diagnostic_code code)
 {
-    int n = 0;
+    std::int32_t n = 0;
     for(const meios::captured_diagnostic &record : records)
         if(record.code == code)
             ++n;
